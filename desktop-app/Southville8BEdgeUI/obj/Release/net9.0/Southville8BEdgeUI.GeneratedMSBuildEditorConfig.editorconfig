@@ -1,0 +1,85 @@
+is_global = true
+build_property.AvaloniaNameGeneratorIsEnabled = true
+build_property.AvaloniaNameGeneratorBehavior = InitializeComponent
+build_property.AvaloniaNameGeneratorDefaultFieldModifier = internal
+build_property.AvaloniaNameGeneratorFilterByPath = *
+build_property.AvaloniaNameGeneratorFilterByNamespace = *
+build_property.AvaloniaNameGeneratorViewFileNamingStrategy = NamespaceAndClassName
+build_property.AvaloniaNameGeneratorAttachDevTools = true
+build_property.TargetFramework = net9.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = Southville8BEdgeUI
+build_property.ProjectDir = C:\Users\merly\source\repos\Southville8BEdgeUI\Southville8BEdgeUI\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.EffectiveAnalysisLevelStyle = 9.0
+build_property.EnableCodeStyleSeverity = 
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/App.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/AdminShellView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/AdminDashboardView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/ChatView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/ELibraryManagementView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/EventDashboardView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/HelpGuideView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/NotificationsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/ProfileView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/RoomManagementView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/SettingsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Admin/UserManagementView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/LoginView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/MainWindow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/TeacherShellView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Teacher/GradeEntryView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Teacher/MessagingView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Teacher/MyAnnouncementsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Teacher/SchedulePlannerView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Teacher/StudentManagementView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/merly/source/repos/Southville8BEdgeUI/Southville8BEdgeUI/Views/Teacher/TeacherDashboardView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml

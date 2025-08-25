@@ -1,0 +1,729 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
+             mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
+             x:Class="Southville8BEdgeUI.Views.AdminShellView"
+             x:DataType="vm:AdminShellViewModel">
+
+    <UserControl.Styles>
+        <!-- Navigation Button Style -->
+        <Style Selector="Button.nav-item">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#4B5563"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="12,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="TextBlock.Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="Button.nav-item.active /template/ ContentPresenter">
+            <Setter Property="Background" Value="#DC2626"/>
+            <Setter Property="TextBlock.Foreground" Value="White"/>
+            <Setter Property="TextBlock.FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.nav-item Path">
+            <Setter Property="Fill" Value="#6B7280"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Fill" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-item:pointerover Path">
+            <Setter Property="Fill" Value="#111827"/>
+        </Style>
+        <Style Selector="Button.nav-item.active Path">
+            <Setter Property="Fill" Value="White"/>
+        </Style>
+        
+        <!-- Section Header Style -->
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Margin" Value="24,16,12,8"/>
+        </Style>
+
+        <!-- Toggle Button Style -->
+        <Style Selector="Button.sidebar-toggle">
+            <Setter Property="Background" Value="#DC2626"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <!-- Remove VerticalAlignment=Top so we can center per-instance -->
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-toggle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.05)"/>
+        </Style>
+
+        <!-- Middle Close Button Style for Left Sidebar -->
+        <Style Selector="Button.sidebar-close-middle">
+            <Setter Property="Background" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <!-- Don't force HorizontalAlignment here; set it on the element -->
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-close-middle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+            <Setter Property="Background" Value="#DC2626"/>
+        </Style>
+
+        <!-- Middle Close Button Style for Right Sidebar -->
+        <Style Selector="Button.sidebar-close-middle-right">
+            <Setter Property="Background" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4,0,0,4"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-close-middle-right:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+            <Setter Property="Background" Value="#DC2626"/>
+        </Style>
+
+        <!-- Add Middle Close Button Style for Left Sidebar -->
+        <Style Selector="Button.sidebar-close-middle-left">
+            <Setter Property="Background" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-close-middle-left:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+            <Setter Property="Background" Value="#DC2626"/>
+        </Style>
+
+        <!-- Dropdown Styles -->
+        <Style Selector="Border.dropdown-menu">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BoxShadow" Value="0 4 12 0 #15000000"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="MinWidth" Value="220"/>
+        </Style>
+
+        <Style Selector="Button.dropdown-item">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.dropdown-item:pointerover">
+            <Setter Property="Background" Value="#F3F4F6"/>
+        </Style>
+        <Style Selector="Button.dropdown-item.logout">
+            <Setter Property="Foreground" Value="#DC2626"/>
+        </Style>
+        <Style Selector="Button.dropdown-item.logout:pointerover">
+            <Setter Property="Background" Value="#FEF2F2"/>
+        </Style>
+
+        <!-- Sidebar Transition Styles -->
+        <Style Selector="Border.sidebar">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.3"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Background="#F9FAFB">
+        <!-- Define explicit column definitions -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{Binding LeftColumnWidth}"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="{Binding RightColumnWidth}"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ======================= -->
+        <!-- Left Navigation Panel    -->
+        <!-- ======================= -->
+        <Border Grid.Column="0" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,1,0" 
+                IsVisible="{Binding IsLeftSidebarVisible}">
+          <Grid>
+
+            <!-- Main Sidebar Content -->
+            <DockPanel Margin="0,0,0,0">
+              <!-- Header Section -->
+              <Border DockPanel.Dock="Top" Padding="16,20,16,20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <Border Background="#DC2626" Width="32" Height="32" CornerRadius="8">
+                    <TextBlock Text="A8" Foreground="White" FontWeight="Bold" FontSize="14"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Southville 8B NHIS" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock Text="Admin Portal" FontSize="12" Foreground="#6B7280"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <!-- Footer Section -->
+              <Border DockPanel.Dock="Bottom" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0">
+                <StackPanel>
+                  <TextBlock Text="ACADEMIC YEAR" Classes="section-header" Margin="0,0,0,8"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Fill="#DC2626" Width="10" Height="10" VerticalAlignment="Center"/>
+                    <TextBlock Text="2024-2025" FontSize="12" Foreground="#374151" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <!-- Navigation Buttons -->
+              <ScrollViewer>
+                <StackPanel Spacing="4">
+                  <TextBlock Text="OVERVIEW" Classes="section-header"/>
+                  <Button Classes="nav-item" Command="{Binding NavigateToDashboardCommand}" Classes.active="{Binding IsDashboardActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                      <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+
+                  <TextBlock Text="MANAGEMENT" Classes="section-header"/>
+                  <Button Classes="nav-item" Command="{Binding NavigateToUserManagementCommand}" Classes.active="{Binding IsUserManagementActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                      <TextBlock Text="User Management" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="nav-item" Command="{Binding NavigateToRoomManagementCommand}" Classes.active="{Binding IsRoomManagementActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                      <TextBlock Text="Room Management" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+
+                  <TextBlock Text="CONTENT" Classes="section-header"/>
+                  <Button Classes="nav-item" Command="{Binding NavigateToEventsDashboardCommand}" Classes.active="{Binding IsEventsDashboardActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                      <TextBlock Text="Events Dashboard" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="nav-item" Command="{Binding NavigateToELibraryCommand}" Classes.active="{Binding IsELibraryActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>
+                      <TextBlock Text="E-Library Management" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+
+                  <TextBlock Text="COMMUNICATION" Classes="section-header"/>
+                  <Button Classes="nav-item" Command="{Binding NavigateToAlertsCommand}" Classes.active="{Binding IsAlertsActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                      <TextBlock Text="Alerts" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="nav-item" Command="{Binding NavigateToChatCommand}" Classes.active="{Binding IsChatActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Path Width="16" Height="16" Data="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                      <TextBlock Text="Chat" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+              </ScrollViewer>
+            </DockPanel>
+
+            <!-- Close button: put AFTER DockPanel and raise ZIndex so it's on top -->
+            <!-- LEFT sidebar close (chevron-left) -->
+<Button Classes="sidebar-close-middle"
+        Command="{Binding ToggleLeftSidebarCommand}"
+        ToolTip.Tip="Close sidebar"
+        HorizontalAlignment="Right"
+        VerticalAlignment="Center"
+        CornerRadius="4,0,0,4"
+        Margin="0"
+        ZIndex="1000">
+  <Path Data="M16 5 L 9 12 L 16 19"
+        Width="12" Height="12"
+        Stretch="Uniform"
+        Stroke="White" StrokeThickness="2"
+        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+</Button>
+
+<!-- RIGHT sidebar close (chevron-right) -->
+<Button Classes="sidebar-close-middle-left"
+        Command="{Binding ToggleRightSidebarCommand}"
+        ToolTip.Tip="Close sidebar"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Center"
+        CornerRadius="0,4,4,0"
+        Margin="0"
+        ZIndex="1000">
+  <Path Data="M8 5 L 15 12 L 8 19"
+        Width="12" Height="12"
+        Stretch="Uniform"
+        Stroke="White" StrokeThickness="2"
+        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+</Button>
+
+          </Grid>
+        </Border>
+
+        <!-- Content Area            -->
+        <!-- ======================= -->
+        <Grid Grid.Column="1">
+            <!-- Open button: left-middle of content column, hugging the divider -->
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="0"
+                        Spacing="4"
+                        ZIndex="100">
+                <Button Classes="sidebar-toggle"
+                        Command="{Binding ToggleLeftSidebarCommand}"
+                        IsVisible="{Binding ShowLeftSidebarToggle}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="0,0,0,0" 
+                        ZIndex="200"
+                        ToolTip.Tip="Open navigation">
+                    <Path Data="M3 12h18m-9-9l9 9-9 9" Stroke="White" StrokeThickness="2" Width="12" Height="12"/>
+                </Button>
+            </StackPanel>
+
+            <!-- Right sidebar open button (unchanged) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" Spacing="4" ZIndex="100">
+                <Button Classes="sidebar-toggle"
+                        Command="{Binding ToggleRightSidebarCommand}"
+                        IsVisible="{Binding ShowRightSidebarToggle}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,0,0"
+                        ToolTip.Tip="Open sidebar">
+                    <Path Data="M21 12H3m18-9l-9 9 9 9" Stroke="White" StrokeThickness="2" Width="12" Height="12"/>
+                </Button>
+            </StackPanel>
+
+            <!-- Main Content -->
+            <ContentControl Content="{Binding CurrentContent}"/>
+        </Grid>
+
+        <!-- ======================= -->
+        <!-- Right Sidebar           -->
+        <!-- ======================= -->
+        <Border Grid.Column="2" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,0,0" 
+                IsVisible="{Binding IsRightSidebarVisible}">
+            <Grid>
+                <!-- Middle Right Close Button -->
+                <!-- RIGHT sidebar close (chevron-right) -->
+<Button Classes="sidebar-close-middle-left"
+        Command="{Binding ToggleRightSidebarCommand}"
+        ToolTip.Tip="Close sidebar"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Center"
+        CornerRadius="0,4,4,0"
+        Margin="0"
+        ZIndex="1000">
+  <Path Data="M8 5 L 15 12 L 8 19"
+        Width="12" Height="12"
+        Stretch="Uniform"
+        Stroke="White" StrokeThickness="2"
+        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+</Button>
+
+                <!-- Right Sidebar Content -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="0" Margin="0">
+                        <!-- User Profile Header with Dropdown -->
+                        <Border Background="White" Padding="16,20,16,16">
+                            <StackPanel>
+                                <Grid>
+                                    <!-- User Profile with Dropdown Button -->
+                                    <Button Background="Transparent" BorderThickness="0" Padding="0" 
+                                            Command="{Binding ToggleUserDropdownCommand}"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                                            <Border Width="40" Height="40" Background="#E5E7EB" CornerRadius="20">
+                                                <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="Black"/>
+                                                    <Path Data="M7 10L12 15 17 10" Stroke="#6B7280" StrokeThickness="2" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="#6B7280"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <!-- Dropdown Menu -->
+                                    <Border Classes="dropdown-menu" 
+                                            IsVisible="{Binding IsUserDropdownVisible}"
+                                            Margin="0,60,0,0" 
+                                            ZIndex="1001"
+                                            VerticalAlignment="Top"
+                                            IsHitTestVisible="True">
+                                        <StackPanel Spacing="4">
+                                            <!-- Email Display -->
+                                            <Border Padding="12,8" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Margin="0,0,0,8">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Signed in as:" FontSize="11" Foreground="#6B7280"/>
+                                                    <TextBlock Text="{Binding UserEmail}" FontSize="12" FontWeight="SemiBold" Foreground="#374151"/>
+                                                </StackPanel>
+                                            </Border>
+                                            
+                                            <!-- Dropdown Items -->
+                                            <Button Classes="dropdown-item" Command="{Binding NavigateToProfileCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="#6B7280"/>
+                                                    <TextBlock Text="Profile" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            
+                                            <Button Classes="dropdown-item" Command="{Binding NavigateToSettingsCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Width="16" Height="16" Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" Fill="#6B7280"/>
+                                                    <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            
+                                            <Button Classes="dropdown-item" Command="{Binding NavigateToNotificationsCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Width="16" Height="16" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" Fill="#6B7280"/>
+                                                    <TextBlock Text="Notifications" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            
+                                            <Button Classes="dropdown-item" Command="{Binding NavigateToHelpGuideCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Width="16" Height="16" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" Fill="#6B7280"/>
+                                                    <TextBlock Text="Help Guide" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            
+                                            <!-- Separator -->
+                                            <Border Height="1" Background="#E5E7EB" Margin="0,8"/>
+                                            
+                                            <!-- Dark Mode Toggle -->
+                                            <Button Classes="dropdown-item" Command="{Binding ToggleDarkModeCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Width="16" Height="16" Data="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z" Fill="#6B7280"/>
+                                                    <TextBlock VerticalAlignment="Center">
+                                                        <TextBlock.Text>
+                                                            <Binding Path="IsDarkMode">
+                                                                <Binding.Converter>
+                                                                    <converters:BoolToStringConverter TrueValue="Light Mode" FalseValue="Dark Mode"/>
+                                                                </Binding.Converter>
+                                                            </Binding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </Button>
+                                            
+                                            <!-- Logout -->
+                                            <Button Classes="dropdown-item logout" Command="{Binding LogoutCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Width="16" Height="16" Data="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" Fill="#DC2626"/>
+                                                    <TextBlock Text="Logout" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Current Page Indicator -->
+                                <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <Path Data="M3 7L9 13L21 1" Stroke="#DC2626" StrokeThickness="2" Width="12" Height="12"/>
+                                        <TextBlock Text="{Binding CurrentPage}" FontSize="11" Foreground="#374151" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Date and Time -->
+                                <StackPanel Orientation="Horizontal" Spacing="20">
+                                    <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4">
+                                        <TextBlock Text="{Binding CurrentDate}" FontSize="11" Foreground="#374151"/>
+                                    </Border>
+                                    <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4">
+                                        <TextBlock Text="{Binding CurrentTime}" FontSize="11" Foreground="#374151"/>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Statistics Cards Grid -->
+                        <Border Padding="16,8">
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
+                                <!-- Events Card -->
+                                <Border Grid.Row="0" Grid.Column="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,4,4">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#10B981" CornerRadius="3">
+                                                <Rectangle Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Events" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="120" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="Approved Events" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Clicks Card -->
+                                <Border Grid.Row="0" Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,0,0,4">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#EF4444" CornerRadius="3">
+                                                <Ellipse Width="6" Height="6" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Clicks" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="22k" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="+12% Last Week" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Students Card -->
+                                <Border Grid.Row="1" Grid.Column="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4,4,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#F59E0B" CornerRadius="3">
+                                                <Ellipse Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Students" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="1512" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="Registered Students" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Sections Card -->
+                                <Border Grid.Row="1" Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,4,0,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#8B5CF6" CornerRadius="3">
+                                                <Rectangle Width="6" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Sections" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="144" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="+10% Last Week" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Event Schedule Section -->
+                        <Border Padding="16,8">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="Event Schedule" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
+                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                </StackPanel>
+
+                                <!-- Calendar Header -->
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Left">
+                                                <Path Data="M15 18L9 12L15 6" Stroke="#6B7280" StrokeThickness="2"/>
+                                            </Button>
+                                            <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Right">
+                                                <Path Data="M9 18L15 12L9 6" Stroke="#10B981" StrokeThickness="2"/>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <!-- Calendar Days -->
+                                        <Grid ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
+                                            <TextBlock Grid.Column="0" Text="Mon" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="Tue" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="Wed" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="Thu" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="Fri" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="5" Text="Sat" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="6" Text="Sun" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Calendar Dates -->
+                                        <Grid RowDefinitions="Auto" ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
+                                            <TextBlock Grid.Column="0" Text="16" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="1" Text="17" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="2" Text="18" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <Border Grid.Column="3" Background="#10B981" CornerRadius="50" Width="24" Height="24">
+                                                <TextBlock Text="19" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="4" Text="20" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="5" Text="21" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="6" Text="22" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Today Section -->
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,1,1" Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="Black" Margin="0,0,0,8"/>
+
+                                        <!-- Event Card -->
+                                        <Border Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <Border Width="4" Height="40" Background="#3B82F6" CornerRadius="2"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
+                                                        <Border Background="#22C55E" CornerRadius="3" Padding="4,2">
+                                                            <TextBlock Text="Training" Foreground="White" FontSize="9"/>
+                                                        </Border>
+                                                        <Border Background="#F59E0B" CornerRadius="3" Padding="4,2">
+                                                            <TextBlock Text="Pending" Foreground="White" FontSize="9"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="Educational Field Trip" FontSize="12" FontWeight="SemiBold" Foreground="Black"/>
+                                                    <TextBlock Text="06:00 AM - 11:00 PM" FontSize="10" Foreground="#6B7280"/>
+                                                </StackPanel>
+                                                <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Path Data="M9 18L15 12L9 6" Stroke="#6B7280" StrokeThickness="2"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Button Content="View more..." Background="Transparent" Foreground="#3B82F6" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Friday Event -->
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Fri, June 20" FontSize="11" Foreground="#6B7280" Margin="0,0,0,8"/>
+                                        <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="8" Padding="12">
+                                            <TextBlock Text="NO EVENTS SCHEDULED" FontSize="11" Foreground="#DC2626" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Activity Log Section -->
+                        <Border Padding="16,8,16,16">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="Activity Log" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
+                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                </StackPanel>
+
+                                <!-- Activity Items -->
+                                <StackPanel Spacing="12">
+                                    <!-- Activity Item 1 -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                            <TextBlock Text="RR" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="RIchard Ramos Jr" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                <TextBlock Text="2hrs ago" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Deleted 2 Students to the...." FontSize="10" Foreground="#6B7280"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Activity Item 2 -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                            <TextBlock Text="RR" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="Richard Ramos" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                <TextBlock Text="15mins ago" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Add 5 Students to list" FontSize="10" Foreground="#6B7280"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Activity Item 3 -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                            <TextBlock Text="HB" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="Hermilo Bagtong" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                <TextBlock Text="4hrs ago" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Disabled 2 Students on list" FontSize="10" Foreground="#6B7280"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Overlay to close dropdown when clicking outside -->
+        <Border Grid.ColumnSpan="3" Background="Transparent" 
+                IsVisible="{Binding IsUserDropdownVisible}"
+                ZIndex="1000"
+                IsHitTestVisible="False">
+            <Button Background="Transparent" BorderThickness="0" 
+                    Command="{Binding CloseUserDropdownCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    IsHitTestVisible="True"/>
+        </Border>
+    </Grid>
+</UserControl>

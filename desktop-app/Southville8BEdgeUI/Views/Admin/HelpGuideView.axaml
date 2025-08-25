@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Southville8BEdgeUI.Views.Admin.HelpGuideView"
+             x:DataType="vm:HelpGuideViewModel">
+
+    <Border Background="White" Padding="24">
+        <Grid RowDefinitions="Auto,Auto,*">
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
+                <TextBlock Text="Help Guide" FontSize="24" FontWeight="Bold" Foreground="#1F2937"/>
+                <TextBlock Text="Find answers to your questions and learn how to use the system effectively"
+                          FontSize="14" Foreground="#6B7280"/>
+            </StackPanel>
+
+            <!-- Search Bar -->
+            <Border Grid.Row="1" Background="#F9FAFB" CornerRadius="8" Padding="16" Margin="0,0,0,24">
+                <StackPanel Spacing="12">
+                    <TextBox Text="{Binding SearchText}"
+                             Watermark="Search help articles..."
+                             Padding="12"
+                             CornerRadius="6"
+                             BorderBrush="#D1D5DB"/>
+                    <Button Content="Search"
+                            Background="#DC2626"
+                            Foreground="White"
+                            BorderThickness="0"
+                            CornerRadius="6"
+                            Padding="12,8"
+                            FontWeight="SemiBold"
+                            Command="{Binding SearchHelpCommand}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Content Area -->
+            <Grid Grid.Row="2" ColumnDefinitions="300,*">
+                <!-- Categories List -->
+                <Border Grid.Column="0" Background="#F9FAFB" CornerRadius="8" Padding="16" Margin="0,0,16,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Help Categories" FontSize="16" FontWeight="SemiBold" Foreground="#1F2937"/>
+
+                        <ItemsControl ItemsSource="{Binding HelpCategories}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Background="Transparent"
+                                            BorderThickness="0"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
+                                            Padding="12"
+                                            Margin="0,0,0,8"
+                                            CornerRadius="6"
+                                            Command="{Binding $parent[UserControl].((vm:HelpGuideViewModel)DataContext).SelectCategoryCommand}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Styles>
+                                            <Style Selector="Button:pointerover">
+                                                <Setter Property="Background" Value="White"/>
+                                            </Style>
+                                        </Button.Styles>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{Binding Title}"
+                                                      FontSize="14"
+                                                      FontWeight="SemiBold"
+                                                      Foreground="#1F2937"/>
+                                            <TextBlock Text="{Binding Description}"
+                                                      FontSize="12"
+                                                      Foreground="#6B7280"
+                                                      TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Contact Support -->
+                        <Button Content="Contact Support"
+                                Background="#DC2626"
+                                Foreground="White"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                FontWeight="SemiBold"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding ContactSupportCommand}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Articles Content -->
+                <Border Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="24">
+                    <Grid>
+                        <!-- Content when category is selected -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="{Binding SelectedCategory.Title}"
+                                          FontSize="20"
+                                          FontWeight="Bold"
+                                          Foreground="#1F2937"/>
+
+                                <ItemsControl ItemsSource="{Binding SelectedCategory.Articles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F9FAFB"
+                                                    CornerRadius="8"
+                                                    Padding="16"
+                                                    Margin="0,0,0,12">
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="{Binding Title}"
+                                                              FontSize="16"
+                                                              FontWeight="SemiBold"
+                                                              Foreground="#1F2937"/>
+                                                    <TextBlock Text="{Binding Content}"
+                                                              FontSize="14"
+                                                              Foreground="#6B7280"
+                                                              TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Default content when no category selected -->
+                        <StackPanel VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Spacing="16"
+                                   IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNull}}">
+                            <TextBlock Text="📖" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                            <TextBlock Text="Select a category to view help articles"
+                                      FontSize="16"
+                                      Foreground="#6B7280"
+                                      HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

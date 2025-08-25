@@ -1,0 +1,322 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             x:Class="Southville8BEdgeUI.Views.Admin.AlertsView"
+             x:DataType="vm:AlertsViewModel"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800">
+  
+  <UserControl.Styles>
+    <!-- Card Style matching project design -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="BorderBrush" Value="#E5E7EB"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="16"/>
+      <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+    
+    <!-- Header Text Style -->
+    <Style Selector="TextBlock.header">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="Black"/>
+      <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+    
+    <!-- Section Header Style -->
+    <Style Selector="TextBlock.section-header">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#6B7280"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+    
+    <!-- Form Label Style -->
+    <Style Selector="TextBlock.form-label">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="#6B7280"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    
+    <!-- Input Control Style -->
+    <Style Selector="TextBox, ComboBox">
+      <Setter Property="Margin" Value="0,0,0,12"/>
+      <Setter Property="Padding" Value="8"/>
+      <Setter Property="BorderBrush" Value="#E5E7EB"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    
+    <!-- Action Button Style -->
+    <Style Selector="Button.action-btn">
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+    
+    <!-- Small Action Button Style -->
+    <Style Selector="Button.action-btn-sm">
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="FontSize" Value="10"/>
+    </Style>
+    
+    <!-- Primary Button -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#10B981"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- Secondary Button -->
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="#F3F4F6"/>
+      <Setter Property="Foreground" Value="#374151"/>
+      <Setter Property="BorderBrush" Value="#E5E7EB"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    
+    <!-- Danger Button -->
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="#EF4444"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- Warning Button -->
+    <Style Selector="Button.warning">
+      <Setter Property="Background" Value="#F59E0B"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+
+    <!-- Alert Card Style -->
+    <Style Selector="Border.alert-card">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="BorderBrush" Value="#E5E7EB"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="16"/>
+      <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <!-- Tag Style -->
+    <Style Selector="Border.tag">
+      <Setter Property="Background" Value="#F3F4F6"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="6,3"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Background="#F9FAFB" RowDefinitions="Auto,*" ColumnDefinitions="400,*">
+    
+    <!-- Page Header -->
+    <Border Grid.Row="0" Grid.ColumnSpan="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="20,16">
+      <StackPanel Orientation="Horizontal" Spacing="16">
+  
+       
+        
+        <!-- Title and Stats -->
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="Alert Management" FontSize="18" FontWeight="SemiBold" Foreground="Black"/>
+          <TextBlock Text="Create and manage school-wide alerts and notifications" FontSize="12" Foreground="#6B7280"/>
+        </StackPanel>
+        
+        <!-- Stats Badge -->
+        <Border Background="#F3F4F6" CornerRadius="6" Padding="12,6" Margin="20,0,0,0" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Ellipse Fill="#10B981" Width="8" Height="8" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding ActiveCount, StringFormat={}{0} Active}" FontSize="11" Foreground="#374151" FontWeight="Medium"/>
+          </StackPanel>
+        </Border>
+        
+        <!-- Action Buttons -->
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="20,0,0,0">
+          <Button Content="Refresh" Command="{Binding RefreshComputedCommand}" 
+                  Classes="action-btn primary" FontSize="11"/>
+          <Button Content="Purge Expired" Command="{Binding PurgeExpiredCommand}" 
+                  Classes="action-btn danger" FontSize="11"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Create Alert Panel -->
+    <Border Grid.Row="1" Grid.Column="0" Classes="card" Margin="20,20,12,20">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="0">
+          <TextBlock Text="Create New Alert" Classes="header"/>
+          
+          <!-- Alert Type -->
+          <TextBlock Text="ALERT TYPE" Classes="section-header"/>
+          <ComboBox ItemsSource="{Binding AlertTypes}" SelectedItem="{Binding NewType}" HorizontalAlignment="Stretch"/>
+          
+          <!-- Alert Content -->
+          <TextBlock Text="CONTENT" Classes="section-header" Margin="0,16,0,8"/>
+          <TextBlock Text="Title" Classes="form-label"/>
+          <TextBox Text="{Binding NewTitle}" Watermark="e.g., Weather Alert: Early dismissal at 2:00 PM" Height="36"/>
+          
+          <TextBlock Text="Message" Classes="form-label"/>
+          <TextBox Text="{Binding NewMessage}" AcceptsReturn="True" Height="80" 
+                   TextWrapping="Wrap" Watermark="Provide detailed information about the alert..."/>
+          
+          <TextBlock Text="Additional Link (Optional)" Classes="form-label"/>
+          <TextBox Text="{Binding NewExtraLink}" Watermark="https://facebook.com/southville8bnhis" Height="36"/>
+          
+          <!-- Alert Settings -->
+          <TextBlock Text="SETTINGS" Classes="section-header" Margin="0,16,0,8"/>
+          <StackPanel Spacing="12">
+            <StackPanel>
+              <TextBlock Text="Priority" Classes="form-label"/>
+              <ComboBox ItemsSource="{Binding Priorities}" SelectedItem="{Binding NewPriority}" HorizontalAlignment="Stretch"/>
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Text="Target Scope" Classes="form-label"/>
+              <ComboBox ItemsSource="{Binding TargetScopes}" SelectedItem="{Binding NewTargetScope}" HorizontalAlignment="Stretch"/>
+            </StackPanel>
+          </StackPanel>
+          
+          <!-- Target Details -->
+          <StackPanel IsVisible="{Binding NewTargetScope, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Margin="0,12,0,0">
+            <TextBlock Text="Scope Details" Classes="form-label"/>
+            <StackPanel Spacing="8">
+              <TextBox Text="{Binding NewGradeLevel}" Watermark="Grade (e.g., 8)" Height="36"/>
+              <TextBox Text="{Binding NewSection}" Watermark="Section (e.g., 8-A)" Height="36"/>
+            </StackPanel>
+          </StackPanel>
+          
+          <!-- Expiration -->
+          <TextBlock Text="EXPIRATION" Classes="section-header" Margin="0,16,0,8"/>
+          <StackPanel Spacing="8">
+            <DatePicker SelectedDate="{Binding NewExpiresDate}" HorizontalAlignment="Stretch"/>
+            <TimePicker SelectedTime="{Binding NewExpiresTime}" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+          
+          <!-- Action Buttons -->
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,24,0,0">
+            <Button Content="Publish Alert" Command="{Binding CreateAlertCommand}" 
+                    Classes="action-btn primary" HorizontalAlignment="Stretch" MinWidth="120"/>
+            <Button Content="Clear Form" Command="{Binding ClearFormCommand}" 
+                    Classes="action-btn secondary" MinWidth="100"/>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <!-- Active Alerts Panel -->
+    <Border Grid.Row="1" Grid.Column="1" Classes="card" Margin="12,20,20,20">
+      <StackPanel Spacing="0">
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+          <TextBlock Text="Active Alerts" Classes="header" Margin="0"/>
+          <Border Background="#F3F4F6" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+            <TextBlock Text="{Binding ActiveCount, StringFormat={}{0} alerts}" FontSize="11" Foreground="#6B7280"/>
+          </Border>
+        </StackPanel>
+
+        <!-- Active Alerts List -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
+          <ItemsControl ItemsSource="{Binding ActiveAlerts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AlertItemViewModel">
+                <Border Classes="alert-card">
+                  <StackPanel Spacing="0">
+                    
+                    <!-- Header Row with Priority Accent -->
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                      <!-- Priority Accent Bar -->
+                      <Border Width="4" Height="40" Background="{Binding PriorityColor}" CornerRadius="2" VerticalAlignment="Top"/>
+                      
+                      <!-- Content Area -->
+                      <StackPanel Spacing="8" HorizontalAlignment="Stretch">
+                        <!-- Title Row -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Border Background="{Binding TypeColor}" Width="12" Height="12" CornerRadius="2" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="Black" 
+                                     TextWrapping="Wrap" MaxWidth="350"/>
+                        </StackPanel>
+                        
+                        <!-- Tags Row -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Border Classes="tag">
+                            <TextBlock Text="{Binding Type}" FontSize="10" Foreground="#374151" FontWeight="Medium"/>
+                          </Border>
+                          <Border Classes="tag">
+                            <TextBlock Text="{Binding Priority}" FontSize="10" Foreground="#374151" FontWeight="Medium"/>
+                          </Border>
+                        </StackPanel>
+                      </StackPanel>
+                      
+                      <!-- Action Buttons -->
+                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Right">
+                        <Button Content="Expire" 
+                                Command="{Binding $parent[UserControl].((vm:AlertsViewModel)DataContext).ExpireAlertCommand}" 
+                                CommandParameter="{Binding}" 
+                                Classes="action-btn-sm warning"/>
+                        <Button Content="Delete" 
+                                Command="{Binding $parent[UserControl].((vm:AlertsViewModel)DataContext).DeleteAlertCommand}" 
+                                CommandParameter="{Binding}" 
+                                Classes="action-btn-sm danger"/>
+                      </StackPanel>
+                    </StackPanel>
+
+                    <!-- Message -->
+                    <TextBlock Text="{Binding Message}" FontSize="12" Foreground="#374151" 
+                               TextWrapping="Wrap" LineHeight="16" Margin="16,0,0,12"/>
+
+                    <!-- Link -->
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="16,0,0,12"
+                                IsVisible="{Binding ExtraLink, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                      <Path Data="M10 6H6a2 2 0 00-2 2v3a2 2 0 002 2h4v-2H6v-3h4V6zM14 6v2h4v3h-4v2h4a2 2 0 002-2V8a2 2 0 00-2-2h-4z" 
+                            Fill="#10B981" Width="12" Height="12" VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding ExtraLink}" Foreground="#10B981" FontSize="11" 
+                                 TextDecorations="Underline"/>
+                    </StackPanel>
+
+                    <!-- Meta Information -->
+                    <StackPanel Orientation="Horizontal" Spacing="16" Margin="16,0,0,0">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding AudienceText}" FontSize="10" Foreground="#6B7280"/>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="#9CA3AF"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Expired Alerts Section -->
+        <StackPanel Margin="0,24,0,0">
+          <TextBlock Text="RECENTLY EXPIRED" Classes="section-header"/>
+          <ItemsControl ItemsSource="{Binding Alerts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AlertItemViewModel">
+                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" 
+                        Padding="12" Margin="0,0,0,8" IsVisible="{Binding IsExpired}">
+                  <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium" Foreground="#6B7280"/>
+                      <Border Background="#F3F4F6" CornerRadius="3" Padding="4,2">
+                        <TextBlock Text="expired" FontSize="9" Foreground="#9CA3AF" FontWeight="Medium"/>
+                      </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="#9CA3AF"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

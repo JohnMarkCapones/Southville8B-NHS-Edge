@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Southville8BEdgeUI.Views.Admin.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <Border Background="White" Padding="24">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="24" MaxWidth="600">
+                <!-- Header -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="System Settings" FontSize="24" FontWeight="Bold" Foreground="#1F2937"/>
+                    <TextBlock Text="Configure your application preferences and system settings" 
+                              FontSize="14" Foreground="#6B7280"/>
+                </StackPanel>
+
+                <!-- General Settings -->
+                <Border Background="#F9FAFB" CornerRadius="8" Padding="24">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="General Settings" FontSize="18" FontWeight="SemiBold" Foreground="#1F2937"/>
+                        
+                        <StackPanel Spacing="12">
+                            <CheckBox Content="Dark Mode" 
+                                     IsChecked="{Binding DarkMode}"
+                                     FontSize="14"/>
+                            <CheckBox Content="Auto Save" 
+                                     IsChecked="{Binding AutoSave}"
+                                     FontSize="14"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Language" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                            <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                                     SelectedItem="{Binding SelectedLanguage}"
+                                     HorizontalAlignment="Stretch"
+                                     Padding="12"
+                                     CornerRadius="6"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Time Zone" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                            <ComboBox ItemsSource="{Binding AvailableTimeZones}"
+                                     SelectedItem="{Binding SelectedTimeZone}"
+                                     HorizontalAlignment="Stretch"
+                                     Padding="12"
+                                     CornerRadius="6"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Session Timeout (minutes)" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                            <NumericUpDown Value="{Binding SessionTimeout}"
+                                          Minimum="5"
+                                          Maximum="120"
+                                          Increment="5"
+                                          Padding="12"
+                                          CornerRadius="6"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Notification Settings -->
+                <Border Background="#F9FAFB" CornerRadius="8" Padding="24">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Notification Settings" FontSize="18" FontWeight="SemiBold" Foreground="#1F2937"/>
+                        
+                        <StackPanel Spacing="12">
+                            <CheckBox Content="Enable Notifications" 
+                                     IsChecked="{Binding Notifications}"
+                                     FontSize="14"/>
+                            <CheckBox Content="Email Notifications" 
+                                     IsChecked="{Binding EmailNotifications}"
+                                     FontSize="14"/>
+                            <CheckBox Content="SMS Notifications" 
+                                     IsChecked="{Binding SmsNotifications}"
+                                     FontSize="14"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Action Buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                    <Button Content="Export Settings" 
+                            Background="#6B7280" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            Command="{Binding ExportSettingsCommand}"/>
+                    
+                    <Button Content="Import Settings" 
+                            Background="#6B7280" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            Command="{Binding ImportSettingsCommand}"/>
+                    
+                    <Button Content="Reset to Defaults" 
+                            Background="#EF4444" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            Command="{Binding ResetToDefaultsCommand}"/>
+                    
+                    <Button Content="Save Settings" 
+                            Background="#DC2626" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            Command="{Binding SaveSettingsCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

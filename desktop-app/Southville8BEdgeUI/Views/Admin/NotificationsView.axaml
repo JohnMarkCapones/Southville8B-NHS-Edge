@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Southville8BEdgeUI.Views.Admin.NotificationsView"
+             x:DataType="vm:NotificationsViewModel">
+
+    <Border Background="White" Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="8">
+                    <TextBlock Text="Notifications" FontSize="24" FontWeight="Bold" Foreground="#1F2937"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="You have" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding UnreadCount}" FontSize="14" FontWeight="Bold" Foreground="#DC2626"/>
+                        <TextBlock Text="unread notifications" FontSize="14" Foreground="#6B7280"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Mark All Read" 
+                            Background="#6B7280" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="12,8"
+                            Command="{Binding MarkAllAsReadCommand}"/>
+                    <Button Content="Clear All" 
+                            Background="#EF4444" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="12,8"
+                            Command="{Binding ClearAllCommand}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Notifications List -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+                <ItemsControl ItemsSource="{Binding Notifications}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{Binding BackgroundColor}" 
+                                    BorderBrush="#E5E7EB" 
+                                    BorderThickness="1" 
+                                    CornerRadius="8" 
+                                    Padding="16" 
+                                    Margin="0,0,0,8">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <!-- Notification Type Icon -->
+                                    <Border Grid.Column="0" 
+                                            Width="12" 
+                                            Height="12" 
+                                            CornerRadius="6" 
+                                            Background="#DC2626"
+                                            VerticalAlignment="Top"
+                                            Margin="0,4,12,0"/>
+                                    
+                                    <!-- Content -->
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="{Binding Title}" 
+                                                  FontSize="14" 
+                                                  FontWeight="SemiBold" 
+                                                  Foreground="#1F2937"/>
+                                        <TextBlock Text="{Binding Message}" 
+                                                  FontSize="13" 
+                                                  Foreground="#6B7280" 
+                                                  TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding TimeAgo}" 
+                                                  FontSize="11" 
+                                                  Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Mark as Read Button -->
+                                    <Button Grid.Column="2" 
+                                            Content="✓" 
+                                            Background="Transparent" 
+                                            BorderThickness="0" 
+                                            CornerRadius="4" 
+                                            Padding="6"
+                                            FontSize="12"
+                                            Foreground="#10B981"
+                                            IsVisible="{Binding !IsRead}"
+                                            Command="{Binding $parent[UserControl].((vm:NotificationsViewModel)DataContext).MarkAsReadCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    
+                                    <!-- Delete Button -->
+                                    <Button Grid.Column="3" 
+                                            Content="✕" 
+                                            Background="Transparent" 
+                                            BorderThickness="0" 
+                                            CornerRadius="4" 
+                                            Padding="6"
+                                            FontSize="12"
+                                            Foreground="#EF4444"
+                                            Command="{Binding $parent[UserControl].((vm:NotificationsViewModel)DataContext).DeleteNotificationCommand}"
+                                            CommandParameter="{Binding}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Empty State -->
+            <StackPanel VerticalAlignment="Center" 
+                       HorizontalAlignment="Center" 
+                       Spacing="16" 
+                       IsVisible="{Binding !Notifications.Count}">
+                <TextBlock Text="🔔" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                <TextBlock Text="No notifications" 
+                          FontSize="16" 
+                          Foreground="#6B7280" 
+                          HorizontalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

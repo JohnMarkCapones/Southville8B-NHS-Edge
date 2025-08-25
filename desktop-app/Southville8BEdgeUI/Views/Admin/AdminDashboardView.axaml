@@ -1,0 +1,458 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
+             mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
+             x:Class="Southville8BEdgeUI.Views.Admin.AdminDashboardView"
+             x:DataType="vm:AdminDashboardViewModel"
+             Background="#F9FAFB">
+
+    <UserControl.Resources>
+        <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.card:pointerover">
+            <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
+            <Setter Property="RenderTransform" Value="translate(-2px)"/>
+        </Style>
+        <Style Selector="TextBlock.stat-title">
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style Selector="TextBlock.stat-value">
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style Selector="Button.quick-action">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.quick-action:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+        <Style Selector="Border.alert-card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="40" Spacing="24">
+            <!-- Header with Refresh Button -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Administrative Dashboard" FontSize="28" FontWeight="Bold"/>
+                    <TextBlock Text="Real-time overview of school operations and performance" FontSize="14" Foreground="#6B7280"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SystemStatus}" FontSize="12" FontWeight="SemiBold" 
+                               Foreground="{Binding SystemStatusColor}" VerticalAlignment="Center"/>
+                    <Border Width="8" Height="8" CornerRadius="4" Background="{Binding SystemStatusColor}" VerticalAlignment="Center"/>
+                    <Button Content="🔄 Refresh" Classes="quick-action" Background="#6B7280" Command="{Binding RefreshDashboardCommand}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Key Performance Indicators -->
+            <Grid ColumnDefinitions="*,*,*,*,*">
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Total Students" Classes="stat-title"/>
+                            <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="6" Padding="4">
+                                <TextBlock Text="👥" FontSize="16"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding TotalStudents}" Classes="stat-value"/>
+                        <TextBlock Text="Active enrollment" FontSize="12" Foreground="#10B981"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Active Teachers" Classes="stat-title"/>
+                            <Border Grid.Column="1" Background="#EDE9FE" CornerRadius="6" Padding="4">
+                                <TextBlock Text="👨‍🏫" FontSize="16"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding ActiveTeachers}" Classes="stat-value"/>
+                        <TextBlock Text="Faculty members" FontSize="12" Foreground="#8B5CF6"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Online Users" Classes="stat-title"/>
+                            <Border Grid.Column="1" Background="#DBEAFE" CornerRadius="6" Padding="4">
+                                <TextBlock Text="🌐" FontSize="16"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding OnlineUsersCount}" Classes="stat-value"/>
+                        <TextBlock Text="Currently active" FontSize="12" Foreground="#3B82F6"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="3" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Room Utilization" Classes="stat-title"/>
+                            <Border Grid.Column="1" Background="#FEF3C7" CornerRadius="6" Padding="4">
+                                <TextBlock Text="🏫" FontSize="16"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" Classes="stat-value"/>
+                        <ProgressBar Value="{Binding RoomUtilization}" Minimum="0" Maximum="100" Height="4" CornerRadius="2" Foreground="#F59E0B"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="4" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="System Uptime" Classes="stat-title"/>
+                            <Border Grid.Column="1" Background="#D1FAE5" CornerRadius="6" Padding="4">
+                                <TextBlock Text="⚡" FontSize="16"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding SystemUptime, StringFormat={}{0:F1}%}" Classes="stat-value"/>
+                        <TextBlock Text="Operational status" FontSize="12" Foreground="#10B981"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Performance Metrics & System Alerts -->
+            <Grid ColumnDefinitions="2*,*">
+                <!-- Performance Metrics -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Performance Metrics" FontSize="18" FontWeight="SemiBold"/>
+                            <Button Grid.Column="1" Content="📊 Detailed Reports" Classes="quick-action" Background="#6B7280" 
+                                    Command="{Binding ViewDetailedReportsCommand}" Padding="12,8" FontSize="12"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding PerformanceMetrics}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:PerformanceMetricViewModel">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,12">
+                                        <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding Icon}" FontSize="16"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Value, StringFormat={}{0:F1}%}" FontSize="20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding ChangeText}" 
+                                                   Foreground="{Binding ChangeColor}" 
+                                                   FontWeight="SemiBold" 
+                                                   VerticalAlignment="Center" 
+                                                   Margin="0,0,8,0"/>
+                                        <Path Grid.Column="3" 
+                                              Data="{Binding IsPositive, Converter={StaticResource BoolToArrowConverter}}" 
+                                              Fill="{Binding ChangeColor}" 
+                                              Width="10" Height="5" 
+                                              VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- System Alerts -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="System Alerts" FontSize="18" FontWeight="SemiBold"/>
+                            <Button Grid.Column="1" Content="View All" Classes="quick-action" Background="#EF4444" 
+                                    Command="{Binding ViewAllAlertsCommand}" Padding="8,6" FontSize="10"/>
+                        </Grid>
+                        <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SystemAlerts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:SystemAlertViewModel">
+                                        <Border Classes="alert-card">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Border Grid.Column="0" Background="{Binding SeverityColor}" 
+                                                        CornerRadius="6" Padding="4" Margin="0,0,8,0">
+                                                    <TextBlock Text="{Binding SeverityIcon}" FontSize="12"/>
+                                                </Border>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12"/>
+                                                    <TextBlock Text="{Binding Message}" FontSize="10" Foreground="#6B7280" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Timestamp}" FontSize="9" Foreground="#9CA3AF"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="2" Content="×" 
+                                                        Background="Transparent" 
+                                                        Foreground="#6B7280" 
+                                                        BorderThickness="0" 
+                                                        FontSize="16" 
+                                                        Padding="4"
+                                                        Command="{Binding $parent[UserControl].((vm:AdminDashboardViewModel)DataContext).DismissAlertCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Quick Actions & Financial Overview -->
+            <Grid ColumnDefinitions="*,*">
+                <!-- Quick Actions -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
+                            <Button Grid.Column="0" Grid.Row="0" Content="🚪 Rooms" Classes="quick-action" Background="#4F46E5" 
+                                    Command="{Binding NavigateToRoomManagementCommand}" Margin="0,0,8,8"/>
+                            <Button Grid.Column="1" Grid.Row="0" Content="📅 Events" Classes="quick-action" Background="#10B981" 
+                                    Command="{Binding NavigateToEventsDashboardCommand}" Margin="8,0,8,8"/>
+                            <Button Grid.Column="2" Grid.Row="0" Content="👥 Users" Classes="quick-action" Background="#8B5CF6" 
+                                    Command="{Binding NavigateToUserManagementCommand}" Margin="8,0,0,8"/>
+                            <Button Grid.Column="0" Grid.Row="1" Content="💬 Chat" Classes="quick-action" Background="#F59E0B" 
+                                    Command="{Binding NavigateToChatCommand}" Margin="0,8,8,0"/>
+                            <Button Grid.Column="1" Grid.Row="1" Content="📚 Library" Classes="quick-action" Background="#EC4899" 
+                                    Command="{Binding NavigateToELibraryCommand}" Margin="8,8,8,0"/>
+                            <Button Grid.Column="2" Grid.Row="1" Content="📊 Reports" Classes="quick-action" Background="#6B7280" 
+                                    Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Financial Overview -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Financial Overview" FontSize="18" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
+                            <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
+                                <TextBlock Text="Monthly Revenue" Classes="stat-title"/>
+                                <TextBlock Text="{Binding MonthlyRevenue, StringFormat=₱{0:N0}}" FontSize="20" FontWeight="Bold" Foreground="#10B981"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
+                                <TextBlock Text="Operating Costs" Classes="stat-title"/>
+                                <TextBlock Text="{Binding OperatingCosts, StringFormat=₱{0:N0}}" FontSize="20" FontWeight="Bold" Foreground="#EF4444"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4" Grid.ColumnSpan="2">
+                                <TextBlock Text="Net Revenue" Classes="stat-title"/>
+                                <TextBlock Text="{Binding NetRevenue, StringFormat=₱{0:N0}}" FontSize="24" FontWeight="Bold" Foreground="#3B82F6"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
+                                <TextBlock Text="Budget Utilization" Classes="stat-title"/>
+                                <ProgressBar Value="{Binding BudgetUtilization}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#4F46E5"/>
+                                <TextBlock Text="{Binding BudgetUtilization, StringFormat={}{0:F1}% utilized}" FontSize="12" Foreground="#6B7280"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Grade Distribution & Room Status -->
+            <Grid ColumnDefinitions="*,*">
+                <!-- Grade Distribution -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Student Distribution" FontSize="18" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding GradeDistribution}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:GradeDistributionViewModel">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
+                                        <Border Grid.Column="0" Background="{Binding Color}" Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Grade}" FontWeight="SemiBold"/>
+                                            <ProgressBar Value="{Binding Percentage}" Minimum="0" Maximum="25" Height="4" CornerRadius="2" Foreground="{Binding Color}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding StudentCount}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Room Status Overview -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Room Status Overview" FontSize="18" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto">
+                            <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
+                                <Border Background="#10B981" Width="40" Height="40" CornerRadius="20">
+                                    <TextBlock Text="{Binding AvailableRoomsCount}" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="Available" FontSize="12" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
+                                <Border Background="#EF4444" Width="40" Height="40" CornerRadius="20">
+                                    <TextBlock Text="{Binding OccupiedRooms}" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="Occupied" FontSize="12" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
+                                <Border Background="#F59E0B" Width="40" Height="40" CornerRadius="20">
+                                    <TextBlock Text="{Binding RoomsInMaintenance}" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="Maintenance" FontSize="12" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4" Grid.ColumnSpan="3" Margin="0,16,0,0">
+                                <TextBlock Text="Overall Utilization" Classes="stat-title" HorizontalAlignment="Center"/>
+                                <ProgressBar Value="{Binding RoomUtilization}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#4F46E5"/>
+                                <TextBlock Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Upcoming Events & Recent Activity -->
+            <Grid ColumnDefinitions="2*,*">
+                <!-- Upcoming Events -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Upcoming Events" FontSize="18" FontWeight="SemiBold"/>
+                            <Button Grid.Column="1" Content="View All Events" Classes="quick-action" Background="#3B82F6" 
+                                    Command="{Binding NavigateToEventsDashboardCommand}" Padding="8,6" FontSize="10"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding UpcomingEvents}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:DashboardEventViewModel">
+                                    <Border Background="#F9FAFB" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                            <Border Grid.Column="0" Background="{Binding TypeColor}" Width="4" Height="40" CornerRadius="2" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Time}" FontSize="12" Foreground="#6B7280"/>
+                                                <TextBlock Text="{Binding Location}" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="2" Background="{Binding PriorityColor}" CornerRadius="12" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Priority}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="3" Text="{Binding Type}" FontSize="10" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Recent Activity -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Recent Activity" FontSize="18" FontWeight="SemiBold"/>
+                        <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding RecentActivities}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:DashboardActivityViewModel">
+                                        <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Background="{Binding TypeColor}" Margin="0,0,12,0" Opacity="0.1"/>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Margin="0,0,12,0">
+                                                <TextBlock Text="{Binding Icon}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock TextWrapping="Wrap" FontSize="12">
+                                                    <Run Text="{Binding User}" FontWeight="SemiBold"/>
+                                                    <Run Text="{Binding Action}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Weekly Statistics Chart Placeholder -->
+            <Border Classes="card">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Weekly Activity Overview" FontSize="18" FontWeight="SemiBold"/>
+                    <Grid ColumnDefinitions="*,*,*,*,*,*,*">
+                        <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,4,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Mon" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="1,480" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Tue" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="1,495" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="#E0F2F1" CornerRadius="8" Padding="12" Margin="4,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Wed" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="1,502" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#10B981" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Thu" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="1,489" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="4" Background="#DBEAFE" CornerRadius="8" Padding="12" Margin="4,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Fri" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="1,512" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#3B82F6" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="5" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Sat" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="892" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="6" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0,0,0">
+                            <StackPanel HorizontalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Sun" FontSize="12" HorizontalAlignment="Center"/>
+                                <TextBlock Text="654" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

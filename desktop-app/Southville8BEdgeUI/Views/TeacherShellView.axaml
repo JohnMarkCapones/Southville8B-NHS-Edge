@@ -1,0 +1,551 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
+             x:Class="Southville8BEdgeUI.Views.TeacherShellView"
+             x:DataType="vm:TeacherShellViewModel">
+
+    <UserControl.Styles>
+        <!-- Navigation Button Style -->
+        <Style Selector="Button.nav-item">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#4B5563"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="12,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="TextBlock.Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="Button.nav-item.active /template/ ContentPresenter">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="TextBlock.Foreground" Value="White"/>
+            <Setter Property="TextBlock.FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.nav-item Path">
+            <Setter Property="Fill" Value="#6B7280"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Fill" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-item:pointerover Path">
+            <Setter Property="Fill" Value="#111827"/>
+        </Style>
+        <Style Selector="Button.nav-item.active Path">
+            <Setter Property="Fill" Value="White"/>
+        </Style>
+        
+        <!-- Section Header Style -->
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Margin" Value="24,16,12,8"/>
+        </Style>
+
+        <!-- Toggle Button Style (no fixed alignment; set per-instance) -->
+        <Style Selector="Button.sidebar-toggle">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-toggle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.05)"/>
+        </Style>
+
+        <!-- Close button over left sidebar (anchored to right edge) -->
+        <Style Selector="Button.sidebar-close-middle">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-close-middle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+        </Style>
+
+        <!-- Close button over right sidebar (anchored to left edge) -->
+        <Style Selector="Button.sidebar-close-middle-left">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sidebar-close-middle-left:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+        </Style>
+
+        <!-- Sidebar Transition Styles -->
+        <Style Selector="Border.sidebar">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.3"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Background="#F9FAFB">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{Binding LeftColumnWidth}"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="{Binding RightColumnWidth}"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ======================= -->
+        <!-- Left Navigation Pane    -->
+        <!-- ======================= -->
+        <Border Grid.Column="0" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,1,0" 
+                IsVisible="{Binding IsLeftSidebarVisible}">
+            <Grid>
+                <!-- Main Sidebar Content -->
+                <DockPanel>
+                    <!-- Header Section -->
+                    <Border DockPanel.Dock="Top" Padding="16,20,16,20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Border Background="#10B981" Width="32" Height="32" CornerRadius="8">
+                                <TextBlock Text="T8" Foreground="White" FontWeight="Bold" FontSize="14"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Southville 8B NHIS" FontSize="14" FontWeight="Bold"/>
+                                <TextBlock Text="Teacher Portal" FontSize="12" Foreground="#6B7280"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Footer Section -->
+                    <Border DockPanel.Dock="Bottom" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0">
+                        <StackPanel>
+                            <TextBlock Text="ACADEMIC YEAR" Classes="section-header" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Fill="#10B981" Width="10" Height="10" VerticalAlignment="Center"/>
+                                <TextBlock Text="2024-2025" FontSize="12" Foreground="#374151" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Navigation Buttons -->
+                    <ScrollViewer>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="OVERVIEW" Classes="section-header"/>
+                            <Button Classes="nav-item" Command="{Binding NavigateToDashboardCommand}" Classes.active="{Binding IsDashboardActive}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Path Width="16" Height="16" Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                                    <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <TextBlock Text="CLASSROOM" Classes="section-header"/>
+                            <Button Classes="nav-item" Command="{Binding NavigateToSchedulePlannerCommand}" Classes.active="{Binding IsSchedulePlannerActive}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Path Width="16" Height="16" Data="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                                    <TextBlock Text="Schedule Planner" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="nav-item" Command="{Binding NavigateToGradeEntryCommand}" Classes.active="{Binding IsGradeEntryActive}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Path Width="16" Height="16" Data="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 7h-2v2h-2V9H7V7h2V5h2v2h2v2z"/>
+                                    <TextBlock Text="Grade Entry" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="nav-item" Command="{Binding NavigateToStudentManagementCommand}" Classes.active="{Binding IsStudentManagementActive}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    <TextBlock Text="Student Management" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <TextBlock Text="CONTENT" Classes="section-header"/>
+                            <Button Classes="nav-item" Command="{Binding NavigateToMyAnnouncementsCommand}" Classes.active="{Binding IsMyAnnouncementsActive}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Path Width="16" Height="16" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                    <TextBlock Text="My Announcements" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <TextBlock Text="COMMUNICATION" Classes="section-header"/>
+                            <Button Classes="nav-item" Command="{Binding NavigateToMessagingCommand}" Classes.active="{Binding IsMessagingActive}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Path Width="16" Height="16" Data="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                                    <TextBlock Text="Messaging" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+
+                <!-- Overlay close button on right edge of left sidebar -->
+                <Button Classes="sidebar-close-middle"
+                        Command="{Binding ToggleLeftSidebarCommand}"
+                        ToolTip.Tip="Close sidebar"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        CornerRadius="4,0,0,4"
+                        Margin="0"
+                        ZIndex="1000">
+                    <Path Data="M15 18L9 12L15 6" Stroke="White" StrokeThickness="2" Width="10" Height="10"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- ======================= -->
+        <!-- Content Area            -->
+        <!-- ======================= -->
+        <Grid Grid.Column="1">
+            <!-- Open left: hug divider -->
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="0"
+                        Spacing="4"
+                        ZIndex="100">
+                <Button Classes="sidebar-toggle"
+                        Command="{Binding ToggleLeftSidebarCommand}"
+                        IsVisible="{Binding ShowLeftSidebarToggle}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="-12,0,0,0"
+                        ZIndex="200"
+                        ToolTip.Tip="Open navigation">
+                    <Path Data="M3 12h18m-9-9l9 9-9 9" Stroke="White" StrokeThickness="2" Width="12" Height="12"/>
+                </Button>
+            </StackPanel>
+
+            <!-- Open right: hug divider -->
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0"
+                        Spacing="4"
+                        ZIndex="100">
+                <Button Classes="sidebar-toggle"
+                        Command="{Binding ToggleRightSidebarCommand}"
+                        IsVisible="{Binding ShowRightSidebarToggle}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,-12,0"
+                        ToolTip.Tip="Open sidebar">
+                    <Path Data="M21 12H3m18-9l-9 9 9 9" Stroke="White" StrokeThickness="2" Width="12" Height="12"/>
+                </Button>
+            </StackPanel>
+
+            <!-- Main Content -->
+            <ContentControl Content="{Binding CurrentContent}"/>
+        </Grid>
+
+        <!-- ======================= -->
+        <!-- Right Sidebar           -->
+        <!-- ======================= -->
+        <Border Grid.Column="2" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,0,0" 
+                IsVisible="{Binding IsRightSidebarVisible}">
+            <Grid>
+                <!-- Overlay close button on left edge of right sidebar -->
+                <Button Classes="sidebar-close-middle-left"
+                        Command="{Binding ToggleRightSidebarCommand}"
+                        ToolTip.Tip="Close sidebar"
+                        CornerRadius="0,4,4,0"
+                        Margin="0"
+                        ZIndex="1000">
+                    <Path Data="M9 18L15 12L9 6" Stroke="White" StrokeThickness="2" Width="10" Height="10"/>
+                </Button>
+
+                <!-- Right Sidebar Content -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="0" Margin="0">
+                        <!-- User Profile Header -->
+                        <Border Background="White" Padding="16,8,16,16">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                                    <Border Width="40" Height="40" Background="#E5E7EB" CornerRadius="20">
+                                        <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="Black"/>
+                                            <Path Data="M7 10L12 15 17 10" Stroke="#6B7280" StrokeThickness="2" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="#6B7280"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Current Page Indicator -->
+                                <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <Path Data="M3 7L9 13L21 1" Stroke="#10B981" StrokeThickness="2" Width="12" Height="12"/>
+                                        <TextBlock Text="{Binding CurrentPage}" FontSize="11" Foreground="#374151" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Date and Time -->
+                                <StackPanel Orientation="Horizontal" Spacing="20">
+                                    <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4">
+                                        <TextBlock Text="{Binding CurrentDate}" FontSize="11" Foreground="#374151"/>
+                                    </Border>
+                                    <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4">
+                                        <TextBlock Text="{Binding CurrentTime}" FontSize="11" Foreground="#374151"/>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Statistics Cards Grid -->
+                        <Border Padding="16,8">
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
+                                <!-- My Classes Card -->
+                                <Border Grid.Row="0" Grid.Column="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,4,4">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#10B981" CornerRadius="3">
+                                                <Rectangle Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Classes" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="6" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="Active Classes" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Assignments Card -->
+                                <Border Grid.Row="0" Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,0,0,4">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#EF4444" CornerRadius="3">
+                                                <Ellipse Width="6" Height="6" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Assignments" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="24" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="Pending Grading" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Students Card -->
+                                <Border Grid.Row="1" Grid.Column="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4,4,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#F59E0B" CornerRadius="3">
+                                                <Ellipse Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Students" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="180" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="Total Students" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Messages Card -->
+                                <Border Grid.Row="1" Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,4,0,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="#8B5CF6" CornerRadius="3">
+                                                <Rectangle Width="6" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Messages" FontSize="11" Foreground="#6B7280"/>
+                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBlock Text="12" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="Unread Messages" FontSize="9" Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Schedule Section -->
+                        <Border Padding="16,8">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="Today's Schedule" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
+                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                </StackPanel>
+
+                                <!-- Calendar Header -->
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Left">
+                                                <Path Data="M15 18L9 12L15 6" Stroke="#6B7280" StrokeThickness="2"/>
+                                            </Button>
+                                            <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Right">
+                                                <Path Data="M9 18L15 12L9 6" Stroke="#10B981" StrokeThickness="2"/>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <!-- Calendar Days -->
+                                        <Grid ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
+                                            <TextBlock Grid.Column="0" Text="Mon" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="Tue" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="Wed" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="Thu" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="Fri" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="5" Text="Sat" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="6" Text="Sun" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Calendar Dates -->
+                                        <Grid RowDefinitions="Auto" ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
+                                            <TextBlock Grid.Column="0" Text="16" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="1" Text="17" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="2" Text="18" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <Border Grid.Column="3" Background="#10B981" CornerRadius="50" Width="24" Height="24">
+                                                <TextBlock Text="19" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="4" Text="20" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="5" Text="21" TextAlignment="Center" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="6" Text="22" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Today Section -->
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,1,1" Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="Black" Margin="0,0,0,8"/>
+
+                                        <!-- Class Card -->
+                                        <Border Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <Border Width="4" Height="40" Background="#10B981" CornerRadius="2"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
+                                                        <Border Background="#10B981" CornerRadius="3" Padding="4,2">
+                                                            <TextBlock Text="Math" Foreground="White" FontSize="9"/>
+                                                        </Border>
+                                                        <Border Background="#3B82F6" CornerRadius="3" Padding="4,2">
+                                                            <TextBlock Text="Room 101" Foreground="White" FontSize="9"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="Grade 8-A Mathematics" FontSize="12" FontWeight="SemiBold" Foreground="Black"/>
+                                                    <TextBlock Text="08:00 AM - 09:30 AM" FontSize="10" Foreground="#6B7280"/>
+                                                </StackPanel>
+                                                <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Path Data="M9 18L15 12L9 6" Stroke="#6B7280" StrokeThickness="2"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Button Content="View full schedule..." Background="Transparent" Foreground="#10B981" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Next Class -->
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Next Class" FontSize="11" Foreground="#6B7280" Margin="0,0,0,8"/>
+                                        <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="Science - Grade 8-B" FontSize="11" Foreground="#92400E" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="10:00 AM - 11:30 AM" FontSize="10" Foreground="#92400E" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Recent Activity Section -->
+                        <Border Padding="16,8,16,16">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
+                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                </StackPanel>
+
+                                <!-- Activity Items -->
+                                <StackPanel Spacing="12">
+                                    <!-- Activity Item 1 -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                            <TextBlock Text="JS" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="John Smith" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                <TextBlock Text="1hr ago" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Submitted Assignment #3" FontSize="10" Foreground="#6B7280"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Activity Item 2 -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                            <TextBlock Text="MD" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="Maria Garcia" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                <TextBlock Text="2hrs ago" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Asked question in Math class" FontSize="10" Foreground="#6B7280"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Activity Item 3 -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                            <TextBlock Text="AL" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="Anna Lee" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                <TextBlock Text="3hrs ago" FontSize="10" Foreground="#9CA3AF"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Completed quiz successfully" FontSize="10" Foreground="#6B7280"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

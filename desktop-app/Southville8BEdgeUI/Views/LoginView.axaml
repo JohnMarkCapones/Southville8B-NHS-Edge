@@ -1,0 +1,154 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+             x:Class="Southville8BEdgeUI.Views.LoginView"
+             x:DataType="vm:LoginViewModel"
+             Background="#F5F5F5">
+
+    <Grid ColumnDefinitions="*, 380" Margin="80,0,80,0">
+        <!-- Left Panel: Welcome Message and Illustration -->
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Spacing="40">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="0">
+                    <TextBlock Text="Welcome " FontSize="52" FontWeight="Bold" Foreground="#E55B5B"/>
+                    <TextBlock Text="to" FontSize="52" FontWeight="Bold" Foreground="#666"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="0">
+                    <TextBlock Text="SV8B NHS " FontSize="32" FontWeight="SemiBold" Foreground="#E55B5B"/>
+                    <TextBlock Text="School Portal" FontSize="32" FontWeight="SemiBold" Foreground="#666"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Placeholder for the student illustration -->
+            <Border Height="280" Width="400" Background="#F0F0F0" CornerRadius="15" Margin="0,20,0,0">
+                <TextBlock Text="Student Illustration Placeholder" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center" 
+                           Foreground="#999"
+                           FontSize="14"/>
+            </Border>
+
+            <!-- Navigation dots -->
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left" Margin="0,20,0,0">
+                <Ellipse Width="12" Height="12" Fill="#E55B5B"/>
+                <Ellipse Width="8" Height="8" Fill="#CCC"/>
+                <Ellipse Width="8" Height="8" Fill="#CCC"/>
+                <Ellipse Width="8" Height="8" Fill="#CCC"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Right Panel: Login Form -->
+        <Border Grid.Column="1"
+                Background="White"
+                CornerRadius="15"
+                Padding="35"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Stretch"
+                BoxShadow="0 8 25 #00000015"
+                Margin="40,0,0,0">
+            <StackPanel Spacing="20">
+                <!-- School logo placeholder -->
+                <Border Height="70" Width="70" 
+                        Background="#F0F0F0" 
+                        CornerRadius="35" 
+                        HorizontalAlignment="Right"
+                        Margin="0,0,0,10">
+                    <TextBlock Text="Logo" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" 
+                               Foreground="#999"
+                               FontSize="12"/>
+                </Border>
+
+                <!-- Login title -->
+                <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <TextBlock Text="Log " Foreground="#E55B5B" FontSize="28" FontWeight="Bold"/>
+                        <TextBlock Text="in," Foreground="#666" FontSize="28" FontWeight="Bold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <TextBlock Text="Welcome " Foreground="#E55B5B" FontSize="20" FontWeight="SemiBold"/>
+                        <TextBlock Text="Back to Portal!" Foreground="#666" FontSize="20" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Email input -->
+                <StackPanel Spacing="5" Margin="0,15,0,0">
+                    <Border Background="#F8F8F8" CornerRadius="8" Padding="15,12">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" 
+                                      Width="16" Height="16" Foreground="#999"/>
+                            <TextBox Text="{Binding Email}" 
+                                     Watermark="Email address" 
+                                     FontSize="14" 
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="#333"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Password input -->
+                <StackPanel Spacing="5">
+                    <Border Background="#F8F8F8" CornerRadius="8" Padding="15,12">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="M18,8h-1V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,6A3,3 0 0,1 12,3A3,3 0 0,1 15,6V8H9V6Z" 
+                                      Width="16" Height="16" Foreground="#999"/>
+                            <TextBox Text="{Binding Password}" 
+                                     Watermark="Password" 
+                                     PasswordChar="●" 
+                                     FontSize="14"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="#333"/>
+                            <PathIcon Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" 
+                                      Width="16" Height="16" Foreground="#999" HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Remember me and Forgot password -->
+                <Grid ColumnDefinitions="*, Auto" Margin="0,10,0,0">
+                    <CheckBox Grid.Column="0" 
+                              Content="Remember me" 
+                              IsChecked="{Binding RememberMe}"
+                              FontSize="13"
+                              Foreground="#666"/>
+                    <Button Grid.Column="1" 
+                            Content="Forgot Password?" 
+                            Command="{Binding ForgotPasswordCommand}" 
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#E55B5B"
+                            FontSize="13"
+                            Padding="0"/>
+                </Grid>
+
+                <!-- Login button -->
+                <Button Content="LOGIN"
+                        Command="{Binding LoginCommand}"
+                        HorizontalAlignment="Stretch"
+                        Background="#777"
+                        Foreground="White"
+                        CornerRadius="8"
+                        Padding="0,15"
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Margin="0,15,0,0"/>
+
+                <!-- Terms and Conditions -->
+                <Button Content="Terms and Condition" 
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="#E55B5B"
+                        HorizontalAlignment="Center"
+                        FontSize="13"
+                        Padding="0"
+                        Margin="0,10,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

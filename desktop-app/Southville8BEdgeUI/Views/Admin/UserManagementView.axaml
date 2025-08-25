@@ -1,0 +1,335 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+             x:Class="Southville8BEdgeUI.Views.Admin.UserManagementView"
+             x:DataType="vm:UserManagementViewModel"
+             Background="#F9FAFB">
+
+    <UserControl.Styles>
+        <!-- Base TextBlock Style -->
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.light">
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+
+        <!-- Main Card Style -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#4F46E5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+        
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.secondary:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+            <Setter Property="Background" Value="#F9FAFB"/>
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="#DC2626"/>
+        </Style>
+
+        <Style Selector="Button.small">
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Status Indicator Styles -->
+        <Style Selector="Border.status-indicator">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+
+        <!-- User Card Styles -->
+        <Style Selector="Border.user-card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 1 3 0 #1000000F"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.user-card:pointerover">
+            <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
+            <Setter Property="RenderTransform" Value="translate(-2px)"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="40" Spacing="24">
+
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="User Management" FontSize="28" FontWeight="Bold"/>
+                    <TextBlock Text="Manage student, teacher, and staff accounts" Classes="light" FontSize="14"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button Content="📁 Import Users" Classes="secondary" Command="{Binding ImportUsersCommand}"/>
+                    <Button Content="➕ Create User" Classes="primary" Command="{Binding CreateUserCommand}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Stat Cards -->
+            <Grid ColumnDefinitions="*,*,*,*">
+                <!-- Total Users -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Total Users" Classes="label"/>
+                            <TextBlock Text="{Binding TotalUsers}" FontSize="28" FontWeight="Bold"/>
+                            <TextBlock Text="All registered users" Classes="light" FontSize="12"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="#EBF8FF" CornerRadius="8">
+                            <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="#3B82F6" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+                <!-- Students -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Students" Classes="label"/>
+                            <TextBlock Text="{Binding Students}" FontSize="28" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding StudentPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="#DBEAFE" CornerRadius="8">
+                            <Path Data="M12 14l-1-1-1 1v4l1-1 1 1v-4zM19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 10c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" Fill="#2563EB" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+                <!-- Teachers -->
+                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Teachers" Classes="label"/>
+                            <TextBlock Text="{Binding Teachers}" FontSize="28" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding TeacherPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="#EDE9FE" CornerRadius="8">
+                            <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Fill="#8B5CF6" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+                <!-- Active Users -->
+                <Border Grid.Column="3" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Active Users" Classes="label"/>
+                        <TextBlock Text="{Binding ActiveUsers}" FontSize="28" FontWeight="Bold"/>
+                        <ProgressBar Value="{Binding ActivePercentage}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#10B981"/>
+                        <TextBlock Text="{Binding ActivePercentage, StringFormat={}{0:F1}% active}" Classes="light" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Filter and Search Bar -->
+            <Border Classes="card">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                    <TextBox Grid.Column="0" 
+                             Watermark="Search users..." 
+                             VerticalAlignment="Center"
+                             Text="{Binding SearchText}"/>
+                    <Border Grid.Column="1" Background="#E5E7EB" Width="1" Margin="12,0"/>
+                    <ComboBox Grid.Column="2" 
+                              PlaceholderText="All Roles" 
+                              Margin="12,0"
+                              ItemsSource="{Binding RoleOptions}"
+                              SelectedItem="{Binding SelectedRole}"/>
+                    <ComboBox Grid.Column="3" 
+                              PlaceholderText="All Status" 
+                              Margin="12,0"
+                              ItemsSource="{Binding StatusOptions}"
+                              SelectedItem="{Binding SelectedStatus}"/>
+                    <ComboBox Grid.Column="4" 
+                              PlaceholderText="All Grades" 
+                              Margin="12,0"
+                              ItemsSource="{Binding GradeOptions}"
+                              SelectedItem="{Binding SelectedGrade}"/>
+                </Grid>
+            </Border>
+
+            <!-- Users Grid -->
+            <ItemsControl ItemsSource="{Binding FilteredUsers}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:UserViewModel">
+                        <Border Classes="user-card" 
+                                Width="400" 
+                                Margin="0,0,20,20">
+                            <StackPanel Spacing="16">
+                                <!-- Header with name and status -->
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding FullName}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Username}" Classes="light" FontSize="12"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="1" 
+                                            Classes="status-indicator"
+                                            Background="{Binding StatusColor}"
+                                            Margin="0,0,8,0"/>
+                                    <Border Grid.Column="2" 
+                                            Background="{Binding RoleColor}" 
+                                            CornerRadius="12" 
+                                            Padding="8,4">
+                                        <TextBlock Text="{Binding Role}" 
+                                                   FontSize="10" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- User Information Grid -->
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                                    <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
+                                        <TextBlock Text="Status" Classes="label"/>
+                                        <TextBlock Text="{Binding Status}" FontWeight="Medium"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
+                                        <TextBlock Text="Grade/Department" Classes="label"/>
+                                        <TextBlock Text="{Binding Grade}" FontWeight="Medium"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4">
+                                        <TextBlock Text="ID" Classes="label"/>
+                                        <TextBlock Text="{Binding DisplayId}" FontWeight="Medium"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.Row="1" Spacing="4">
+                                        <TextBlock Text="Phone" Classes="label"/>
+                                        <TextBlock Text="{Binding PhoneNumber}" FontWeight="Medium"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
+                                        <TextBlock Text="Email" Classes="label"/>
+                                        <TextBlock Text="{Binding Email}" FontWeight="Medium" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="0" Grid.Row="3" Spacing="4">
+                                        <TextBlock Text="Last Login" Classes="label"/>
+                                        <TextBlock Text="{Binding LastLoginText}" FontWeight="Medium"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.Row="3" Spacing="4" IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <TextBlock Text="Department" Classes="label"/>
+                                        <TextBlock Text="{Binding Department}" FontWeight="Medium"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Action Buttons -->
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                    <Button Grid.Column="0" 
+                                            Content="View Details" 
+                                            Classes="secondary small"
+                                            Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ViewUserDetailsCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Grid.Column="1" 
+                                            Content="Edit" 
+                                            Classes="secondary small"
+                                            Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).EditUserCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsEnabled="{Binding CanEdit}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2" 
+                                            Content="{Binding StatusActionText}" 
+                                            Classes="secondary small"
+                                            Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ToggleUserStatusCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsEnabled="{Binding CanToggleStatus}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="3" 
+                                            Content="Reset PW" 
+                                            Classes="secondary small"
+                                            Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ResetPasswordCommand}"
+                                            CommandParameter="{Binding}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="4" 
+                                            Content="Delete" 
+                                            Classes="danger small"
+                                            Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).DeleteUserCommand}"
+                                            CommandParameter="{Binding}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Empty State -->
+            <Border Classes="card" 
+                    IsVisible="{Binding !HasFilteredUsers}"
+                    HorizontalAlignment="Center"
+                    Padding="40">
+                <StackPanel Spacing="16" HorizontalAlignment="Center">
+                    <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" 
+                          Fill="#9CA3AF" 
+                          Width="48" 
+                          Height="48" 
+                          HorizontalAlignment="Center"/>
+                    <TextBlock Text="No users found" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try adjusting your search criteria or create a new user" Classes="light" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

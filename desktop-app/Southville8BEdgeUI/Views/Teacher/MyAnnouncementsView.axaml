@@ -1,0 +1,219 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
+             x:Class="Southville8BEdgeUI.Views.Teacher.MyAnnouncementsView"
+             x:DataType="vm:MyAnnouncementsViewModel"
+             Background="#F9FAFB">
+
+    <UserControl.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+        <Style Selector="Button.action-btn">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.announcement-card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="40" Spacing="24">
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="My Announcements" FontSize="28" FontWeight="Bold"/>
+                    <TextBlock Text="Create and manage announcements for your classes" FontSize="14" Foreground="#6B7280"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button Content="📝 New Announcement" Classes="action-btn" Command="{Binding CreateAnnouncementCommand}"/>
+                    <Button Content="📊 Analytics" Background="#3B82F6" Foreground="White" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" Command="{Binding ViewAnalyticsCommand}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Announcement Statistics -->
+            <Grid ColumnDefinitions="*,*,*,*">
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Total Announcements" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding TotalAnnouncementsCount}" FontSize="24" FontWeight="Bold" Foreground="#3B82F6"/>
+                        <TextBlock Text="All time" FontSize="12" Foreground="#3B82F6"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Active Posts" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding ActiveAnnouncementsCount}" FontSize="24" FontWeight="Bold" Foreground="#10B981"/>
+                        <TextBlock Text="Currently visible" FontSize="12" Foreground="#10B981"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Total Views" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding TotalViewsCount}" FontSize="24" FontWeight="Bold" Foreground="#F59E0B"/>
+                        <TextBlock Text="This month" FontSize="12" Foreground="#F59E0B"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="3" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Engagement Rate" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding EngagementRate, StringFormat={}{0:F1}%}" FontSize="24" FontWeight="Bold" Foreground="#8B5CF6"/>
+                        <TextBlock Text="Student interaction" FontSize="12" Foreground="#8B5CF6"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Announcements Management -->
+            <Grid ColumnDefinitions="2*,*">
+                <!-- Announcements List -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Recent Announcements" FontSize="18" FontWeight="SemiBold"/>
+                            <ComboBox Grid.Column="1" SelectedItem="{Binding SelectedFilter}" ItemsSource="{Binding FilterOptions}" MinWidth="120"/>
+                        </Grid>
+
+                        <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Announcements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:AnnouncementItemViewModel">
+                                        <Border Classes="announcement-card">
+                                            <StackPanel Spacing="12">
+                                                <!-- Announcement Header -->
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <StackPanel Grid.Column="0" Spacing="4">
+                                                        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"/>
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <Border Background="{Binding PriorityColor}" CornerRadius="12" Padding="6,2">
+                                                                <TextBlock Text="{Binding Priority}" FontSize="10" Foreground="White" FontWeight="SemiBold"/>
+                                                            </Border>
+                                                            <Border Background="{Binding StatusColor}" CornerRadius="12" Padding="6,2">
+                                                                <TextBlock Text="{Binding Status}" FontSize="10" Foreground="White" FontWeight="SemiBold"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding TargetClass}" FontSize="12" Foreground="#6B7280"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                        <Button Content="✏️" Background="#3B82F6" Foreground="White" Padding="6" BorderThickness="0" CornerRadius="4" 
+                                                                Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).EditAnnouncementCommand}" 
+                                                                CommandParameter="{Binding}"/>
+                                                        <Button Content="👁️" Background="#10B981" Foreground="White" Padding="6" BorderThickness="0" CornerRadius="4"
+                                                                Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).ViewAnnouncementCommand}" 
+                                                                CommandParameter="{Binding}"/>
+                                                        <Button Content="🗑️" Background="#EF4444" Foreground="White" Padding="6" BorderThickness="0" CornerRadius="4"
+                                                                Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).DeleteAnnouncementCommand}" 
+                                                                CommandParameter="{Binding}"/>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Announcement Content Preview -->
+                                                <TextBlock Text="{Binding ContentPreview}" FontSize="14" Foreground="#6B7280" TextWrapping="Wrap" MaxLines="2"/>
+
+                                                <!-- Announcement Footer -->
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <TextBlock Text="👁️" FontSize="12"/>
+                                                            <TextBlock Text="{Binding ViewCount}" FontSize="12" Foreground="#6B7280"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <TextBlock Text="💬" FontSize="12"/>
+                                                            <TextBlock Text="{Binding CommentCount}" FontSize="12" Foreground="#6B7280"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <TextBlock Text="📅" FontSize="12"/>
+                                                            <TextBlock Text="{Binding PostedDate}" FontSize="12" Foreground="#6B7280"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    
+                                                    <TextBlock Grid.Column="1" Text="{Binding LastModified}" FontSize="11" Foreground="#9CA3AF"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- Create/Edit Panel -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Quick Create" FontSize="18" FontWeight="SemiBold"/>
+                        
+                        <!-- Quick Create Form -->
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Title" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding NewAnnouncementTitle}" Watermark="Enter announcement title..."/>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Target Class" FontSize="12" FontWeight="SemiBold"/>
+                                <ComboBox SelectedItem="{Binding NewAnnouncementClass}" ItemsSource="{Binding AvailableClasses}" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Priority" FontSize="12" FontWeight="SemiBold"/>
+                                <ComboBox SelectedItem="{Binding NewAnnouncementPriority}" ItemsSource="{Binding PriorityOptions}" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Content" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding NewAnnouncementContent}" Watermark="Write your announcement..." AcceptsReturn="True" MinHeight="120"/>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Schedule" FontSize="12" FontWeight="SemiBold"/>
+                                <CheckBox Content="Post immediately" IsChecked="{Binding PostImmediately}"/>
+                                <DatePicker SelectedDate="{Binding ScheduledDate}" IsVisible="{Binding !PostImmediately}"/>
+                            </StackPanel>
+
+                            <Button Content="📝 Create Announcement" Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding CreateQuickAnnouncementCommand}"/>
+                        </StackPanel>
+
+                        <!-- Recent Activity -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold"/>
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding RecentActivity}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:AnnouncementActivityViewModel">
+                                            <Border Background="#F9FAFB" CornerRadius="6" Padding="8" Margin="0,0,0,4">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding Activity}" FontSize="11" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding AnnouncementTitle}" FontSize="10" Foreground="#6B7280"/>
+                                                    <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="#9CA3AF"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

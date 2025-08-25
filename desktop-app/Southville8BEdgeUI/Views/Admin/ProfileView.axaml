@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Southville8BEdgeUI.Views.Admin.ProfileView"
+             x:DataType="vm:ProfileViewModel">
+
+    <Border Background="White" Padding="24">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="24" MaxWidth="600">
+                <!-- Header -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Profile Settings" FontSize="24" FontWeight="Bold" Foreground="#1F2937"/>
+                    <TextBlock Text="Manage your account information and preferences" 
+                              FontSize="14" Foreground="#6B7280"/>
+                </StackPanel>
+
+                <!-- Profile Picture Section -->
+                <Border Background="#F9FAFB" CornerRadius="8" Padding="24">
+                    <StackPanel Spacing="16" HorizontalAlignment="Center">
+                        <Border Width="100" Height="100" CornerRadius="50" Background="#E5E7EB">
+                            <TextBlock Text="JM" 
+                                      FontSize="32" 
+                                      FontWeight="Bold" 
+                                      Foreground="#6B7280"
+                                      HorizontalAlignment="Center" 
+                                      VerticalAlignment="Center"/>
+                        </Border>
+                        <Button Content="Upload Photo" 
+                                Background="#DC2626" 
+                                Foreground="White" 
+                                BorderThickness="0" 
+                                CornerRadius="6" 
+                                Padding="12,8"
+                                Command="{Binding UploadPhotoCommand}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Personal Information -->
+                <Border Background="#F9FAFB" CornerRadius="8" Padding="24">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Personal Information" FontSize="18" FontWeight="SemiBold" Foreground="#1F2937"/>
+                        
+                        <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,16,Auto,16,Auto,16,Auto">
+                            <!-- Full Name -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="Full Name" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding FullName}" 
+                                        IsReadOnly="{Binding !IsEditing}"
+                                        Padding="12" 
+                                        CornerRadius="6"/>
+                            </StackPanel>
+
+                            <!-- Employee ID -->
+                            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="4">
+                                <TextBlock Text="Employee ID" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding EmployeeId}" 
+                                        IsReadOnly="True"
+                                        Padding="12" 
+                                        CornerRadius="6"
+                                        Background="#F3F4F6"/>
+                            </StackPanel>
+
+                            <!-- Email -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="Email Address" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding Email}" 
+                                        IsReadOnly="{Binding !IsEditing}"
+                                        Padding="12" 
+                                        CornerRadius="6"/>
+                            </StackPanel>
+
+                            <!-- Phone -->
+                            <StackPanel Grid.Row="2" Grid.Column="2" Spacing="4">
+                                <TextBlock Text="Phone Number" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding Phone}" 
+                                        IsReadOnly="{Binding !IsEditing}"
+                                        Padding="12" 
+                                        CornerRadius="6"/>
+                            </StackPanel>
+
+                            <!-- Position -->
+                            <StackPanel Grid.Row="4" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="Position" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding Position}" 
+                                        IsReadOnly="True"
+                                        Padding="12" 
+                                        CornerRadius="6"
+                                        Background="#F3F4F6"/>
+                            </StackPanel>
+
+                            <!-- Department -->
+                            <StackPanel Grid.Row="4" Grid.Column="2" Spacing="4">
+                                <TextBlock Text="Department" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding Department}" 
+                                        IsReadOnly="True"
+                                        Padding="12" 
+                                        CornerRadius="6"
+                                        Background="#F3F4F6"/>
+                            </StackPanel>
+
+                            <!-- Address -->
+                            <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Spacing="4">
+                                <TextBlock Text="Address" FontSize="14" FontWeight="Medium" Foreground="#374151"/>
+                                <TextBox Text="{Binding Address}" 
+                                        IsReadOnly="{Binding !IsEditing}"
+                                        Padding="12" 
+                                        CornerRadius="6"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Action Buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                    <Button Content="Change Password" 
+                            Background="#6B7280" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            Command="{Binding ChangePasswordCommand}"/>
+                    
+                    <Button Content="Edit Profile" 
+                            Background="#DC2626" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            IsVisible="{Binding !IsEditing}"
+                            Command="{Binding EditProfileCommand}"/>
+                    
+                    <Button Content="Cancel" 
+                            Background="#6B7280" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            IsVisible="{Binding IsEditing}"
+                            Command="{Binding CancelEditCommand}"/>
+                    
+                    <Button Content="Save Changes" 
+                            Background="#10B981" 
+                            Foreground="White" 
+                            BorderThickness="0" 
+                            CornerRadius="6" 
+                            Padding="16,8"
+                            IsVisible="{Binding IsEditing}"
+                            Command="{Binding SaveProfileCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

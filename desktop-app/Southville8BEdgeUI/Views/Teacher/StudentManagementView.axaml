@@ -1,0 +1,209 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
+             x:Class="Southville8BEdgeUI.Views.Teacher.StudentManagementView"
+             x:DataType="vm:StudentManagementViewModel"
+             Background="#F9FAFB">
+
+    <UserControl.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+        <Style Selector="Button.action-btn">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.student-card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="40" Spacing="24">
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Student Management" FontSize="28" FontWeight="Bold"/>
+                    <TextBlock Text="Manage your students and track their progress" FontSize="14" Foreground="#6B7280"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBox Text="{Binding SearchText}" Watermark="Search students..." MinWidth="200"/>
+                    <Button Content="📊 Generate Report" Classes="action-btn" Command="{Binding GenerateReportCommand}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Student Statistics -->
+            <Grid ColumnDefinitions="*,*,*,*">
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Total Students" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding TotalStudentsCount}" FontSize="24" FontWeight="Bold" Foreground="#3B82F6"/>
+                        <TextBlock Text="Under your supervision" FontSize="12" Foreground="#3B82F6"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Present Today" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding PresentTodayCount}" FontSize="24" FontWeight="Bold" Foreground="#10B981"/>
+                        <TextBlock Text="{Binding AttendanceRate, StringFormat={}{0:F1}% attendance}" FontSize="12" Foreground="#10B981"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Absent Today" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding AbsentTodayCount}" FontSize="24" FontWeight="Bold" Foreground="#EF4444"/>
+                        <TextBlock Text="Require follow-up" FontSize="12" Foreground="#EF4444"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="3" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Avg Performance" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding AveragePerformance, StringFormat={}{0:F1}%}" FontSize="24" FontWeight="Bold" Foreground="#8B5CF6"/>
+                        <TextBlock Text="Class average" FontSize="12" Foreground="#8B5CF6"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Student List and Details -->
+            <Grid ColumnDefinitions="2*,*">
+                <!-- Student List -->
+                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Student List" FontSize="18" FontWeight="SemiBold"/>
+                            <ComboBox Grid.Column="1" SelectedItem="{Binding SelectedClass}" ItemsSource="{Binding Classes}" MinWidth="150"/>
+                        </Grid>
+
+                        <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding FilteredStudents}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:StudentInfoViewModel">
+                                        <Border Classes="student-card">
+                                            <Grid ColumnDefinitions="60,*,Auto">
+                                                <!-- Student Avatar -->
+                                                <Border Grid.Column="0" Width="50" Height="50" CornerRadius="25" Background="#E5E7EB" Margin="0,0,12,0">
+                                                    <TextBlock Text="{Binding Initials}" FontSize="16" FontWeight="Bold" Foreground="#6B7280" 
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                
+                                                <!-- Student Info -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                                    <TextBlock Text="{Binding FullName}" FontSize="16" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding StudentId}" FontSize="12" Foreground="#6B7280"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Border Background="{Binding AttendanceStatusColor}" CornerRadius="12" Padding="6,2">
+                                                            <TextBlock Text="{Binding AttendanceStatus}" FontSize="10" Foreground="White" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding CurrentGrade, StringFormat=Grade: {0:F1}%}" FontSize="12" FontWeight="SemiBold" Foreground="#3B82F6"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Action Buttons -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                    <Button Content="📊" Background="#3B82F6" Foreground="White" Padding="8" BorderThickness="0" CornerRadius="4" 
+                                                            Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ViewStudentDetailsCommand}" 
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Content="📝" Background="#10B981" Foreground="White" Padding="8" BorderThickness="0" CornerRadius="4"
+                                                            Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).EditStudentCommand}" 
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Content="📞" Background="#F59E0B" Foreground="White" Padding="8" BorderThickness="0" CornerRadius="4"
+                                                            Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ContactParentCommand}" 
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- Student Details Panel -->
+                <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Student Details" FontSize="18" FontWeight="SemiBold"/>
+                        
+                        <StackPanel Spacing="16" IsVisible="{Binding SelectedStudent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <!-- Selected Student Info -->
+                            <StackPanel Spacing="8">
+                                <Border Width="80" Height="80" CornerRadius="40" Background="#E5E7EB" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding SelectedStudent.Initials}" FontSize="24" FontWeight="Bold" Foreground="#6B7280" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding SelectedStudent.FullName}" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding SelectedStudent.StudentId}" FontSize="12" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Performance Metrics -->
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Performance Metrics" FontSize="14" FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Current Grade:" FontSize="12"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedStudent.CurrentGrade, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
+                                    
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Attendance:" FontSize="12"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedStudent.AttendanceRate, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
+                                    
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Assignments:" FontSize="12"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedStudent.AssignmentsCompleted}/{Binding SelectedStudent.TotalAssignments}" FontWeight="Bold"/>
+                                    
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Last Login:" FontSize="12"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedStudent.LastLogin}" FontWeight="Bold"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Recent Activity -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold"/>
+                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding SelectedStudent.RecentActivities}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="vm:StudentActivityViewModel">
+                                                <Border Background="#F9FAFB" CornerRadius="6" Padding="8" Margin="0,0,0,4">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding Activity}" FontSize="11" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="#6B7280"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+
+                            <!-- Quick Actions -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Quick Actions" FontSize="14" FontWeight="SemiBold"/>
+                                <Button Content="📧 Send Message" Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding SendMessageCommand}"/>
+                                <Button Content="📞 Contact Parent" Background="#F59E0B" Foreground="White" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" HorizontalAlignment="Stretch" Command="{Binding ContactParentCommand}"/>
+                                <Button Content="📝 Add Note" Background="#8B5CF6" Foreground="White" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" HorizontalAlignment="Stretch" Command="{Binding AddNoteCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- No Selection Message -->
+                        <TextBlock Text="Select a student to view details" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   IsVisible="{Binding SelectedStudent, Converter={x:Static ObjectConverters.IsNull}}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

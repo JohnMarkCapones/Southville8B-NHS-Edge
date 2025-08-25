@@ -1,0 +1,348 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
+             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+             x:Class="Southville8BEdgeUI.Views.Admin.ChatView"
+             x:DataType="vm:ChatViewModel"
+             Background="#F9FAFB">
+
+    <UserControl.Resources>
+        <converters:BoolToStringConverter x:Key="OnlineStatusConverter" TrueValue="Online" FalseValue="Offline"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <!-- Base TextBlock Style -->
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.light">
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+
+        <!-- Main Card Style -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#4F46E5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- Conversation Item Styles -->
+        <Style Selector="Button.conversation-item">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.conversation-item:pointerover">
+            <Setter Property="Background" Value="#F3F4F6"/>
+        </Style>
+        <Style Selector="Button.conversation-item.selected">
+            <Setter Property="Background" Value="#EBF8FF"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderThickness" Value="0,0,3,0"/>
+        </Style>
+
+        <!-- Message Styles -->
+        <Style Selector="Border.message-bubble">
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="MaxWidth" Value="320"/>
+            <Setter Property="Margin" Value="0,2"/>
+        </Style>
+
+        <Style Selector="Border.message-sent">
+            <Setter Property="Background" Value="#4F46E5"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+
+        <Style Selector="Border.message-received">
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="360,*" Margin="24">
+        <!-- Conversations List -->
+        <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+            <Grid RowDefinitions="Auto,Auto,*">
+                <!-- Header -->
+                <Border Grid.Row="0" Padding="20,20,20,16" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Messages" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="Admin Communication Hub" Classes="light" FontSize="12"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="➕ New" Classes="primary" 
+                                Command="{Binding StartNewChatCommand}"
+                                VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Search and Filter -->
+                <Border Grid.Row="1" Padding="16" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                    <StackPanel Spacing="12">
+                        <TextBox Watermark="Search conversations..." 
+                                 Text="{Binding SearchText}"
+                                 CornerRadius="8"/>
+                        <ComboBox PlaceholderText="All Users" 
+                                  ItemsSource="{Binding UserTypeOptions}"
+                                  SelectedItem="{Binding SelectedUserType}"
+                                  HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Conversations List and Empty State -->
+                <Grid Grid.Row="2">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasConversations}">
+                        <ItemsControl ItemsSource="{Binding FilteredConversations}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:ChatConversationViewModel">
+                                    <Button Classes="conversation-item"
+                                            Classes.selected="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedConversation, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding}}"
+                                            Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectConversationCommand}"
+                                            CommandParameter="{Binding}">
+                                        
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <!-- Avatar -->
+                                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" 
+                                                    Background="{Binding RoleColor}" 
+                                                    Margin="0,0,12,0">
+                                                <TextBlock Text="{Binding ContactInitials}" 
+                                                           FontSize="14" 
+                                                           FontWeight="SemiBold" 
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <!-- Content -->
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Grid.Column="0" Text="{Binding ContactName}" 
+                                                               FontWeight="SemiBold" FontSize="14"/>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                        <Border Width="6" Height="6" CornerRadius="3" 
+                                                                Background="#10B981" 
+                                                                VerticalAlignment="Center"
+                                                                IsVisible="{Binding IsOnline}"/>
+                                                        <TextBlock Text="{Binding ContactRole}" 
+                                                                   FontSize="10" 
+                                                                   Classes="light"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <TextBlock Text="{Binding LastMessage}" 
+                                                           Classes="light" 
+                                                           FontSize="12" 
+                                                           TextWrapping="Wrap"
+                                                           MaxLines="2"/>
+                                                <TextBlock Text="{Binding LastMessageTimeText}" 
+                                                           Classes="light" 
+                                                           FontSize="10"/>
+                                            </StackPanel>
+
+                                            <!-- Unread Badge -->
+                                            <Border Grid.Column="2" 
+                                                    Background="#EF4444" 
+                                                    CornerRadius="10" 
+                                                    MinWidth="20" 
+                                                    Height="20"
+                                                    IsVisible="{Binding HasUnreadMessages}"
+                                                    VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding UnreadCount}" 
+                                                           FontSize="10" 
+                                                           FontWeight="Bold" 
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel Spacing="16" 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding !HasConversations}">
+                        <Path Data="M8 12H16M8 8H16M8 16H12M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" 
+                              Stroke="#9CA3AF" 
+                              StrokeThickness="2" 
+                              Width="48" 
+                              Height="48"/>
+                        <TextBlock Text="No conversations found" FontSize="16" FontWeight="SemiBold" Foreground="#6B7280"/>
+                        <TextBlock Text="Try adjusting your search criteria" Classes="light" FontSize="12"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Chat Area -->
+        <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+            <Grid>
+                <!-- Selected Conversation Chat -->
+                <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasSelectedConversation}">
+                    <!-- Chat Header -->
+                    <Border Grid.Row="0" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <!-- Contact Info -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="20" 
+                                        Background="{Binding SelectedConversation.RoleColor}">
+                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials}" 
+                                               FontSize="14" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="White"
+                                               HorizontalAlignment="Center" 
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SelectedConversation.ContactName}" 
+                                               FontSize="16" 
+                                               FontWeight="SemiBold"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Border Width="6" Height="6" CornerRadius="3" 
+                                                Background="#10B981" 
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding SelectedConversation.IsOnline}"/>
+                                        <TextBlock Text="{Binding SelectedConversation.ContactRole}" 
+                                                   FontSize="12" 
+                                                   Classes="light"/>
+                                        <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}}" 
+                                                   FontSize="12" 
+                                                   Classes="light"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Chat Actions -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <Button Content="📞" 
+                                        Background="Transparent" 
+                                        Foreground="#6B7280" 
+                                        BorderThickness="0" 
+                                        CornerRadius="8" 
+                                        Padding="8"/>
+                                <Button Content="📹" 
+                                        Background="Transparent" 
+                                        Foreground="#6B7280" 
+                                        BorderThickness="0" 
+                                        CornerRadius="8" 
+                                        Padding="8"/>
+                                <Button Content="ℹ️" 
+                                        Background="Transparent" 
+                                        Foreground="#6B7280" 
+                                        BorderThickness="0" 
+                                        CornerRadius="8" 
+                                        Padding="8"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Messages -->
+                    <ScrollViewer Grid.Row="1" 
+                                  Name="MessagesScrollViewer"
+                                  VerticalScrollBarVisibility="Auto" 
+                                  Padding="20">
+                        <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:ChatMessageViewModel">
+                                    <StackPanel Margin="0,8">
+                                        <Border Classes="message-bubble"
+                                                Classes.message-sent="{Binding IsFromCurrentUser}"
+                                                Classes.message-received="{Binding !IsFromCurrentUser}"
+                                                Background="{Binding MessageBackground}">
+                                            <TextBlock Text="{Binding Content}" 
+                                                       Foreground="{Binding MessageTextColor}"
+                                                       TextWrapping="Wrap"
+                                                       FontSize="14"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding TimestampText}" 
+                                                   FontSize="10" 
+                                                   Classes="light"
+                                                   HorizontalAlignment="{Binding MessageAlignment}"
+                                                   Margin="12,2,12,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Message Input -->
+                    <Border Grid.Row="2" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Grid.Column="0" 
+                                     Text="{Binding NewMessage}"
+                                     Watermark="Type a message..."
+                                     CornerRadius="24"
+                                     Padding="16,12"
+                                     FontSize="14"
+                                     Margin="0,0,12,0">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}"/>
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <Button Grid.Column="1" 
+                                    Content="Send"
+                                    Classes="primary"
+                                    Command="{Binding SendMessageCommand}"
+                                    CornerRadius="24"
+                                    Padding="20,12"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- No Conversation Selected -->
+                <StackPanel Spacing="16" 
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding !HasSelectedConversation}">
+                    <Path Data="M8 12H16M8 8H16M8 16H12M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" 
+                          Stroke="#9CA3AF" 
+                          StrokeThickness="2" 
+                          Width="64" 
+                          Height="64"/>
+                    <TextBlock Text="Select a conversation" FontSize="18" FontWeight="SemiBold" Foreground="#6B7280"/>
+                    <TextBlock Text="Choose a conversation from the list to start messaging" Classes="light" FontSize="14"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+   </UserControl>
