@@ -32,16 +32,19 @@
             <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
             <Setter Property="RenderTransform" Value="translate(-2px)"/>
         </Style>
+        
         <Style Selector="TextBlock.stat-title">
             <Setter Property="Foreground" Value="#6B7280"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
         </Style>
+        
         <Style Selector="TextBlock.stat-value">
             <Setter Property="Foreground" Value="#111827"/>
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+
         <Style Selector="Button.quick-action">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -59,6 +62,7 @@
         <Style Selector="Button.quick-action:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.02)"/>
         </Style>
+        
         <Style Selector="Border.alert-card">
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="#E5E7EB"/>
@@ -67,10 +71,65 @@
             <Setter Property="Padding" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
+        
+        <!-- Responsive Progress Bar Styles -->
+        <Style Selector="ProgressBar.responsive-progress">
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="MinWidth" Value="40"/>
+            <Setter Property="ShowProgressText" Value="False"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        
+        <!-- Small progress bars for tight spaces -->
+        <Style Selector="ProgressBar.small">
+            <Setter Property="Height" Value="2"/>
+            <Setter Property="CornerRadius" Value="1"/>
+            <Setter Property="MinWidth" Value="30"/>
+        </Style>
+        
+        <!-- Medium progress bars -->
+        <Style Selector="ProgressBar.medium">
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="MinWidth" Value="80"/>
+            <Setter Property="ShowProgressText" Value="True"/>
+            <Setter Property="ProgressTextFormat" Value="{}{1:0}%"/>
+        </Style>
+
+        <!-- Responsive margins -->
+        <Style Selector="StackPanel.main-content">
+            <Setter Property="Margin" Value="40"/>
+            <Setter Property="Spacing" Value="24"/>
+        </Style>
+        
+        <Style Selector="StackPanel.main-content-medium">
+            <Setter Property="Margin" Value="20"/>
+            <Setter Property="Spacing" Value="16"/>
+        </Style>
+        
+        <Style Selector="StackPanel.main-content-small">
+            <Setter Property="Margin" Value="12"/>
+            <Setter Property="Spacing" Value="12"/>
+        </Style>
+
+        <!-- Card margins for different layouts -->
+        <Style Selector="Border.kpi-card-standard">
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+        
+        <Style Selector="Border.kpi-card-stacked">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer>
-        <StackPanel Margin="40" Spacing="24">
+        <StackPanel x:Name="MainStackPanel" Classes="main-content">
             <!-- Header with Refresh Button -->
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0">
@@ -86,8 +145,8 @@
             </Grid>
 
             <!-- Key Performance Indicators -->
-            <Grid ColumnDefinitions="*,*,*,*,*">
-                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+            <Grid x:Name="KpiGrid" ColumnDefinitions="*,*,*,*,*">
+                <Border Grid.Column="0" x:Name="KpiCard1" Classes="card kpi-card-standard">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Total Students" Classes="stat-title"/>
@@ -99,7 +158,7 @@
                         <TextBlock Text="Active enrollment" FontSize="12" Foreground="#10B981"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                <Border Grid.Column="1" x:Name="KpiCard2" Classes="card kpi-card-standard">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Active Teachers" Classes="stat-title"/>
@@ -111,7 +170,7 @@
                         <TextBlock Text="Faculty members" FontSize="12" Foreground="#8B5CF6"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                <Border Grid.Column="2" x:Name="KpiCard3" Classes="card kpi-card-standard">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Online Users" Classes="stat-title"/>
@@ -123,19 +182,27 @@
                         <TextBlock Text="Currently active" FontSize="12" Foreground="#3B82F6"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="3" Classes="card" Margin="12,0">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Room Utilization" Classes="stat-title"/>
-                            <Border Grid.Column="1" Background="#FEF3C7" CornerRadius="6" Padding="4">
-                                <TextBlock Text="🏫" FontSize="16"/>
-                            </Border>
-                        </Grid>
-                        <TextBlock Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-                        <ProgressBar Value="{Binding RoomUtilization}" Minimum="0" Maximum="100" Height="4" CornerRadius="2" Foreground="#F59E0B"/>
-                    </StackPanel>
+                <Border Grid.Column="3" x:Name="KpiCard4" Classes="card kpi-card-standard">
+					<DockPanel>
+						<StackPanel DockPanel.Dock="Top" Spacing="12">
+							<Grid ColumnDefinitions="*,Auto">
+								<TextBlock Grid.Column="0" Text="Room Utilization" Classes="stat-title"/>
+								<Border Grid.Column="1" Background="#FEF3C7" CornerRadius="6" Padding="4">
+									<TextBlock Text="🏫" FontSize="16"/>
+								</Border>
+							</Grid>
+							<TextBlock Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" Classes="stat-value"/>
+						</StackPanel>
+						<ProgressBar x:Name="RoomProgressBar"
+                                     DockPanel.Dock="Bottom"
+                                     Classes="responsive-progress"
+                                     Value="{Binding RoomUtilization}"
+                                     Minimum="0"
+                                     Maximum="100"
+                                     Foreground="#F59E0B"/>
+					</DockPanel>
                 </Border>
-                <Border Grid.Column="4" Classes="card" Margin="12,0,0,0">
+                <Border Grid.Column="4" x:Name="KpiCard5" Classes="card kpi-card-standard">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="System Uptime" Classes="stat-title"/>
@@ -150,7 +217,7 @@
             </Grid>
 
             <!-- Performance Metrics & System Alerts -->
-            <Grid ColumnDefinitions="2*,*">
+            <Grid x:Name="TwoColumnGrid1" ColumnDefinitions="2*,*">
                 <!-- Performance Metrics -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
@@ -229,12 +296,12 @@
             </Grid>
 
             <!-- Quick Actions & Financial Overview -->
-            <Grid ColumnDefinitions="*,*">
+            <Grid x:Name="TwoColumnGrid2" ColumnDefinitions="*,*">
                 <!-- Quick Actions -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
                         <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold"/>
-                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
+                        <Grid x:Name="QuickActionsGrid" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
                             <Button Grid.Column="0" Grid.Row="0" Content="🚪 Rooms" Classes="quick-action" Background="#4F46E5" 
                                     Command="{Binding NavigateToRoomManagementCommand}" Margin="0,0,8,8"/>
                             <Button Grid.Column="1" Grid.Row="0" Content="📅 Events" Classes="quick-action" Background="#10B981" 
@@ -270,7 +337,11 @@
                             </StackPanel>
                             <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
                                 <TextBlock Text="Budget Utilization" Classes="stat-title"/>
-                                <ProgressBar Value="{Binding BudgetUtilization}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#4F46E5"/>
+                                <ProgressBar x:Name="BudgetProgressBar"
+                                           Classes="responsive-progress" 
+                                           Value="{Binding BudgetUtilization}" 
+                                           Minimum="0" Maximum="100" 
+                                           Foreground="#4F46E5"/>
                                 <TextBlock Text="{Binding BudgetUtilization, StringFormat={}{0:F1}% utilized}" FontSize="12" Foreground="#6B7280"/>
                             </StackPanel>
                         </Grid>
@@ -279,7 +350,7 @@
             </Grid>
 
             <!-- Grade Distribution & Room Status -->
-            <Grid ColumnDefinitions="*,*">
+            <Grid x:Name="TwoColumnGrid3" ColumnDefinitions="*,*">
                 <!-- Grade Distribution -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
@@ -291,7 +362,10 @@
                                         <Border Grid.Column="0" Background="{Binding Color}" Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Grade}" FontWeight="SemiBold"/>
-                                            <ProgressBar Value="{Binding Percentage}" Minimum="0" Maximum="25" Height="4" CornerRadius="2" Foreground="{Binding Color}"/>
+                                            <ProgressBar Classes="responsive-progress" 
+                                                       Value="{Binding Percentage}" 
+                                                       Minimum="0" Maximum="25" 
+                                                       Foreground="{Binding Color}"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding StudentCount}" FontWeight="Bold" VerticalAlignment="Center"/>
                                     </Grid>
@@ -326,7 +400,11 @@
                             </StackPanel>
                             <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4" Grid.ColumnSpan="3" Margin="0,16,0,0">
                                 <TextBlock Text="Overall Utilization" Classes="stat-title" HorizontalAlignment="Center"/>
-                                <ProgressBar Value="{Binding RoomUtilization}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#4F46E5"/>
+                                <ProgressBar x:Name="OverallProgressBar"
+                                           Classes="responsive-progress" 
+                                           Value="{Binding RoomUtilization}" 
+                                           Minimum="0" Maximum="100" 
+                                           Foreground="#4F46E5"/>
                                 <TextBlock Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
@@ -335,7 +413,7 @@
             </Grid>
 
             <!-- Upcoming Events & Recent Activity -->
-            <Grid ColumnDefinitions="2*,*">
+            <Grid x:Name="TwoColumnGrid4" ColumnDefinitions="2*,*">
                 <!-- Upcoming Events -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
@@ -400,50 +478,50 @@
             <Border Classes="card">
                 <StackPanel Spacing="16">
                     <TextBlock Text="Weekly Activity Overview" FontSize="18" FontWeight="SemiBold"/>
-                    <Grid ColumnDefinitions="*,*,*,*,*,*,*">
-                        <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,4,0">
+                    <Grid x:Name="WeeklyStatsGrid" ColumnDefinitions="*,*,*,*,*,*,*">
+                        <Border Grid.Column="0" x:Name="WeeklyStat1" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Mon" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="1,480" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="1" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="1" x:Name="WeeklyStat2" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Tue" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="1,495" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="2" Background="#E0F2F1" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="2" x:Name="WeeklyStat3" Background="#E0F2F1" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Wed" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="1,502" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="students" FontSize="10" Foreground="#10B981" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="3" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="3" x:Name="WeeklyStat4" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Thu" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="1,489" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="4" Background="#DBEAFE" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="4" x:Name="WeeklyStat5" Background="#DBEAFE" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Fri" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="1,512" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="students" FontSize="10" Foreground="#3B82F6" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="5" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="5" x:Name="WeeklyStat6" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Sat" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="892" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="students" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="6" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0,0,0">
+                        <Border Grid.Column="6" x:Name="WeeklyStat7" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0,0,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Sun" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="654" FontWeight="Bold" HorizontalAlignment="Center"/>

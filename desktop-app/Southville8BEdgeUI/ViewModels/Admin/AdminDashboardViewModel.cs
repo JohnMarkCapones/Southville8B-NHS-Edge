@@ -23,7 +23,7 @@ public partial class AdminDashboardViewModel : ViewModelBase
     [ObservableProperty] private int _onlineUsersCount = 324;
 
     // Room Status Summary
-    [ObservableProperty] private double _roomUtilization = 68.5;
+    [ObservableProperty] private double _roomUtilization = 35.4;
     [ObservableProperty] private int _occupiedRooms = 18;
     [ObservableProperty] private int _roomsInMaintenance = 3;
     [ObservableProperty] private int _roomsBooked = 12;
