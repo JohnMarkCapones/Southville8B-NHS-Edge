@@ -1,13 +1,478 @@
 using Avalonia.Controls;
+using Avalonia;
+using System.Collections.Generic;
+using System.Linq;
 using Southville8BEdgeUI.ViewModels.Admin;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
 public partial class UserManagementView : UserControl
 {
+    private const double TabletBreakpoint = 1024;
+    private const double MobileBreakpoint = 768;
+    
+    // Collections to store elements that need responsive behavior
+    private readonly List<Control> _responsiveTextElements = new();
+    private readonly List<Control> _responsiveCardElements = new();
+    private readonly List<Control> _responsiveButtonElements = new();
+    private readonly List<Control> _responsiveInputElements = new();
+
     public UserManagementView()
     {
         InitializeComponent();
         DataContext = new UserManagementViewModel();
+        
+        // Store references to elements that need responsive behavior
+        InitializeResponsiveElements();
+        
+        // Set up size change handler
+        this.SizeChanged += OnSizeChanged;
+    }
+
+    private void InitializeResponsiveElements()
+    {
+        // Add all named text elements that need responsive font sizes
+        _responsiveTextElements.AddRange(new Control[]
+        {
+            MainHeaderText,
+            SubtitleText,
+            TotalUsersValue,
+            StudentsValue,
+            StudentsPercentageText,
+            TeachersValue,
+            TeachersPercentageText,
+            ActiveUsersValue,
+            ActivePercentageText,
+            EmptyTitleText,
+            EmptySubtitleText
+        });
+
+        // Add card elements
+        _responsiveCardElements.AddRange(new Control[]
+        {
+            StatsCard1, StatsCard2, StatsCard3, StatsCard4, FilterCard, EmptyStateCard
+        });
+
+        // Add button elements
+        _responsiveButtonElements.AddRange(new Control[]
+        {
+            ImportButton,
+            CreateButton
+        });
+
+        // Add input elements
+        _responsiveInputElements.AddRange(new Control[]
+        {
+            SearchInput,
+            RoleFilter,
+            StatusFilter,
+            GradeFilter
+        });
+    }
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateResponsiveClasses(e.NewSize.Width);
+    }
+
+    private void UpdateResponsiveClasses(double width)
+    {
+        // Determine the current breakpoint
+        string sizeClass = GetSizeClass(width);
+        
+        // Update all responsive elements
+        UpdateMainContainerClasses(sizeClass);
+        UpdateElementClasses(_responsiveTextElements, sizeClass);
+        UpdateElementClasses(_responsiveCardElements, sizeClass);
+        UpdateElementClasses(_responsiveButtonElements, sizeClass);
+        UpdateElementClasses(_responsiveInputElements, sizeClass);
+        
+        // Update layout-specific elements
+        UpdateLayoutClasses(sizeClass, width);
+        
+        // Update user card elements dynamically
+        UpdateUserCardElements(sizeClass);
+    }
+
+    private string GetSizeClass(double width)
+    {
+        if (width < MobileBreakpoint)
+            return "mobile";
+        else if (width < TabletBreakpoint)
+            return "tablet";
+        else
+            return "desktop";
+    }
+
+    private void UpdateMainContainerClasses(string sizeClass)
+    {
+        // Clear existing responsive classes
+        MainStackPanel.Classes.Remove("main-content");
+        MainStackPanel.Classes.Remove("main-content-tablet");
+        MainStackPanel.Classes.Remove("main-content-mobile");
+        
+        // Add appropriate class
+        switch (sizeClass)
+        {
+            case "mobile":
+                MainStackPanel.Classes.Add("main-content-mobile");
+                break;
+            case "tablet":
+                MainStackPanel.Classes.Add("main-content-tablet");
+                break;
+            default:
+                MainStackPanel.Classes.Add("main-content");
+                break;
+        }
+    }
+
+    private void UpdateElementClasses(List<Control> elements, string sizeClass)
+    {
+        foreach (var element in elements)
+        {
+            // Remove existing responsive classes
+            element.Classes.Remove("mobile");
+            element.Classes.Remove("tablet");
+            
+            // Add appropriate responsive class
+            if (sizeClass != "desktop")
+            {
+                element.Classes.Add(sizeClass);
+            }
+        }
+    }
+
+    private void UpdateLayoutClasses(string sizeClass, double width)
+    {
+        // Update grid layouts based on screen size
+        switch (sizeClass)
+        {
+            case "mobile":
+                // Stack stats cards vertically on mobile
+                SetupMobileStatsGrid();
+                // Stack filter grid vertically
+                SetupMobileFilterGrid();
+                // Stack header buttons vertically
+                SetupMobileHeaderLayout();
+                break;
+                
+            case "tablet":
+                // 2x2 grid for tablets
+                SetupTabletStatsGrid();
+                // 2x3 filter grid for tablets
+                SetupTabletFilterGrid();
+                // Keep header horizontal
+                SetupTabletHeaderLayout();
+                break;
+                
+            default:
+                // 4-column grid for desktop
+                SetupDesktopStatsGrid();
+                // 5-column filter grid for desktop
+                SetupDesktopFilterGrid();
+                // Keep header horizontal
+                SetupDesktopHeaderLayout();
+                break;
+        }
+    }
+
+    private void UpdateUserCardElements(string sizeClass)
+    {
+        // Find all user cards and update their classes
+        var itemsControl = UsersGrid;
+        if (itemsControl != null)
+        {
+            UpdateUserCardsRecursively(itemsControl, sizeClass);
+        }
+    }
+
+    private void UpdateUserCardsRecursively(Control control, string sizeClass)
+    {
+        // Update user cards
+        if (control.Name == "UserCard" && control is Border userCard)
+        {
+            userCard.Classes.Remove("mobile");
+            userCard.Classes.Remove("tablet");
+            if (sizeClass != "desktop")
+            {
+                userCard.Classes.Add(sizeClass);
+            }
+        }
+
+        // Update text elements in user cards
+        if (control.Name?.EndsWith("Text") == true && control is TextBlock textBlock)
+        {
+            textBlock.Classes.Remove("mobile");
+            textBlock.Classes.Remove("tablet");
+            if (sizeClass != "desktop")
+            {
+                textBlock.Classes.Add(sizeClass);
+            }
+        }
+
+        // Update button elements in user cards
+        if (control.Name?.EndsWith("Button") == true && control is Button button)
+        {
+            button.Classes.Remove("mobile");
+            button.Classes.Remove("tablet");
+            if (sizeClass != "desktop")
+            {
+                button.Classes.Add(sizeClass);
+            }
+        }
+
+        // Update status indicators and role badges
+        if ((control.Name == "StatusIndicator" || control.Name == "RoleBadge") && control is Border border)
+        {
+            border.Classes.Remove("mobile");
+            border.Classes.Remove("tablet");
+            if (sizeClass != "desktop")
+            {
+                border.Classes.Add(sizeClass);
+            }
+        }
+
+        // Update role text
+        if (control.Name == "RoleText" && control is TextBlock roleText)
+        {
+            roleText.Classes.Remove("mobile");
+            roleText.Classes.Remove("tablet");
+            if (sizeClass != "desktop")
+            {
+                roleText.Classes.Add(sizeClass);
+            }
+        }
+
+        // Recursively update children
+        if (control is Panel panel)
+        {
+            foreach (Control child in panel.Children)
+            {
+                UpdateUserCardsRecursively(child, sizeClass);
+            }
+        }
+        else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
+        {
+            UpdateUserCardsRecursively(contentChild, sizeClass);
+        }
+        else if (control is ItemsControl itemsControl)
+        {
+            // ItemsControl children are handled through the template
+        }
+    }
+
+    private void SetupMobileHeaderLayout()
+    {
+        HeaderGrid.ColumnDefinitions.Clear();
+        HeaderGrid.RowDefinitions.Clear();
+        
+        HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        
+        Grid.SetColumn(HeaderButtons, 0);
+        Grid.SetRow(HeaderButtons, 1);
+        Grid.SetColumnSpan(HeaderButtons, 1);
+        
+        HeaderButtons.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        HeaderButtons.Margin = new Thickness(0, 12, 0, 0);
+    }
+
+    private void SetupTabletHeaderLayout()
+    {
+        SetupDesktopHeaderLayout();
+    }
+
+    private void SetupDesktopHeaderLayout()
+    {
+        HeaderGrid.ColumnDefinitions.Clear();
+        HeaderGrid.RowDefinitions.Clear();
+        
+        HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        
+        Grid.SetColumn(HeaderButtons, 1);
+        Grid.SetRow(HeaderButtons, 0);
+        Grid.SetColumnSpan(HeaderButtons, 1);
+        
+        HeaderButtons.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
+        HeaderButtons.Margin = new Thickness(0);
+    }
+
+    private void SetupMobileStatsGrid()
+    {
+        StatsGrid.ColumnDefinitions.Clear();
+        StatsGrid.RowDefinitions.Clear();
+        
+        StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        
+        for (int i = 0; i < 4; i++)
+        {
+            StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        }
+        
+        Grid.SetColumn(StatsCard1, 0); Grid.SetRow(StatsCard1, 0);
+        Grid.SetColumn(StatsCard2, 0); Grid.SetRow(StatsCard2, 1);
+        Grid.SetColumn(StatsCard3, 0); Grid.SetRow(StatsCard3, 2);
+        Grid.SetColumn(StatsCard4, 0); Grid.SetRow(StatsCard4, 3);
+        
+        // Update margins for mobile
+        StatsCard1.Margin = new Thickness(0, 0, 0, 8);
+        StatsCard2.Margin = new Thickness(0, 8, 0, 8);
+        StatsCard3.Margin = new Thickness(0, 8, 0, 8);
+        StatsCard4.Margin = new Thickness(0, 8, 0, 0);
+    }
+
+    private void SetupTabletStatsGrid()
+    {
+        StatsGrid.ColumnDefinitions.Clear();
+        StatsGrid.RowDefinitions.Clear();
+        
+        StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        
+        StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        
+        Grid.SetColumn(StatsCard1, 0); Grid.SetRow(StatsCard1, 0);
+        Grid.SetColumn(StatsCard2, 1); Grid.SetRow(StatsCard2, 0);
+        Grid.SetColumn(StatsCard3, 0); Grid.SetRow(StatsCard3, 1);
+        Grid.SetColumn(StatsCard4, 1); Grid.SetRow(StatsCard4, 1);
+        
+        // Update margins for tablet
+        StatsCard1.Margin = new Thickness(0, 0, 8, 8);
+        StatsCard2.Margin = new Thickness(8, 0, 0, 8);
+        StatsCard3.Margin = new Thickness(0, 8, 8, 0);
+        StatsCard4.Margin = new Thickness(8, 8, 0, 0);
+    }
+
+    private void SetupDesktopStatsGrid()
+    {
+        StatsGrid.ColumnDefinitions.Clear();
+        StatsGrid.RowDefinitions.Clear();
+        
+        for (int i = 0; i < 4; i++)
+        {
+            StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        }
+        StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        
+        Grid.SetColumn(StatsCard1, 0); Grid.SetRow(StatsCard1, 0);
+        Grid.SetColumn(StatsCard2, 1); Grid.SetRow(StatsCard2, 0);
+        Grid.SetColumn(StatsCard3, 2); Grid.SetRow(StatsCard3, 0);
+        Grid.SetColumn(StatsCard4, 3); Grid.SetRow(StatsCard4, 0);
+        
+        // Update margins for desktop
+        StatsCard1.Margin = new Thickness(0, 0, 12, 0);
+        StatsCard2.Margin = new Thickness(12, 0);
+        StatsCard3.Margin = new Thickness(12, 0);
+        StatsCard4.Margin = new Thickness(12, 0, 0, 0);
+    }
+
+    private void SetupMobileFilterGrid()
+    {
+        FilterGrid.ColumnDefinitions.Clear();
+        FilterGrid.RowDefinitions.Clear();
+        
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        
+        for (int i = 0; i < 5; i++)
+        {
+            FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        }
+        
+        Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0);
+        Grid.SetColumn(RoleFilter, 0); Grid.SetRow(RoleFilter, 2);
+        Grid.SetColumn(StatusFilter, 0); Grid.SetRow(StatusFilter, 3);
+        Grid.SetColumn(GradeFilter, 0); Grid.SetRow(GradeFilter, 4);
+        
+        // Hide separator on mobile
+        if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
+        {
+            Grid.SetColumn(separator, 0);
+            Grid.SetRow(separator, 1);
+            separator.IsVisible = false;
+        }
+        
+        // Update margins for mobile
+        SearchInput.Margin = new Thickness(0, 0, 0, 8);
+        RoleFilter.Margin = new Thickness(0, 8, 0, 8);
+        StatusFilter.Margin = new Thickness(0, 8, 0, 8);
+        GradeFilter.Margin = new Thickness(0, 8, 0, 0);
+    }
+
+    private void SetupTabletFilterGrid()
+    {
+        FilterGrid.ColumnDefinitions.Clear();
+        FilterGrid.RowDefinitions.Clear();
+        
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        
+        FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        
+        Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0); Grid.SetColumnSpan(SearchInput, 3);
+        Grid.SetColumn(RoleFilter, 0); Grid.SetRow(RoleFilter, 1);
+        Grid.SetColumn(StatusFilter, 1); Grid.SetRow(StatusFilter, 1);
+        Grid.SetColumn(GradeFilter, 2); Grid.SetRow(GradeFilter, 1);
+        
+        // Show separator on tablet/desktop
+        if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
+        {
+            separator.IsVisible = false; // Hide in tablet layout too
+        }
+        
+        // Update margins for tablet
+        SearchInput.Margin = new Thickness(0, 0, 0, 8);
+        RoleFilter.Margin = new Thickness(0, 8, 8, 0);
+        StatusFilter.Margin = new Thickness(8, 8);
+        GradeFilter.Margin = new Thickness(8, 8, 0, 0);
+    }
+
+    private void SetupDesktopFilterGrid()
+    {
+        FilterGrid.ColumnDefinitions.Clear();
+        FilterGrid.RowDefinitions.Clear();
+        
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        
+        FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        
+        Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0); Grid.SetColumnSpan(SearchInput, 1);
+        Grid.SetColumn(RoleFilter, 2); Grid.SetRow(RoleFilter, 0);
+        Grid.SetColumn(StatusFilter, 3); Grid.SetRow(StatusFilter, 0);
+        Grid.SetColumn(GradeFilter, 4); Grid.SetRow(GradeFilter, 0);
+        
+        // Show separator on desktop
+        if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
+        {
+            Grid.SetColumn(separator, 1);
+            Grid.SetRow(separator, 0);
+            separator.IsVisible = true;
+        }
+        
+        // Update margins for desktop
+        SearchInput.Margin = new Thickness(0);
+        RoleFilter.Margin = new Thickness(12, 0);
+        StatusFilter.Margin = new Thickness(12, 0);
+        GradeFilter.Margin = new Thickness(12, 0);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        
+        // Initial responsive setup
+        if (Bounds.Width > 0)
+        {
+            UpdateResponsiveClasses(Bounds.Width);
+        }
     }
 }

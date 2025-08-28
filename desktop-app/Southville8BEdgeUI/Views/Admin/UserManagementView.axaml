@@ -1,335 +1,569 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
-             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+             mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Admin.UserManagementView"
              x:DataType="vm:UserManagementViewModel"
              Background="#F9FAFB">
 
-    <UserControl.Styles>
-        <!-- Base TextBlock Style -->
-        <Style Selector="TextBlock">
-            <Setter Property="Foreground" Value="#111827"/>
-        </Style>
-        <Style Selector="TextBlock.light">
-            <Setter Property="Foreground" Value="#6B7280"/>
-        </Style>
-        <Style Selector="TextBlock.label">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
-        </Style>
+	<UserControl.Styles>
+		<!-- RESPONSIVE TEXT STYLES -->
 
-        <!-- Main Card Style -->
-        <Style Selector="Border.card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
-        </Style>
+		<!-- Main Header -->
+		<Style Selector="TextBlock.main-header">
+			<Setter Property="FontSize" Value="28"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="Foreground" Value="#111827"/>
+		</Style>
+		<Style Selector="TextBlock.main-header.tablet">
+			<Setter Property="FontSize" Value="24"/>
+		</Style>
+		<Style Selector="TextBlock.main-header.mobile">
+			<Setter Property="FontSize" Value="20"/>
+		</Style>
 
-        <!-- Button Styles -->
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="#4F46E5"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-        </Style>
-        
-        <Style Selector="Button.secondary">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#374151"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.secondary:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-            <Setter Property="Background" Value="#F9FAFB"/>
-        </Style>
+		<!-- Subtitle Text -->
+		<Style Selector="TextBlock.subtitle">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Foreground" Value="#6B7280"/>
+		</Style>
+		<Style Selector="TextBlock.subtitle.tablet">
+			<Setter Property="FontSize" Value="13"/>
+		</Style>
+		<Style Selector="TextBlock.subtitle.mobile">
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
 
-        <Style Selector="Button.danger">
-            <Setter Property="Background" Value="#EF4444"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-        <Style Selector="Button.danger:pointerover">
-            <Setter Property="Background" Value="#DC2626"/>
-        </Style>
+		<!-- Base TextBlock Style -->
+		<Style Selector="TextBlock">
+			<Setter Property="Foreground" Value="#111827"/>
+		</Style>
+		<Style Selector="TextBlock.light">
+			<Setter Property="Foreground" Value="#6B7280"/>
+		</Style>
 
-        <Style Selector="Button.small">
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="FontSize" Value="12"/>
-        </Style>
+		<!-- Label Text -->
+		<Style Selector="TextBlock.label">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Foreground" Value="#6B7280"/>
+		</Style>
+		<Style Selector="TextBlock.label.tablet">
+			<Setter Property="FontSize" Value="10"/>
+		</Style>
+		<Style Selector="TextBlock.label.mobile">
+			<Setter Property="FontSize" Value="9"/>
+		</Style>
 
-        <!-- Status Indicator Styles -->
-        <Style Selector="Border.status-indicator">
-            <Setter Property="Width" Value="8"/>
-            <Setter Property="Height" Value="8"/>
-            <Setter Property="CornerRadius" Value="4"/>
-        </Style>
+		<!-- Stat Values -->
+		<Style Selector="TextBlock.stat-value">
+			<Setter Property="FontSize" Value="28"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="Foreground" Value="#111827"/>
+		</Style>
+		<Style Selector="TextBlock.stat-value.tablet">
+			<Setter Property="FontSize" Value="24"/>
+		</Style>
+		<Style Selector="TextBlock.stat-value.mobile">
+			<Setter Property="FontSize" Value="20"/>
+		</Style>
 
-        <!-- User Card Styles -->
-        <Style Selector="Border.user-card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="BoxShadow" Value="0 1 3 0 #1000000F"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.user-card:pointerover">
-            <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
-            <Setter Property="RenderTransform" Value="translate(-2px)"/>
-        </Style>
-    </UserControl.Styles>
+		<!-- User Name Text -->
+		<Style Selector="TextBlock.user-name">
+			<Setter Property="FontSize" Value="18"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+		</Style>
+		<Style Selector="TextBlock.user-name.tablet">
+			<Setter Property="FontSize" Value="16"/>
+		</Style>
+		<Style Selector="TextBlock.user-name.mobile">
+			<Setter Property="FontSize" Value="14"/>
+		</Style>
 
-    <ScrollViewer>
-        <StackPanel Margin="40" Spacing="24">
+		<!-- User Detail Text -->
+		<Style Selector="TextBlock.user-detail">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+		</Style>
+		<Style Selector="TextBlock.user-detail.tablet">
+			<Setter Property="FontSize" Value="13"/>
+		</Style>
+		<Style Selector="TextBlock.user-detail.mobile">
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
 
-            <!-- Header -->
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="User Management" FontSize="28" FontWeight="Bold"/>
-                    <TextBlock Text="Manage student, teacher, and staff accounts" Classes="light" FontSize="14"/>
-                </StackPanel>
+		<!-- Empty State Text -->
+		<Style Selector="TextBlock.empty-title">
+			<Setter Property="FontSize" Value="18"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+		</Style>
+		<Style Selector="TextBlock.empty-title.tablet">
+			<Setter Property="FontSize" Value="16"/>
+		</Style>
+		<Style Selector="TextBlock.empty-title.mobile">
+			<Setter Property="FontSize" Value="14"/>
+		</Style>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button Content="📁 Import Users" Classes="secondary" Command="{Binding ImportUsersCommand}"/>
-                    <Button Content="➕ Create User" Classes="primary" Command="{Binding CreateUserCommand}"/>
-                </StackPanel>
-            </Grid>
+		<!-- RESPONSIVE CARD STYLES -->
 
-            <!-- Stat Cards -->
-            <Grid ColumnDefinitions="*,*,*,*">
-                <!-- Total Users -->
-                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="Total Users" Classes="label"/>
-                            <TextBlock Text="{Binding TotalUsers}" FontSize="28" FontWeight="Bold"/>
-                            <TextBlock Text="All registered users" Classes="light" FontSize="12"/>
-                        </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="#EBF8FF" CornerRadius="8">
-                            <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="#3B82F6" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-                </Border>
-                <!-- Students -->
-                <Border Grid.Column="1" Classes="card" Margin="12,0">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="Students" Classes="label"/>
-                            <TextBlock Text="{Binding Students}" FontSize="28" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding StudentPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
-                        </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="#DBEAFE" CornerRadius="8">
-                            <Path Data="M12 14l-1-1-1 1v4l1-1 1 1v-4zM19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 10c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" Fill="#2563EB" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-                </Border>
-                <!-- Teachers -->
-                <Border Grid.Column="2" Classes="card" Margin="12,0">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="Teachers" Classes="label"/>
-                            <TextBlock Text="{Binding Teachers}" FontSize="28" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding TeacherPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
-                        </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="#EDE9FE" CornerRadius="8">
-                            <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Fill="#8B5CF6" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-                </Border>
-                <!-- Active Users -->
-                <Border Grid.Column="3" Classes="card" Margin="12,0,0,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Active Users" Classes="label"/>
-                        <TextBlock Text="{Binding ActiveUsers}" FontSize="28" FontWeight="Bold"/>
-                        <ProgressBar Value="{Binding ActivePercentage}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#10B981"/>
-                        <TextBlock Text="{Binding ActivePercentage, StringFormat={}{0:F1}% active}" Classes="light" FontSize="12"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
+		<!-- Main Card Style -->
+		<Style Selector="Border.card">
+			<Setter Property="Background" Value="White"/>
+			<Setter Property="BorderBrush" Value="#E5E7EB"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="20"/>
+			<Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+		</Style>
+		<Style Selector="Border.card.tablet">
+			<Setter Property="Padding" Value="16"/>
+		</Style>
+		<Style Selector="Border.card.mobile">
+			<Setter Property="Padding" Value="12"/>
+		</Style>
 
-            <!-- Filter and Search Bar -->
-            <Border Classes="card">
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                    <TextBox Grid.Column="0" 
-                             Watermark="Search users..." 
+		<!-- User Card Styles -->
+		<Style Selector="Border.user-card">
+			<Setter Property="Background" Value="White"/>
+			<Setter Property="BorderBrush" Value="#E5E7EB"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="20"/>
+			<Setter Property="BoxShadow" Value="0 1 3 0 #1000000F"/>
+			<Setter Property="Width" Value="400"/>
+			<Setter Property="Margin" Value="0,0,20,20"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Border.user-card:pointerover">
+			<Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
+			<Setter Property="RenderTransform" Value="translate(0, -2px)"/>
+		</Style>
+		<Style Selector="Border.user-card.tablet">
+			<Setter Property="Padding" Value="16"/>
+			<Setter Property="Width" Value="350"/>
+			<Setter Property="Margin" Value="0,0,16,16"/>
+		</Style>
+		<Style Selector="Border.user-card.mobile">
+			<Setter Property="Padding" Value="12"/>
+			<Setter Property="Width" Value="100"/>
+			<Setter Property="Margin" Value="0,0,0,12"/>
+		</Style>
+
+		<!-- RESPONSIVE BUTTON STYLES -->
+
+		<!-- Primary Button -->
+		<Style Selector="Button.primary">
+			<Setter Property="Background" Value="#4F46E5"/>
+			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="16,10"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Button.primary:pointerover">
+			<Setter Property="RenderTransform" Value="scale(1.02)"/>
+		</Style>
+		<Style Selector="Button.primary.tablet">
+			<Setter Property="Padding" Value="14,8"/>
+			<Setter Property="FontSize" Value="13"/>
+		</Style>
+		<Style Selector="Button.primary.mobile">
+			<Setter Property="Padding" Value="12,6"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+
+		<!-- Secondary Button -->
+		<Style Selector="Button.secondary">
+			<Setter Property="Background" Value="White"/>
+			<Setter Property="Foreground" Value="#374151"/>
+			<Setter Property="BorderBrush" Value="#D1D5DB"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="16,10"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Button.secondary:pointerover">
+			<Setter Property="RenderTransform" Value="scale(1.02)"/>
+			<Setter Property="Background" Value="#F9FAFB"/>
+		</Style>
+		<Style Selector="Button.secondary.tablet">
+			<Setter Property="Padding" Value="14,8"/>
+			<Setter Property="FontSize" Value="13"/>
+		</Style>
+		<Style Selector="Button.secondary.mobile">
+			<Setter Property="Padding" Value="12,6"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+
+		<!-- Danger Button -->
+		<Style Selector="Button.danger">
+			<Setter Property="Background" Value="#EF4444"/>
+			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="12,8"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+		<Style Selector="Button.danger:pointerover">
+			<Setter Property="Background" Value="#DC2626"/>
+		</Style>
+		<Style Selector="Button.danger.tablet">
+			<Setter Property="Padding" Value="10,6"/>
+			<Setter Property="FontSize" Value="11"/>
+		</Style>
+		<Style Selector="Button.danger.mobile">
+			<Setter Property="Padding" Value="8,4"/>
+			<Setter Property="FontSize" Value="10"/>
+		</Style>
+
+		<!-- Small Button -->
+		<Style Selector="Button.small">
+			<Setter Property="Padding" Value="8,6"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+		<Style Selector="Button.small.tablet">
+			<Setter Property="Padding" Value="6,4"/>
+			<Setter Property="FontSize" Value="11"/>
+		</Style>
+		<Style Selector="Button.small.mobile">
+			<Setter Property="Padding" Value="4,3"/>
+			<Setter Property="FontSize" Value="10"/>
+		</Style>
+
+		<!-- RESPONSIVE INPUT STYLES -->
+
+		<Style Selector="TextBox.search-input">
+			<Setter Property="Padding" Value="12"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="BorderBrush" Value="#D1D5DB"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
+		<Style Selector="TextBox.search-input.tablet">
+			<Setter Property="Padding" Value="10"/>
+			<Setter Property="FontSize" Value="13"/>
+		</Style>
+		<Style Selector="TextBox.search-input.mobile">
+			<Setter Property="Padding" Value="8"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+
+		<Style Selector="ComboBox.filter-combo">
+			<Setter Property="Padding" Value="12"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="BorderBrush" Value="#D1D5DB"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="MinWidth" Value="120"/>
+		</Style>
+		<Style Selector="ComboBox.filter-combo.tablet">
+			<Setter Property="Padding" Value="10"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="MinWidth" Value="100"/>
+		</Style>
+		<Style Selector="ComboBox.filter-combo.mobile">
+			<Setter Property="Padding" Value="8"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="MinWidth" Value="80"/>
+		</Style>
+
+		<!-- RESPONSIVE LAYOUT STYLES -->
+
+		<Style Selector="StackPanel.main-content">
+			<Setter Property="Margin" Value="40"/>
+			<Setter Property="Spacing" Value="24"/>
+		</Style>
+		<Style Selector="StackPanel.main-content-tablet">
+			<Setter Property="Margin" Value="20"/>
+			<Setter Property="Spacing" Value="16"/>
+		</Style>
+		<Style Selector="StackPanel.main-content-mobile">
+			<Setter Property="Margin" Value="12"/>
+			<Setter Property="Spacing" Value="12"/>
+		</Style>
+
+		<!-- Status Indicator Styles -->
+		<Style Selector="Border.status-indicator">
+			<Setter Property="Width" Value="8"/>
+			<Setter Property="Height" Value="8"/>
+			<Setter Property="CornerRadius" Value="4"/>
+		</Style>
+		<Style Selector="Border.status-indicator.tablet">
+			<Setter Property="Width" Value="6"/>
+			<Setter Property="Height" Value="6"/>
+			<Setter Property="CornerRadius" Value="3"/>
+		</Style>
+		<Style Selector="Border.status-indicator.mobile">
+			<Setter Property="Width" Value="4"/>
+			<Setter Property="Height" Value="4"/>
+			<Setter Property="CornerRadius" Value="2"/>
+		</Style>
+
+		<!-- Role Badge Styles -->
+		<Style Selector="Border.role-badge">
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="8,4"/>
+		</Style>
+		<Style Selector="Border.role-badge.tablet">
+			<Setter Property="Padding" Value="6,3"/>
+		</Style>
+		<Style Selector="Border.role-badge.mobile">
+			<Setter Property="Padding" Value="4,2"/>
+		</Style>
+
+		<!-- Role Badge Text -->
+		<Style Selector="TextBlock.role-text">
+			<Setter Property="FontSize" Value="10"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Foreground" Value="White"/>
+		</Style>
+		<Style Selector="TextBlock.role-text.tablet">
+			<Setter Property="FontSize" Value="9"/>
+		</Style>
+		<Style Selector="TextBlock.role-text.mobile">
+			<Setter Property="FontSize" Value="8"/>
+		</Style>
+	</UserControl.Styles>
+
+	<ScrollViewer>
+		<StackPanel x:Name="MainStackPanel" Classes="main-content">
+			<!-- Header -->
+			<Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
+				<StackPanel Grid.Column="0">
+					<TextBlock x:Name="MainHeaderText" Text="User Management" Classes="main-header"/>
+					<TextBlock x:Name="SubtitleText" Text="Manage student, teacher, and staff accounts" Classes="subtitle"/>
+				</StackPanel>
+
+				<StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+					<Button x:Name="ImportButton" Content="📁 Import Users" Classes="secondary" Command="{Binding ImportUsersCommand}"/>
+					<Button x:Name="CreateButton" Content="➕ Create User" Classes="primary" Command="{Binding CreateUserCommand}"/>
+				</StackPanel>
+			</Grid>
+
+			<!-- Stat Cards -->
+			<Grid x:Name="StatsGrid" ColumnDefinitions="*,*,*,*">
+				<!-- Total Users -->
+				<Border Grid.Column="0" x:Name="StatsCard1" Classes="card" Margin="0,0,12,0">
+					<Grid ColumnDefinitions="*,Auto">
+						<StackPanel Grid.Column="0" Spacing="4">
+							<TextBlock Text="Total Users" Classes="label"/>
+							<TextBlock x:Name="TotalUsersValue" Text="{Binding TotalUsers}" Classes="stat-value"/>
+							<TextBlock Text="All registered users" Classes="light" FontSize="12"/>
+						</StackPanel>
+						<Border Grid.Column="1" Width="40" Height="40" Background="#EBF8FF" CornerRadius="8">
+							<Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="#3B82F6" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+					</Grid>
+				</Border>
+				<!-- Students -->
+				<Border Grid.Column="1" x:Name="StatsCard2" Classes="card" Margin="12,0">
+					<Grid ColumnDefinitions="*,Auto">
+						<StackPanel Grid.Column="0" Spacing="4">
+							<TextBlock Text="Students" Classes="label"/>
+							<TextBlock x:Name="StudentsValue" Text="{Binding Students}" Classes="stat-value"/>
+							<TextBlock x:Name="StudentsPercentageText" Text="{Binding StudentPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+						</StackPanel>
+						<Border Grid.Column="1" Width="40" Height="40" Background="#DBEAFE" CornerRadius="8">
+							<Path Data="M12 14l-1-1-1 1v4l1-1 1 1v-4zM19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 10c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" Fill="#2563EB" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+					</Grid>
+				</Border>
+				<!-- Teachers -->
+				<Border Grid.Column="2" x:Name="StatsCard3" Classes="card" Margin="12,0">
+					<Grid ColumnDefinitions="*,Auto">
+						<StackPanel Grid.Column="0" Spacing="4">
+							<TextBlock Text="Teachers" Classes="label"/>
+							<TextBlock x:Name="TeachersValue" Text="{Binding Teachers}" Classes="stat-value"/>
+							<TextBlock x:Name="TeachersPercentageText" Text="{Binding TeacherPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+						</StackPanel>
+						<Border Grid.Column="1" Width="40" Height="40" Background="#EDE9FE" CornerRadius="8">
+							<Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Fill="#8B5CF6" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+					</Grid>
+				</Border>
+				<!-- Active Users -->
+				<Border Grid.Column="3" x:Name="StatsCard4" Classes="card" Margin="12,0,0,0">
+					<StackPanel Spacing="8">
+						<TextBlock Text="Active Users" Classes="label"/>
+						<TextBlock x:Name="ActiveUsersValue" Text="{Binding ActiveUsers}" Classes="stat-value"/>
+						<ProgressBar x:Name="ActiveUsersProgress" Value="{Binding ActivePercentage}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#10B981"/>
+						<TextBlock x:Name="ActivePercentageText" Text="{Binding ActivePercentage, StringFormat={}{0:F1}% active}" Classes="light" FontSize="12"/>
+					</StackPanel>
+				</Border>
+			</Grid>
+
+			<!-- Filter and Search Bar -->
+			<Border x:Name="FilterCard" Classes="card">
+				<Grid x:Name="FilterGrid" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+					<TextBox x:Name="SearchInput" Grid.Column="0"
+                             Classes="search-input"
+                             Watermark="Search users..."
                              VerticalAlignment="Center"
                              Text="{Binding SearchText}"/>
-                    <Border Grid.Column="1" Background="#E5E7EB" Width="1" Margin="12,0"/>
-                    <ComboBox Grid.Column="2" 
-                              PlaceholderText="All Roles" 
+					<Border Grid.Column="1" Background="#E5E7EB" Width="1" Margin="12,0"/>
+					<ComboBox x:Name="RoleFilter" Grid.Column="2"
+                              Classes="filter-combo"
+                              PlaceholderText="All Roles"
                               Margin="12,0"
                               ItemsSource="{Binding RoleOptions}"
                               SelectedItem="{Binding SelectedRole}"/>
-                    <ComboBox Grid.Column="3" 
-                              PlaceholderText="All Status" 
+					<ComboBox x:Name="StatusFilter" Grid.Column="3"
+                              Classes="filter-combo"
+                              PlaceholderText="All Status"
                               Margin="12,0"
                               ItemsSource="{Binding StatusOptions}"
                               SelectedItem="{Binding SelectedStatus}"/>
-                    <ComboBox Grid.Column="4" 
-                              PlaceholderText="All Grades" 
+					<ComboBox x:Name="GradeFilter" Grid.Column="4"
+                              Classes="filter-combo"
+                              PlaceholderText="All Grades"
                               Margin="12,0"
                               ItemsSource="{Binding GradeOptions}"
                               SelectedItem="{Binding SelectedGrade}"/>
-                </Grid>
-            </Border>
+				</Grid>
+			</Border>
 
-            <!-- Users Grid -->
-            <ItemsControl ItemsSource="{Binding FilteredUsers}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:UserViewModel">
-                        <Border Classes="user-card" 
-                                Width="400" 
-                                Margin="0,0,20,20">
-                            <StackPanel Spacing="16">
-                                <!-- Header with name and status -->
-                                <Grid ColumnDefinitions="*,Auto,Auto">
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding FullName}" FontSize="18" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Username}" Classes="light" FontSize="12"/>
-                                    </StackPanel>
-                                    <Border Grid.Column="1" 
+			<!-- Users Grid -->
+			<ItemsControl x:Name="UsersGrid" ItemsSource="{Binding FilteredUsers}">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<WrapPanel x:Name="UsersWrapPanel" Orientation="Horizontal"/>
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+					<DataTemplate DataType="vm:UserViewModel">
+						<Border x:Name="UserCard" Classes="user-card">
+							<StackPanel Spacing="16">
+								<!-- Header with name and status -->
+								<Grid ColumnDefinitions="*,Auto,Auto">
+									<StackPanel Grid.Column="0">
+										<TextBlock x:Name="UserNameText" Text="{Binding FullName}" Classes="user-name"/>
+										<TextBlock x:Name="UsernameText" Text="{Binding Username}" Classes="light" FontSize="12"/>
+									</StackPanel>
+									<Border Grid.Column="1"
+                                            x:Name="StatusIndicator"
                                             Classes="status-indicator"
                                             Background="{Binding StatusColor}"
                                             Margin="0,0,8,0"/>
-                                    <Border Grid.Column="2" 
-                                            Background="{Binding RoleColor}" 
-                                            CornerRadius="12" 
-                                            Padding="8,4">
-                                        <TextBlock Text="{Binding Role}" 
-                                                   FontSize="10" 
-                                                   FontWeight="SemiBold" 
-                                                   Foreground="White"/>
-                                    </Border>
-                                </Grid>
+									<Border Grid.Column="2"
+                                            x:Name="RoleBadge"
+                                            Classes="role-badge"
+                                            Background="{Binding RoleColor}">
+										<TextBlock x:Name="RoleText" Text="{Binding Role}" Classes="role-text"/>
+									</Border>
+								</Grid>
 
-                                <!-- User Information Grid -->
-                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
-                                    <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
-                                        <TextBlock Text="Status" Classes="label"/>
-                                        <TextBlock Text="{Binding Status}" FontWeight="Medium"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
-                                        <TextBlock Text="Grade/Department" Classes="label"/>
-                                        <TextBlock Text="{Binding Grade}" FontWeight="Medium"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4">
-                                        <TextBlock Text="ID" Classes="label"/>
-                                        <TextBlock Text="{Binding DisplayId}" FontWeight="Medium"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Grid.Row="1" Spacing="4">
-                                        <TextBlock Text="Phone" Classes="label"/>
-                                        <TextBlock Text="{Binding PhoneNumber}" FontWeight="Medium"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
-                                        <TextBlock Text="Email" Classes="label"/>
-                                        <TextBlock Text="{Binding Email}" FontWeight="Medium" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="0" Grid.Row="3" Spacing="4">
-                                        <TextBlock Text="Last Login" Classes="label"/>
-                                        <TextBlock Text="{Binding LastLoginText}" FontWeight="Medium"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Grid.Row="3" Spacing="4" IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                        <TextBlock Text="Department" Classes="label"/>
-                                        <TextBlock Text="{Binding Department}" FontWeight="Medium"/>
-                                    </StackPanel>
-                                </Grid>
+								<!-- User Information Grid -->
+								<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+									<StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
+										<TextBlock Text="Status" Classes="label"/>
+										<TextBlock x:Name="StatusText" Text="{Binding Status}" Classes="user-detail"/>
+									</StackPanel>
+									<StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
+										<TextBlock Text="Grade/Department" Classes="label"/>
+										<TextBlock x:Name="GradeText" Text="{Binding Grade}" Classes="user-detail"/>
+									</StackPanel>
+									<StackPanel Grid.Column="0" Grid.Row="1" Spacing="4">
+										<TextBlock Text="ID" Classes="label"/>
+										<TextBlock x:Name="DisplayIdText" Text="{Binding DisplayId}" Classes="user-detail"/>
+									</StackPanel>
+									<StackPanel Grid.Column="1" Grid.Row="1" Spacing="4">
+										<TextBlock Text="Phone" Classes="label"/>
+										<TextBlock x:Name="PhoneText" Text="{Binding PhoneNumber}" Classes="user-detail"/>
+									</StackPanel>
+									<StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
+										<TextBlock Text="Email" Classes="label"/>
+										<TextBlock x:Name="EmailText" Text="{Binding Email}" Classes="user-detail" TextWrapping="Wrap"/>
+									</StackPanel>
+									<StackPanel Grid.Column="0" Grid.Row="3" Spacing="4">
+										<TextBlock Text="Last Login" Classes="label"/>
+										<TextBlock x:Name="LastLoginText" Text="{Binding LastLoginText}" Classes="user-detail"/>
+									</StackPanel>
+									<StackPanel Grid.Column="1" Grid.Row="3" Spacing="4" IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+										<TextBlock Text="Department" Classes="label"/>
+										<TextBlock x:Name="DepartmentText" Text="{Binding Department}" Classes="user-detail"/>
+									</StackPanel>
+								</Grid>
 
-                                <!-- Action Buttons -->
-                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                                    <Button Grid.Column="0" 
-                                            Content="View Details" 
+								<!-- Action Buttons -->
+								<Grid x:Name="ActionButtonsGrid" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+									<Button Grid.Column="0"
+                                            x:Name="ViewDetailsButton"
+                                            Content="View Details"
                                             Classes="secondary small"
                                             Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ViewUserDetailsCommand}"
                                             CommandParameter="{Binding}"/>
-                                    <Button Grid.Column="1" 
-                                            Content="Edit" 
+									<Button Grid.Column="1"
+                                            x:Name="EditButton"
+                                            Content="Edit"
                                             Classes="secondary small"
                                             Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).EditUserCommand}"
                                             CommandParameter="{Binding}"
                                             IsEnabled="{Binding CanEdit}"
                                             Margin="8,0,0,0"/>
-                                    <Button Grid.Column="2" 
-                                            Content="{Binding StatusActionText}" 
+									<Button Grid.Column="2"
+                                            x:Name="ToggleStatusButton"
+                                            Content="{Binding StatusActionText}"
                                             Classes="secondary small"
                                             Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ToggleUserStatusCommand}"
                                             CommandParameter="{Binding}"
                                             IsEnabled="{Binding CanToggleStatus}"
                                             Margin="8,0,0,0"/>
-                                    <Button Grid.Column="3" 
-                                            Content="Reset PW" 
+									<Button Grid.Column="3"
+                                            x:Name="ResetPasswordButton"
+                                            Content="Reset PW"
                                             Classes="secondary small"
                                             Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ResetPasswordCommand}"
                                             CommandParameter="{Binding}"
                                             Margin="8,0,0,0"/>
-                                    <Button Grid.Column="4" 
-                                            Content="Delete" 
+									<Button Grid.Column="4"
+                                            x:Name="DeleteButton"
+                                            Content="Delete"
                                             Classes="danger small"
                                             Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).DeleteUserCommand}"
                                             CommandParameter="{Binding}"
                                             Margin="8,0,0,0"/>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+								</Grid>
+							</StackPanel>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
 
-            <!-- Empty State -->
-            <Border Classes="card" 
+			<!-- Empty State -->
+			<Border x:Name="EmptyStateCard" Classes="card"
                     IsVisible="{Binding !HasFilteredUsers}"
                     HorizontalAlignment="Center"
                     Padding="40">
-                <StackPanel Spacing="16" HorizontalAlignment="Center">
-                    <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" 
-                          Fill="#9CA3AF" 
-                          Width="48" 
-                          Height="48" 
+				<StackPanel Spacing="16" HorizontalAlignment="Center">
+					<Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                          Fill="#9CA3AF"
+                          Width="48"
+                          Height="48"
                           HorizontalAlignment="Center"/>
-                    <TextBlock Text="No users found" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Try adjusting your search criteria or create a new user" Classes="light" HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-
-        </StackPanel>
-    </ScrollViewer>
+					<TextBlock x:Name="EmptyTitleText" Text="No users found" Classes="empty-title" HorizontalAlignment="Center"/>
+					<TextBlock x:Name="EmptySubtitleText" Text="Try adjusting your search criteria or create a new user" Classes="light" HorizontalAlignment="Center"/>
+				</StackPanel>
+			</Border>
+		</StackPanel>
+	</ScrollViewer>
 </UserControl>
