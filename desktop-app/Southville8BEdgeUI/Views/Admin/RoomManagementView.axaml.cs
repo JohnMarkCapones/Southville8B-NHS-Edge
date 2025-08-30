@@ -21,10 +21,10 @@ public partial class RoomManagementView : UserControl
     // Cache the separator reference to avoid repeated LINQ queries
     private Border? _filterSeparator;
 
-    // Element types for optimized recursive updates
-    private readonly HashSet<string> _textElementSuffixes = new() { "Text" };
-    private readonly HashSet<string> _buttonElementSuffixes = new() { "Button" };
-    private readonly HashSet<string> _specialElementNames = new() { "StatusIndicator" };
+    // Element identification constants for optimized performance
+    private const string TextElementSuffix = "Text";
+    private const string ButtonElementSuffix = "Button";
+    private const string SpecialElementName = "StatusIndicator";
 
     public RoomManagementView()
     {
@@ -78,13 +78,10 @@ public partial class RoomManagementView : UserControl
             TypeFilter
         });
 
-        // Cache the filter separator to avoid repeated LINQ queries
-        // Find separator by looking for a Border child of FilterGrid that doesn't match our known controls
+        // Cache the filter separator by name for accurate identification
         _filterSeparator = FilterGrid.Children
             .OfType<Border>()
-            .FirstOrDefault(b => 
-                b != StatsCard1 && b != StatsCard2 && b != StatsCard3 && 
-                b != StatsCard4 && b != FilterCard && b != EmptyStateCard);
+            .FirstOrDefault(b => b.Name == "FilterSeparator");
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -409,21 +406,21 @@ public partial class RoomManagementView : UserControl
         {
             UpdateElementResponsiveClasses(roomCard, sizeClass);
         }
-        // Fast path for text blocks with optimized name check
+        // Optimized text block check using direct string comparison
         else if (controlName != null && control is TextBlock textBlock && 
-                 _textElementSuffixes.Any(suffix => controlName.EndsWith(suffix)))
+                 controlName.EndsWith(TextElementSuffix))
         {
             UpdateElementResponsiveClasses(textBlock, sizeClass);
         }
-        // Fast path for buttons with optimized name check
+        // Optimized button check using direct string comparison
         else if (controlName != null && control is Button button && 
-                 _buttonElementSuffixes.Any(suffix => controlName.EndsWith(suffix)))
+                 controlName.EndsWith(ButtonElementSuffix))
         {
             UpdateElementResponsiveClasses(button, sizeClass);
         }
         // Fast path for special elements like status indicators
         else if (controlName != null && control is Border border && 
-                 _specialElementNames.Contains(controlName))
+                 controlName == SpecialElementName)
         {
             UpdateElementResponsiveClasses(border, sizeClass);
         }

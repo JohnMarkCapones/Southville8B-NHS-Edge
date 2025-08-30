@@ -372,7 +372,7 @@
                              Watermark="Search for a room..." 
                              VerticalAlignment="Center"
                              Text="{Binding SearchText}"/>
-                    <Border Grid.Column="1" Background="#E5E7EB" Width="1" Margin="12,0"/>
+                    <Border x:Name="FilterSeparator" Grid.Column="1" Background="#E5E7EB" Width="1" Margin="12,0"/>
                     <ComboBox x:Name="FloorFilter" Grid.Column="2" 
                               Classes="filter-combo"
                               PlaceholderText="All Floors" 
