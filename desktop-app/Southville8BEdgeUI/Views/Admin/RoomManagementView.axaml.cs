@@ -256,7 +256,7 @@ public partial class RoomManagementView : UserControl
                 {
                     new(0, 0, 0, 8),
                     new(0, 8, 8, 0),
-                    new(8, 8, 8, 8),              // Fixed: Use single parameter constructor
+                    new(8, 8, 8, 8),
                     new(8, 8, 0, 0)
                 }
             },
