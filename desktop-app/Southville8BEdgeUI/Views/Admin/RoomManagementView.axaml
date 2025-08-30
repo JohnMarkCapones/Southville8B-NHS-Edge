@@ -9,6 +9,33 @@
              Background="#F9FAFB">
 
     <UserControl.Styles>
+        <!-- RESPONSIVE TEXT STYLES -->
+
+        <!-- Main Header -->
+        <Style Selector="TextBlock.main-header">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.tablet">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.mobile">
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+
+        <!-- Subtitle Text -->
+        <Style Selector="TextBlock.subtitle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        
         <!-- Base TextBlock Style -->
         <Style Selector="TextBlock">
             <Setter Property="Foreground" Value="#111827"/>
@@ -16,11 +43,70 @@
         <Style Selector="TextBlock.light">
             <Setter Property="Foreground" Value="#6B7280"/>
         </Style>
+        
+        <!-- Label Text -->
         <Style Selector="TextBlock.label">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Foreground" Value="#6B7280"/>
         </Style>
+        <Style Selector="TextBlock.label.tablet">
+            <Setter Property="FontSize" Value="10"/>
+        </Style>
+        <Style Selector="TextBlock.label.mobile">
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Stat Values -->
+        <Style Selector="TextBlock.stat-value">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.stat-value.tablet">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+        <Style Selector="TextBlock.stat-value.mobile">
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+
+        <!-- Room Title Text -->
+        <Style Selector="TextBlock.room-title">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.room-title.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.room-title.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- Room Detail Text -->
+        <Style Selector="TextBlock.room-detail">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style Selector="TextBlock.room-detail.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.room-detail.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Empty State Text -->
+        <Style Selector="TextBlock.empty-title">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.empty-title.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.empty-title.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- RESPONSIVE CARD STYLES -->
 
         <!-- Main Card Style -->
         <Style Selector="Border.card">
@@ -31,49 +117,11 @@
             <Setter Property="Padding" Value="20"/>
             <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
         </Style>
-
-        <!-- Button Styles -->
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="#4F46E5"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
-                </Transitions>
-            </Setter>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="Padding" Value="16"/>
         </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-        </Style>
-        
-        <Style Selector="Button.secondary">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#374151"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.secondary:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-            <Setter Property="Background" Value="#F9FAFB"/>
-        </Style>
-
-        <!-- Status Indicator Styles -->
-        <Style Selector="Border.status-indicator">
-            <Setter Property="Width" Value="8"/>
-            <Setter Property="Height" Value="8"/>
-            <Setter Property="CornerRadius" Value="4"/>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="Padding" Value="12"/>
         </Style>
 
         <!-- Room Card Styles -->
@@ -84,6 +132,8 @@
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="BoxShadow" Value="0 1 3 0 #1000000F"/>
+            <Setter Property="Width" Value="320"/>
+            <Setter Property="Margin" Value="0,0,20,20"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
@@ -93,7 +143,146 @@
         </Style>
         <Style Selector="Border.room-card:pointerover">
             <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
-			<Setter Property="RenderTransform" Value="translate(-1px)"/>
+            <Setter Property="RenderTransform" Value="translate(-1px)"/>
+        </Style>
+        <Style Selector="Border.room-card.tablet">
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Width" Value="280"/>
+            <Setter Property="Margin" Value="0,0,16,16"/>
+        </Style>
+		<Style Selector="Border.room-card.mobile">
+			<Setter Property="Padding" Value="12"/>
+			<!-- Fix the width to use percentage instead of fixed 100px -->
+			<Setter Property="Width" Value="NaN"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="Margin" Value="0,0,0,12"/>
+		</Style>
+
+        <!-- RESPONSIVE BUTTON STYLES -->
+
+        <!-- Primary Button -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#4F46E5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+        <Style Selector="Button.primary.tablet">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.primary.mobile">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        
+        <!-- Secondary Button -->
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.secondary:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+            <Setter Property="Background" Value="#F9FAFB"/>
+        </Style>
+        <Style Selector="Button.secondary.tablet">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.secondary.mobile">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- RESPONSIVE INPUT STYLES -->
+
+        <Style Selector="TextBox.search-input">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="TextBox.search-input.tablet">
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBox.search-input.mobile">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style Selector="ComboBox.filter-combo">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="MinWidth" Value="120"/>
+        </Style>
+        <Style Selector="ComboBox.filter-combo.tablet">
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinWidth" Value="100"/>
+        </Style>
+        <Style Selector="ComboBox.filter-combo.mobile">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+
+        <!-- RESPONSIVE LAYOUT STYLES -->
+
+        <Style Selector="StackPanel.main-content">
+            <Setter Property="Margin" Value="40"/>
+            <Setter Property="Spacing" Value="24"/>
+        </Style>
+        <Style Selector="StackPanel.main-content-tablet">
+            <Setter Property="Margin" Value="20"/>
+            <Setter Property="Spacing" Value="16"/>
+        </Style>
+        <Style Selector="StackPanel.main-content-mobile">
+            <Setter Property="Margin" Value="12"/>
+            <Setter Property="Spacing" Value="12"/>
+        </Style>
+
+        <!-- Status Indicator Styles -->
+        <Style Selector="Border.status-indicator">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Border.status-indicator.tablet">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style Selector="Border.status-indicator.mobile">
+            <Setter Property="Width" Value="4"/>
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="CornerRadius" Value="2"/>
         </Style>
 
         <!-- Status-specific styles -->
@@ -109,30 +298,30 @@
     </UserControl.Styles>
 
     <ScrollViewer>
-        <StackPanel Margin="40" Spacing="24">
+        <StackPanel x:Name="MainStackPanel" Classes="main-content">
 
             <!-- Header -->
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Room Management" FontSize="28" FontWeight="Bold"/>
-                    <TextBlock Text="Manage classroom and event space bookings efficiently" Classes="light" FontSize="14"/>
+                    <TextBlock x:Name="MainHeaderText" Text="Room Management" Classes="main-header"/>
+                    <TextBlock x:Name="SubtitleText" Text="Manage classroom and event space bookings efficiently" Classes="subtitle"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button Content="📅 View Calendar" Classes="secondary" Command="{Binding ViewCalendarCommand}"/>
-                    <Button Content="➕ Book Room" Classes="primary" Command="{Binding BookRoomCommand}"/>
+                <StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button x:Name="ViewCalendarButton" Content="📅 View Calendar" Classes="secondary" Command="{Binding ViewCalendarCommand}"/>
+                    <Button x:Name="BookRoomButton" Content="➕ Book Room" Classes="primary" Command="{Binding BookRoomCommand}"/>
                 </StackPanel>
             </Grid>
 
             <!-- Stat Cards -->
-            <Grid ColumnDefinitions="*,*,*,*">
+            <Grid x:Name="StatsGrid" ColumnDefinitions="*,*,*,*">
                 <!-- Available -->
-                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+                <Border Grid.Column="0" x:Name="StatsCard1" Classes="card" Margin="0,0,12,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
                             <TextBlock Text="Available" Classes="label"/>
-                            <TextBlock Text="{Binding AvailableRooms}" FontSize="28" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding AvailablePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                            <TextBlock x:Name="AvailableRoomsValue" Text="{Binding AvailableRooms}" Classes="stat-value"/>
+                            <TextBlock x:Name="AvailablePercentageText" Text="{Binding AvailablePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
                         </StackPanel>
                         <Border Grid.Column="1" Width="40" Height="40" Background="#E0F2F1" CornerRadius="8">
                             <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" Fill="#10B981" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -140,12 +329,12 @@
                     </Grid>
                 </Border>
                 <!-- Occupied -->
-                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                <Border Grid.Column="1" x:Name="StatsCard2" Classes="card" Margin="12,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
                             <TextBlock Text="Occupied" Classes="label"/>
-                            <TextBlock Text="{Binding OccupiedRooms}" FontSize="28" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding OccupiedPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                            <TextBlock x:Name="OccupiedRoomsValue" Text="{Binding OccupiedRooms}" Classes="stat-value"/>
+                            <TextBlock x:Name="OccupiedPercentageText" Text="{Binding OccupiedPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
                         </StackPanel>
                         <Border Grid.Column="1" Width="40" Height="40" Background="#FEE2E2" CornerRadius="8">
                             <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Fill="#EF4444" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -153,12 +342,12 @@
                     </Grid>
                 </Border>
                 <!-- Maintenance -->
-                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                <Border Grid.Column="2" x:Name="StatsCard3" Classes="card" Margin="12,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
                             <TextBlock Text="Maintenance" Classes="label"/>
-                            <TextBlock Text="{Binding MaintenanceRooms}" FontSize="28" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding MaintenancePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                            <TextBlock x:Name="MaintenanceRoomsValue" Text="{Binding MaintenanceRooms}" Classes="stat-value"/>
+                            <TextBlock x:Name="MaintenancePercentageText" Text="{Binding MaintenancePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
                         </StackPanel>
                         <Border Grid.Column="1" Width="40" Height="40" Background="#FFFBEB" CornerRadius="8">
                             <Path Data="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6.1 6.1 9 1.3 4.2c-1.1 2.4-.7 5.4 1.3 7.4 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.1-2.1c.4-.4.4-1 0-1.4z" Fill="#F59E0B" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -166,34 +355,38 @@
                     </Grid>
                 </Border>
                 <!-- Utilization -->
-                <Border Grid.Column="3" Classes="card" Margin="12,0,0,0">
+                <Border Grid.Column="3" x:Name="StatsCard4" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Utilization" Classes="label"/>
-                        <TextBlock Text="{Binding UtilizationPercentage, StringFormat={}{0:F1}%}" FontSize="28" FontWeight="Bold"/>
-                        <ProgressBar Value="{Binding UtilizationPercentage}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#4F46E5"/>
+                        <TextBlock x:Name="UtilizationValue" Text="{Binding UtilizationPercentage, StringFormat={}{0:F1}%}" Classes="stat-value"/>
+                        <ProgressBar x:Name="UtilizationProgressBar" Value="{Binding UtilizationPercentage}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="#4F46E5"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <!-- Filter and Search Bar -->
-            <Border Classes="card">
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                    <TextBox Grid.Column="0" 
+            <Border x:Name="FilterCard" Classes="card">
+                <Grid x:Name="FilterGrid" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                    <TextBox x:Name="SearchInput" Grid.Column="0" 
+                             Classes="search-input"
                              Watermark="Search for a room..." 
                              VerticalAlignment="Center"
                              Text="{Binding SearchText}"/>
                     <Border Grid.Column="1" Background="#E5E7EB" Width="1" Margin="12,0"/>
-                    <ComboBox Grid.Column="2" 
+                    <ComboBox x:Name="FloorFilter" Grid.Column="2" 
+                              Classes="filter-combo"
                               PlaceholderText="All Floors" 
                               Margin="12,0"
                               ItemsSource="{Binding FloorOptions}"
                               SelectedItem="{Binding SelectedFloor}"/>
-                    <ComboBox Grid.Column="3" 
+                    <ComboBox x:Name="StatusFilter" Grid.Column="3" 
+                              Classes="filter-combo"
                               PlaceholderText="All Status" 
                               Margin="12,0"
                               ItemsSource="{Binding StatusOptions}"
                               SelectedItem="{Binding SelectedStatus}"/>
-                    <ComboBox Grid.Column="4" 
+                    <ComboBox x:Name="TypeFilter" Grid.Column="4" 
+                              Classes="filter-combo"
                               PlaceholderText="All Types" 
                               Margin="12,0"
                               ItemsSource="{Binding TypeOptions}"
@@ -202,7 +395,7 @@
             </Border>
 
             <!-- Room Grid -->
-            <ItemsControl ItemsSource="{Binding FilteredRooms}">
+            <ItemsControl x:Name="RoomsGrid" ItemsSource="{Binding FilteredRooms}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
@@ -210,19 +403,18 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:RoomViewModel">
-                        <Border Classes="room-card" 
-                                Width="320" 
-                                Margin="0,0,20,20"
+                        <Border x:Name="RoomCard" Classes="room-card" 
                                 Classes.status-available="{Binding IsAvailable}"
                                 Classes.status-occupied="{Binding IsOccupied}"
                                 Classes.status-maintenance="{Binding IsInMaintenance}">
                             <StackPanel Spacing="16">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Type}" Classes="light" FontSize="12"/>
+                                        <TextBlock x:Name="RoomNameText" Text="{Binding Name}" Classes="room-title"/>
+                                        <TextBlock x:Name="RoomTypeText" Text="{Binding Type}" Classes="light" FontSize="12"/>
                                     </StackPanel>
                                     <Border Grid.Column="1" 
+                                            x:Name="StatusIndicator"
                                             Classes="status-indicator"
                                             Background="{Binding StatusColor}"/>
                                 </Grid>
@@ -230,37 +422,40 @@
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
                                     <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
                                         <TextBlock Text="Status" Classes="label"/>
-                                        <TextBlock Text="{Binding Status}" FontWeight="Medium"/>
+                                        <TextBlock x:Name="StatusText" Text="{Binding Status}" Classes="room-detail"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
                                         <TextBlock Text="Capacity" Classes="label"/>
-                                        <TextBlock Text="{Binding Capacity}" FontWeight="Medium"/>
+                                        <TextBlock x:Name="CapacityText" Text="{Binding Capacity}" Classes="room-detail"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4">
                                         <TextBlock Text="Floor" Classes="label"/>
-                                        <TextBlock Text="{Binding Floor, StringFormat=Floor {0}}" FontWeight="Medium"/>
+                                        <TextBlock x:Name="FloorText" Text="{Binding Floor, StringFormat=Floor {0}}" Classes="room-detail"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Grid.Row="1" Spacing="4">
                                         <TextBlock Text="Room ID" Classes="label"/>
-                                        <TextBlock Text="{Binding RoomId}" FontWeight="Medium"/>
+                                        <TextBlock x:Name="RoomIdText" Text="{Binding RoomId}" Classes="room-detail"/>
                                     </StackPanel>
                                 </Grid>
 
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Current Booking" Classes="label"/>
-                                    <TextBlock Text="{Binding CurrentBooking}" 
-                                               FontWeight="Medium" 
+                                    <TextBlock x:Name="CurrentBookingText" 
+                                               Text="{Binding CurrentBooking}" 
+                                               Classes="room-detail"
                                                TextWrapping="Wrap"
                                                Foreground="{Binding CurrentBookingColor}"/>
                                 </StackPanel>
 
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Button Grid.Column="0" 
+                                            x:Name="ViewDetailsButton"
                                             Content="View Details" 
                                             Classes="secondary"
                                             Command="{Binding $parent[UserControl].((vm:RoomManagementViewModel)DataContext).ViewRoomDetailsCommand}"
                                             CommandParameter="{Binding}"/>
                                     <Button Grid.Column="1" 
+                                            x:Name="ActionButton"
                                             Content="{Binding ActionButtonText}" 
                                             Classes.primary="{Binding IsAvailable}"
                                             Classes.secondary="{Binding !IsAvailable}"
@@ -276,7 +471,7 @@
             </ItemsControl>
 
             <!-- Empty State -->
-            <Border Classes="card" 
+            <Border x:Name="EmptyStateCard" Classes="card" 
                     IsVisible="{Binding !HasFilteredRooms}"
                     HorizontalAlignment="Center"
                     Padding="40">
@@ -286,8 +481,8 @@
                           Width="48" 
                           Height="48" 
                           HorizontalAlignment="Center"/>
-                    <TextBlock Text="No rooms found" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Try adjusting your search criteria or filters" Classes="light" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptyTitleText" Text="No rooms found" Classes="empty-title" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptySubtitleText" Text="Try adjusting your search criteria or filters" Classes="subtitle" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
 
