@@ -40,9 +40,8 @@ public partial class RoomManagementView : UserControl
 
     private void InitializeResponsiveElements()
     {
-        // Add all named text elements that need responsive font sizes
-        _responsiveTextElements.AddRange(new Control[]
-        {
+        // Modern collection initializer syntax (C# 12+ feature for .NET 9)
+        _responsiveTextElements.AddRange([
             MainHeaderText,
             SubtitleText,
             AvailableRoomsValue,
@@ -54,29 +53,23 @@ public partial class RoomManagementView : UserControl
             UtilizationValue,
             EmptyTitleText,
             EmptySubtitleText
-        });
+        ]);
 
-        // Add card elements
-        _responsiveCardElements.AddRange(new Control[]
-        {
+        _responsiveCardElements.AddRange([
             StatsCard1, StatsCard2, StatsCard3, StatsCard4, FilterCard, EmptyStateCard
-        });
+        ]);
 
-        // Add button elements
-        _responsiveButtonElements.AddRange(new Control[]
-        {
+        _responsiveButtonElements.AddRange([
             ViewCalendarButton,
             BookRoomButton
-        });
+        ]);
 
-        // Add input elements
-        _responsiveInputElements.AddRange(new Control[]
-        {
+        _responsiveInputElements.AddRange([
             SearchInput,
             FloorFilter,
             StatusFilter,
             TypeFilter
-        });
+        ]);
 
         // Cache the filter separator by name for accurate identification
         _filterSeparator = FilterGrid.Children
@@ -388,39 +381,30 @@ public partial class RoomManagementView : UserControl
 
     private void UpdateRoomCardElements(string sizeClass)
     {
-        // Find all room cards and update their classes
-        var itemsControl = RoomsGrid;
-        if (itemsControl != null)
-        {
-            UpdateRoomCardsRecursively(itemsControl, sizeClass);
-        }
+        // Simplified - no unnecessary null check or intermediate variable
+        UpdateRoomCardsRecursively(RoomsGrid, sizeClass);
     }
 
     private void UpdateRoomCardsRecursively(Control control, string sizeClass)
     {
-        // Update room cards more efficiently
-        var controlName = control.Name;
-        
+        // Improved pattern matching with null safety
         // Fast path for room cards
-        if (controlName == "RoomCard" && control is Border roomCard)
+        if (control is Border roomCard && roomCard.Name == "RoomCard")
         {
             UpdateElementResponsiveClasses(roomCard, sizeClass);
         }
         // Optimized text block check using direct string comparison
-        else if (controlName != null && control is TextBlock textBlock && 
-                 controlName.EndsWith(TextElementSuffix))
+        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
         {
             UpdateElementResponsiveClasses(textBlock, sizeClass);
         }
         // Optimized button check using direct string comparison
-        else if (controlName != null && control is Button button && 
-                 controlName.EndsWith(ButtonElementSuffix))
+        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
         {
             UpdateElementResponsiveClasses(button, sizeClass);
         }
         // Fast path for special elements like status indicators
-        else if (controlName != null && control is Border border && 
-                 controlName == SpecialElementName)
+        else if (control is Border border && border.Name == SpecialElementName)
         {
             UpdateElementResponsiveClasses(border, sizeClass);
         }
