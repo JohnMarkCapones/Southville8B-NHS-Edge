@@ -359,8 +359,7 @@ public partial class RoomManagementView : UserControl
             FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
         
-        // Explicitly specify the type of the array to Control[]
-        Control[] filterControls = new Control[] { SearchInput, FloorFilter, StatusFilter, TypeFilter };
+        Control[] filterControls = { SearchInput, FloorFilter, StatusFilter, TypeFilter };
         for (int i = 0; i < filterControls.Length; i++)
         {
             var (col, row, span) = config.FilterElementPositions[i];
