@@ -152,7 +152,7 @@
         </Style>
 		<Style Selector="Border.room-card.mobile">
 			<Setter Property="Padding" Value="12"/>
-			<!-- Fix the width to use percentage instead of fixed 100px -->
+			<!-- Use Auto width + Stretch alignment for full-width behavior on mobile -->
 			<Setter Property="Width" Value="NaN"/>
 			<Setter Property="HorizontalAlignment" Value="Stretch"/>
 			<Setter Property="Margin" Value="0,0,0,12"/>
