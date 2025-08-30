@@ -40,7 +40,6 @@ public partial class RoomManagementView : UserControl
 
     private void InitializeResponsiveElements()
     {
-        // Modern collection initializer syntax (C# 12+ feature for .NET 9)
         _responsiveTextElements.AddRange([
             MainHeaderText,
             SubtitleText,
@@ -179,7 +178,7 @@ public partial class RoomManagementView : UserControl
                 {
                     (0, 0), (0, 1), (0, 2), (0, 3)
                 },
-                // Use explicit array declaration with Thickness type
+              
                 StatsCardMargins = new Thickness[] 
                 {
                     new(0, 0, 0, 8),
@@ -265,7 +264,7 @@ public partial class RoomManagementView : UserControl
                 {
                     (0, 0), (1, 0), (2, 0), (3, 0)
                 },
-                // Use explicit array declaration with Thickness type
+              
                 StatsCardMargins = new Thickness[] 
                 {
                     new(0, 0, 12, 0),
@@ -285,7 +284,7 @@ public partial class RoomManagementView : UserControl
                     (3, 0, 1), // StatusFilter
                     (4, 0, 1)  // TypeFilter
                 },
-                // Use explicit array declaration with Thickness type
+               
                 FilterElementMargins = new Thickness[]
                 {
                     new(0),
