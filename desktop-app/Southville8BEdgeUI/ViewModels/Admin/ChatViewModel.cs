@@ -258,8 +258,17 @@ public partial class ChatViewModel : ViewModelBase
     [RelayCommand]
     private void SelectConversation(ChatConversationViewModel conversation)
     {
+        // For mobile navigation: always trigger the navigation, even for the same conversation
+        var wasSameConversation = SelectedConversation == conversation;
+        
         SelectedConversation = conversation;
         conversation.UnreadCount = 0; // Mark as read
+        
+        // Force property change notification for mobile navigation if it's the same conversation
+        if (wasSameConversation)
+        {
+            OnPropertyChanged(nameof(SelectedConversation));
+        }
     }
 
     [RelayCommand]
