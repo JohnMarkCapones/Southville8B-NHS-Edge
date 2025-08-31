@@ -36,6 +36,9 @@ public partial class ChatView : UserControl
     
     // Mobile navigation state
     private bool _isMobileViewInChatMode = false;
+    
+    // Track message collection subscriptions to prevent memory leaks
+    private ChatConversationViewModel? _currentSubscribedConversation = null;
 
     public ChatView()
     {
@@ -58,7 +61,7 @@ public partial class ChatView : UserControl
     // Add this method to automatically scroll to bottom when new messages arrive
     private void ScrollToBottomOfMessages()
     {
-        if (MessagesScrollViewer != null && _lastSizeClass != null)
+        if (MessagesScrollViewer != null && !string.IsNullOrEmpty(_lastSizeClass))
         {
             // Use dispatcher to ensure UI has updated before scrolling
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -83,11 +86,22 @@ public partial class ChatView : UserControl
             }
         }
         
-        // Auto-scroll to bottom when new messages are added
-        if (e.PropertyName == nameof(ChatViewModel.SelectedConversation) && DataContext is ChatViewModel vm && vm.SelectedConversation != null)
+        // Handle message collection subscription changes properly to prevent memory leaks
+        if (e.PropertyName == nameof(ChatViewModel.SelectedConversation) && DataContext is ChatViewModel vm)
         {
-            // Subscribe to messages collection changes
-            vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
+            // Unsubscribe from previous conversation's messages
+            if (_currentSubscribedConversation != null)
+            {
+                _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
+                _currentSubscribedConversation = null;
+            }
+            
+            // Subscribe to new conversation's messages
+            if (vm.SelectedConversation != null)
+            {
+                vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
+                _currentSubscribedConversation = vm.SelectedConversation;
+            }
         }
     }
 
@@ -103,7 +117,9 @@ public partial class ChatView : UserControl
     private void InitializeResponsiveElements()
     {
         // Add all named text elements that need responsive font sizes
-        _responsiveTextElements.AddRange([
+        // Using traditional array syntax for better compatibility
+        _responsiveTextElements.AddRange(new Control[]
+        {
             ConversationsHeaderText,
             ConversationsSubtitleText,
             ChatHeaderNameText,
@@ -111,30 +127,33 @@ public partial class ChatView : UserControl
             NoConversationTitleText,
             NoConversationSubtitleText,
             NoMessagesText
-        ]);
+        });
 
         // Add card elements
-        _responsiveCardElements.AddRange([
+        _responsiveCardElements.AddRange(new Control[]
+        {
             ConversationsCard,
             ChatCard
-        ]);
+        });
 
         // Add button elements
-        _responsiveButtonElements.AddRange([
+        _responsiveButtonElements.AddRange(new Control[]
+        {
             NewChatButton,
             BackButton,
             CallButton,
             VideoButton,
             InfoButton,
             SendButton
-        ]);
+        });
 
         // Add input elements
-        _responsiveInputElements.AddRange([
+        _responsiveInputElements.AddRange(new Control[]
+        {
             SearchTextBox,
             UserTypeComboBox,
             MessageTextBox
-        ]);
+        });
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -462,10 +481,7 @@ public partial class ChatView : UserControl
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
         
         _isMobileViewInChatMode = false;
-        
-        // **ALTERNATIVE FIX: Instead of setting to null, keep the selection but allow re-selection**
-        // This prevents binding errors while still allowing the same conversation to be opened again
-        
+        // Navigate back to conversations list without clearing selection to maintain state
         ApplyLayoutStrategy(_lastSizeClass, Bounds.Width);
     }
 
@@ -499,12 +515,13 @@ public partial class ChatView : UserControl
         if (DataContext is ChatViewModel viewModel)
         {
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
-            
-            // Clean up message collection subscriptions
-            if (viewModel.SelectedConversation != null)
-            {
-                viewModel.SelectedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
-            }
+        }
+        
+        // Clean up message collection subscription to prevent memory leaks
+        if (_currentSubscribedConversation != null)
+        {
+            _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
+            _currentSubscribedConversation = null;
         }
     }
     

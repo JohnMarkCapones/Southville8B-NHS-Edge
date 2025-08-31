@@ -524,7 +524,7 @@
                                                     Background="{Binding RoleColor}" 
                                                     Margin="0,0,12,0">
                                                 <TextBlock Text="{Binding ContactInitials}" 
-                                                           FontSize="14" 
+                                                           Classes="contact-name"
                                                            FontWeight="SemiBold" 
                                                            Foreground="White"
                                                            HorizontalAlignment="Center" 
@@ -612,7 +612,7 @@
                                 <Border Classes="avatar"
                                         Background="{Binding SelectedConversation.RoleColor, FallbackValue=#6B7280}">
                                     <TextBlock Text="{Binding SelectedConversation.ContactInitials, FallbackValue=''}" 
-                                               FontSize="14" 
+                                               Classes="contact-name"
                                                FontWeight="SemiBold" 
                                                Foreground="White"
                                                HorizontalAlignment="Center" 
