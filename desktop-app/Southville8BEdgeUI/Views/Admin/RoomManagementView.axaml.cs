@@ -174,11 +174,8 @@ public partial class RoomManagementView : UserControl
                 
                 StatsColumns = 1,
                 StatsRows = 4,
-                StatsCardPositions = new (int, int)[] 
-                {
-                    (0, 0), (0, 1), (0, 2), (0, 3)
-                },
-              
+                StatsCardPositions = [(0, 0), (0, 1), (0, 2), (0, 3)],
+
                 StatsCardMargins = new Thickness[] 
                 {
                     new(0, 0, 0, 8),
@@ -199,13 +196,12 @@ public partial class RoomManagementView : UserControl
                     (0, 4, 1)  // TypeFilter
                 },
                 // Use explicit array declaration with Thickness type
-                FilterElementMargins = new Thickness[]
-                {
+                FilterElementMargins = [
                     new(0, 0, 0, 8),
                     new(0, 8, 0, 8),
                     new(0, 8, 0, 8),
                     new(0, 8, 0, 0)
-                }
+                ]
             },
             
             "tablet" => new LayoutConfiguration
@@ -218,10 +214,7 @@ public partial class RoomManagementView : UserControl
                 
                 StatsColumns = 2,
                 StatsRows = 2,
-                StatsCardPositions = new (int, int)[] 
-                {
-                    (0, 0), (1, 0), (0, 1), (1, 1)
-                },
+                StatsCardPositions = [(0, 0), (1, 0), (0, 1), (1, 1)],
                 StatsCardMargins = new Thickness[] 
                 {
                     new(0, 0, 8, 8),
@@ -234,13 +227,12 @@ public partial class RoomManagementView : UserControl
                 FilterRows = 2,
                 FilterSeparatorVisible = false,
                 FilterSeparatorPosition = (0, 0),
-                FilterElementPositions = new (int, int, int)[]
-                {
+                FilterElementPositions = [
                     (0, 0, 3), // SearchInput spans 3 columns
                     (0, 1, 1), // FloorFilter
                     (1, 1, 1), // StatusFilter
                     (2, 1, 1)  // TypeFilter
-                },
+                ],
                 FilterElementMargins = new Thickness[]
                 {
                     new(0, 0, 0, 8),
@@ -260,11 +252,8 @@ public partial class RoomManagementView : UserControl
                 
                 StatsColumns = 4,
                 StatsRows = 1,
-                StatsCardPositions = new (int, int)[] 
-                {
-                    (0, 0), (1, 0), (2, 0), (3, 0)
-                },
-              
+                StatsCardPositions = [(0, 0), (1, 0), (2, 0), (3, 0)],
+
                 StatsCardMargins = new Thickness[] 
                 {
                     new(0, 0, 12, 0),
@@ -277,14 +266,13 @@ public partial class RoomManagementView : UserControl
                 FilterRows = 1,
                 FilterSeparatorVisible = true,
                 FilterSeparatorPosition = (1, 0),
-                FilterElementPositions = new (int, int, int)[]
-                {
+                FilterElementPositions = [
                     (0, 0, 1), // SearchInput
                     (2, 0, 1), // FloorFilter
                     (3, 0, 1), // StatusFilter
                     (4, 0, 1)  // TypeFilter
-                },
-               
+                ],
+
                 FilterElementMargins = new Thickness[]
                 {
                     new(0),
