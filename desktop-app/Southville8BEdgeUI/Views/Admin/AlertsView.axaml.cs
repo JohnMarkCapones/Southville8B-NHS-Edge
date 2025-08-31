@@ -47,23 +47,44 @@ public partial class AlertsView : UserControl
 
     private void InitializeResponsiveElements()
     {
-        // Use reflection to automatically discover elements by naming convention
-        var fields = this.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-        foreach (var field in fields)
-        {
-            var value = field.GetValue(this) as Control;
-            if (value == null || string.IsNullOrEmpty(field.Name))
-                continue;
+        // Add all named text elements that need responsive font sizes
+        _responsiveTextElements.AddRange([
+            MainHeaderText,
+            SubtitleText,
+            ActiveCountText,
+            CreateHeaderText,
+            AlertsHeaderText,
+            ActiveCountBadgeText
+        ]);
 
-            if (field.Name.EndsWith(TextElementSuffix))
-                _responsiveTextElements.Add(value);
-            else if (field.Name.EndsWith(ButtonElementSuffix))
-                _responsiveButtonElements.Add(value);
-            else if (field.Name.EndsWith(InputElementSuffix))
-                _responsiveInputElements.Add(value);
-            else if (field.Name.EndsWith("Card"))
-                _responsiveCardElements.Add(value);
-        }
+        // Add card elements
+        _responsiveCardElements.AddRange([
+            HeaderCard,
+            CreateAlertCard,
+            ActiveAlertsCard
+        ]);
+
+        // Add button elements
+        _responsiveButtonElements.AddRange([
+            RefreshButton,
+            PurgeButton,
+            PublishButton,
+            ClearButton
+        ]);
+
+        // Add input elements
+        _responsiveInputElements.AddRange([
+            TypeComboBox,
+            TitleTextBox,
+            MessageTextBox,
+            LinkTextBox,
+            PriorityComboBox,
+            ScopeComboBox,
+            GradeLevelTextBox,
+            SectionTextBox,
+            ExpiresDatePicker,
+            ExpiresTimePicker
+        ]);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
