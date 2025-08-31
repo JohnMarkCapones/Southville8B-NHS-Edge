@@ -196,7 +196,12 @@ public partial class RoomManagementView : UserControl
                     (0, 4, 1)  // TypeFilter
                 },
                 // Use explicit array declaration with Thickness type
-                FilterElementMargins = [new(0, 0, 0, 8), new(0, 8, 0, 8), new(0, 8, 0, 8), new(0, 8, 0, 0)]
+                FilterElementMargins = [
+                    new(0, 0, 0, 8),
+                    new(0, 8, 0, 8),
+                    new(0, 8, 0, 8),
+                    new(0, 8, 0, 0)
+                ]
             },
             
             "tablet" => new LayoutConfiguration
