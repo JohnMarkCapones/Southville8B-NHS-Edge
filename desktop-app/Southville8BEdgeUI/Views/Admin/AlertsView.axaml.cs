@@ -291,52 +291,43 @@ public partial class AlertsView : UserControl
         }
     }
 
-    private void UpdateAlertCardsRecursively(Control root, string sizeClass)
+    private void UpdateAlertCardsRecursively(Control control, string sizeClass)
     {
-        // Iterative traversal using a stack to avoid recursion
-        var stack = new Stack<Control>();
-        stack.Push(root);
-
-        while (stack.Count > 0)
+        // Improved pattern matching with null safety and performance optimization
+        // Fast path for alert cards
+        if (control is Border alertCard && alertCard.Classes.Contains(AlertCardClass))
         {
-            var control = stack.Pop();
-
-            // Fast path for alert cards
-            if (control is Border alertCard && alertCard.Classes.Contains(AlertCardClass))
-            {
-                UpdateElementResponsiveClasses(alertCard, sizeClass);
-            }
-            // Optimized text block check using direct string comparison
-            else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
-            {
-                UpdateElementResponsiveClasses(textBlock, sizeClass);
-            }
-            // Optimized button check using direct string comparison
-            else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
-            {
-                UpdateElementResponsiveClasses(button, sizeClass);
-            }
-            // Check for input elements
-            else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
-            {
-                UpdateElementResponsiveClasses(control, sizeClass);
-            }
-
-            // Add children to stack for further processing
-            if (control is Panel panel)
-            {
-                // Reverse to maintain order similar to recursive traversal
-                for (int i = panel.Children.Count - 1; i >= 0; i--)
-                {
-                    stack.Push(panel.Children[i]);
-                }
-            }
-            else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
-            {
-                stack.Push(contentChild);
-            }
-            // Note: ItemsControl children are handled through the template
+            UpdateElementResponsiveClasses(alertCard, sizeClass);
         }
+        // Optimized text block check using direct string comparison
+        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
+        {
+            UpdateElementResponsiveClasses(textBlock, sizeClass);
+        }
+        // Optimized button check using direct string comparison
+        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
+        {
+            UpdateElementResponsiveClasses(button, sizeClass);
+        }
+        // Check for input elements
+        else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
+        {
+            UpdateElementResponsiveClasses(control, sizeClass);
+        }
+
+        // Recursively update children with type-specific handling
+        if (control is Panel panel)
+        {
+            foreach (Control child in panel.Children)
+            {
+                UpdateAlertCardsRecursively(child, sizeClass);
+            }
+        }
+        else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
+        {
+            UpdateAlertCardsRecursively(contentChild, sizeClass);
+        }
+        // Note: ItemsControl children are handled through the template
     }
     
     private void UpdateElementResponsiveClasses(Control element, string sizeClass)
