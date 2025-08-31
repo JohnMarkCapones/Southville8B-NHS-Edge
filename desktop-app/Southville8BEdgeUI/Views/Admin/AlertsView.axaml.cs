@@ -13,6 +13,11 @@ public partial class AlertsView : UserControl
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
     
+    // Responsive class name constants for consistency
+    private const string MobileClass = "mobile";
+    private const string TabletClass = "tablet";
+    private const string DesktopClass = "desktop";
+    
     // Collections to store elements that need responsive behavior
     private readonly List<Control> _responsiveTextElements = new();
     private readonly List<Control> _responsiveCardElements = new();
@@ -23,6 +28,10 @@ public partial class AlertsView : UserControl
     private const string TextElementSuffix = "Text";
     private const string ButtonElementSuffix = "Button";
     private const string InputElementSuffix = "Input";
+    private const string AlertCardClass = "alert-card";
+
+    // Cache for performance optimization
+    private string _lastSizeClass = "";
 
     public AlertsView()
     {
@@ -88,6 +97,12 @@ public partial class AlertsView : UserControl
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
         
+        // Performance optimization: Skip update if size class hasn't changed
+        if (sizeClass == _lastSizeClass)
+            return;
+            
+        _lastSizeClass = sizeClass;
+        
         // Update all responsive elements
         UpdateMainContainerClasses(sizeClass);
         UpdateElementClasses(_responsiveTextElements, sizeClass);
@@ -105,16 +120,16 @@ public partial class AlertsView : UserControl
     private string GetSizeClass(double width)
     {
         if (width < MobileBreakpoint)
-            return "mobile";
+            return MobileClass;
         else if (width < TabletBreakpoint)
-            return "tablet";
+            return TabletClass;
         else
-            return "desktop";
+            return DesktopClass;
     }
 
     private void UpdateMainContainerClasses(string sizeClass)
     {
-        // Clear existing responsive classes
+        // Clear existing responsive classes using constants
         MainGrid.Classes.Remove("main-content");
         MainGrid.Classes.Remove("main-content-tablet");
         MainGrid.Classes.Remove("main-content-mobile");
@@ -122,10 +137,10 @@ public partial class AlertsView : UserControl
         // Add appropriate class
         switch (sizeClass)
         {
-            case "mobile":
+            case MobileClass:
                 MainGrid.Classes.Add("main-content-mobile");
                 break;
-            case "tablet":
+            case TabletClass:
                 MainGrid.Classes.Add("main-content-tablet");
                 break;
             default:
@@ -138,12 +153,12 @@ public partial class AlertsView : UserControl
     {
         foreach (var element in elements)
         {
-            // Remove existing responsive classes
-            element.Classes.Remove("mobile");
-            element.Classes.Remove("tablet");
+            // Remove existing responsive classes using constants
+            element.Classes.Remove(MobileClass);
+            element.Classes.Remove(TabletClass);
             
             // Add appropriate responsive class
-            if (sizeClass != "desktop")
+            if (sizeClass != DesktopClass)
             {
                 element.Classes.Add(sizeClass);
             }
@@ -164,7 +179,7 @@ public partial class AlertsView : UserControl
     {
         return sizeClass switch
         {
-            "mobile" => new LayoutConfiguration
+            MobileClass => new LayoutConfiguration
             {
                 MainGridColumns = 1,
                 MainGridRows = 3,
@@ -177,7 +192,7 @@ public partial class AlertsView : UserControl
                 HeaderButtonsSpacing = 8
             },
             
-            "tablet" => new LayoutConfiguration
+            TabletClass => new LayoutConfiguration
             {
                 MainGridColumns = 1,
                 MainGridRows = 3,
@@ -269,14 +284,18 @@ public partial class AlertsView : UserControl
 
     private void UpdateAlertCardElements(string sizeClass)
     {
-        // Find all alert cards and update their classes
-        UpdateAlertCardsRecursively(ActiveAlertsCard, sizeClass);
+        // Optimized: Only update if there are actual alert cards rendered
+        if (ActiveAlertsCard?.IsVisible == true)
+        {
+            UpdateAlertCardsRecursively(ActiveAlertsCard, sizeClass);
+        }
     }
 
     private void UpdateAlertCardsRecursively(Control control, string sizeClass)
     {
-        // Improved pattern matching with null safety
-        if (control is Border alertCard && alertCard.Classes.Contains("alert-card"))
+        // Improved pattern matching with null safety and performance optimization
+        // Fast path for alert cards
+        if (control is Border alertCard && alertCard.Classes.Contains(AlertCardClass))
         {
             UpdateElementResponsiveClasses(alertCard, sizeClass);
         }
@@ -308,16 +327,17 @@ public partial class AlertsView : UserControl
         {
             UpdateAlertCardsRecursively(contentChild, sizeClass);
         }
+        // Note: ItemsControl children are handled through the template
     }
     
     private void UpdateElementResponsiveClasses(Control element, string sizeClass)
     {
-        // Remove existing responsive classes
-        element.Classes.Remove("mobile");
-        element.Classes.Remove("tablet");
+        // Remove existing responsive classes using constants
+        element.Classes.Remove(MobileClass);
+        element.Classes.Remove(TabletClass);
         
         // Add appropriate responsive class
-        if (sizeClass != "desktop")
+        if (sizeClass != DesktopClass)
         {
             element.Classes.Add(sizeClass);
         }
