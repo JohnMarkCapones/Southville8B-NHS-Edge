@@ -207,7 +207,8 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Iterative method to cache elements without depth limiting
+    // Iterative method to cache elements. This approach avoids recursion and does not require explicit depth limiting,
+    // preventing stack overflow issues that can occur with deep or complex control trees.
     private void FindAndCacheElementsIteratively(Control root)
     {
         var stack = new Stack<Control>();
