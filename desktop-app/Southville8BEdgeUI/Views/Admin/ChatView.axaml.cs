@@ -45,6 +45,13 @@ public partial class ChatView : UserControl
     
     // Debouncing for scroll operations
     private bool _isScrollScheduled = false;
+    
+    // Visibility state tracking for efficient cache management
+    private bool _lastConversationsCardVisible = false;
+    private bool _lastChatCardVisible = false;
+    
+    // Recursion depth limit for UI traversal safety
+    private const int MaxRecursionDepth = 10;
 
     public ChatView()
     {
@@ -172,6 +179,10 @@ public partial class ChatView : UserControl
         
         // Cache chat-specific elements for targeted updates
         CacheChatElements();
+        
+        // Initialize visibility state tracking
+        _lastConversationsCardVisible = ConversationsCard?.IsVisible ?? false;
+        _lastChatCardVisible = ChatCard?.IsVisible ?? false;
     }
 
     // Pre-cache chat elements to avoid expensive recursive searches
@@ -182,17 +193,24 @@ public partial class ChatView : UserControl
         // Add elements with known classes/patterns that need responsive updates
         if (ConversationsCard != null)
         {
-            FindAndCacheElementsRecursively(ConversationsCard);
+            FindAndCacheElementsRecursively(ConversationsCard, 0);
         }
         
         if (ChatCard != null)
         {
-            FindAndCacheElementsRecursively(ChatCard);
+            FindAndCacheElementsRecursively(ChatCard, 0);
         }
     }
 
-    private void FindAndCacheElementsRecursively(Control control)
+    // Improved recursive method with depth limiting to prevent stack overflow
+    private void FindAndCacheElementsRecursively(Control control, int depth)
     {
+        // Safety check: Prevent stack overflow with depth limiting
+        if (depth >= MaxRecursionDepth)
+        {
+            return;
+        }
+        
         // Cache conversation items
         if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
         {
@@ -219,17 +237,17 @@ public partial class ChatView : UserControl
             _cachedChatElements.Add(control);
         }
 
-        // Recursively search children
+        // Recursively search children with depth tracking
         if (control is Panel panel)
         {
             foreach (Control child in panel.Children)
             {
-                FindAndCacheElementsRecursively(child);
+                FindAndCacheElementsRecursively(child, depth + 1);
             }
         }
         else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
         {
-            FindAndCacheElementsRecursively(contentChild);
+            FindAndCacheElementsRecursively(contentChild, depth + 1);
         }
     }
 
@@ -473,7 +491,7 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Optimized method using cached elements for better performance
+    // Optimized method using cached elements with smart cache refresh logic
     private void UpdateCachedChatElements(string sizeClass)
     {
         // Update cached elements directly instead of recursive search
@@ -482,11 +500,19 @@ public partial class ChatView : UserControl
             UpdateElementResponsiveClasses(element, sizeClass);
         }
         
-        // Refresh cache if UI structure has changed significantly
-        // This only happens when cards become visible/invisible
-        if (ConversationsCard?.IsVisible == true || ChatCard?.IsVisible == true)
+        // Smart cache refresh: Only refresh when visibility state actually changes
+        var currentConversationsVisible = ConversationsCard?.IsVisible ?? false;
+        var currentChatVisible = ChatCard?.IsVisible ?? false;
+        
+        if (currentConversationsVisible != _lastConversationsCardVisible || 
+            currentChatVisible != _lastChatCardVisible)
         {
+            // Visibility state changed, refresh cache
             CacheChatElements();
+            
+            // Update tracking state
+            _lastConversationsCardVisible = currentConversationsVisible;
+            _lastChatCardVisible = currentChatVisible;
         }
     }
     
