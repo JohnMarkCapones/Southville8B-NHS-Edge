@@ -214,61 +214,63 @@ public partial class ChatView : UserControl
         // Add elements with known classes/patterns that need responsive updates
         if (ConversationsCard != null)
         {
-            FindAndCacheElementsRecursively(ConversationsCard, 0);
+            FindAndCacheElementsIteratively(ConversationsCard);
         }
         
         if (ChatCard != null)
         {
-            FindAndCacheElementsRecursively(ChatCard, 0);
+            FindAndCacheElementsIteratively(ChatCard);
         }
     }
 
-    // Improved recursive method with depth limiting to prevent stack overflow
-    private void FindAndCacheElementsRecursively(Control control, int depth)
+    // Iterative method using a stack to traverse all controls without depth limiting
+    private void FindAndCacheElementsIteratively(Control root)
     {
-        // Safety check: Prevent stack overflow with depth limiting
-        if (depth >= MaxRecursionDepth)
-        {
-            return;
-        }
-        
-        // Cache conversation items
-        if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
-        {
-            _cachedChatElements.Add(conversationItem);
-        }
-        // Cache message bubbles
-        else if (control is Border messageBubble && messageBubble.Classes.Contains(MessageBubbleClass))
-        {
-            _cachedChatElements.Add(messageBubble);
-        }
-        // Cache text elements with specific suffixes
-        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
-        {
-            _cachedChatElements.Add(textBlock);
-        }
-        // Cache button elements with specific suffixes
-        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
-        {
-            _cachedChatElements.Add(button);
-        }
-        // Cache input elements
-        else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
-        {
-            _cachedChatElements.Add(control);
-        }
+        var stack = new Stack<Control>();
+        stack.Push(root);
 
-        // Recursively search children with depth tracking
-        if (control is Panel panel)
+        while (stack.Count > 0)
         {
-            foreach (Control child in panel.Children)
+            var control = stack.Pop();
+
+            // Cache conversation items
+            if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
             {
-                FindAndCacheElementsRecursively(child, depth + 1);
+                _cachedChatElements.Add(conversationItem);
             }
-        }
-        else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
-        {
-            FindAndCacheElementsRecursively(contentChild, depth + 1);
+            // Cache message bubbles
+            else if (control is Border messageBubble && messageBubble.Classes.Contains(MessageBubbleClass))
+            {
+                _cachedChatElements.Add(messageBubble);
+            }
+            // Cache text elements with specific suffixes
+            else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
+            {
+                _cachedChatElements.Add(textBlock);
+            }
+            // Cache button elements with specific suffixes
+            else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
+            {
+                _cachedChatElements.Add(button);
+            }
+            // Cache input elements
+            else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
+            {
+                _cachedChatElements.Add(control);
+            }
+
+            // Traverse children
+            if (control is Panel panel)
+            {
+                foreach (Control child in panel.Children)
+                {
+                    stack.Push(child);
+                }
+            }
+            else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
+            {
+                stack.Push(contentChild);
+            }
         }
     }
 
