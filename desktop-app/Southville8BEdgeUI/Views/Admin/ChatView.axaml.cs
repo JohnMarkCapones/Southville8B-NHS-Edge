@@ -21,7 +21,6 @@ public partial class ChatView : UserControl
     private const string TabletClass = "tablet";
     private const string DesktopClass = "desktop";
     
-    // Collections to store elements that need responsive behavior - ADD THESE BACK
     
     // Consolidated collection for responsive elements by type (can be used for future optimization)
     private readonly Dictionary<string, List<Control>> _responsiveElements = new()
