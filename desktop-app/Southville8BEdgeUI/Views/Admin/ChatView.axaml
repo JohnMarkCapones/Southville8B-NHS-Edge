@@ -620,14 +620,14 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock x:Name="ChatHeaderNameText" 
-                                               Text="{Binding SelectedConversation.ContactName, FallbackValue='No Conversation Selected'}" 
+                                               Text="{Binding SelectedConversation.ContactName}" 
                                                Classes="chat-header-name"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Border Classes="online-indicator"
                                                 VerticalAlignment="Center"
                                                 IsVisible="{Binding SelectedConversation.IsOnline, FallbackValue=False}"/>
                                         <TextBlock x:Name="ChatHeaderRoleText" 
-                                                   Text="{Binding SelectedConversation.ContactRole, FallbackValue=''}" 
+                                                   Text="{Binding SelectedConversation.ContactRole}" 
                                                    FontSize="12" 
                                                    Classes="light"/>
                                         <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}, FallbackValue=''}" 

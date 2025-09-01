@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia;
 using Avalonia.Layout;
 using System;
@@ -15,6 +15,27 @@ public partial class ChatView : UserControl
     
     // Significant width change threshold for responsive updates
     private const double SignificantWidthChangeThreshold = 50;
+    
+    // Fallback text constants for better maintainability and localization
+    private const string NoConversationSelectedText = "No Conversation Selected";
+    private const string NoConversationsFoundText = "No conversations found";
+    private const string SearchCriteriaHintText = "Try adjusting your search criteria";
+    private const string SelectConversationText = "Select a conversation";
+    private const string ChooseConversationHintText = "Choose a conversation from the list to start messaging";
+    private const string MessagesHeaderText = "Messages";
+    private const string AdminCommunicationHubText = "Admin Communication Hub";
+    private const string NewButtonText = "➕ New";
+    private const string SearchWatermarkText = "Search conversations...";
+    private const string AllUsersPlaceholderText = "All Users";
+    private const string TypeMessageWatermarkText = "Type a message...";
+    private const string SendButtonText = "Send";
+    private const string BackButtonText = "←";
+    private const string CallButtonText = "📞";
+    private const string VideoButtonText = "📹";
+    private const string InfoButtonText = "ℹ️";
+    private const string OnlineStatusText = "Online";
+    private const string OfflineStatusText = "Offline";
+    private const string DefaultRoleColorText = "#6B7280";
     
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
@@ -53,11 +74,14 @@ public partial class ChatView : UserControl
     // Visibility state tracking for efficient cache management
     private bool _lastConversationsCardVisible = false;
     private bool _lastChatCardVisible = false;
-    
+
     public ChatView()
     {
         InitializeComponent();
         DataContext = new ChatViewModel();
+        
+        // Initialize UI text constants after component initialization
+        InitializeUIText();
         
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
@@ -70,6 +94,28 @@ public partial class ChatView : UserControl
         {
             viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
+    }
+
+    /// <summary>
+    /// Initialize UI elements with constant text values for better maintainability
+    /// </summary>
+    private void InitializeUIText()
+    {
+        // Set static text content using constants
+        ConversationsHeaderText.Text = MessagesHeaderText;
+        ConversationsSubtitleText.Text = AdminCommunicationHubText;
+        NewChatButton.Content = NewButtonText;
+        SearchTextBox.Watermark = SearchWatermarkText;
+        UserTypeComboBox.PlaceholderText = AllUsersPlaceholderText;
+        NoMessagesText.Text = NoConversationsFoundText;
+        NoConversationTitleText.Text = SelectConversationText;
+        NoConversationSubtitleText.Text = ChooseConversationHintText;
+        MessageTextBox.Watermark = TypeMessageWatermarkText;
+        SendButton.Content = SendButtonText;
+        BackButton.Content = BackButtonText;
+        CallButton.Content = CallButtonText;
+        VideoButton.Content = VideoButtonText;
+        InfoButton.Content = InfoButtonText;
     }
 
     // Improved scroll method allowing initial scrolling before size class is set
@@ -128,6 +174,24 @@ public partial class ChatView : UserControl
             {
                 _currentSubscribedConversation = null;
             }
+        }
+        
+        // Update chat header text when conversation changes
+        UpdateChatHeaderText();
+    }
+
+    /// <summary>
+    /// Updates chat header text with appropriate fallback values
+    /// </summary>
+    private void UpdateChatHeaderText()
+    {
+        if (DataContext is ChatViewModel viewModel)
+        {
+            // Update chat header name with fallback
+            ChatHeaderNameText.Text = viewModel.SelectedConversation?.ContactName ?? NoConversationSelectedText;
+            
+            // Update chat header role with fallback
+            ChatHeaderRoleText.Text = viewModel.SelectedConversation?.ContactRole ?? string.Empty;
         }
     }
 
