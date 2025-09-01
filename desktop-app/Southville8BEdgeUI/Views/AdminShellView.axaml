@@ -495,7 +495,7 @@
                                                 <Rectangle Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Events" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+											<!--<TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/> -->
                                         </StackPanel>
                                         <TextBlock Text="120" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="Approved Events" FontSize="9" Foreground="#9CA3AF"/>
@@ -510,7 +510,7 @@
                                                 <Ellipse Width="6" Height="6" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Clicks" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                            <!--<TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/> -->
                                         </StackPanel>
                                         <TextBlock Text="22k" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="+12% Last Week" FontSize="9" Foreground="#9CA3AF"/>
@@ -525,7 +525,7 @@
                                                 <Ellipse Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Students" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+											<!--<TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/> -->
                                         </StackPanel>
                                         <TextBlock Text="1512" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="Registered Students" FontSize="9" Foreground="#9CA3AF"/>
@@ -540,7 +540,7 @@
                                                 <Rectangle Width="6" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Sections" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+											<!-- <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/> -->
                                         </StackPanel>
                                         <TextBlock Text="144" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="+10% Last Week" FontSize="9" Foreground="#9CA3AF"/>
@@ -554,7 +554,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Event Schedule" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
-                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+									<!-- <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/> -->
                                 </StackPanel>
 
                                 <!-- Calendar Header -->
@@ -644,7 +644,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Activity Log" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
-                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
+                                    <!--<TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>-->
                                 </StackPanel>
 
                                 <!-- Activity Items -->
