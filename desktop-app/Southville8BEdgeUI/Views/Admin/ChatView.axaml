@@ -610,8 +610,7 @@
                             <!-- Contact Info -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
                                 <Border Classes="avatar"
-                                        Background="{Binding SelectedConversation.RoleColor, FallbackValue=#6B7280}">
-                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials, FallbackValue=''}" 
+                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials}" 
                                                Classes="contact-name"
                                                FontWeight="SemiBold" 
                                                Foreground="White"
