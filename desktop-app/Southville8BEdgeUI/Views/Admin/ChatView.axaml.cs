@@ -22,10 +22,8 @@ public partial class ChatView : UserControl
     private const string DesktopClass = "desktop";
     
     // Collections to store elements that need responsive behavior
-    private readonly List<Control> _responsiveTextElements = new();
-    private readonly List<Control> _responsiveCardElements = new();
-    private readonly List<Control> _responsiveButtonElements = new();
-    private readonly List<Control> _responsiveInputElements = new();
+    // Consolidated collection for responsive elements by type
+    private readonly Dictionary<string, List<Control>> _responsiveElements = new();
     
     // Cache for targeted UI element updates
     private readonly List<Control> _cachedChatElements = new();
