@@ -454,21 +454,8 @@ public partial class ChatView : UserControl
     // Helper method to clone a LayoutConfiguration instance
     private LayoutConfiguration CloneLayoutConfig(LayoutConfiguration source)
     {
-        return new LayoutConfiguration
-        {
-            MainGridColumns = source.MainGridColumns,
-            ConversationsCardMargin = source.ConversationsCardMargin,
-            ChatCardMargin = source.ChatCardMargin,
-            ConversationsHeaderPadding = source.ConversationsHeaderPadding,
-            ChatHeaderPadding = source.ChatHeaderPadding,
-            ChatHeaderButtonsOrientation = source.ChatHeaderButtonsOrientation,
-            MessageInputOrientation = source.MessageInputOrientation,
-            MessageInputSpacing = source.MessageInputSpacing,
-            SearchFilterOrientation = source.SearchFilterOrientation,
-            SearchFilterSpacing = source.SearchFilterSpacing,
-            // The following are set at runtime
-            // ConversationsCardVisible, ChatCardVisible, ShowBackButton
-        };
+        // Use the copy constructor for deep cloning
+        return new LayoutConfiguration(source);
     }
 
     private void ApplyMainGridLayout(LayoutConfiguration config)
