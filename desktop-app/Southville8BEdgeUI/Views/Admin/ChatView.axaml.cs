@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Southville8BEdgeUI.ViewModels.Admin;
 using Avalonia.Threading;
+using Avalonia.Input;
+using Avalonia.Interactivity; // Add this using directive
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -73,10 +75,83 @@ public partial class ChatView : UserControl
         // Set up size change handler
         this.SizeChanged += OnSizeChanged;
         
+        // Set up message text box event handlers
+        SetupMessageTextBoxEvents();
+        
         // Subscribe to conversation selection changes for mobile navigation
         if (DataContext is ChatViewModel viewModel)
         {
             viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+    }
+
+    // Set up enhanced message text box event handling
+    private void SetupMessageTextBoxEvents()
+    {
+        if (MessageTextBox != null)
+        {
+            // Override key down events to ensure Enter key is properly handled
+            MessageTextBox.KeyDown += MessageTextBox_KeyDown;
+            MessageTextBox.LostFocus += MessageTextBox_LostFocus;
+            MessageTextBox.GotFocus += MessageTextBox_GotFocus;
+        }
+    }
+
+    // Handle key down events directly to bypass any scrollbar interference
+    private void MessageTextBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && DataContext is ChatViewModel viewModel)
+        {
+            // Prevent default behavior and send message immediately
+            e.Handled = true;
+            
+            // Send message immediately without delay
+            if (!string.IsNullOrWhiteSpace(viewModel.NewMessage))
+            {
+                viewModel.SendMessageCommand.Execute(null);
+                
+                // Ensure focus is maintained
+                Dispatcher.UIThread.Post(() => EnsureMessageTextBoxFocus(), DispatcherPriority.Normal);
+            }
+        }
+    }
+
+    // Handle focus events to maintain proper input state
+    private void MessageTextBox_GotFocus(object? sender, GotFocusEventArgs e)
+    {
+        // Ensure the text box is ready for input
+        if (MessageTextBox != null)
+        {
+            MessageTextBox.CaretIndex = MessageTextBox.Text?.Length ?? 0;
+        }
+    }
+
+    // Fixed method signature for LostFocus event
+    private void MessageTextBox_LostFocus(object? sender, RoutedEventArgs e)
+    {
+        // If scrollbar caused focus loss, restore it
+        if (MessagesScrollViewer?.IsPointerOver == false)
+        {
+            Dispatcher.UIThread.Post(() => EnsureMessageTextBoxFocus(), DispatcherPriority.Normal);
+        }
+    }
+
+    // Method to ensure message text box maintains focus
+    private void EnsureMessageTextBoxFocus()
+    {
+        // Ensure the message text box maintains focus after sending a message
+        if (MessageTextBox != null && !MessageTextBox.IsFocused)
+        {
+            // Use dispatcher to ensure focus is set after UI updates
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (MessageTextBox != null && MessageTextBox.IsVisible)
+                {
+                    MessageTextBox.Focus();
+                    // Set cursor to end of text
+                    MessageTextBox.CaretIndex = MessageTextBox.Text?.Length ?? 0;
+                }
+            }, DispatcherPriority.Normal);
         }
     }
 
@@ -126,6 +201,16 @@ public partial class ChatView : UserControl
                 _currentSubscribedConversation = null;
             }
         }
+        
+        // Handle NewMessage property changes to maintain focus
+        if (e.PropertyName == nameof(ChatViewModel.NewMessage) && DataContext is ChatViewModel viewModel)
+        {
+            // If the new message is empty (just sent), ensure focus is maintained
+            if (string.IsNullOrEmpty(viewModel.NewMessage))
+            {
+                EnsureMessageTextBoxFocus();
+            }
+        }
     }
 
     // Add event handler for conversation navigation
@@ -141,6 +226,8 @@ public partial class ChatView : UserControl
                     NavigateToChat();
                     // Immediate scroll when opening conversation
                     ScrollToBottomOfMessages();
+                    // Focus the message input when opening a chat
+                    EnsureMessageTextBoxFocus();
                 }
                 break;
                 
@@ -150,20 +237,32 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Simplified message collection change handler
+    // Simplified message collection change handler with immediate scroll
     private void Messages_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
         {
-            // Force immediate UI update and scroll
+            // Immediate scroll without nested dispatchers
             Dispatcher.UIThread.Post(() =>
             {
-                // Give UI a moment to render the new message, then scroll
-                Dispatcher.UIThread.Post(() => ScrollToBottomOfMessages(), DispatcherPriority.Loaded);
+                ScrollToBottomOfMessages();
+                // Ensure focus is maintained after message is sent
+                EnsureMessageTextBoxFocus();
             }, DispatcherPriority.Render);
         }
     }
 
+    // Send button click handler to ensure proper message sending
+    private void SendButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is ChatViewModel viewModel && !string.IsNullOrWhiteSpace(viewModel.NewMessage))
+        {
+            viewModel.SendMessageCommand.Execute(null);
+            EnsureMessageTextBoxFocus();
+        }
+    }
+
+    // [Keep all your existing responsive and layout methods unchanged - they remain exactly the same]
     private void InitializeResponsiveElements()
     {
         // Add all named text elements that need responsive font sizes
@@ -212,7 +311,6 @@ public partial class ChatView : UserControl
         _lastChatCardVisible = ChatCard?.IsVisible ?? false;
     }
 
-    // [Keep all your existing layout and responsive methods unchanged]
     // Pre-cache chat elements to avoid expensive recursive searches
     private void CacheChatElements()
     {
@@ -281,6 +379,7 @@ public partial class ChatView : UserControl
         }
     }
 
+    // [Keep all your existing responsive layout methods exactly as they are]
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         UpdateResponsiveClasses(e.NewSize.Width);
@@ -651,6 +750,9 @@ public partial class ChatView : UserControl
         // Set up back button click handler
         BackButton.Click += BackButton_Click;
         
+        // Set up send button click handler
+        SendButton.Click += SendButton_Click;
+        
         // Subscribe to conversation navigation events
         if (DataContext is ChatViewModel viewModel)
         {
@@ -662,6 +764,9 @@ public partial class ChatView : UserControl
         {
             UpdateResponsiveClasses(Bounds.Width);
         }
+        
+        // Initial focus on message text box when view is loaded
+        Dispatcher.UIThread.Post(() => EnsureMessageTextBoxFocus(), DispatcherPriority.Loaded);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -670,6 +775,15 @@ public partial class ChatView : UserControl
         
         // Clean up event handlers
         BackButton.Click -= BackButton_Click;
+        SendButton.Click -= SendButton_Click;
+        
+        // Clean up message text box events
+        if (MessageTextBox != null)
+        {
+            MessageTextBox.KeyDown -= MessageTextBox_KeyDown;
+            MessageTextBox.LostFocus -= MessageTextBox_LostFocus;
+            MessageTextBox.GotFocus -= MessageTextBox_GotFocus;
+        }
         
         if (DataContext is ChatViewModel viewModel)
         {

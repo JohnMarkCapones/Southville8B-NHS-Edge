@@ -684,10 +684,8 @@
                                      Text="{Binding NewMessage}"
                                      Watermark="Type a message..."
                                      Classes="message-input"
-                                     Margin="0,0,12,0">
-                                <TextBox.KeyBindings>
-                                    <KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}"/>
-                                </TextBox.KeyBindings>
+                                     Margin="0,0,12,0"
+                                     AcceptsReturn="False">
                             </TextBox>
                             <Button x:Name="SendButton" Grid.Column="1" 
                                     Content="Send"
