@@ -652,7 +652,7 @@
                                   HorizontalScrollBarVisibility="Disabled"
                                   Padding="20"
                                   AllowAutoHide="True">
-                        <ItemsControl ItemsSource="{Binding SelectedConversation.Messages, FallbackValue={x:Null}}">
+                        <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:ChatMessageViewModel">
                                     <StackPanel Margin="0,8">
