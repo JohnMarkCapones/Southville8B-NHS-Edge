@@ -613,7 +613,7 @@ public partial class ChatView : UserControl
         }
         
         // Clean up message collection subscription to prevent memory leaks with null safety
-        if (_currentSubscribedConversation?.Messages != null)
+        if (_currentSubscribedConversation != null && _currentSubscribedConversation.Messages != null)
         {
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
         }
