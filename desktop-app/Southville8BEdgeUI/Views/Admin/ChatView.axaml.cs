@@ -368,60 +368,99 @@ public partial class ChatView : UserControl
         ApplyMessageInputLayout(layoutConfig);
     }
 
+    // Layout configuration definitions extracted to a static class for maintainability
+    private static class LayoutConfigurations
+    {
+        public static readonly LayoutConfiguration Mobile = new LayoutConfiguration
+        {
+            MainGridColumns = 1,
+            ConversationsCardMargin = new Thickness(12),
+            ChatCardMargin = new Thickness(12),
+            ConversationsHeaderPadding = new Thickness(16),
+            ChatHeaderPadding = new Thickness(16),
+            ChatHeaderButtonsOrientation = Orientation.Horizontal,
+            MessageInputOrientation = Orientation.Vertical,
+            MessageInputSpacing = 8,
+            SearchFilterOrientation = Orientation.Vertical,
+            SearchFilterSpacing = 8,
+            // ConversationsCardVisible, ChatCardVisible, ShowBackButton are set at runtime
+        };
+
+        public static readonly LayoutConfiguration Tablet = new LayoutConfiguration
+        {
+            MainGridColumns = 1,
+            ConversationsCardMargin = new Thickness(16),
+            ChatCardMargin = new Thickness(16),
+            ConversationsHeaderPadding = new Thickness(20, 20, 20, 16),
+            ChatHeaderPadding = new Thickness(20),
+            ChatHeaderButtonsOrientation = Orientation.Horizontal,
+            MessageInputOrientation = Orientation.Horizontal,
+            MessageInputSpacing = 12,
+            SearchFilterOrientation = Orientation.Vertical,
+            SearchFilterSpacing = 12,
+            // ConversationsCardVisible, ChatCardVisible, ShowBackButton are set at runtime
+        };
+
+        public static readonly LayoutConfiguration Desktop = new LayoutConfiguration
+        {
+            MainGridColumns = 2,
+            ConversationsCardMargin = new Thickness(24, 24, 12, 24),
+            ChatCardMargin = new Thickness(12, 24, 24, 24),
+            ConversationsHeaderPadding = new Thickness(20, 20, 20, 16),
+            ChatHeaderPadding = new Thickness(20),
+            ChatHeaderButtonsOrientation = Orientation.Horizontal,
+            MessageInputOrientation = Orientation.Horizontal,
+            MessageInputSpacing = 12,
+            SearchFilterOrientation = Orientation.Vertical,
+            SearchFilterSpacing = 12,
+            // ConversationsCardVisible, ChatCardVisible, ShowBackButton are set at runtime
+        };
+    }
+
     private LayoutConfiguration CreateLayoutConfig(string sizeClass)
     {
-        return sizeClass switch
+        LayoutConfiguration config;
+        switch (sizeClass)
         {
-            MobileClass => new LayoutConfiguration
-            {
-                MainGridColumns = 1,
-                ConversationsCardVisible = !_isMobileViewInChatMode,
-                ChatCardVisible = _isMobileViewInChatMode,
-                ConversationsCardMargin = new Thickness(12),
-                ChatCardMargin = new Thickness(12),
-                ConversationsHeaderPadding = new Thickness(16),
-                ChatHeaderPadding = new Thickness(16),
-                ChatHeaderButtonsOrientation = Orientation.Horizontal,
-                MessageInputOrientation = Orientation.Vertical,
-                MessageInputSpacing = 8,
-                SearchFilterOrientation = Orientation.Vertical,
-                SearchFilterSpacing = 8,
-                ShowBackButton = true
-            },
-            
-            TabletClass => new LayoutConfiguration
-            {
-                MainGridColumns = 1,
-                ConversationsCardVisible = !_isMobileViewInChatMode,
-                ChatCardVisible = _isMobileViewInChatMode,
-                ConversationsCardMargin = new Thickness(16),
-                ChatCardMargin = new Thickness(16),
-                ConversationsHeaderPadding = new Thickness(20, 20, 20, 16),
-                ChatHeaderPadding = new Thickness(20),
-                ChatHeaderButtonsOrientation = Orientation.Horizontal,
-                MessageInputOrientation = Orientation.Horizontal,
-                MessageInputSpacing = 12,
-                SearchFilterOrientation = Orientation.Vertical,
-                SearchFilterSpacing = 12,
-                ShowBackButton = true
-            },
-            
-            _ => new LayoutConfiguration // Desktop
-            {
-                MainGridColumns = 2,
-                ConversationsCardVisible = true,
-                ChatCardVisible = true,
-                ConversationsCardMargin = new Thickness(24, 24, 12, 24),
-                ChatCardMargin = new Thickness(12, 24, 24, 24),
-                ConversationsHeaderPadding = new Thickness(20, 20, 20, 16),
-                ChatHeaderPadding = new Thickness(20),
-                ChatHeaderButtonsOrientation = Orientation.Horizontal,
-                MessageInputOrientation = Orientation.Horizontal,
-                MessageInputSpacing = 12,
-                SearchFilterOrientation = Orientation.Vertical,
-                SearchFilterSpacing = 12,
-                ShowBackButton = false
-            }
+            case MobileClass:
+                config = CloneLayoutConfig(LayoutConfigurations.Mobile);
+                config.ConversationsCardVisible = !_isMobileViewInChatMode;
+                config.ChatCardVisible = _isMobileViewInChatMode;
+                config.ShowBackButton = true;
+                break;
+            case TabletClass:
+                config = CloneLayoutConfig(LayoutConfigurations.Tablet);
+                config.ConversationsCardVisible = !_isMobileViewInChatMode;
+                config.ChatCardVisible = _isMobileViewInChatMode;
+                config.ShowBackButton = true;
+                break;
+            default:
+                config = CloneLayoutConfig(LayoutConfigurations.Desktop);
+                config.ConversationsCardVisible = true;
+                config.ChatCardVisible = true;
+                config.ShowBackButton = false;
+                break;
+        }
+        return config;
+    }
+
+    // Helper method to clone a LayoutConfiguration instance
+    private LayoutConfiguration CloneLayoutConfig(LayoutConfiguration source)
+    {
+        return new LayoutConfiguration
+        {
+            MainGridColumns = source.MainGridColumns,
+            ConversationsCardMargin = source.ConversationsCardMargin,
+            ChatCardMargin = source.ChatCardMargin,
+            ConversationsHeaderPadding = source.ConversationsHeaderPadding,
+            ChatHeaderPadding = source.ChatHeaderPadding,
+            ChatHeaderButtonsOrientation = source.ChatHeaderButtonsOrientation,
+            MessageInputOrientation = source.MessageInputOrientation,
+            MessageInputSpacing = source.MessageInputSpacing,
+            SearchFilterOrientation = source.SearchFilterOrientation,
+            SearchFilterSpacing = source.SearchFilterSpacing,
+            // The following are set at runtime
+            // ConversationsCardVisible, ChatCardVisible, ShowBackButton
         };
     }
 
