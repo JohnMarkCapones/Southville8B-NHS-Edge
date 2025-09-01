@@ -629,7 +629,7 @@
                                                    Text="{Binding SelectedConversation.ContactRole}" 
                                                    FontSize="12" 
                                                    Classes="light"/>
-                                        <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}, FallbackValue=''}" 
+                                        <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}}" 
                                                    FontSize="12" 
                                                    Classes="light"/>
                                     </StackPanel>
