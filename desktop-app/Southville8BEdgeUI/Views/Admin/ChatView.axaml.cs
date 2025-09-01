@@ -21,9 +21,20 @@ public partial class ChatView : UserControl
     private const string TabletClass = "tablet";
     private const string DesktopClass = "desktop";
     
-    // Collections to store elements that need responsive behavior
-    // Consolidated collection for responsive elements by type
-    private readonly Dictionary<string, List<Control>> _responsiveElements = new();
+    // Collections to store elements that need responsive behavior - ADD THESE BACK
+    private readonly List<Control> _responsiveTextElements = new();
+    private readonly List<Control> _responsiveCardElements = new();
+    private readonly List<Control> _responsiveButtonElements = new();
+    private readonly List<Control> _responsiveInputElements = new();
+    
+    // Consolidated collection for responsive elements by type (can be used for future optimization)
+    private readonly Dictionary<string, List<Control>> _responsiveElements = new()
+    {
+        {"text", new List<Control>()},
+        {"card", new List<Control>()},
+        {"button", new List<Control>()},
+        {"input", new List<Control>()}
+    };
     
     // Cache for targeted UI element updates
     private readonly List<Control> _cachedChatElements = new();
@@ -154,7 +165,7 @@ public partial class ChatView : UserControl
     private void InitializeResponsiveElements()
     {
         // Add all named text elements that need responsive font sizes
-        _responsiveTextElements.AddRange(new Control[]
+        _responsiveElements["text"].AddRange(new Control[]
         {
             ConversationsHeaderText,
             ConversationsSubtitleText,
@@ -166,14 +177,14 @@ public partial class ChatView : UserControl
         });
 
         // Add card elements
-        _responsiveCardElements.AddRange(new Control[]
+        _responsiveElements["card"].AddRange(new Control[]
         {
             ConversationsCard,
             ChatCard
         });
 
         // Add button elements
-        _responsiveButtonElements.AddRange(new Control[]
+        _responsiveElements["button"].AddRange(new Control[]
         {
             NewChatButton,
             BackButton,
@@ -184,7 +195,7 @@ public partial class ChatView : UserControl
         });
 
         // Add input elements
-        _responsiveInputElements.AddRange(new Control[]
+        _responsiveElements["input"].AddRange(new Control[]
         {
             SearchTextBox,
             UserTypeComboBox,
@@ -294,12 +305,12 @@ public partial class ChatView : UserControl
         // Only update element classes when size class changes
         if (sizeClassChanged)
         {
-            // Update all responsive elements
+            // Update all responsive elements using dictionary
             UpdateMainContainerClasses(sizeClass);
-            UpdateElementClasses(_responsiveTextElements, sizeClass);
-            UpdateElementClasses(_responsiveCardElements, sizeClass);
-            UpdateElementClasses(_responsiveButtonElements, sizeClass);
-            UpdateElementClasses(_responsiveInputElements, sizeClass);
+            UpdateElementClasses(_responsiveElements["text"], sizeClass);
+            UpdateElementClasses(_responsiveElements["card"], sizeClass);
+            UpdateElementClasses(_responsiveElements["button"], sizeClass);
+            UpdateElementClasses(_responsiveElements["input"], sizeClass);
             
             // Update cached chat elements for better performance
             UpdateCachedChatElements(sizeClass);
