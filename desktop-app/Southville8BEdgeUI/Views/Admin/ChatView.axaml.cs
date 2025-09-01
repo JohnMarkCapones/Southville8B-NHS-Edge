@@ -16,27 +16,6 @@ public partial class ChatView : UserControl
     // Significant width change threshold for responsive updates
     private const double SignificantWidthChangeThreshold = 50;
     
-    // Fallback text constants for better maintainability and localization
-    private const string NoConversationSelectedText = "No Conversation Selected";
-    private const string NoConversationsFoundText = "No conversations found";
-    private const string SearchCriteriaHintText = "Try adjusting your search criteria";
-    private const string SelectConversationText = "Select a conversation";
-    private const string ChooseConversationHintText = "Choose a conversation from the list to start messaging";
-    private const string MessagesHeaderText = "Messages";
-    private const string AdminCommunicationHubText = "Admin Communication Hub";
-    private const string NewButtonText = "➕ New";
-    private const string SearchWatermarkText = "Search conversations...";
-    private const string AllUsersPlaceholderText = "All Users";
-    private const string TypeMessageWatermarkText = "Type a message...";
-    private const string SendButtonText = "Send";
-    private const string BackButtonText = "←";
-    private const string CallButtonText = "📞";
-    private const string VideoButtonText = "📹";
-    private const string InfoButtonText = "ℹ️";
-    private const string OnlineStatusText = "Online";
-    private const string OfflineStatusText = "Offline";
-    private const string DefaultRoleColorText = "#6B7280";
-    
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
     private const string TabletClass = "tablet";
@@ -74,14 +53,14 @@ public partial class ChatView : UserControl
     // Visibility state tracking for efficient cache management
     private bool _lastConversationsCardVisible = false;
     private bool _lastChatCardVisible = false;
+    
+    // Recursion depth limit for UI traversal safety
+    private const int MaxRecursionDepth = 10;
 
     public ChatView()
     {
         InitializeComponent();
         DataContext = new ChatViewModel();
-        
-        // Initialize UI text constants after component initialization
-        InitializeUIText();
         
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
@@ -94,28 +73,6 @@ public partial class ChatView : UserControl
         {
             viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
-    }
-
-    /// <summary>
-    /// Initialize UI elements with constant text values for better maintainability
-    /// </summary>
-    private void InitializeUIText()
-    {
-        // Set static text content using constants
-        ConversationsHeaderText.Text = MessagesHeaderText;
-        ConversationsSubtitleText.Text = AdminCommunicationHubText;
-        NewChatButton.Content = NewButtonText;
-        SearchTextBox.Watermark = SearchWatermarkText;
-        UserTypeComboBox.PlaceholderText = AllUsersPlaceholderText;
-        NoMessagesText.Text = NoConversationsFoundText;
-        NoConversationTitleText.Text = SelectConversationText;
-        NoConversationSubtitleText.Text = ChooseConversationHintText;
-        MessageTextBox.Watermark = TypeMessageWatermarkText;
-        SendButton.Content = SendButtonText;
-        BackButton.Content = BackButtonText;
-        CallButton.Content = CallButtonText;
-        VideoButton.Content = VideoButtonText;
-        InfoButton.Content = InfoButtonText;
     }
 
     // Improved scroll method allowing initial scrolling before size class is set
@@ -140,21 +97,9 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Update the ViewModel_PropertyChanged method to include auto-scroll
+    // Update the ViewModel_PropertyChanged method to handle message subscriptions only
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ChatViewModel.SelectedConversation) && _lastSizeClass != DesktopClass)
-        {
-            // On mobile/tablet, navigate to chat when conversation is selected (even if it's the same one)
-            var viewModel = DataContext as ChatViewModel;
-            if (viewModel?.SelectedConversation != null && !_isMobileViewInChatMode)
-            {
-                NavigateToChat();
-                // Auto-scroll to bottom when conversation is opened
-                ScrollToBottomOfMessages();
-            }
-        }
-        
         // Handle message collection subscription changes properly to prevent memory leaks
         if (e.PropertyName == nameof(ChatViewModel.SelectedConversation) && DataContext is ChatViewModel vm)
         {
@@ -175,23 +120,27 @@ public partial class ChatView : UserControl
                 _currentSubscribedConversation = null;
             }
         }
-        
-        // Update chat header text when conversation changes
-        UpdateChatHeaderText();
     }
 
-    /// <summary>
-    /// Updates chat header text with appropriate fallback values
-    /// </summary>
-    private void UpdateChatHeaderText()
+    // Add event handler for conversation navigation
+    private void ChatViewModel_ConversationNavigationRequested(object? sender, ConversationNavigationEventArgs e)
     {
-        if (DataContext is ChatViewModel viewModel)
+        if (_lastSizeClass == DesktopClass) return; // Don't handle navigation on desktop
+        
+        switch (e.NavigationType)
         {
-            // Update chat header name with fallback
-            ChatHeaderNameText.Text = viewModel.SelectedConversation?.ContactName ?? NoConversationSelectedText;
-            
-            // Update chat header role with fallback
-            ChatHeaderRoleText.Text = viewModel.SelectedConversation?.ContactRole ?? string.Empty;
+            case ConversationNavigationType.OpenChat:
+                if (e.Conversation != null && !_isMobileViewInChatMode)
+                {
+                    NavigateToChat();
+                    // Auto-scroll to bottom when conversation is opened
+                    ScrollToBottomOfMessages();
+                }
+                break;
+                
+            case ConversationNavigationType.BackToConversations:
+                NavigateToConversations();
+                break;
         }
     }
 
@@ -260,64 +209,61 @@ public partial class ChatView : UserControl
         // Add elements with known classes/patterns that need responsive updates
         if (ConversationsCard != null)
         {
-            FindAndCacheElementsIteratively(ConversationsCard);
+            FindAndCacheElementsRecursively(ConversationsCard, 0);
         }
         
         if (ChatCard != null)
         {
-            FindAndCacheElementsIteratively(ChatCard);
+            FindAndCacheElementsRecursively(ChatCard, 0);
         }
     }
 
-    // Iterative method to cache elements. This approach avoids recursion and does not require explicit depth limiting,
-    // preventing stack overflow issues that can occur with deep or complex control trees.
-    private void FindAndCacheElementsIteratively(Control root)
+    // Improved recursive method with depth limiting to prevent stack overflow
+    private void FindAndCacheElementsRecursively(Control control, int depth)
     {
-        var stack = new Stack<Control>();
-        stack.Push(root);
-
-        while (stack.Count > 0)
+        // Safety check: Prevent stack overflow with depth limiting
+        if (depth >= MaxRecursionDepth)
         {
-            var control = stack.Pop();
+            return;
+        }
+        
+        // Cache conversation items
+        if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
+        {
+            _cachedChatElements.Add(conversationItem);
+        }
+        // Cache message bubbles
+        else if (control is Border messageBubble && messageBubble.Classes.Contains(MessageBubbleClass))
+        {
+            _cachedChatElements.Add(messageBubble);
+        }
+        // Cache text elements with specific suffixes
+        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
+        {
+            _cachedChatElements.Add(textBlock);
+        }
+        // Cache button elements with specific suffixes
+        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
+        {
+            _cachedChatElements.Add(button);
+        }
+        // Cache input elements
+        else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
+        {
+            _cachedChatElements.Add(control);
+        }
 
-            // Cache conversation items
-            if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
+        // Recursively search children with depth tracking
+        if (control is Panel panel)
+        {
+            foreach (Control child in panel.Children)
             {
-                _cachedChatElements.Add(conversationItem);
+                FindAndCacheElementsRecursively(child, depth + 1);
             }
-            // Cache other elements based on type and name suffix
-            else
-            {
-                var name = control.Name;
-                switch (control)
-                {
-                    case Border messageBubble when messageBubble.Classes.Contains(MessageBubbleClass):
-                        _cachedChatElements.Add(messageBubble);
-                        break;
-                    case TextBlock textBlock when name != null && name.EndsWith(TextElementSuffix):
-                        _cachedChatElements.Add(textBlock);
-                        break;
-                    case Button button when name != null && name.EndsWith(ButtonElementSuffix):
-                        _cachedChatElements.Add(button);
-                        break;
-                    case Control genericControl when name != null && name.EndsWith(InputElementSuffix):
-                        _cachedChatElements.Add(genericControl);
-                        break;
-                }
-            }
-
-            // Traverse children
-            if (control is Panel panel)
-            {
-                foreach (Control child in panel.Children)
-                {
-                    stack.Push(child);
-                }
-            }
-            else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
-            {
-                stack.Push(contentChild);
-            }
+        }
+        else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
+        {
+            FindAndCacheElementsRecursively(contentChild, depth + 1);
         }
     }
 
@@ -642,10 +588,17 @@ public partial class ChatView : UserControl
         ApplyLayoutStrategy(_lastSizeClass, GetEffectiveWidth());
     }
 
-    // Event handlers for navigation
+    // Update the BackButton_Click to use ViewModel method
     private void BackButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        NavigateToConversations();
+        if (DataContext is ChatViewModel viewModel)
+        {
+            viewModel.RequestNavigateToConversations();
+        }
+        else
+        {
+            NavigateToConversations();
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -654,6 +607,12 @@ public partial class ChatView : UserControl
         
         // Set up back button click handler
         BackButton.Click += BackButton_Click;
+        
+        // Subscribe to conversation navigation events
+        if (DataContext is ChatViewModel viewModel)
+        {
+            viewModel.ConversationNavigationRequested += ChatViewModel_ConversationNavigationRequested;
+        }
         
         // Initial responsive setup
         if (Bounds.Width > 0)
@@ -672,10 +631,11 @@ public partial class ChatView : UserControl
         if (DataContext is ChatViewModel viewModel)
         {
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            viewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
         }
         
-        // Clean up message collection subscription to prevent memory leaks
-        if (_currentSubscribedConversation != null)
+        // Clean up message collection subscription to prevent memory leaks with null safety
+        if (_currentSubscribedConversation?.Messages != null)
         {
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
         }

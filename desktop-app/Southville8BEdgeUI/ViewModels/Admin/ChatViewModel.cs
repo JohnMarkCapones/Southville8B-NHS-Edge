@@ -34,6 +34,9 @@ public partial class ChatViewModel : ViewModelBase
     public bool HasConversations => FilteredConversations?.Any() == true;
     public bool HasSelectedConversation => SelectedConversation != null;
 
+    // Event for mobile navigation communication between View and ViewModel
+    public event EventHandler<ConversationNavigationEventArgs>? ConversationNavigationRequested;
+
     public ChatViewModel()
     {
         // Sample conversation data
@@ -264,6 +267,9 @@ public partial class ChatViewModel : ViewModelBase
         SelectedConversation = conversation;
         conversation.UnreadCount = 0; // Mark as read
         
+        // Notify the view about conversation selection for mobile navigation
+        ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(conversation, ConversationNavigationType.OpenChat));
+        
         // Force property change notification for mobile navigation if it's the same conversation
         if (wasSameConversation)
         {
@@ -298,10 +304,36 @@ public partial class ChatViewModel : ViewModelBase
         // TODO: Open new chat dialog
     }
 
+    // Method to request navigation back to conversations (for mobile back button)
+    public void RequestNavigateToConversations()
+    {
+        ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(null, ConversationNavigationType.BackToConversations));
+    }
+
     partial void OnSelectedConversationChanged(ChatConversationViewModel? value)
     {
         OnPropertyChanged(nameof(HasSelectedConversation));
     }
+}
+
+// Event args for conversation navigation
+public class ConversationNavigationEventArgs : EventArgs
+{
+    public ChatConversationViewModel? Conversation { get; }
+    public ConversationNavigationType NavigationType { get; }
+
+    public ConversationNavigationEventArgs(ChatConversationViewModel? conversation, ConversationNavigationType navigationType)
+    {
+        Conversation = conversation;
+        NavigationType = navigationType;
+    }
+}
+
+// Enum for navigation types
+public enum ConversationNavigationType
+{
+    OpenChat,
+    BackToConversations
 }
 
 public partial class ChatConversationViewModel : ViewModelBase
