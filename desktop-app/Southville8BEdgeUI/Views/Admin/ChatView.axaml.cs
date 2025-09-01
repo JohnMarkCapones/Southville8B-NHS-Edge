@@ -13,8 +13,8 @@ public partial class ChatView : UserControl
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
     
-    // Significant width change threshold for responsive updates
-    private const double SignificantWidthChangeThreshold = 50;
+    // Percentage-based width change threshold for responsive updates (5% of current width)
+    private const double SignificantWidthChangePercentage = 0.05;
     
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
@@ -286,7 +286,10 @@ public partial class ChatView : UserControl
         
         // Check if significant changes occurred that require updates
         bool sizeClassChanged = sizeClass != _lastSizeClass;
-        bool significantWidthChange = Math.Abs(width - _lastWidth) > SignificantWidthChangeThreshold;
+        
+        // Calculate percentage-based threshold for more proportional responsiveness
+        double widthChangeThreshold = Math.Max(width * SignificantWidthChangePercentage, 10); // Minimum 10px threshold
+        bool significantWidthChange = Math.Abs(width - _lastWidth) > widthChangeThreshold;
         
         if (!sizeClassChanged && !significantWidthChange)
             return;
@@ -667,17 +670,20 @@ public partial class ChatView : UserControl
             viewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
         }
         
-        // Clean up message collection subscription to prevent memory leaks with null safety
-        if (_currentSubscribedConversation?.Messages != null)
+        // Clean up message collection subscription to prevent memory leaks with thread safety
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
-        }
+            if (_currentSubscribedConversation?.Messages != null)
+            {
+                _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
+            }
+            
+            // Set to null after all cleanup operations are complete
+            _currentSubscribedConversation = null;
+        });
         
         // Clear cached elements
         _cachedChatElements.Clear();
-        
-        // Set to null after all cleanup operations are complete
-        _currentSubscribedConversation = null;
     }
     
     // Configuration class for layout strategies
@@ -696,5 +702,31 @@ public partial class ChatView : UserControl
         public Orientation SearchFilterOrientation { get; set; }
         public double SearchFilterSpacing { get; set; }
         public bool ShowBackButton { get; set; }
+
+        // Default constructor
+        public LayoutConfiguration()
+        {
+        }
+
+        // Copy constructor to support cloning operations
+        public LayoutConfiguration(LayoutConfiguration source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            MainGridColumns = source.MainGridColumns;
+            ConversationsCardVisible = source.ConversationsCardVisible;
+            ChatCardVisible = source.ChatCardVisible;
+            ConversationsCardMargin = source.ConversationsCardMargin;
+            ChatCardMargin = source.ChatCardMargin;
+            ConversationsHeaderPadding = source.ConversationsHeaderPadding;
+            ChatHeaderPadding = source.ChatHeaderPadding;
+            ChatHeaderButtonsOrientation = source.ChatHeaderButtonsOrientation;
+            MessageInputOrientation = source.MessageInputOrientation;
+            MessageInputSpacing = source.MessageInputSpacing;
+            SearchFilterOrientation = source.SearchFilterOrientation;
+            SearchFilterSpacing = source.SearchFilterSpacing;
+            ShowBackButton = source.ShowBackButton;
+        }
     }
 }
