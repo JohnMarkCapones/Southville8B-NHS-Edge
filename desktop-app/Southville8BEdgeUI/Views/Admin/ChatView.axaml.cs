@@ -109,9 +109,7 @@ public partial class ChatView : UserControl
             if (!string.IsNullOrWhiteSpace(viewModel.NewMessage))
             {
                 viewModel.SendMessageCommand.Execute(null);
-                
-                // Ensure focus is maintained
-                Dispatcher.UIThread.Post(() => EnsureMessageTextBoxFocus(), DispatcherPriority.Normal);
+                // Remove focus maintenance
             }
         }
     }
@@ -119,7 +117,7 @@ public partial class ChatView : UserControl
     // Handle focus events to maintain proper input state
     private void MessageTextBox_GotFocus(object? sender, GotFocusEventArgs e)
     {
-        // Ensure the text box is ready for input
+        // Only position cursor at end of text, no focus management
         if (MessageTextBox != null)
         {
             MessageTextBox.CaretIndex = MessageTextBox.Text?.Length ?? 0;
@@ -129,30 +127,7 @@ public partial class ChatView : UserControl
     // Fixed method signature for LostFocus event
     private void MessageTextBox_LostFocus(object? sender, RoutedEventArgs e)
     {
-        // If scrollbar caused focus loss, restore it
-        if (MessagesScrollViewer?.IsPointerOver == false)
-        {
-            Dispatcher.UIThread.Post(() => EnsureMessageTextBoxFocus(), DispatcherPriority.Normal);
-        }
-    }
-
-    // Method to ensure message text box maintains focus
-    private void EnsureMessageTextBoxFocus()
-    {
-        // Ensure the message text box maintains focus after sending a message
-        if (MessageTextBox != null && !MessageTextBox.IsFocused)
-        {
-            // Use dispatcher to ensure focus is set after UI updates
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (MessageTextBox != null && MessageTextBox.IsVisible)
-                {
-                    MessageTextBox.Focus();
-                    // Set cursor to end of text
-                    MessageTextBox.CaretIndex = MessageTextBox.Text?.Length ?? 0;
-                }
-            }, DispatcherPriority.Normal);
-        }
+        // Remove focus restoration code completely
     }
 
     // Simplified and immediate scroll method
@@ -202,15 +177,7 @@ public partial class ChatView : UserControl
             }
         }
         
-        // Handle NewMessage property changes to maintain focus
-        if (e.PropertyName == nameof(ChatViewModel.NewMessage) && DataContext is ChatViewModel viewModel)
-        {
-            // If the new message is empty (just sent), ensure focus is maintained
-            if (string.IsNullOrEmpty(viewModel.NewMessage))
-            {
-                EnsureMessageTextBoxFocus();
-            }
-        }
+        // Remove NewMessage property change handler that managed focus
     }
 
     // Add event handler for conversation navigation
@@ -226,8 +193,7 @@ public partial class ChatView : UserControl
                     NavigateToChat();
                     // Immediate scroll when opening conversation
                     ScrollToBottomOfMessages();
-                    // Focus the message input when opening a chat
-                    EnsureMessageTextBoxFocus();
+                    // Remove focus management call
                 }
                 break;
                 
@@ -242,12 +208,11 @@ public partial class ChatView : UserControl
     {
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
         {
-            // Immediate scroll without nested dispatchers
+            // Only scroll, don't manage focus
             Dispatcher.UIThread.Post(() =>
             {
                 ScrollToBottomOfMessages();
-                // Ensure focus is maintained after message is sent
-                EnsureMessageTextBoxFocus();
+                // Remove focus management call
             }, DispatcherPriority.Render);
         }
     }
@@ -257,8 +222,9 @@ public partial class ChatView : UserControl
     {
         if (DataContext is ChatViewModel viewModel && !string.IsNullOrWhiteSpace(viewModel.NewMessage))
         {
+            // Remove focus flag
             viewModel.SendMessageCommand.Execute(null);
-            EnsureMessageTextBoxFocus();
+            // Remove focus management call
         }
     }
 
@@ -747,11 +713,15 @@ public partial class ChatView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         
-        // Set up back button click handler
+        // Set up ALL button click handlers
         BackButton.Click += BackButton_Click;
-        
-        // Set up send button click handler
         SendButton.Click += SendButton_Click;
+        
+        // Add the missing button event handlers
+        NewChatButton.Click += NewChatButton_Click;
+        CallButton.Click += CallButton_Click;
+        VideoButton.Click += VideoButton_Click;
+        InfoButton.Click += InfoButton_Click;
         
         // Subscribe to conversation navigation events
         if (DataContext is ChatViewModel viewModel)
@@ -765,17 +735,59 @@ public partial class ChatView : UserControl
             UpdateResponsiveClasses(Bounds.Width);
         }
         
-        // Initial focus on message text box when view is loaded
-        Dispatcher.UIThread.Post(() => EnsureMessageTextBoxFocus(), DispatcherPriority.Loaded);
+        // Remove initial focus call
+    }
+
+    // Add the missing button click handlers
+    private void NewChatButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is ChatViewModel viewModel)
+        {
+            viewModel.StartNewChatCommand.Execute(null);
+        }
+    }
+
+    private void CallButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        // Temporarily disable message box focus maintenance
+        // _shouldMaintainTextBoxFocus = false;
+    
+        // TODO: Implement call functionality
+        System.Diagnostics.Debug.WriteLine("Call button clicked");
+    
+        // Optional: Show some visual feedback that the button worked
+        if (sender is Button button)
+        {
+            button.IsEnabled = false;
+            Dispatcher.UIThread.Post(() => button.IsEnabled = true, DispatcherPriority.Background);
+        }
+    }
+
+    private void VideoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        // TODO: Implement video call functionality
+        // For now, just show it's working
+        System.Diagnostics.Debug.WriteLine("Video button clicked");
+    }
+
+    private void InfoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        // TODO: Implement info panel functionality
+        // For now, just show it's working
+        System.Diagnostics.Debug.WriteLine("Info button clicked");
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
         
-        // Clean up event handlers
+        // Clean up ALL event handlers
         BackButton.Click -= BackButton_Click;
         SendButton.Click -= SendButton_Click;
+        NewChatButton.Click -= NewChatButton_Click;
+        CallButton.Click -= CallButton_Click;
+        VideoButton.Click -= VideoButton_Click;
+        InfoButton.Click -= InfoButton_Click;
         
         // Clean up message text box events
         if (MessageTextBox != null)
