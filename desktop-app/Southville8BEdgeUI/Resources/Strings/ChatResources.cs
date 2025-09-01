@@ -12,12 +12,6 @@ public static class ChatResources
     private static ResourceManager? _resourceManager;
     private static CultureInfo? _resourceCulture;
 
-    static ChatResources()
-    {
-        _resourceManager = new ResourceManager("Southville8BEdgeUI.Resources.Strings.ChatResources", 
-            typeof(ChatResources).Assembly);
-    }
-
     /// <summary>
     /// Gets or sets the culture used by this resource manager to look up culture-specific resources
     /// </summary>
