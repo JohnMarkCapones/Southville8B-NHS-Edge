@@ -670,17 +670,14 @@ public partial class ChatView : UserControl
             viewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
         }
         
-        // Clean up message collection subscription to prevent memory leaks with thread safety
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        // Clean up message collection subscription to prevent memory leaks
+        if (_currentSubscribedConversation?.Messages != null)
         {
-            if (_currentSubscribedConversation?.Messages != null)
-            {
-                _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
-            }
-            
-            // Set to null after all cleanup operations are complete
-            _currentSubscribedConversation = null;
-        });
+            _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
+        }
+        
+        // Set to null after all cleanup operations are complete
+        _currentSubscribedConversation = null;
         
         // Clear cached elements
         _cachedChatElements.Clear();
