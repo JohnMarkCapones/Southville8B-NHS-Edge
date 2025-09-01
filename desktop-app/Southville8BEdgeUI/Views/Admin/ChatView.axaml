@@ -14,18 +14,101 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
-        <!-- Base TextBlock Style -->
-        <Style Selector="TextBlock">
-            <Setter Property="Foreground" Value="#111827"/>
+        <!-- RESPONSIVE TEXT STYLES -->
+
+        <!-- Main Header -->
+        <Style Selector="TextBlock.main-header">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
-        <Style Selector="TextBlock.light">
+        <Style Selector="TextBlock.main-header.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- Subtitle Text -->
+        <Style Selector="TextBlock.subtitle">
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="#6B7280"/>
         </Style>
+        <Style Selector="TextBlock.subtitle.tablet">
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.mobile">
+            <Setter Property="FontSize" Value="10"/>
+        </Style>
+
+        <!-- Chat Header Name -->
+        <Style Selector="TextBlock.chat-header-name">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+        <Style Selector="TextBlock.chat-header-name.tablet">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="TextBlock.chat-header-name.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Contact Name -->
+        <Style Selector="TextBlock.contact-name">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.contact-name.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.contact-name.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Message Text -->
+        <Style Selector="TextBlock.message-text">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="TextBlock.message-text.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.message-text.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Label Text -->
         <Style Selector="TextBlock.label">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Foreground" Value="#6B7280"/>
         </Style>
+        <Style Selector="TextBlock.label.tablet">
+            <Setter Property="FontSize" Value="10"/>
+        </Style>
+        <Style Selector="TextBlock.label.mobile">
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Light Text -->
+        <Style Selector="TextBlock.light">
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+
+        <!-- Empty State Text -->
+        <Style Selector="TextBlock.empty-title">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+        <Style Selector="TextBlock.empty-title.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.empty-title.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- RESPONSIVE CARD STYLES -->
 
         <!-- Main Card Style -->
         <Style Selector="Border.card">
@@ -35,8 +118,16 @@
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
         </Style>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="CornerRadius" Value="10"/>
+        </Style>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
 
-        <!-- Button Styles -->
+        <!-- RESPONSIVE BUTTON STYLES -->
+
+        <!-- Primary Button -->
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="#4F46E5"/>
             <Setter Property="Foreground" Value="White"/>
@@ -44,8 +135,26 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16,10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+        <Style Selector="Button.primary.tablet">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.primary.mobile">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
         
+        <!-- Secondary Button -->
         <Style Selector="Button.secondary">
             <Setter Property="Background" Value="White"/>
             <Setter Property="Foreground" Value="#374151"/>
@@ -54,6 +163,50 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16,10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.secondary:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+            <Setter Property="Background" Value="#F9FAFB"/>
+        </Style>
+        <Style Selector="Button.secondary.tablet">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.secondary.mobile">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Back Button Style -->
+        <Style Selector="Button.back-button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.back-button:pointerover">
+            <Setter Property="Background" Value="#F3F4F6"/>
+        </Style>
+        <Style Selector="Button.back-button.tablet">
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.back-button.mobile">
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <!-- Conversation Item Styles -->
@@ -77,13 +230,29 @@
             <Setter Property="BorderBrush" Value="#3B82F6"/>
             <Setter Property="BorderThickness" Value="0,0,3,0"/>
         </Style>
+        <Style Selector="Button.conversation-item.tablet">
+            <Setter Property="Padding" Value="14"/>
+        </Style>
+        <Style Selector="Button.conversation-item.mobile">
+            <Setter Property="Padding" Value="12"/>
+        </Style>
 
-        <!-- Message Styles -->
+        <!-- Message Bubble Styles -->
         <Style Selector="Border.message-bubble">
             <Setter Property="CornerRadius" Value="18"/>
             <Setter Property="Padding" Value="12,8"/>
             <Setter Property="MaxWidth" Value="320"/>
             <Setter Property="Margin" Value="0,2"/>
+        </Style>
+        <Style Selector="Border.message-bubble.tablet">
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="MaxWidth" Value="280"/>
+        </Style>
+        <Style Selector="Border.message-bubble.mobile">
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="MaxWidth" Value="240"/>
         </Style>
 
         <Style Selector="Border.message-sent">
@@ -95,20 +264,226 @@
             <Setter Property="Background" Value="#F3F4F6"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
         </Style>
+
+        <!-- Chat Icon Button Styles -->
+        <Style Selector="Button.chat-icon">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.chat-icon:pointerover">
+            <Setter Property="Background" Value="#F3F4F6"/>
+        </Style>
+        <Style Selector="Button.chat-icon.tablet">
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.chat-icon.mobile">
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- RESPONSIVE INPUT STYLES -->
+
+        <Style Selector="TextBox, ComboBox">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="TextBox.tablet, ComboBox.tablet">
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBox.mobile, ComboBox.mobile">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Message Input Special Styling -->
+        <Style Selector="TextBox.message-input">
+            <Setter Property="CornerRadius" Value="24"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="TextBox.message-input.tablet">
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBox.message-input.mobile">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Send Button Special Styling -->
+        <Style Selector="Button.send-button">
+            <Setter Property="CornerRadius" Value="24"/>
+            <Setter Property="Padding" Value="20,12"/>
+        </Style>
+        <Style Selector="Button.send-button.tablet">
+            <Setter Property="Padding" Value="18,10"/>
+        </Style>
+        <Style Selector="Button.send-button.mobile">
+            <Setter Property="Padding" Value="16,8"/>
+        </Style>
+
+        <!-- RESPONSIVE LAYOUT STYLES -->
+
+        <Style Selector="Grid.main-content">
+            <Setter Property="Background" Value="#F9FAFB"/>
+        </Style>
+        <Style Selector="Grid.main-content-tablet">
+            <Setter Property="Background" Value="#F9FAFB"/>
+        </Style>
+        <Style Selector="Grid.main-content-mobile">
+            <Setter Property="Background" Value="#F9FAFB"/>
+        </Style>
+
+        <!-- Avatar Styles -->
+        <Style Selector="Border.avatar">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="20"/>
+        </Style>
+        <Style Selector="Border.avatar.tablet">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="CornerRadius" Value="18"/>
+        </Style>
+        <Style Selector="Border.avatar.mobile">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="CornerRadius" Value="16"/>
+        </Style>
+
+        <!-- Online Indicator Styles -->
+        <Style Selector="Border.online-indicator">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="#10B981"/>
+        </Style>
+        <Style Selector="Border.online-indicator.tablet">
+            <Setter Property="Width" Value="5"/>
+            <Setter Property="Height" Value="5"/>
+            <Setter Property="CornerRadius" Value="2.5"/>
+        </Style>
+        <Style Selector="Border.online-indicator.mobile">
+            <Setter Property="Width" Value="4"/>
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="CornerRadius" Value="2"/>
+        </Style>
+
+        <!-- SCROLLBAR STYLES -->
+        <!-- Custom ScrollBar styling for better UX -->
+        <Style Selector="ScrollBar">
+            <Setter Property="AllowAutoHide" Value="True"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        
+        <Style Selector="ScrollBar:vertical">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Margin" Value="2,0,0,0"/>
+        </Style>
+        
+        <Style Selector="ScrollBar:horizontal">
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+        
+        <!-- ScrollBar Track Styling -->
+        <Style Selector="ScrollBar /template/ Track#PART_Track">
+            <Setter Property="IsDirectionReversed" Value="True"/>
+        </Style>
+        
+        <!-- ScrollBar Thumb Styling -->
+        <Style Selector="ScrollBar /template/ Thumb">
+            <Setter Property="Background" Value="#D1D5DB"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        
+        <Style Selector="ScrollBar /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="#9CA3AF"/>
+        </Style>
+        
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
+            <Setter Property="Background" Value="#6B7280"/>
+        </Style>
+        
+        <!-- ScrollBar Button Styling (Up/Down arrows) -->
+        <Style Selector="ScrollBar /template/ RepeatButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#9CA3AF"/>
+        </Style>
+        
+        <Style Selector="ScrollBar /template/ RepeatButton:pointerover">
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+        
+        <!-- Hide ScrollBar arrows for cleaner look (optional) -->
+        <Style Selector="ScrollBar /template/ RepeatButton#PART_LineUpButton">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        
+        <Style Selector="ScrollBar /template/ RepeatButton#PART_LineDownButton">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        
+        <Style Selector="ScrollBar /template/ RepeatButton#PART_LineLeftButton">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        
+        <Style Selector="ScrollBar /template/ RepeatButton#PART_LineRightButton">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+
+        <!-- ScrollViewer styling -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+        
+        <!-- Enhanced ScrollViewer for better mobile experience -->
+        <Style Selector="ScrollViewer.mobile">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+        
+        <Style Selector="ScrollViewer.tablet">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="360,*" Margin="24">
+    <Grid x:Name="MainGrid" Classes="main-content" ColumnDefinitions="360,*" Margin="24">
         <!-- Conversations List -->
-        <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+        <Border x:Name="ConversationsCard" Grid.Column="0" Classes="card" Margin="0,0,12,0">
             <Grid RowDefinitions="Auto,Auto,*">
                 <!-- Header -->
-                <Border Grid.Row="0" Padding="20,20,20,16" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                <Border x:Name="ConversationsHeader" Grid.Row="0" Padding="20,20,20,16" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Messages" FontSize="18" FontWeight="SemiBold"/>
-                            <TextBlock Text="Admin Communication Hub" Classes="light" FontSize="12"/>
+                            <TextBlock x:Name="ConversationsHeaderText" Text="Messages" Classes="main-header"/>
+                            <TextBlock x:Name="ConversationsSubtitleText" Text="Admin Communication Hub" Classes="subtitle"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="➕ New" Classes="primary" 
+                        <Button x:Name="NewChatButton" Grid.Column="1" Content="➕ New" Classes="primary" 
                                 Command="{Binding StartNewChatCommand}"
                                 VerticalAlignment="Center"/>
                     </Grid>
@@ -117,10 +492,10 @@
                 <!-- Search and Filter -->
                 <Border Grid.Row="1" Padding="16" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
                     <StackPanel Spacing="12">
-                        <TextBox Watermark="Search conversations..." 
+                        <TextBox x:Name="SearchTextBox" Watermark="Search conversations..." 
                                  Text="{Binding SearchText}"
                                  CornerRadius="8"/>
-                        <ComboBox PlaceholderText="All Users" 
+                        <ComboBox x:Name="UserTypeComboBox" PlaceholderText="All Users" 
                                   ItemsSource="{Binding UserTypeOptions}"
                                   SelectedItem="{Binding SelectedUserType}"
                                   HorizontalAlignment="Stretch"/>
@@ -129,7 +504,12 @@
 
                 <!-- Conversations List and Empty State -->
                 <Grid Grid.Row="2">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasConversations}">
+                    <!-- Enhanced ScrollViewer for Conversations List -->
+                    <ScrollViewer x:Name="ConversationsScrollViewer"
+                                  VerticalScrollBarVisibility="Auto" 
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  IsVisible="{Binding HasConversations}"
+                                  AllowAutoHide="True">
                         <ItemsControl ItemsSource="{Binding FilteredConversations}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:ChatConversationViewModel">
@@ -140,11 +520,11 @@
                                         
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <!-- Avatar -->
-                                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" 
+                                            <Border Grid.Column="0" Classes="avatar"
                                                     Background="{Binding RoleColor}" 
                                                     Margin="0,0,12,0">
                                                 <TextBlock Text="{Binding ContactInitials}" 
-                                                           FontSize="14" 
+                                                           Classes="contact-name"
                                                            FontWeight="SemiBold" 
                                                            Foreground="White"
                                                            HorizontalAlignment="Center" 
@@ -155,10 +535,9 @@
                                             <StackPanel Grid.Column="1" Spacing="4">
                                                 <Grid ColumnDefinitions="*,Auto">
                                                     <TextBlock Grid.Column="0" Text="{Binding ContactName}" 
-                                                               FontWeight="SemiBold" FontSize="14"/>
+                                                               Classes="contact-name"/>
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                                                        <Border Width="6" Height="6" CornerRadius="3" 
-                                                                Background="#10B981" 
+                                                        <Border Classes="online-indicator"
                                                                 VerticalAlignment="Center"
                                                                 IsVisible="{Binding IsOnline}"/>
                                                         <TextBlock Text="{Binding ContactRole}" 
@@ -198,6 +577,7 @@
                         </ItemsControl>
                     </ScrollViewer>
 
+                    <!-- Empty State -->
                     <StackPanel Spacing="16" 
                                 HorizontalAlignment="Center" 
                                 VerticalAlignment="Center"
@@ -207,42 +587,46 @@
                               StrokeThickness="2" 
                               Width="48" 
                               Height="48"/>
-                        <TextBlock Text="No conversations found" FontSize="16" FontWeight="SemiBold" Foreground="#6B7280"/>
-                        <TextBlock Text="Try adjusting your search criteria" Classes="light" FontSize="12"/>
+                        <TextBlock x:Name="NoMessagesText" Text="No conversations found" Classes="empty-title"/>
+                        <TextBlock Text="Try adjusting your search criteria" Classes="subtitle"/>
                     </StackPanel>
                 </Grid>
             </Grid>
         </Border>
 
         <!-- Chat Area -->
-        <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
+        <Border x:Name="ChatCard" Grid.Column="1" Classes="card" Margin="12,0,0,0">
             <Grid>
                 <!-- Selected Conversation Chat -->
                 <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasSelectedConversation}">
                     <!-- Chat Header -->
-                    <Border Grid.Row="0" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border x:Name="ChatHeader" Grid.Row="0" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                            <!-- Back Button (only visible on mobile/tablet) -->
+                            <Button x:Name="BackButton" Grid.Column="0" Content="←" Classes="back-button" 
+                                    VerticalAlignment="Center" Margin="0,0,12,0"
+                                    IsVisible="False"/>
+                            
                             <!-- Contact Info -->
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
-                                <Border Width="40" Height="40" CornerRadius="20" 
-                                        Background="{Binding SelectedConversation.RoleColor}">
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                <Border Classes="avatar"
                                     <TextBlock Text="{Binding SelectedConversation.ContactInitials}" 
-                                               FontSize="14" 
+                                               Classes="contact-name"
                                                FontWeight="SemiBold" 
                                                Foreground="White"
                                                HorizontalAlignment="Center" 
                                                VerticalAlignment="Center"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedConversation.ContactName}" 
-                                               FontSize="16" 
-                                               FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="ChatHeaderNameText" 
+                                               Text="{Binding SelectedConversation.ContactName}" 
+                                               Classes="chat-header-name"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Border Width="6" Height="6" CornerRadius="3" 
-                                                Background="#10B981" 
+                                        <Border Classes="online-indicator"
                                                 VerticalAlignment="Center"
-                                                IsVisible="{Binding SelectedConversation.IsOnline}"/>
-                                        <TextBlock Text="{Binding SelectedConversation.ContactRole}" 
+                                                IsVisible="{Binding SelectedConversation.IsOnline, FallbackValue=False}"/>
+                                        <TextBlock x:Name="ChatHeaderRoleText" 
+                                                   Text="{Binding SelectedConversation.ContactRole}" 
                                                    FontSize="12" 
                                                    Classes="light"/>
                                         <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}}" 
@@ -253,34 +637,21 @@
                             </StackPanel>
 
                             <!-- Chat Actions -->
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                <Button Content="📞" 
-                                        Background="Transparent" 
-                                        Foreground="#6B7280" 
-                                        BorderThickness="0" 
-                                        CornerRadius="8" 
-                                        Padding="8"/>
-                                <Button Content="📹" 
-                                        Background="Transparent" 
-                                        Foreground="#6B7280" 
-                                        BorderThickness="0" 
-                                        CornerRadius="8" 
-                                        Padding="8"/>
-                                <Button Content="ℹ️" 
-                                        Background="Transparent" 
-                                        Foreground="#6B7280" 
-                                        BorderThickness="0" 
-                                        CornerRadius="8" 
-                                        Padding="8"/>
+                            <StackPanel x:Name="ChatHeaderButtons" Grid.Column="3" Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="CallButton" Content="📞" Classes="chat-icon"/>
+                                <Button x:Name="VideoButton" Content="📹" Classes="chat-icon"/>
+                                <Button x:Name="InfoButton" Content="ℹ️" Classes="chat-icon"/>
                             </StackPanel>
                         </Grid>
                     </Border>
 
-                    <!-- Messages -->
-                    <ScrollViewer Grid.Row="1" 
-                                  Name="MessagesScrollViewer"
+                    <!-- Enhanced Messages ScrollViewer -->
+                    <ScrollViewer x:Name="MessagesScrollViewer"
+                                  Grid.Row="1" 
                                   VerticalScrollBarVisibility="Auto" 
-                                  Padding="20">
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Padding="20"
+                                  AllowAutoHide="True">
                         <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:ChatMessageViewModel">
@@ -292,7 +663,7 @@
                                             <TextBlock Text="{Binding Content}" 
                                                        Foreground="{Binding MessageTextColor}"
                                                        TextWrapping="Wrap"
-                                                       FontSize="14"/>
+                                                       Classes="message-text"/>
                                         </Border>
                                         <TextBlock Text="{Binding TimestampText}" 
                                                    FontSize="10" 
@@ -307,24 +678,20 @@
 
                     <!-- Message Input -->
                     <Border Grid.Row="2" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBox Grid.Column="0" 
+                        <Grid x:Name="MessageInputGrid" ColumnDefinitions="*,Auto">
+                            <TextBox x:Name="MessageTextBox" Grid.Column="0" 
                                      Text="{Binding NewMessage}"
                                      Watermark="Type a message..."
-                                     CornerRadius="24"
-                                     Padding="16,12"
-                                     FontSize="14"
+                                     Classes="message-input"
                                      Margin="0,0,12,0">
                                 <TextBox.KeyBindings>
                                     <KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}"/>
                                 </TextBox.KeyBindings>
                             </TextBox>
-                            <Button Grid.Column="1" 
+                            <Button x:Name="SendButton" Grid.Column="1" 
                                     Content="Send"
-                                    Classes="primary"
-                                    Command="{Binding SendMessageCommand}"
-                                    CornerRadius="24"
-                                    Padding="20,12"/>
+                                    Classes="primary send-button"
+                                    Command="{Binding SendMessageCommand}"/>
                         </Grid>
                     </Border>
                 </Grid>
@@ -339,10 +706,10 @@
                           StrokeThickness="2" 
                           Width="64" 
                           Height="64"/>
-                    <TextBlock Text="Select a conversation" FontSize="18" FontWeight="SemiBold" Foreground="#6B7280"/>
-                    <TextBlock Text="Choose a conversation from the list to start messaging" Classes="light" FontSize="14"/>
+                    <TextBlock x:Name="NoConversationTitleText" Text="Select a conversation" Classes="empty-title"/>
+                    <TextBlock x:Name="NoConversationSubtitleText" Text="Choose a conversation from the list to start messaging" Classes="subtitle"/>
                 </StackPanel>
             </Grid>
         </Border>
     </Grid>
-   </UserControl>
+</UserControl>
