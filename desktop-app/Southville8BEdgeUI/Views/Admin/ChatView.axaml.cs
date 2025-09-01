@@ -54,8 +54,6 @@ public partial class ChatView : UserControl
     private bool _lastConversationsCardVisible = false;
     private bool _lastChatCardVisible = false;
     
-    // Recursion depth limit for UI traversal safety
-
     public ChatView()
     {
         InitializeComponent();
