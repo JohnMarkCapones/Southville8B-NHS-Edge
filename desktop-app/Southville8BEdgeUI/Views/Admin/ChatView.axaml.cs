@@ -36,6 +36,7 @@ public partial class ChatView : UserControl
 
     // Cache for performance optimization
     private string _lastSizeClass = "";
+    private double _lastWidth = 0;
     
     // Mobile navigation state
     private bool _isMobileViewInChatMode = false;
@@ -71,10 +72,10 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Improved scroll method with debouncing to prevent unnecessary dispatcher posts
+    // Improved scroll method allowing initial scrolling before size class is set
     private void ScrollToBottomOfMessages()
     {
-        if (MessagesScrollViewer != null && !string.IsNullOrEmpty(_lastSizeClass) && !_isScrollScheduled)
+        if (MessagesScrollViewer != null && !_isScrollScheduled)
         {
             _isScrollScheduled = true;
             
@@ -115,7 +116,6 @@ public partial class ChatView : UserControl
             if (_currentSubscribedConversation?.Messages != null)
             {
                 _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
-                _currentSubscribedConversation = null;
             }
             
             // Subscribe to new conversation's messages with null safety
@@ -123,6 +123,10 @@ public partial class ChatView : UserControl
             {
                 vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
                 _currentSubscribedConversation = vm.SelectedConversation;
+            }
+            else
+            {
+                _currentSubscribedConversation = null;
             }
         }
     }
@@ -261,11 +265,15 @@ public partial class ChatView : UserControl
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
         
-        // Performance optimization: Skip update if size class hasn't changed
-        if (sizeClass == _lastSizeClass)
+        // Check if significant changes occurred that require updates
+        bool sizeClassChanged = sizeClass != _lastSizeClass;
+        bool significantWidthChange = Math.Abs(width - _lastWidth) > 50; // 50px threshold for significant changes
+        
+        if (!sizeClassChanged && !significantWidthChange)
             return;
             
         _lastSizeClass = sizeClass;
+        _lastWidth = width;
         
         // Reset mobile navigation state when switching to desktop
         if (sizeClass == DesktopClass)
@@ -273,18 +281,22 @@ public partial class ChatView : UserControl
             _isMobileViewInChatMode = false;
         }
         
-        // Update all responsive elements
-        UpdateMainContainerClasses(sizeClass);
-        UpdateElementClasses(_responsiveTextElements, sizeClass);
-        UpdateElementClasses(_responsiveCardElements, sizeClass);
-        UpdateElementClasses(_responsiveButtonElements, sizeClass);
-        UpdateElementClasses(_responsiveInputElements, sizeClass);
+        // Only update element classes when size class changes
+        if (sizeClassChanged)
+        {
+            // Update all responsive elements
+            UpdateMainContainerClasses(sizeClass);
+            UpdateElementClasses(_responsiveTextElements, sizeClass);
+            UpdateElementClasses(_responsiveCardElements, sizeClass);
+            UpdateElementClasses(_responsiveButtonElements, sizeClass);
+            UpdateElementClasses(_responsiveInputElements, sizeClass);
+            
+            // Update cached chat elements for better performance
+            UpdateCachedChatElements(sizeClass);
+        }
         
-        // Update layout-specific elements based on screen size
+        // Always update layout-specific elements based on actual width
         ApplyLayoutStrategy(sizeClass, width);
-        
-        // Update cached chat elements for better performance
-        UpdateCachedChatElements(sizeClass);
     }
 
     private string GetSizeClass(double width)
@@ -516,7 +528,7 @@ public partial class ChatView : UserControl
         }
     }
     
-    private void UpdateElementResponsiveClasses(Control element, string sizeClass)
+    private void UpdateElementResponsiveClasses(Control element, String sizeClass)
     {
         // Remove existing responsive classes using constants
         element.Classes.Remove(MobileClass);
@@ -529,13 +541,16 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Mobile navigation methods
+    // Mobile navigation methods with improved width handling
     private void NavigateToChat()
     {
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
         
         _isMobileViewInChatMode = true;
-        ApplyLayoutStrategy(_lastSizeClass, Bounds.Width);
+        
+        // Use cached width if available, otherwise use current bounds
+        double width = _lastWidth > 0 ? _lastWidth : (Bounds.Width > 0 ? Bounds.Width : MobileBreakpoint - 1);
+        ApplyLayoutStrategy(_lastSizeClass, width);
     }
 
     private void NavigateToConversations()
@@ -543,8 +558,10 @@ public partial class ChatView : UserControl
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
         
         _isMobileViewInChatMode = false;
-        // Navigate back to conversations list without clearing selection to maintain state
-        ApplyLayoutStrategy(_lastSizeClass, Bounds.Width);
+        
+        // Use cached width if available, otherwise use current bounds
+        double width = _lastWidth > 0 ? _lastWidth : (Bounds.Width > 0 ? Bounds.Width : MobileBreakpoint - 1);
+        ApplyLayoutStrategy(_lastSizeClass, width);
     }
 
     // Event handlers for navigation
@@ -583,11 +600,13 @@ public partial class ChatView : UserControl
         if (_currentSubscribedConversation?.Messages != null)
         {
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
-            _currentSubscribedConversation = null;
         }
         
         // Clear cached elements
         _cachedChatElements.Clear();
+        
+        // Set to null after all cleanup operations are complete
+        _currentSubscribedConversation = null;
     }
     
     // Configuration class for layout strategies
