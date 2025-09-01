@@ -291,10 +291,14 @@ public partial class ChatViewModel : ViewModelBase
             IsFromCurrentUser = true
         };
 
+        // Add the message immediately
         SelectedConversation.Messages.Add(message);
+        
+        // Update conversation info immediately
         SelectedConversation.LastMessage = NewMessage.Trim();
         SelectedConversation.LastMessageTime = DateTime.Now;
 
+        // Clear the input immediately
         NewMessage = "";
     }
 

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Southville8BEdgeUI.ViewModels.Admin;
+using Avalonia.Threading;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -51,9 +52,9 @@ public partial class ChatView : UserControl
     // Track message collection subscriptions to prevent memory leaks
     private ChatConversationViewModel? _currentSubscribedConversation = null;
     
-    // Debouncing for scroll operations
-    private bool _isScrollScheduled = false;
-    
+    // Simplified scroll handling
+    private bool _isScrolling = false;
+
     // Visibility state tracking for efficient cache management
     private bool _lastConversationsCardVisible = false;
     private bool _lastChatCardVisible = false;
@@ -79,25 +80,23 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Improved scroll method allowing initial scrolling before size class is set
+    // Simplified and immediate scroll method
     private void ScrollToBottomOfMessages()
     {
-        if (MessagesScrollViewer != null && !_isScrollScheduled)
+        if (MessagesScrollViewer != null && !_isScrolling)
         {
-            _isScrollScheduled = true;
+            _isScrolling = true;
             
-            // Use dispatcher to ensure UI has updated before scrolling
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            try
             {
-                try
-                {
-                    MessagesScrollViewer.ScrollToEnd();
-                }
-                finally
-                {
-                    _isScrollScheduled = false;
-                }
-            }, Avalonia.Threading.DispatcherPriority.Background);
+                // Immediate scroll without dispatcher delays
+                MessagesScrollViewer.ScrollToEnd();
+            }
+            finally
+            {
+                // Reset flag after a minimal delay
+                Dispatcher.UIThread.Post(() => _isScrolling = false, DispatcherPriority.Normal);
+            }
         }
     }
 
@@ -118,6 +117,9 @@ public partial class ChatView : UserControl
             {
                 vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
                 _currentSubscribedConversation = vm.SelectedConversation;
+                
+                // Immediate scroll to bottom when conversation changes
+                ScrollToBottomOfMessages();
             }
             else
             {
@@ -137,7 +139,7 @@ public partial class ChatView : UserControl
                 if (e.Conversation != null && !_isMobileViewInChatMode)
                 {
                     NavigateToChat();
-                    // Auto-scroll to bottom when conversation is opened
+                    // Immediate scroll when opening conversation
                     ScrollToBottomOfMessages();
                 }
                 break;
@@ -148,12 +150,17 @@ public partial class ChatView : UserControl
         }
     }
 
+    // Simplified message collection change handler
     private void Messages_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
         {
-            // Auto-scroll to bottom when new messages are added
-            ScrollToBottomOfMessages();
+            // Force immediate UI update and scroll
+            Dispatcher.UIThread.Post(() =>
+            {
+                // Give UI a moment to render the new message, then scroll
+                Dispatcher.UIThread.Post(() => ScrollToBottomOfMessages(), DispatcherPriority.Loaded);
+            }, DispatcherPriority.Render);
         }
     }
 
@@ -205,6 +212,7 @@ public partial class ChatView : UserControl
         _lastChatCardVisible = ChatCard?.IsVisible ?? false;
     }
 
+    // [Keep all your existing layout and responsive methods unchanged]
     // Pre-cache chat elements to avoid expensive recursive searches
     private void CacheChatElements()
     {
