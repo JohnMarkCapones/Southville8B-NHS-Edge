@@ -24,6 +24,9 @@ public partial class ChatView : UserControl
     private readonly List<Control> _responsiveButtonElements = new();
     private readonly List<Control> _responsiveInputElements = new();
     
+    // Cache for targeted UI element updates
+    private readonly List<Control> _cachedChatElements = new();
+    
     // Element identification constants for optimized performance
     private const string TextElementSuffix = "Text";
     private const string ButtonElementSuffix = "Button";
@@ -39,6 +42,9 @@ public partial class ChatView : UserControl
     
     // Track message collection subscriptions to prevent memory leaks
     private ChatConversationViewModel? _currentSubscribedConversation = null;
+    
+    // Debouncing for scroll operations
+    private bool _isScrollScheduled = false;
 
     public ChatView()
     {
@@ -58,15 +64,24 @@ public partial class ChatView : UserControl
         }
     }
 
-    // Add this method to automatically scroll to bottom when new messages arrive
+    // Improved scroll method with debouncing to prevent unnecessary dispatcher posts
     private void ScrollToBottomOfMessages()
     {
-        if (MessagesScrollViewer != null && !string.IsNullOrEmpty(_lastSizeClass))
+        if (MessagesScrollViewer != null && !string.IsNullOrEmpty(_lastSizeClass) && !_isScrollScheduled)
         {
+            _isScrollScheduled = true;
+            
             // Use dispatcher to ensure UI has updated before scrolling
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                MessagesScrollViewer.ScrollToEnd();
+                try
+                {
+                    MessagesScrollViewer.ScrollToEnd();
+                }
+                finally
+                {
+                    _isScrollScheduled = false;
+                }
             }, Avalonia.Threading.DispatcherPriority.Background);
         }
     }
@@ -89,15 +104,15 @@ public partial class ChatView : UserControl
         // Handle message collection subscription changes properly to prevent memory leaks
         if (e.PropertyName == nameof(ChatViewModel.SelectedConversation) && DataContext is ChatViewModel vm)
         {
-            // Unsubscribe from previous conversation's messages
-            if (_currentSubscribedConversation != null)
+            // Unsubscribe from previous conversation's messages with null safety
+            if (_currentSubscribedConversation?.Messages != null)
             {
                 _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
                 _currentSubscribedConversation = null;
             }
             
-            // Subscribe to new conversation's messages
-            if (vm.SelectedConversation != null)
+            // Subscribe to new conversation's messages with null safety
+            if (vm.SelectedConversation?.Messages != null)
             {
                 vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
                 _currentSubscribedConversation = vm.SelectedConversation;
@@ -154,6 +169,68 @@ public partial class ChatView : UserControl
             UserTypeComboBox,
             MessageTextBox
         });
+        
+        // Cache chat-specific elements for targeted updates
+        CacheChatElements();
+    }
+
+    // Pre-cache chat elements to avoid expensive recursive searches
+    private void CacheChatElements()
+    {
+        _cachedChatElements.Clear();
+        
+        // Add elements with known classes/patterns that need responsive updates
+        if (ConversationsCard != null)
+        {
+            FindAndCacheElementsRecursively(ConversationsCard);
+        }
+        
+        if (ChatCard != null)
+        {
+            FindAndCacheElementsRecursively(ChatCard);
+        }
+    }
+
+    private void FindAndCacheElementsRecursively(Control control)
+    {
+        // Cache conversation items
+        if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
+        {
+            _cachedChatElements.Add(conversationItem);
+        }
+        // Cache message bubbles
+        else if (control is Border messageBubble && messageBubble.Classes.Contains(MessageBubbleClass))
+        {
+            _cachedChatElements.Add(messageBubble);
+        }
+        // Cache text elements with specific suffixes
+        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
+        {
+            _cachedChatElements.Add(textBlock);
+        }
+        // Cache button elements with specific suffixes
+        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
+        {
+            _cachedChatElements.Add(button);
+        }
+        // Cache input elements
+        else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
+        {
+            _cachedChatElements.Add(control);
+        }
+
+        // Recursively search children
+        if (control is Panel panel)
+        {
+            foreach (Control child in panel.Children)
+            {
+                FindAndCacheElementsRecursively(child);
+            }
+        }
+        else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
+        {
+            FindAndCacheElementsRecursively(contentChild);
+        }
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -188,8 +265,8 @@ public partial class ChatView : UserControl
         // Update layout-specific elements based on screen size
         ApplyLayoutStrategy(sizeClass, width);
         
-        // Update conversation and message elements dynamically
-        UpdateChatElements(sizeClass);
+        // Update cached chat elements for better performance
+        UpdateCachedChatElements(sizeClass);
     }
 
     private string GetSizeClass(double width)
@@ -396,62 +473,21 @@ public partial class ChatView : UserControl
         }
     }
 
-    private void UpdateChatElements(string sizeClass)
+    // Optimized method using cached elements for better performance
+    private void UpdateCachedChatElements(string sizeClass)
     {
-        // Optimized: Only update if there are visible elements
-        if (ConversationsCard?.IsVisible == true)
+        // Update cached elements directly instead of recursive search
+        foreach (var element in _cachedChatElements)
         {
-            UpdateChatElementsRecursively(ConversationsCard, sizeClass);
+            UpdateElementResponsiveClasses(element, sizeClass);
         }
         
-        if (ChatCard?.IsVisible == true)
+        // Refresh cache if UI structure has changed significantly
+        // This only happens when cards become visible/invisible
+        if (ConversationsCard?.IsVisible == true || ChatCard?.IsVisible == true)
         {
-            UpdateChatElementsRecursively(ChatCard, sizeClass);
+            CacheChatElements();
         }
-    }
-
-    private void UpdateChatElementsRecursively(Control control, string sizeClass)
-    {
-        // Improved pattern matching with null safety and performance optimization
-        // Fast path for conversation items
-        if (control is Button conversationItem && conversationItem.Classes.Contains(ConversationItemClass))
-        {
-            UpdateElementResponsiveClasses(conversationItem, sizeClass);
-        }
-        // Fast path for message bubbles
-        else if (control is Border messageBubble && messageBubble.Classes.Contains(MessageBubbleClass))
-        {
-            UpdateElementResponsiveClasses(messageBubble, sizeClass);
-        }
-        // Optimized text block check using direct string comparison
-        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
-        {
-            UpdateElementResponsiveClasses(textBlock, sizeClass);
-        }
-        // Optimized button check using direct string comparison
-        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
-        {
-            UpdateElementResponsiveClasses(button, sizeClass);
-        }
-        // Check for input elements
-        else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
-        {
-            UpdateElementResponsiveClasses(control, sizeClass);
-        }
-
-        // Recursively update children with type-specific handling
-        if (control is Panel panel)
-        {
-            foreach (Control child in panel.Children)
-            {
-                UpdateChatElementsRecursively(child, sizeClass);
-            }
-        }
-        else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
-        {
-            UpdateChatElementsRecursively(contentChild, sizeClass);
-        }
-        // Note: ItemsControl children are handled through the template
     }
     
     private void UpdateElementResponsiveClasses(Control element, string sizeClass)
@@ -517,12 +553,15 @@ public partial class ChatView : UserControl
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
         
-        // Clean up message collection subscription to prevent memory leaks
-        if (_currentSubscribedConversation != null)
+        // Clean up message collection subscription to prevent memory leaks with null safety
+        if (_currentSubscribedConversation?.Messages != null)
         {
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
             _currentSubscribedConversation = null;
         }
+        
+        // Clear cached elements
+        _cachedChatElements.Clear();
     }
     
     // Configuration class for layout strategies
