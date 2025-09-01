@@ -13,6 +13,9 @@ public partial class ChatView : UserControl
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
     
+    // Significant width change threshold for responsive updates
+    private const double SignificantWidthChangeThreshold = 50;
+    
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
     private const string TabletClass = "tablet";
@@ -143,7 +146,6 @@ public partial class ChatView : UserControl
     private void InitializeResponsiveElements()
     {
         // Add all named text elements that need responsive font sizes
-        // Using traditional array syntax for better compatibility
         _responsiveTextElements.AddRange(new Control[]
         {
             ConversationsHeaderText,
@@ -267,7 +269,7 @@ public partial class ChatView : UserControl
         
         // Check if significant changes occurred that require updates
         bool sizeClassChanged = sizeClass != _lastSizeClass;
-        bool significantWidthChange = Math.Abs(width - _lastWidth) > 50; // 50px threshold for significant changes
+        bool significantWidthChange = Math.Abs(width - _lastWidth) > SignificantWidthChangeThreshold;
         
         if (!sizeClassChanged && !significantWidthChange)
             return;
@@ -528,7 +530,7 @@ public partial class ChatView : UserControl
         }
     }
     
-    private void UpdateElementResponsiveClasses(Control element, String sizeClass)
+    private void UpdateElementResponsiveClasses(Control element, string sizeClass)
     {
         // Remove existing responsive classes using constants
         element.Classes.Remove(MobileClass);
@@ -541,16 +543,31 @@ public partial class ChatView : UserControl
         }
     }
 
+    /// <summary>
+    /// Gets the effective width for layout calculations with proper fallback values
+    /// </summary>
+    /// <returns>A valid width value for layout operations</returns>
+    private double GetEffectiveWidth()
+    {
+        // Use cached width if available and valid
+        if (_lastWidth > 0)
+            return _lastWidth;
+            
+        // Use current bounds if available
+        if (Bounds.Width > 0)
+            return Bounds.Width;
+            
+        // Fallback to mobile breakpoint - 1 to ensure mobile layout
+        return MobileBreakpoint - 1;
+    }
+
     // Mobile navigation methods with improved width handling
     private void NavigateToChat()
     {
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
         
         _isMobileViewInChatMode = true;
-        
-        // Use cached width if available, otherwise use current bounds
-        double width = _lastWidth > 0 ? _lastWidth : (Bounds.Width > 0 ? Bounds.Width : MobileBreakpoint - 1);
-        ApplyLayoutStrategy(_lastSizeClass, width);
+        ApplyLayoutStrategy(_lastSizeClass, GetEffectiveWidth());
     }
 
     private void NavigateToConversations()
@@ -558,10 +575,7 @@ public partial class ChatView : UserControl
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
         
         _isMobileViewInChatMode = false;
-        
-        // Use cached width if available, otherwise use current bounds
-        double width = _lastWidth > 0 ? _lastWidth : (Bounds.Width > 0 ? Bounds.Width : MobileBreakpoint - 1);
-        ApplyLayoutStrategy(_lastSizeClass, width);
+        ApplyLayoutStrategy(_lastSizeClass, GetEffectiveWidth());
     }
 
     // Event handlers for navigation
