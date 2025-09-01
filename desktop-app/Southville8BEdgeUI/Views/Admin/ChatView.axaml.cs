@@ -222,25 +222,25 @@ public partial class ChatView : UserControl
             {
                 _cachedChatElements.Add(conversationItem);
             }
-            // Cache message bubbles
-            else if (control is Border messageBubble && messageBubble.Classes.Contains(MessageBubbleClass))
+            // Cache other elements based on type and name suffix
+            else
             {
-                _cachedChatElements.Add(messageBubble);
-            }
-            // Cache text elements with specific suffixes
-            else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
-            {
-                _cachedChatElements.Add(textBlock);
-            }
-            // Cache button elements with specific suffixes
-            else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
-            {
-                _cachedChatElements.Add(button);
-            }
-            // Cache input elements
-            else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
-            {
-                _cachedChatElements.Add(control);
+                var name = control.Name;
+                switch (control)
+                {
+                    case Border messageBubble when messageBubble.Classes.Contains(MessageBubbleClass):
+                        _cachedChatElements.Add(messageBubble);
+                        break;
+                    case TextBlock textBlock when name != null && name.EndsWith(TextElementSuffix):
+                        _cachedChatElements.Add(textBlock);
+                        break;
+                    case Button button when name != null && name.EndsWith(ButtonElementSuffix):
+                        _cachedChatElements.Add(button);
+                        break;
+                    case Control genericControl when name != null && name.EndsWith(InputElementSuffix):
+                        _cachedChatElements.Add(genericControl);
+                        break;
+                }
             }
 
             // Traverse children
