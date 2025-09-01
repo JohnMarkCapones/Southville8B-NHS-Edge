@@ -611,8 +611,8 @@ public partial class ChatView : UserControl
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
         
-        // Clean up message collection subscription to prevent memory leaks with null safety
-        if (_currentSubscribedConversation != null && _currentSubscribedConversation.Messages != null)
+        // Clean up message collection subscription to prevent memory leaks
+        if (_currentSubscribedConversation != null)
         {
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
         }
