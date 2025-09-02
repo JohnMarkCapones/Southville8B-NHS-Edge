@@ -14,6 +14,7 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
+        <!-- RESPONSIVE CARD STYLES -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="#E5E7EB"/>
@@ -32,22 +33,81 @@
             <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
             <Setter Property="RenderTransform" Value="translate(-2px)"/>
         </Style>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <!-- RESPONSIVE TEXT STYLES -->
+        <Style Selector="TextBlock.main-header">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.tablet">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.mobile">
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+
+        <Style Selector="TextBlock.subtitle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
         <Style Selector="TextBlock.stat-title">
             <Setter Property="Foreground" Value="#6B7280"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
         </Style>
+        <Style Selector="TextBlock.stat-title.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.stat-title.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
         <Style Selector="TextBlock.stat-value">
             <Setter Property="Foreground" Value="#111827"/>
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+        <Style Selector="TextBlock.stat-value.tablet">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+        <Style Selector="TextBlock.stat-value.mobile">
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- RESPONSIVE BUTTON STYLES -->
         <Style Selector="Button.quick-action">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16,12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Transitions">
@@ -59,6 +119,28 @@
         <Style Selector="Button.quick-action:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.02)"/>
         </Style>
+        <Style Selector="Button.quick-action.tablet">
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.quick-action.mobile">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- RESPONSIVE PROGRESS BAR STYLES -->
+        <Style Selector="ProgressBar.responsive-progress">
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="CornerRadius" Value="2"/>
+        </Style>
+        <Style Selector="ProgressBar.responsive-progress.tablet">
+            <Setter Property="Height" Value="3"/>
+        </Style>
+        <Style Selector="ProgressBar.responsive-progress.mobile">
+            <Setter Property="Height" Value="2"/>
+        </Style>
+
+        <!-- CLASS CARD STYLES -->
         <Style Selector="Border.class-card">
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="#E5E7EB"/>
@@ -67,27 +149,47 @@
             <Setter Property="Padding" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
+        <Style Selector="Border.class-card.tablet">
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+        <Style Selector="Border.class-card.mobile">
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+
+        <!-- RESPONSIVE LAYOUT STYLES -->
+        <Style Selector="StackPanel.main-content">
+            <Setter Property="Margin" Value="40"/>
+            <Setter Property="Spacing" Value="24"/>
+        </Style>
+        <Style Selector="StackPanel.main-content-tablet">
+            <Setter Property="Margin" Value="20"/>
+            <Setter Property="Spacing" Value="16"/>
+        </Style>
+        <Style Selector="StackPanel.main-content-mobile">
+            <Setter Property="Margin" Value="12"/>
+            <Setter Property="Spacing" Value="12"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer>
-        <StackPanel Margin="40" Spacing="24">
+        <StackPanel x:Name="MainStackPanel" Classes="main-content">
             <!-- Header with Welcome Message -->
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Teacher Dashboard" FontSize="28" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding WelcomeMessage}" FontSize="14" Foreground="#6B7280"/>
+                    <TextBlock x:Name="MainHeaderText" Text="Teacher Dashboard" Classes="main-header"/>
+                    <TextBlock x:Name="SubtitleText" Text="{Binding WelcomeMessage}" Classes="subtitle"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <Border Background="#10B981" CornerRadius="6" Padding="8,4">
                         <TextBlock Text="Online" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
                     </Border>
-                    <Button Content="🔄 Refresh" Classes="quick-action" Background="#6B7280" Command="{Binding RefreshDashboardCommand}"/>
+                    <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="#6B7280" Command="{Binding RefreshDashboardCommand}"/>
                 </StackPanel>
             </Grid>
 
             <!-- Key Performance Indicators -->
-            <Grid ColumnDefinitions="*,*,*,*,*">
-                <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
+            <Grid x:Name="KpiGrid" ColumnDefinitions="*,*,*,*,*">
+                <Border x:Name="KpiCard1" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="My Students" Classes="stat-title"/>
@@ -95,11 +197,11 @@
                                 <TextBlock Text="👥" FontSize="16"/>
                             </Border>
                         </Grid>
-                        <TextBlock Text="{Binding MyStudents}" Classes="stat-value"/>
+                        <TextBlock x:Name="MyStudentsText" Text="{Binding MyStudents}" Classes="stat-value"/>
                         <TextBlock Text="Across all classes" FontSize="12" Foreground="#10B981"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="1" Classes="card" Margin="12,0">
+                <Border x:Name="KpiCard2" Grid.Column="1" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Active Classes" Classes="stat-title"/>
@@ -107,11 +209,11 @@
                                 <TextBlock Text="📚" FontSize="16"/>
                             </Border>
                         </Grid>
-                        <TextBlock Text="{Binding ActiveClasses}" Classes="stat-value"/>
+                        <TextBlock x:Name="ActiveClassesText" Text="{Binding ActiveClasses}" Classes="stat-value"/>
                         <TextBlock Text="This semester" FontSize="12" Foreground="#3B82F6"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="2" Classes="card" Margin="12,0">
+                <Border x:Name="KpiCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Pending Grading" Classes="stat-title"/>
@@ -119,11 +221,11 @@
                                 <TextBlock Text="📝" FontSize="16"/>
                             </Border>
                         </Grid>
-                        <TextBlock Text="{Binding PendingAssignments}" Classes="stat-value"/>
-                        <ProgressBar Value="{Binding GradingProgress}" Minimum="0" Maximum="100" Height="4" CornerRadius="2" Foreground="#F59E0B"/>
+                        <TextBlock x:Name="PendingAssignmentsText" Text="{Binding PendingAssignments}" Classes="stat-value"/>
+                        <ProgressBar Value="{Binding GradingProgress}" Minimum="0" Maximum="100" Classes="responsive-progress" Foreground="#F59E0B"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="3" Classes="card" Margin="12,0">
+                <Border x:Name="KpiCard4" Grid.Column="3" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Average Grade" Classes="stat-title"/>
@@ -131,11 +233,11 @@
                                 <TextBlock Text="📊" FontSize="16"/>
                             </Border>
                         </Grid>
-                        <TextBlock Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" Classes="stat-value"/>
+                        <TextBlock x:Name="AverageGradeText" Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" Classes="stat-value"/>
                         <TextBlock Text="Class performance" FontSize="12" Foreground="#8B5CF6"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="4" Classes="card" Margin="12,0,0,0">
+                <Border x:Name="KpiCard5" Grid.Column="4" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Attendance Rate" Classes="stat-title"/>
@@ -143,20 +245,20 @@
                                 <TextBlock Text="✅" FontSize="16"/>
                             </Border>
                         </Grid>
-                        <TextBlock Text="{Binding ClassAttendanceRate, StringFormat={}{0:F1}%}" Classes="stat-value"/>
+                        <TextBlock x:Name="AttendanceRateText" Text="{Binding ClassAttendanceRate, StringFormat={}{0:F1}%}" Classes="stat-value"/>
                         <TextBlock Text="Overall attendance" FontSize="12" Foreground="#10B981"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <!-- Performance Metrics & Today's Schedule -->
-            <Grid ColumnDefinitions="2*,*">
+            <Grid x:Name="TwoColumnGrid1" ColumnDefinitions="2*,*">
                 <!-- Student Performance Metrics -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Subject Performance" FontSize="18" FontWeight="SemiBold"/>
-                            <Button Grid.Column="1" Content="📊 Detailed Reports" Classes="quick-action" Background="#6B7280" 
+                            <TextBlock Grid.Column="0" Text="Subject Performance" Classes="section-header"/>
+                            <Button x:Name="DetailedReportsButton" Grid.Column="1" Content="📊 Detailed Reports" Classes="quick-action" Background="#6B7280" 
                                     Command="{Binding ViewDetailedReportsCommand}" Padding="12,8" FontSize="12"/>
                         </Grid>
                         <ItemsControl ItemsSource="{Binding StudentPerformance}">
@@ -192,8 +294,8 @@
                 <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Today's Schedule" FontSize="18" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Text="{Binding TodayClasses}" FontSize="14" FontWeight="SemiBold" Foreground="#10B981"/>
+                            <TextBlock Grid.Column="0" Text="Today's Schedule" Classes="section-header"/>
+                            <TextBlock x:Name="TodayClassesText" Grid.Column="1" Text="{Binding TodayClasses}" FontSize="14" FontWeight="SemiBold" Foreground="#10B981"/>
                         </Grid>
                         <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding TodaySchedule}">
@@ -225,23 +327,23 @@
             </Grid>
 
             <!-- Quick Actions & Class Statistics -->
-            <Grid ColumnDefinitions="*,*">
+            <Grid x:Name="TwoColumnGrid2" ColumnDefinitions="*,*">
                 <!-- Quick Actions -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Quick Actions" Classes="section-header"/>
                         <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
-                            <Button Grid.Column="0" Grid.Row="0" Content="📅 Schedule" Classes="quick-action" Background="#10B981" 
+                            <Button x:Name="ScheduleButton" Grid.Column="0" Grid.Row="0" Content="📅 Schedule" Classes="quick-action" Background="#10B981" 
                                     Command="{Binding NavigateToSchedulePlannerCommand}" Margin="0,0,8,8"/>
-                            <Button Grid.Column="1" Grid.Row="0" Content="📊 Grades" Classes="quick-action" Background="#3B82F6" 
+                            <Button x:Name="GradesButton" Grid.Column="1" Grid.Row="0" Content="📊 Grades" Classes="quick-action" Background="#3B82F6" 
                                     Command="{Binding NavigateToGradeEntryCommand}" Margin="8,0,8,8"/>
-                            <Button Grid.Column="2" Grid.Row="0" Content="👥 Students" Classes="quick-action" Background="#8B5CF6" 
+                            <Button x:Name="StudentsButton" Grid.Column="2" Grid.Row="0" Content="👥 Students" Classes="quick-action" Background="#8B5CF6" 
                                     Command="{Binding NavigateToStudentManagementCommand}" Margin="8,0,0,8"/>
-                            <Button Grid.Column="0" Grid.Row="1" Content="📢 Announce" Classes="quick-action" Background="#F59E0B" 
+                            <Button x:Name="AnnounceButton" Grid.Column="0" Grid.Row="1" Content="📢 Announce" Classes="quick-action" Background="#F59E0B" 
                                     Command="{Binding NavigateToMyAnnouncementsCommand}" Margin="0,8,8,0"/>
-                            <Button Grid.Column="1" Grid.Row="1" Content="💬 Messages" Classes="quick-action" Background="#EC4899" 
+                            <Button x:Name="MessagesButton" Grid.Column="1" Grid.Row="1" Content="💬 Messages" Classes="quick-action" Background="#EC4899" 
                                     Command="{Binding NavigateToMessagingCommand}" Margin="8,8,8,0"/>
-                            <Button Grid.Column="2" Grid.Row="1" Content="📈 Reports" Classes="quick-action" Background="#6B7280" 
+                            <Button x:Name="ReportsButton" Grid.Column="2" Grid.Row="1" Content="📈 Reports" Classes="quick-action" Background="#6B7280" 
                                     Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0"/>
                         </Grid>
                     </StackPanel>
@@ -250,7 +352,7 @@
                 <!-- Class Statistics Overview -->
                 <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Class Overview" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Class Overview" Classes="section-header"/>
                         <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding ClassStatistics}">
                                 <ItemsControl.ItemTemplate>
@@ -283,11 +385,11 @@
             </Grid>
 
             <!-- Subject Distribution & Recent Activity -->
-            <Grid ColumnDefinitions="*,2*">
+            <Grid x:Name="TwoColumnGrid3" ColumnDefinitions="*,2*">
                 <!-- Subject Distribution -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Subject Distribution" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Subject Distribution" Classes="section-header"/>
                         <ItemsControl ItemsSource="{Binding SubjectDistribution}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:SubjectDistributionViewModel">
@@ -295,7 +397,7 @@
                                         <Border Grid.Column="0" Background="{Binding Color}" Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Subject}" FontWeight="SemiBold"/>
-                                            <ProgressBar Value="{Binding Percentage}" Minimum="0" Maximum="40" Height="4" CornerRadius="2" Foreground="{Binding Color}"/>
+                                            <ProgressBar Value="{Binding Percentage}" Minimum="0" Maximum="40" Classes="responsive-progress" Foreground="{Binding Color}"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding StudentsCount}" FontWeight="Bold" VerticalAlignment="Center"/>
                                     </Grid>
@@ -309,8 +411,8 @@
                 <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Recent Student Activity" FontSize="18" FontWeight="SemiBold"/>
-                            <Button Grid.Column="1" Content="View All" Classes="quick-action" Background="#10B981" 
+                            <TextBlock Grid.Column="0" Text="Recent Student Activity" Classes="section-header"/>
+                            <Button x:Name="ViewAllButton" Grid.Column="1" Content="View All" Classes="quick-action" Background="#10B981" 
                                     Command="{Binding ViewAllActivitiesCommand}" Padding="8,6" FontSize="10"/>
                         </Grid>
                         <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
@@ -345,8 +447,8 @@
             <!-- Weekly Schedule Overview -->
             <Border Classes="card">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Weekly Schedule Overview" FontSize="18" FontWeight="SemiBold"/>
-                    <Grid ColumnDefinitions="*,*,*,*,*,*,*">
+                    <TextBlock Text="Weekly Schedule Overview" Classes="section-header"/>
+                    <Grid x:Name="WeeklyGrid" ColumnDefinitions="*,*,*,*,*,*,*">
                         <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Mon" FontSize="12" HorizontalAlignment="Center"/>
