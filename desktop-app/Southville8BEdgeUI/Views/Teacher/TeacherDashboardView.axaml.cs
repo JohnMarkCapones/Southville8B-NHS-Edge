@@ -1,559 +1,528 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Southville8BEdgeUI.ViewModels.Teacher;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Southville8BEdgeUI.Views.Teacher;
 
 public partial class TeacherDashboardView : UserControl
 {
-    private const double TabletBreakpoint = 1024;
-    private const double MobileBreakpoint = 768;
-    
-    // Percentage-based width change threshold for responsive updates (5% of current width)
-    private const double SignificantWidthChangePercentage = 0.05;
-    
-    // Responsive class name constants for consistency
-    private const string MobileClass = "mobile";
-    private const string TabletClass = "tablet";
-    private const string DesktopClass = "desktop";
-    
-    // Collections to store elements that need responsive behavior
-    private readonly Dictionary<string, List<Control>> _responsiveElements = new()
+    #region Constants & Configuration
+
+    private static class Breakpoints
     {
-        {"text", new List<Control>()},
-        {"card", new List<Control>()},
-        {"button", new List<Control>()},
-        {"progress", new List<Control>()},
-        {"icon", new List<Control>()}
-    };
-    
-    // Cache for targeted UI element updates
-    private readonly List<Control> _cachedCardElements = new();
-    
-    // Element identification constants for optimized performance
-    private const string TextElementSuffix = "Text";
-    private const string ButtonElementSuffix = "Button";
-    private const string CardElementClass = "card";
-    private const string ProgressElementClass = "progress";
-    
-    // Cache for performance optimization
-    private string _lastSizeClass = "";
-    private double _lastWidth = 0;
+        public const double Mobile = 768;
+        public const double Tablet = 1024;
+        public const double ChangeThreshold = 0.05; // 5% width change
+        public const double MinThreshold = 10;
+    }
+
+    private static class ResponsiveClasses
+    {
+        public const string Mobile = "mobile";
+        public const string Tablet = "tablet";
+        public const string Desktop = "desktop";
+    }
+
+    private static class ElementIdentifiers
+    {
+        public const string MainStackPanel = "MainStackPanel";
+        public const string KpiGrid = "KpiGrid";
+        public static readonly string[] KpiCards = { "KpiCard1", "KpiCard2", "KpiCard3", "KpiCard4", "KpiCard5" };
+        public static readonly string[] TwoColumnGrids = { "TwoColumnGrid1", "TwoColumnGrid2", "TwoColumnGrid3" };
+    }
+
+    #endregion
+
+    #region Fields
+
+    // Performance: Cache all control references at initialization
+    private readonly ElementCache _elementCache = new();
+    private readonly ResponsiveLayoutManager _layoutManager;
+    private readonly ThrottledUpdater _throttledUpdater;
+
+    // State tracking
+    private ResponsiveState _currentState = ResponsiveState.Unknown;
+    private double _lastProcessedWidth;
+
+    #endregion
+
+    #region Constructor & Initialization
 
     public TeacherDashboardView()
     {
         InitializeComponent();
-        
-        // Store references to elements that need responsive behavior
-        InitializeResponsiveElements();
-        
-        // Set up size change handler
+
+        _layoutManager = new ResponsiveLayoutManager();
+        _throttledUpdater = new ThrottledUpdater(TimeSpan.FromMilliseconds(100));
+
+        // Defer heavy initialization
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            InitializeResponsiveSystem();
+        }, DispatcherPriority.Background);
+    }
+
+    private void InitializeResponsiveSystem()
+    {
+        CacheAllElements();
+        AttachEventHandlers();
+
+        // Initial layout if visible
+        if (Bounds.Width > 0)
+        {
+            ApplyResponsiveLayout(Bounds.Width);
+        }
+    }
+
+    private void CacheAllElements()
+    {
+        // Cache named elements once at startup
+        _elementCache.CacheNamedElements(this, ElementIdentifiers.KpiCards);
+        _elementCache.CacheNamedElements(this, ElementIdentifiers.TwoColumnGrids);
+        _elementCache.CacheNamedElement(this, ElementIdentifiers.MainStackPanel);
+        _elementCache.CacheNamedElement(this, ElementIdentifiers.KpiGrid);
+
+        // Cache typed elements efficiently
+        _elementCache.CacheTypedElements(this);
+    }
+
+    private void AttachEventHandlers()
+    {
         this.SizeChanged += OnSizeChanged;
+        this.AttachedToVisualTree += OnAttachedToVisualTree;
+        this.DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
-    private void InitializeResponsiveElements()
-    {
-        // Safely add named elements that exist in XAML
-        var textElements = new List<Control>();
-        
-        // Try to find text elements and add them if they exist
-        if (this.FindControl<TextBlock>("MainHeaderText") is { } mainHeaderText)
-            textElements.Add(mainHeaderText);
-        if (this.FindControl<TextBlock>("SubtitleText") is { } subtitleText)
-            textElements.Add(subtitleText);
-        if (this.FindControl<TextBlock>("MyStudentsText") is { } myStudentsText)
-            textElements.Add(myStudentsText);
-        if (this.FindControl<TextBlock>("ActiveClassesText") is { } activeClassesText)
-            textElements.Add(activeClassesText);
-        if (this.FindControl<TextBlock>("PendingAssignmentsText") is { } pendingAssignmentsText)
-            textElements.Add(pendingAssignmentsText);
-        if (this.FindControl<TextBlock>("AverageGradeText") is { } averageGradeText)
-            textElements.Add(averageGradeText);
-        if (this.FindControl<TextBlock>("AttendanceRateText") is { } attendanceRateText)
-            textElements.Add(attendanceRateText);
-        if (this.FindControl<TextBlock>("TodayClassesText") is { } todayClassesText)
-            textElements.Add(todayClassesText);
-        
-        _responsiveElements["text"].AddRange(textElements);
+    #endregion
 
-        // Add card elements safely
-        var cardElements = new List<Control>();
-        if (this.FindControl<Border>("KpiCard1") is { } kpiCard1)
-            cardElements.Add(kpiCard1);
-        if (this.FindControl<Border>("KpiCard2") is { } kpiCard2)
-            cardElements.Add(kpiCard2);
-        if (this.FindControl<Border>("KpiCard3") is { } kpiCard3)
-            cardElements.Add(kpiCard3);
-        if (this.FindControl<Border>("KpiCard4") is { } kpiCard4)
-            cardElements.Add(kpiCard4);
-        if (this.FindControl<Border>("KpiCard5") is { } kpiCard5)
-            cardElements.Add(kpiCard5);
-        
-        _responsiveElements["card"].AddRange(cardElements);
-
-        // Add button elements safely
-        var buttonElements = new List<Control>();
-        if (this.FindControl<Button>("RefreshButton") is { } refreshButton)
-            buttonElements.Add(refreshButton);
-        if (this.FindControl<Button>("DetailedReportsButton") is { } detailedReportsButton)
-            buttonElements.Add(detailedReportsButton);
-        if (this.FindControl<Button>("ScheduleButton") is { } scheduleButton)
-            buttonElements.Add(scheduleButton);
-        if (this.FindControl<Button>("GradesButton") is { } gradesButton)
-            buttonElements.Add(gradesButton);
-        if (this.FindControl<Button>("StudentsButton") is { } studentsButton)
-            buttonElements.Add(studentsButton);
-        if (this.FindControl<Button>("AnnounceButton") is { } announceButton)
-            buttonElements.Add(announceButton);
-        if (this.FindControl<Button>("MessagesButton") is { } messagesButton)
-            buttonElements.Add(messagesButton);
-        if (this.FindControl<Button>("ReportsButton") is { } reportsButton)
-            buttonElements.Add(reportsButton);
-        if (this.FindControl<Button>("ViewAllButton") is { } viewAllButton)
-            buttonElements.Add(viewAllButton);
-
-        _responsiveElements["button"].AddRange(buttonElements);
-
-        // Add progress bar elements
-        _responsiveElements["progress"].AddRange(FindControlsByType<ProgressBar>());
-        
-        // Cache specific card elements for targeted updates
-        CacheCardElements();
-    }
-
-    private List<Control> FindControlsByType<T>() where T : Control
-    {
-        return FindControlsByTypeRecursively<T>(this).ToList();
-    }
-
-    private IEnumerable<Control> FindControlsByTypeRecursively<T>(Control parent) where T : Control
-    {
-        var controls = new List<Control>();
-        
-        if (parent is T t)
-        {
-            controls.Add(t);
-        }
-        
-        if (parent is Panel panel)
-        {
-            foreach (var child in panel.Children)
-            {
-                if (child is Control control)
-                {
-                    controls.AddRange(FindControlsByTypeRecursively<T>(control));
-                }
-            }
-        }
-        else if (parent is ContentControl contentControl && contentControl.Content is Control content)
-        {
-            controls.AddRange(FindControlsByTypeRecursively<T>(content));
-        }
-        
-        return controls;
-    }
-
-    private void CacheCardElements()
-    {
-        _cachedCardElements.Clear();
-        
-        // Iterate through card elements and cache their children
-        foreach (var card in _responsiveElements["card"])
-        {
-            // Add the card itself
-            _cachedCardElements.Add(card);
-            
-            // Find and cache children like text blocks, buttons, etc.
-            CacheCardChildrenRecursively(card);
-        }
-    }
-
-    private void CacheCardChildrenRecursively(Control parent)
-    {
-        // Only go two levels deep to avoid performance issues
-        if (parent is Panel panel)
-        {
-            foreach (var child in panel.Children)
-            {
-                if (child is Control control)
-                {
-                    // Cache text elements with specific suffixes
-                    if (control is TextBlock textBlock && control.Name?.EndsWith(TextElementSuffix) == true)
-                    {
-                        _cachedCardElements.Add(textBlock);
-                    }
-                    // Cache button elements with specific suffixes
-                    else if (control is Button button && control.Name?.EndsWith(ButtonElementSuffix) == true)
-                    {
-                        _cachedCardElements.Add(button);
-                    }
-                    // Cache progress bars
-                    else if (control is ProgressBar progressBar)
-                    {
-                        _cachedCardElements.Add(progressBar);
-                    }
-                    
-                    // Go one level deeper for complex UI hierarchies
-                    if (control is Panel childPanel)
-                    {
-                        foreach (var grandchild in childPanel.Children)
-                        {
-                            if (grandchild is Control grandchildControl)
-                            {
-                                if ((grandchildControl is TextBlock && grandchildControl.Name?.EndsWith(TextElementSuffix) == true) ||
-                                    (grandchildControl is Button && grandchildControl.Name?.EndsWith(ButtonElementSuffix) == true) ||
-                                    (grandchildControl is ProgressBar))
-                                {
-                                    _cachedCardElements.Add(grandchildControl);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if (parent is ContentControl contentControl && contentControl.Content is Control content)
-        {
-            if ((content is TextBlock && content.Name?.EndsWith(TextElementSuffix) == true) ||
-                (content is Button && content.Name?.EndsWith(ButtonElementSuffix) == true) ||
-                (content is ProgressBar))
-            {
-                _cachedCardElements.Add(content);
-            }
-            
-            // Continue recursion if the content is a panel
-            if (content is Panel contentPanel)
-            {
-                CacheCardChildrenRecursively(contentPanel);
-            }
-        }
-    }
+    #region Event Handlers
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        UpdateResponsiveClasses(e.NewSize.Width);
+        // Use throttling to prevent excessive updates
+        _throttledUpdater.Schedule(() => ApplyResponsiveLayout(e.NewSize.Width));
     }
 
-    private void UpdateResponsiveClasses(double width)
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        // Determine the current breakpoint
-        string sizeClass = GetSizeClass(width);
-        
-        // Check if significant changes occurred that require updates
-        bool sizeClassChanged = sizeClass != _lastSizeClass;
-        
-        // Calculate percentage-based threshold for more proportional responsiveness
-        double widthChangeThreshold = Math.Max(width * SignificantWidthChangePercentage, 10); // Minimum 10px threshold
-        bool significantWidthChange = Math.Abs(width - _lastWidth) > widthChangeThreshold;
-        
-        if (!sizeClassChanged && !significantWidthChange)
-            return;
-            
-        _lastSizeClass = sizeClass;
-        _lastWidth = width;
-        
-        // Only update element classes when size class changes
-        if (sizeClassChanged)
+        if (Bounds.Width > 0)
         {
-            // Update all responsive elements using dictionary
-            foreach (var kvp in _responsiveElements)
-            {
-                UpdateElementClasses(kvp.Value, sizeClass);
-            }
-            
-            // Update cached card elements for better performance
-            UpdateCachedCardElements(sizeClass);
-        }
-        
-        // Always update layout-specific elements based on actual width
-        ApplyLayoutStrategy(sizeClass);
-    }
-
-    private string GetSizeClass(double width)
-    {
-        if (width < MobileBreakpoint)
-            return MobileClass;
-        else if (width < TabletBreakpoint)
-            return TabletClass;
-        else
-            return DesktopClass;
-    }
-
-    private void UpdateElementClasses(List<Control> elements, string sizeClass)
-    {
-        foreach (var element in elements)
-        {
-            // Skip null elements for safety
-            if (element == null) continue;
-            
-            // Remove existing responsive classes
-            element.Classes.Remove(MobileClass);
-            element.Classes.Remove(TabletClass);
-            
-            // Add appropriate responsive class
-            if (sizeClass != DesktopClass)
-            {
-                element.Classes.Add(sizeClass);
-            }
+            ApplyResponsiveLayout(Bounds.Width);
         }
     }
 
-    // Optimized method using cached elements with smart cache refresh logic
-    private void UpdateCachedCardElements(string sizeClass)
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        // Update cached elements directly instead of recursive search
-        foreach (var element in _cachedCardElements)
-        {
-            // Skip null elements for safety
-            if (element == null) continue;
-            
-            // Remove existing responsive classes
-            element.Classes.Remove(MobileClass);
-            element.Classes.Remove(TabletClass);
-            
-            // Add appropriate responsive class
-            if (sizeClass != DesktopClass)
-            {
-                element.Classes.Add(sizeClass);
-            }
-        }
+        _throttledUpdater.Cancel();
     }
 
-    private void ApplyLayoutStrategy(string sizeClass)
-    {
-        // Create a layout configuration based on the screen size
-        var layoutConfig = CreateLayoutConfig(sizeClass);
-        
-        // Apply the layout configuration
-        ApplyKpiGridLayout(layoutConfig);
-        ApplyColumnGridLayouts(layoutConfig);
-    }
+    #endregion
 
-    private LayoutConfiguration CreateLayoutConfig(string sizeClass)
-    {
-        switch (sizeClass)
-        {
-            case MobileClass:
-                return new LayoutConfiguration
-                {
-                    KpiGridColumns = 1,
-                    KpiGridRows = 5,
-                    KpiCardPositions = new[]
-                    {
-                        (0, 0), // Students
-                        (0, 1), // Classes
-                        (0, 2), // Grading
-                        (0, 3), // Average
-                        (0, 4)  // Attendance
-                    },
-                    KpiCardMargins = new[]
-                    {
-                        new Thickness(0, 0, 0, 8),
-                        new Thickness(0, 8, 0, 8),
-                        new Thickness(0, 8, 0, 8),
-                        new Thickness(0, 8, 0, 8),
-                        new Thickness(0, 8, 0, 0)
-                    },
-                    TwoColumnGridLayout = TwoColumnGridLayout.Stacked
-                };
-                
-            case TabletClass:
-                return new LayoutConfiguration
-                {
-                    KpiGridColumns = 2,
-                    KpiGridRows = 3,
-                    KpiCardPositions = new[]
-                    {
-                        (0, 0), // Students
-                        (1, 0), // Classes
-                        (0, 1), // Grading
-                        (1, 1), // Average
-                        (0, 2)  // Attendance
-                    },
-                    KpiCardMargins = new[]
-                    {
-                        new Thickness(0, 0, 8, 8),
-                        new Thickness(8, 0, 0, 8),
-                        new Thickness(0, 8, 8, 8),
-                        new Thickness(8, 8, 0, 8),
-                        new Thickness(0, 8, 0, 0)
-                    },
-                    TwoColumnGridLayout = TwoColumnGridLayout.TwoColumns
-                };
-                
-            default: // Desktop
-                return new LayoutConfiguration
-                {
-                    KpiGridColumns = 5,
-                    KpiGridRows = 1,
-                    KpiCardPositions = new[]
-                    {
-                        (0, 0), // Students
-                        (1, 0), // Classes
-                        (2, 0), // Grading
-                        (3, 0), // Average
-                        (4, 0)  // Attendance
-                    },
-                    KpiCardMargins = new[]
-                    {
-                        new Thickness(0, 0, 12, 0),
-                        new Thickness(12, 0, 12, 0),
-                        new Thickness(12, 0, 12, 0),
-                        new Thickness(12, 0, 12, 0),
-                        new Thickness(12, 0, 0, 0)
-                    },
-                    TwoColumnGridLayout = TwoColumnGridLayout.TwoColumns
-                };
-        }
-    }
+    #region Responsive Layout Logic
 
-    private void ApplyKpiGridLayout(LayoutConfiguration config)
+    private void ApplyResponsiveLayout(double width)
     {
-        // Find KPI grid by name safely
-        if (this.FindControl<Grid>("KpiGrid") is not Grid kpiGrid)
+        var newState = DetermineResponsiveState(width);
+
+        // Skip if no significant change
+        if (!ShouldUpdateLayout(newState, width))
             return;
 
-        kpiGrid.ColumnDefinitions.Clear();
-        kpiGrid.RowDefinitions.Clear();
-        
-        // Create columns
-        for (int i = 0; i < config.KpiGridColumns; i++)
+        _currentState = newState;
+        _lastProcessedWidth = width;
+
+        // Batch DOM updates for performance
+        using var deferral = BatchUpdate();
         {
-            kpiGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            UpdateElementClasses(newState);
+            UpdateGridLayouts(newState);
         }
-        
-        // Create rows
-        for (int i = 0; i < config.KpiGridRows; i++)
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ResponsiveState DetermineResponsiveState(double width)
+    {
+        if (width < Breakpoints.Mobile) return ResponsiveState.Mobile;
+        if (width < Breakpoints.Tablet) return ResponsiveState.Tablet;
+        return ResponsiveState.Desktop;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool ShouldUpdateLayout(ResponsiveState newState, double width)
+    {
+        if (newState != _currentState)
+            return true;
+
+        double threshold = Math.Max(width * Breakpoints.ChangeThreshold, Breakpoints.MinThreshold);
+        return Math.Abs(width - _lastProcessedWidth) > threshold;
+    }
+
+    private void UpdateElementClasses(ResponsiveState state)
+    {
+        var className = GetClassName(state);
+
+        // Update all cached elements efficiently
+        _elementCache.ApplyToAll(element =>
         {
-            kpiGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        }
-        
-        // Position KPI cards safely
-        var kpiCards = new Control?[] 
-        {
-            this.FindControl<Border>("KpiCard1"),
-            this.FindControl<Border>("KpiCard2"),
-            this.FindControl<Border>("KpiCard3"),
-            this.FindControl<Border>("KpiCard4"),
-            this.FindControl<Border>("KpiCard5")
-        };
-        
-        for (int i = 0; i < kpiCards.Length && i < config.KpiCardPositions.Length; i++)
-        {
-            var kpiCard = kpiCards[i];
-            if (kpiCard != null) // Null safety check
+            // Clear previous responsive classes
+            element.Classes.Remove(ResponsiveClasses.Mobile);
+            element.Classes.Remove(ResponsiveClasses.Tablet);
+
+            // Apply new class if not desktop
+            if (state != ResponsiveState.Desktop)
             {
-                Grid.SetColumn(kpiCard, config.KpiCardPositions[i].Column);
-                Grid.SetRow(kpiCard, config.KpiCardPositions[i].Row);
-                kpiCard.Margin = config.KpiCardMargins[i];
+                element.Classes.Add(className);
+            }
+        });
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private string GetClassName(ResponsiveState state) => state switch
+    {
+        ResponsiveState.Mobile => ResponsiveClasses.Mobile,
+        ResponsiveState.Tablet => ResponsiveClasses.Tablet,
+        _ => ResponsiveClasses.Desktop
+    };
+
+    private void UpdateGridLayouts(ResponsiveState state)
+    {
+        var config = _layoutManager.GetConfiguration(state);
+
+        // Update KPI Grid
+        if (_elementCache.TryGetElement(ElementIdentifiers.KpiGrid, out Grid? kpiGrid) && kpiGrid != null)
+        {
+            UpdateKpiGrid(kpiGrid, config);
+        }
+
+        // Update Two-Column Grids
+        foreach (var gridName in ElementIdentifiers.TwoColumnGrids)
+        {
+            if (_elementCache.TryGetElement(gridName, out Grid? grid) && grid != null)
+            {
+                UpdateTwoColumnGrid(grid, config);
             }
         }
     }
 
-    private void ApplyColumnGridLayouts(LayoutConfiguration config)
-    {
-        // Handle all two-column grids
-        ApplyLayoutToGrid(this.FindControl<Grid>("TwoColumnGrid1"), config.TwoColumnGridLayout, "2*", "*");
-        ApplyLayoutToGrid(this.FindControl<Grid>("TwoColumnGrid2"), config.TwoColumnGridLayout, "*", "*");
-        ApplyLayoutToGrid(this.FindControl<Grid>("TwoColumnGrid3"), config.TwoColumnGridLayout, "*", "*");
-        ApplyLayoutToGrid(this.FindControl<Grid>("TwoColumnGrid4"), config.TwoColumnGridLayout, "2*", "*");
-    }
-
-    private void ApplyLayoutToGrid(Grid? grid, TwoColumnGridLayout layoutType, string col1Width, string col2Width)
-    {
-        if (grid == null) return;
-        
-        switch (layoutType)
-        {
-            case TwoColumnGridLayout.Stacked:
-                ConvertToSingleColumn(grid);
-                break;
-            case TwoColumnGridLayout.TwoColumns:
-                RestoreTwoColumnGrid(grid, col1Width, col2Width);
-                break;
-        }
-    }
-
-    private void ConvertToSingleColumn(Grid grid)
+    private void UpdateKpiGrid(Grid grid, LayoutConfiguration config)
     {
         grid.ColumnDefinitions.Clear();
+        grid.RowDefinitions.Clear();
+
+        // Add definitions
+        for (int i = 0; i < config.KpiColumns; i++)
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
+        for (int i = 0; i < config.KpiRows; i++)
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+        // Position cards
+        for (int i = 0; i < ElementIdentifiers.KpiCards.Length; i++)
+        {
+            if (_elementCache.TryGetElement(ElementIdentifiers.KpiCards[i], out Border? card) && card != null)
+            {
+                var position = config.KpiCardPositions[i];
+                Grid.SetColumn(card, position.Column);
+                Grid.SetRow(card, position.Row);
+                card.Margin = config.KpiCardMargins[i];
+            }
+        }
+    }
+
+    private void UpdateTwoColumnGrid(Grid grid, LayoutConfiguration config)
+    {
+        if (config.StackTwoColumnGrids)
+        {
+            ConvertToStackedLayout(grid);
+        }
+        else
+        {
+            RestoreTwoColumnLayout(grid);
+        }
+    }
+
+    private void ConvertToStackedLayout(Grid grid)
+    {
+        var children = grid.Children.ToList();
+
+        grid.ColumnDefinitions.Clear();
         grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
-        var children = grid.Children.Cast<Control>().ToList();
-        
-        // Add row definitions for stacking
+
         grid.RowDefinitions.Clear();
         for (int i = 0; i < children.Count; i++)
         {
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        }
-        
-        // Update grid positions for mobile stacking
-        for (int i = 0; i < children.Count; i++)
-        {
             Grid.SetColumn(children[i], 0);
             Grid.SetRow(children[i], i);
+            children[i].Margin = new Thickness(0, i > 0 ? 8 : 0, 0, 0);
         }
     }
 
-    private void RestoreTwoColumnGrid(Grid grid, string col1Width, string col2Width)
+    private void RestoreTwoColumnLayout(Grid grid)
     {
+        var children = grid.Children.ToList();
+
         grid.ColumnDefinitions.Clear();
-        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Parse(col1Width)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Parse(col2Width)));
-        
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
         grid.RowDefinitions.Clear();
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
-        var children = grid.Children.Cast<Control>().ToList();
-        
-        // Restore original grid positions
-        for (int i = 0; i < children.Count; i++)
+
+        for (int i = 0; i < children.Count && i < 2; i++)
         {
-            Grid.SetColumn(children[i], i % 2);
+            Grid.SetColumn(children[i], i);
             Grid.SetRow(children[i], 0);
-            
-            // Update margins for two-column layout
-            if (i % 2 == 0) // Left column
+            children[i].Margin = new Thickness(i == 0 ? 0 : 12, 0, i == 0 ? 12 : 0, 0);
+        }
+    }
+
+    #endregion
+
+    #region Utilities
+
+    private IDisposable BatchUpdate()
+    {
+        // Placeholder for batch update logic
+        // In a real implementation, this would defer layout updates
+        return new DisposableAction(() => { });
+    }
+
+    #endregion
+
+    #region Nested Types
+
+    private enum ResponsiveState
+    {
+        Unknown,
+        Mobile,
+        Tablet,
+        Desktop
+    }
+
+    private class ElementCache
+    {
+        private readonly Dictionary<string, Control> _namedElements = new();
+        private readonly List<Control> _allElements = new();
+
+        public void CacheNamedElement(UserControl parent, string name)
+        {
+            if (parent.FindControl<Control>(name) is { } control)
             {
-                children[i].Margin = new Thickness(0, 0, 12, 0);
+                _namedElements[name] = control;
+                _allElements.Add(control);
             }
-            else // Right column
+        }
+
+        public void CacheNamedElements(UserControl parent, string[] names)
+        {
+            foreach (var name in names)
             {
-                children[i].Margin = new Thickness(12, 0, 0, 0);
+                CacheNamedElement(parent, name);
+            }
+        }
+
+        public void CacheTypedElements(UserControl parent)
+        {
+            // Cache all responsive elements in a single traversal
+            foreach (var control in parent.GetVisualDescendants().OfType<Control>())
+            {
+                if (control is TextBlock or Button or ProgressBar or Border)
+                {
+                    _allElements.Add(control);
+                }
+            }
+        }
+
+        public bool TryGetElement<T>(string name, out T? element) where T : Control
+        {
+            if (_namedElements.TryGetValue(name, out var control))
+            {
+                element = control as T;
+                return element != null;
+            }
+            element = null;
+            return false;
+        }
+
+        public void ApplyToAll(Action<Control> action)
+        {
+            // Process in batch for better performance
+            var elements = _allElements.ToArray(); // Avoid collection modification issues
+            foreach (var element in elements)
+            {
+                if (element != null) // Null safety
+                {
+                    action(element);
+                }
             }
         }
     }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    private class ResponsiveLayoutManager
     {
-        base.OnAttachedToVisualTree(e);
-        
-        // Initial responsive setup
-        if (Bounds.Width > 0)
+        private readonly Dictionary<ResponsiveState, LayoutConfiguration> _configurations;
+
+        public ResponsiveLayoutManager()
         {
-            UpdateResponsiveClasses(Bounds.Width);
+            _configurations = new Dictionary<ResponsiveState, LayoutConfiguration>
+            {
+                [ResponsiveState.Mobile] = CreateMobileConfig(),
+                [ResponsiveState.Tablet] = CreateTabletConfig(),
+                [ResponsiveState.Desktop] = CreateDesktopConfig()
+            };
         }
+
+        public LayoutConfiguration GetConfiguration(ResponsiveState state)
+        {
+            return _configurations.TryGetValue(state, out var config)
+                ? config
+                : _configurations[ResponsiveState.Desktop];
+        }
+
+        private LayoutConfiguration CreateMobileConfig() => new()
+        {
+            KpiColumns = 1,
+            KpiRows = 5,
+            KpiCardPositions = new[]
+            {
+                new GridPosition(0, 0),
+                new GridPosition(0, 1),
+                new GridPosition(0, 2),
+                new GridPosition(0, 3),
+                new GridPosition(0, 4)
+            },
+            KpiCardMargins = new[]
+            {
+                new Thickness(0, 0, 0, 8),
+                new Thickness(0, 8, 0, 8),
+                new Thickness(0, 8, 0, 8),
+                new Thickness(0, 8, 0, 8),
+                new Thickness(0, 8, 0, 0)
+            },
+            StackTwoColumnGrids = true
+        };
+
+        private LayoutConfiguration CreateTabletConfig() => new()
+        {
+            KpiColumns = 2,
+            KpiRows = 3,
+            KpiCardPositions = new[]
+            {
+                new GridPosition(0, 0),
+                new GridPosition(1, 0),
+                new GridPosition(0, 1),
+                new GridPosition(1, 1),
+                new GridPosition(0, 2)
+            },
+            KpiCardMargins = new[]
+            {
+                new Thickness(0, 0, 8, 8),
+                new Thickness(8, 0, 0, 8),
+                new Thickness(0, 8, 8, 8),
+                new Thickness(8, 8, 0, 8),
+                new Thickness(0, 8, 0, 0)
+            },
+            StackTwoColumnGrids = false
+        };
+
+        private LayoutConfiguration CreateDesktopConfig() => new()
+        {
+            KpiColumns = 5,
+            KpiRows = 1,
+            KpiCardPositions = new[]
+            {
+                new GridPosition(0, 0),
+                new GridPosition(1, 0),
+                new GridPosition(2, 0),
+                new GridPosition(3, 0),
+                new GridPosition(4, 0)
+            },
+            KpiCardMargins = new[]
+            {
+                new Thickness(0, 0, 12, 0),
+                new Thickness(12, 0, 12, 0),
+                new Thickness(12, 0, 12, 0),
+                new Thickness(12, 0, 12, 0),
+                new Thickness(12, 0, 0, 0)
+            },
+            StackTwoColumnGrids = false
+        };
     }
-    
-    // Configuration class for layout strategies
+
     private class LayoutConfiguration
     {
-        public int KpiGridColumns { get; set; }
-        public int KpiGridRows { get; set; }
-        public (int Column, int Row)[] KpiCardPositions { get; set; } = Array.Empty<(int, int)>();
-        public Thickness[] KpiCardMargins { get; set; } = Array.Empty<Thickness>();
-        public TwoColumnGridLayout TwoColumnGridLayout { get; set; }
+        public int KpiColumns { get; init; }
+        public int KpiRows { get; init; }
+        public GridPosition[] KpiCardPositions { get; init; } = Array.Empty<GridPosition>();
+        public Thickness[] KpiCardMargins { get; init; } = Array.Empty<Thickness>();
+        public bool StackTwoColumnGrids { get; init; }
     }
-    
-    // Enum for two-column grid layout strategies
-    private enum TwoColumnGridLayout
+
+    private readonly struct GridPosition
     {
-        TwoColumns,
-        Stacked
+        public int Column { get; }
+        public int Row { get; }
+
+        public GridPosition(int column, int row)
+        {
+            Column = column;
+            Row = row;
+        }
     }
+
+    private class ThrottledUpdater
+    {
+        private readonly DispatcherTimer _timer;
+        private Action? _pendingAction;
+
+        public ThrottledUpdater(TimeSpan delay)
+        {
+            _timer = new DispatcherTimer { Interval = delay };
+            _timer.Tick += OnTimerTick;
+        }
+
+        public void Schedule(Action action)
+        {
+            _pendingAction = action;
+            _timer.Stop();
+            _timer.Start();
+        }
+
+        public void Cancel()
+        {
+            _timer.Stop();
+            _pendingAction = null;
+        }
+
+        private void OnTimerTick(object? sender, EventArgs e)
+        {
+            _timer.Stop();
+            _pendingAction?.Invoke();
+            _pendingAction = null;
+        }
+    }
+
+    private class DisposableAction : IDisposable
+    {
+        private readonly Action _action;
+
+        public DisposableAction(Action action)
+        {
+            _action = action;
+        }
+
+        public void Dispose()
+        {
+            _action?.Invoke();
+        }
+    }
+
+    #endregion
 }

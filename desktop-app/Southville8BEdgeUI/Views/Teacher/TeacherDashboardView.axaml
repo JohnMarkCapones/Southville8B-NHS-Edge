@@ -161,11 +161,11 @@
             <Setter Property="Margin" Value="40"/>
             <Setter Property="Spacing" Value="24"/>
         </Style>
-        <Style Selector="StackPanel.main-content-tablet">
+        <Style Selector="StackPanel.main-content.tablet">
             <Setter Property="Margin" Value="20"/>
             <Setter Property="Spacing" Value="16"/>
         </Style>
-        <Style Selector="StackPanel.main-content-mobile">
+        <Style Selector="StackPanel.main-content.mobile">
             <Setter Property="Margin" Value="12"/>
             <Setter Property="Spacing" Value="12"/>
         </Style>
