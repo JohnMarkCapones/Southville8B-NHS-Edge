@@ -22,9 +22,9 @@ public partial class TeacherShellViewModel : ViewModelBase
     private bool _isRightSidebarVisible = true;
 
     // Properties for the right sidebar
-    [ObservableProperty] private string _userName = "Maem RayeGun";
+    [ObservableProperty] private string _userName = "St.Yummy";
     [ObservableProperty] private string _userRole = "Teacher";
-    [ObservableProperty] private string _userInitials = "RDG";
+    [ObservableProperty] private string _userInitials = "SY";
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
 
