@@ -56,6 +56,7 @@ public partial class SchedulePlannerView : UserControl
     private readonly ElementCache _elementCache = new();
     private readonly ResponsiveLayoutManager _layoutManager;
     private readonly ThrottledUpdater _throttledUpdater;
+    private DispatcherTimer? _periodicTimer;
 
     private ResponsiveState _currentState = ResponsiveState.Unknown;
     private double _lastProcessedWidth;
@@ -128,20 +129,19 @@ public partial class SchedulePlannerView : UserControl
     private void SchedulePeriodicUpdates()
     {
         // Schedule updates to catch dynamically generated content
-        var timer = new DispatcherTimer
+        _periodicTimer ??= new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(1) // Check every second for new content
+            Interval = TimeSpan.FromSeconds(1)
         };
-        
-        timer.Tick += (sender, e) =>
-        {
-            if (_currentState != ResponsiveState.Unknown)
-            {
-                UpdateDynamicElements(_currentState);
-            }
-        };
-        
-        timer.Start();
+        _periodicTimer.Tick -= OnPeriodicTick;
+        _periodicTimer.Tick += OnPeriodicTick;
+        _periodicTimer.Start();
+    }
+
+    private void OnPeriodicTick(object? sender, EventArgs e)
+    {
+        if (_currentState != ResponsiveState.Unknown)
+            UpdateDynamicElements(_currentState);
     }
 
     #endregion
@@ -159,11 +159,13 @@ public partial class SchedulePlannerView : UserControl
         {
             ApplyResponsiveLayout(Bounds.Width);
         }
+        _periodicTimer?.Start();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _throttledUpdater.Cancel();
+        _periodicTimer?.Stop();
     }
 
     #endregion
@@ -292,10 +294,11 @@ public partial class SchedulePlannerView : UserControl
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.ScheduleGrid, out Border? scheduleGrid) && scheduleGrid != null)
+            // Fix: ScheduleGrid is actually a Border containing the schedule
+            if (_elementCache.TryGetElement<Control>(ElementIdentifiers.ScheduleGrid, out Control? scheduleContainer) && scheduleContainer != null)
             {
-                Grid.SetColumn(scheduleGrid, 0);
-                Grid.SetRow(scheduleGrid, 0);
+                Grid.SetColumn(scheduleContainer, 0);
+                Grid.SetRow(scheduleContainer, 0);
             }
 
             if (_elementCache.TryGetElement<Border>(ElementIdentifiers.SidePanel, out Border? sidePanel) && sidePanel != null)
@@ -312,10 +315,10 @@ public partial class SchedulePlannerView : UserControl
             grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
 
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.ScheduleGrid, out Border? scheduleGrid) && scheduleGrid != null)
+            if (_elementCache.TryGetElement<Control>(ElementIdentifiers.ScheduleGrid, out Control? scheduleContainer) && scheduleContainer != null)
             {
-                Grid.SetColumn(scheduleGrid, 0);
-                Grid.SetRow(scheduleGrid, 0);
+                Grid.SetColumn(scheduleContainer, 0);
+                Grid.SetRow(scheduleContainer, 0);
             }
 
             if (_elementCache.TryGetElement<Border>(ElementIdentifiers.SidePanel, out Border? sidePanel) && sidePanel != null)
@@ -381,33 +384,25 @@ public partial class SchedulePlannerView : UserControl
 
     private void UpdateScheduleLayout(ResponsiveState state)
     {
-        if (!_elementCache.TryGetElement<Border>(ElementIdentifiers.ScheduleGrid, out Border? scheduleGridBorder) || scheduleGridBorder == null)
+        // Fix: Find the actual schedule container and its ScrollViewer
+        if (!_elementCache.TryGetElement<Control>(ElementIdentifiers.ScheduleGrid, out Control? scheduleContainer) || scheduleContainer is null)
             return;
 
         var config = _layoutManager.GetConfiguration(state);
+        
+        // Look for ScrollViewer in the visual tree of the schedule container
+        var scrollViewer = scheduleContainer.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+        if (scrollViewer is null) return;
 
-        // Find the inner ScrollViewer within the schedule border
-        if (scheduleGridBorder.Child is StackPanel stackPanel)
+        if (config.UseHorizontalSchedule)
         {
-            foreach (var child in stackPanel.Children)
-            {
-                if (child is ScrollViewer scrollViewer)
-                {
-                    if (config.UseHorizontalSchedule)
-                    {
-                        // Mobile: Horizontal scroll for schedule
-                        scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
-                        scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
-                    }
-                    else
-                    {
-                        // Desktop/Tablet: Standard layout
-                        scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
-                        scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
-                    }
-                    break;
-                }
-            }
+            scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+            scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+        }
+        else
+        {
+            scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
+            scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
         }
     }
 
