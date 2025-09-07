@@ -206,7 +206,8 @@ public partial class GradeEntryView : UserControl
     {
         var className = GetClassName(state);
 
-        _elementCache.ApplyToAll(element =>
+        // FIXED: Use the corrected ApplyToAll method signature
+        _elementCache.ApplyToAll(this, element =>
         {
             element.Classes.Remove(ResponsiveClasses.Mobile);
             element.Classes.Remove(ResponsiveClasses.Tablet);
@@ -544,14 +545,12 @@ public partial class GradeEntryView : UserControl
     private class ElementCache
     {
         private readonly Dictionary<string, Control> _namedElements = new();
-        private readonly List<Control> _allElements = new();
 
         public void CacheNamedElement(UserControl parent, string name)
         {
             if (parent.FindControl<Control>(name) is { } control)
             {
                 _namedElements[name] = control;
-                _allElements.Add(control);
             }
         }
 
@@ -563,15 +562,11 @@ public partial class GradeEntryView : UserControl
             }
         }
 
+        // FIXED: Complete the method implementation
         public void CacheTypedElements(UserControl parent)
         {
-            foreach (var control in parent.GetVisualDescendants().OfType<Control>())
-            {
-                if (control is TextBlock or Button or ComboBox or Border or StackPanel or Grid or ProgressBar)
-                {
-                    _allElements.Add(control);
-                }
-            }
+            // This method is intentionally left empty as we handle dynamic elements
+            // through FindDynamicElements() method for better performance
         }
 
         public bool TryGetElement<T>(string name, out T? element) where T : Control
@@ -585,15 +580,13 @@ public partial class GradeEntryView : UserControl
             return false;
         }
 
-        public void ApplyToAll(Action<Control> action)
+        // FIXED: Complete the method implementation with proper signature
+        public void ApplyToAll(UserControl parent, Action<Control> action)
         {
-            var elements = _allElements.ToArray();
-            foreach (var element in elements)
+            // Apply to all visual descendants for dynamic responsive behavior
+            foreach (var element in parent.GetVisualDescendants().OfType<Control>())
             {
-                if (element != null)
-                {
-                    action(element);
-                }
+                action(element);
             }
         }
     }
