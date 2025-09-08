@@ -39,6 +39,7 @@ public partial class StudentManagementView : UserControl
         public const string StudentListCard = "StudentListCard";
         public const string StudentDetailsCard = "StudentDetailsCard";
         public const string StudentListScrollViewer = "StudentListScrollViewer";
+        public const string StudentListItems = "StudentListItems";
         public const string SearchBox = "SearchBox";
         public const string ClassSelector = "ClassSelector";
         public static readonly string[] StatsCards = { "StatsCard1", "StatsCard2", "StatsCard3", "StatsCard4" };
@@ -105,6 +106,7 @@ public partial class StudentManagementView : UserControl
         _elementCache.CacheNamedElement(this, ElementIdentifiers.StudentListCard);
         _elementCache.CacheNamedElement(this, ElementIdentifiers.StudentDetailsCard);
         _elementCache.CacheNamedElement(this, ElementIdentifiers.StudentListScrollViewer);
+        _elementCache.CacheNamedElement(this, ElementIdentifiers.StudentListItems);
         _elementCache.CacheNamedElement(this, ElementIdentifiers.SearchBox);
         _elementCache.CacheNamedElement(this, ElementIdentifiers.ClassSelector);
 
@@ -125,13 +127,28 @@ public partial class StudentManagementView : UserControl
 
     private void SchedulePeriodicUpdates()
     {
-        // Schedule updates to catch dynamically generated content
+        // Reduced frequency and add collection change handling if available
         _periodicTimer ??= new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(1)
+            Interval = TimeSpan.FromSeconds(2) // Reduced from 1 second
         };
         _periodicTimer.Tick -= OnPeriodicTick;
         _periodicTimer.Tick += OnPeriodicTick;
+        
+        // Try to subscribe to collection changes for more efficient updates
+        if (DataContext is StudentManagementViewModel vm && 
+            vm.FilteredStudents is System.Collections.Specialized.INotifyCollectionChanged collection)
+        {
+            collection.CollectionChanged += (_, __) => 
+            {
+                if (_currentState != ResponsiveState.Unknown)
+                    UpdateDynamicElements(_currentState);
+            };
+            
+            // Don't start periodic timer if we have collection change notifications
+            return;
+        }
+        
         _periodicTimer.Start();
     }
 
@@ -191,8 +208,8 @@ public partial class StudentManagementView : UserControl
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ResponsiveState DetermineResponsiveState(double width)
     {
-        if (width < Breakpoints.Mobile) return ResponsiveState.Mobile;
-        if (width < Breakpoints.Tablet) return ResponsiveState.Tablet;
+        if (width <= Breakpoints.Mobile) return ResponsiveState.Mobile;
+        if (width <= Breakpoints.Tablet) return ResponsiveState.Tablet;
         return ResponsiveState.Desktop;
     }
 
@@ -396,12 +413,32 @@ public partial class StudentManagementView : UserControl
             // Mobile: Enable horizontal scrolling for student cards
             scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
             scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+            
+            // Switch to horizontal layout
+            if (_elementCache.TryGetElement<ItemsControl>(ElementIdentifiers.StudentListItems, out var items) && items != null)
+            {
+                // Horizontal flow using WrapPanel
+                items.ItemsPanel = new Avalonia.Controls.Templates.FuncTemplate<Avalonia.Controls.Panel?>(() =>
+                {
+                    return new Avalonia.Controls.WrapPanel { Orientation = Avalonia.Layout.Orientation.Horizontal };
+                });
+            }
         }
         else
         {
             // Desktop/Tablet: Standard layout
             scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
             scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+
+            // Restore vertical layout
+            if (_elementCache.TryGetElement<ItemsControl>(ElementIdentifiers.StudentListItems, out var items) && items != null)
+            {
+                // Vertical flow using StackPanel
+                items.ItemsPanel = new Avalonia.Controls.Templates.FuncTemplate<Avalonia.Controls.Panel?>(() =>
+                {
+                    return new Avalonia.Controls.StackPanel { Orientation = Avalonia.Layout.Orientation.Vertical };
+                });
+            }
         }
     }
 

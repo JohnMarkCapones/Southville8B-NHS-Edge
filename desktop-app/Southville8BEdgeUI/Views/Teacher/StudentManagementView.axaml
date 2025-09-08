@@ -248,7 +248,8 @@
                                      MaxHeight="600" 
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding FilteredStudents}">
+                            <ItemsControl x:Name="StudentListItems"
+                                          ItemsSource="{Binding FilteredStudents}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:StudentInfoViewModel">
                                         <Border Classes="student-card">
@@ -299,7 +300,7 @@
                                                            BorderThickness="0" 
                                                            CornerRadius="4"
                                                            ToolTip.Tip="View Details"
-                                                           Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ViewStudentDetailsCommand}" 
+                                                           Command="{Binding $parent[UserControl].DataContext.ViewStudentDetailsCommand}" 
                                                            CommandParameter="{Binding}"/>
                                                     <Button Content="📝" 
                                                            Background="#10B981" 
@@ -308,7 +309,7 @@
                                                            BorderThickness="0" 
                                                            CornerRadius="4"
                                                            ToolTip.Tip="Edit Student"
-                                                           Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).EditStudentCommand}" 
+                                                           Command="{Binding $parent[UserControl].DataContext.EditStudentCommand}" 
                                                            CommandParameter="{Binding}"/>
                                                     <Button Content="📞" 
                                                            Background="#F59E0B" 
@@ -317,7 +318,7 @@
                                                            BorderThickness="0" 
                                                            CornerRadius="4"
                                                            ToolTip.Tip="Contact Parent"
-                                                           Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ContactParentCommand}" 
+                                                           Command="{Binding $parent[UserControl].DataContext.ContactParentCommand}" 
                                                            CommandParameter="{Binding}"/>
                                                 </StackPanel>
                                             </Grid>
