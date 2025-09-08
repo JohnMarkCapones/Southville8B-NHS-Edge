@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Collections.Specialized;
 using Southville8BEdgeUI.ViewModels.Teacher;
 
 namespace Southville8BEdgeUI.Views.Teacher;
@@ -53,6 +54,9 @@ public partial class MyAnnouncementsView : UserControl
     private readonly ResponsiveLayoutManager _layoutManager;
     private readonly ThrottledUpdater _throttledUpdater;
     private DispatcherTimer? _periodicTimer;
+    private bool _usePeriodicTimer;
+    private INotifyCollectionChanged? _announcementsCollection;
+    private NotifyCollectionChangedEventHandler? _collectionChangedHandler;
 
     private ResponsiveState _currentState = ResponsiveState.Unknown;
     private double _lastProcessedWidth;
@@ -132,21 +136,23 @@ public partial class MyAnnouncementsView : UserControl
         };
         _periodicTimer.Tick -= OnPeriodicTick;
         _periodicTimer.Tick += OnPeriodicTick;
-        
+
         // Try to subscribe to collection changes for more efficient updates
-        if (DataContext is MyAnnouncementsViewModel vm && 
-            vm.Announcements is System.Collections.Specialized.INotifyCollectionChanged collection)
+        if (DataContext is MyAnnouncementsViewModel vm &&
+            vm.Announcements is INotifyCollectionChanged collection)
         {
-            collection.CollectionChanged += (_, __) => 
+            _announcementsCollection = collection;
+            _collectionChangedHandler = (_, __) =>
             {
                 if (_currentState != ResponsiveState.Unknown)
-                    UpdateDynamicElements(_currentState);
+                    _throttledUpdater.Schedule(() => UpdateDynamicElements(_currentState));
             };
-            
-            // Don't start periodic timer if we have collection change notifications
-            return;
+            _announcementsCollection.CollectionChanged += _collectionChangedHandler;
+            _usePeriodicTimer = false;
+            return; // Don't start periodic timer if we have collection change notifications
         }
-        
+
+        _usePeriodicTimer = true;
         _periodicTimer.Start();
     }
 
@@ -171,13 +177,19 @@ public partial class MyAnnouncementsView : UserControl
         {
             ApplyResponsiveLayout(Bounds.Width);
         }
-        _periodicTimer?.Start();
+        if (_usePeriodicTimer)
+            _periodicTimer?.Start();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _throttledUpdater.Cancel();
-        _periodicTimer?.Stop();
+        if (_usePeriodicTimer)
+            _periodicTimer?.Stop();
+        if (_announcementsCollection is not null && _collectionChangedHandler is not null)
+            _announcementsCollection.CollectionChanged -= _collectionChangedHandler;
+        _announcementsCollection = null;
+        _collectionChangedHandler = null;
     }
 
     #endregion
@@ -410,7 +422,7 @@ public partial class MyAnnouncementsView : UserControl
         {
             // Mobile: Enable horizontal scrolling for announcement cards
             scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
-            scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+            scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
             
             // Switch to horizontal layout
             if (_elementCache.TryGetElement<ItemsControl>(ElementIdentifiers.AnnouncementListItems, out var items) && items != null)
