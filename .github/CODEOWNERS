@@ -1,0 +1,17 @@
+# Default: both of you own everything in the repo
+* @johnmarkcapones @rchrdrmsjr
+
+# Frontend (Next.js)
+/frontend-nextjs/ @johnmarkcapones
+
+# Backend (ASP.NET Core, infra/docker)
+/infra/docker/ @rchrdrmsjr @johnmarkcapones
+
+# Mobile apps (Flutter, Swift)
+/mobile-app/ @johnmarkcapones @rchrdrmsjr
+
+# Desktop app (C# MAUI)
+/desktop-app/ @rchrdrmsjr
+
+# Documentation
+/docs/ @johnmarkcapones @rchrdrmsjr
