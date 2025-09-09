@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -21,14 +22,38 @@ public partial class TeacherShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isRightSidebarVisible = true;
 
-    // Properties for the right sidebar
-    [ObservableProperty] private string _userName = "St.Yummy";
-    [ObservableProperty] private string _userRole = "Teacher";
+    // Properties for the right sidebar - User Profile
+    [ObservableProperty] private string _userName = "St. Yummy";
+    [ObservableProperty] private string _userRole = "Senior Math Teacher";
     [ObservableProperty] private string _userInitials = "SY";
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
 
-    // Grid column properties for flexible layout - using GridLength instead of string
+    // Statistics Cards Data
+    [ObservableProperty] private int _totalClasses = 6;
+    [ObservableProperty] private int _pendingAssignments = 24;
+    [ObservableProperty] private int _totalStudents = 180;
+    [ObservableProperty] private int _unreadMessages = 12;
+
+    // Today's Schedule
+    [ObservableProperty] private string _currentMonth = DateTime.Now.ToString("MMMM yyyy");
+    [ObservableProperty] private string _todayDate = DateTime.Now.Day.ToString();
+    [ObservableProperty] private string _nextClassSubject = "Science - Grade 8-B";
+    [ObservableProperty] private string _nextClassTime = "10:00 AM - 11:30 AM";
+
+    // Today's Current Class
+    [ObservableProperty] private string _currentClassSubject = "Mathematics";
+    [ObservableProperty] private string _currentClassGrade = "Grade 8-A Mathematics";
+    [ObservableProperty] private string _currentClassTime = "08:00 AM - 09:30 AM";
+    [ObservableProperty] private string _currentClassRoom = "Room 101";
+
+    // Recent Activities Collection
+    [ObservableProperty] private ObservableCollection<TeacherActivityItem> _recentActivities = new();
+
+    // Calendar Days Collection for the mini calendar
+    [ObservableProperty] private ObservableCollection<CalendarDayItem> _calendarDays = new();
+
+    // Grid column properties for flexible layout
     [ObservableProperty] private GridLength _leftColumnWidth = new(260);
     [ObservableProperty] private GridLength _rightColumnWidth = new(260);
 
@@ -40,7 +65,62 @@ public partial class TeacherShellViewModel : ViewModelBase
     {
         // Set the default page to the dashboard
         _currentContent = CreateDashboardViewModel();
+        InitializeRecentActivities();
+        InitializeCalendarDays();
         UpdateColumnWidths();
+        
+        // Update time every minute
+        StartTimeUpdater();
+    }
+
+    private void StartTimeUpdater()
+    {
+        // In a real application, you'd use a timer to update time
+        // For now, we'll just set it once
+        CurrentTime = DateTime.Now.ToString("hh:mm tt");
+        CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
+    }
+
+    private void InitializeRecentActivities()
+    {
+        RecentActivities = new ObservableCollection<TeacherActivityItem>
+        {
+            new()
+            {
+                StudentName = "John Smith",
+                StudentInitials = "JS",
+                Activity = "Submitted Assignment #3",
+                TimeAgo = "1hr ago"
+            },
+            new()
+            {
+                StudentName = "Maria Garcia",
+                StudentInitials = "MG",
+                Activity = "Asked question in Math class",
+                TimeAgo = "2hrs ago"
+            },
+            new()
+            {
+                StudentName = "Anna Lee",
+                StudentInitials = "AL",
+                Activity = "Completed quiz successfully",
+                TimeAgo = "3hrs ago"
+            }
+        };
+    }
+
+    private void InitializeCalendarDays()
+    {
+        CalendarDays = new ObservableCollection<CalendarDayItem>
+        {
+            new() { Day = "16", IsToday = false },
+            new() { Day = "17", IsToday = false },
+            new() { Day = "18", IsToday = false },
+            new() { Day = "19", IsToday = true },
+            new() { Day = "20", IsToday = false },
+            new() { Day = "21", IsToday = false },
+            new() { Day = "22", IsToday = false }
+        };
     }
 
     private TeacherDashboardViewModel CreateDashboardViewModel()
@@ -74,6 +154,25 @@ public partial class TeacherShellViewModel : ViewModelBase
     {
         IsRightSidebarVisible = !IsRightSidebarVisible;
         UpdateColumnWidths();
+    }
+
+    // Calendar navigation commands
+    [RelayCommand]
+    private void NavigatePreviousMonth()
+    {
+        // TODO: Implement previous month navigation
+    }
+
+    [RelayCommand]
+    private void NavigateNextMonth()
+    {
+        // TODO: Implement next month navigation
+    }
+
+    [RelayCommand]
+    private void ViewFullSchedule()
+    {
+        NavigateToSchedulePlanner();
     }
 
     // Navigation commands
@@ -146,4 +245,19 @@ public partial class TeacherShellViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(ShowRightSidebarToggle));
     }
+}
+
+// Supporting ViewModels for the shell
+public partial class TeacherActivityItem : ViewModelBase
+{
+    [ObservableProperty] private string _studentName = "";
+    [ObservableProperty] private string _studentInitials = "";
+    [ObservableProperty] private string _activity = "";
+    [ObservableProperty] private string _timeAgo = "";
+}
+
+public partial class CalendarDayItem : ViewModelBase
+{
+    [ObservableProperty] private string _day = "";
+    [ObservableProperty] private bool _isToday = false;
 }
