@@ -51,9 +51,9 @@ jobs:
           # Check if title follows conventional commit format
           # Examples: feat: add feature, fix(api): resolve bug, docs: update readme
           if ! [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\([^)]+\))?:\ .+ ]]; then
-          echo "❌ PR title must follow conventional commit format:"
-          echo "   Examples: 'feat: add user authentication', 'fix(api): resolve timeout issue'"
-          exit 1
+            echo "❌ PR title must follow conventional commit format:"
+            echo "   Examples: 'feat: add user authentication', 'fix(api): resolve timeout issue'"
+            exit 1
           fi
           
           # Check title length (10-100 characters for readability)
