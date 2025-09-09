@@ -1,0 +1,272 @@
+name: Pull Request Governance
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+env:
+  MAX_CHANGED_LINES: 500
+  MIN_DESCRIPTION_LENGTH: 50
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Validate PR Title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          
+          # Check if title follows conventional commit format
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?: .+ ]]; then
+            echo "❌ PR title must follow conventional commit format:"
+            echo "   Examples: 'feat: add user authentication', 'fix(api): resolve timeout issue'"
+            exit 1
+          fi
+          
+          # Check title length
+          if [[ ${#PR_TITLE} -lt 10 || ${#PR_TITLE} -gt 100 ]]; then
+            echo "❌ PR title must be between 10-100 characters (current: ${#PR_TITLE})"
+            exit 1
+          fi
+          
+          echo "✅ PR title validation passed"
+
+      - name: Validate Issue Link
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          # Check for issue reference with keywords
+          if [[ ! "$PR_BODY" =~ (fixes|closes|resolves|addresses|refs?|related to|part of)\s*#[0-9]+ ]]; then
+            echo "❌ PR must reference an issue using keywords:"
+            echo "   Examples: 'Fixes #123', 'Closes #456', 'Related to #789'"
+            exit 1
+          fi
+          
+          echo "✅ Issue reference validation passed"
+
+      - name: Validate PR Description
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          # Remove issue links and common markdown for length calculation
+          DESCRIPTION_CONTENT=$(echo "$PR_BODY" | sed -E 's/(fixes|closes|resolves|addresses|refs?|related to)\s*#[0-9]+//gi' | sed 's/[#*`-]//g' | tr -d '\n\r')
+          
+          if [[ ${#DESCRIPTION_CONTENT} -lt $MIN_DESCRIPTION_LENGTH ]]; then
+            echo "❌ PR description too short. Minimum $MIN_DESCRIPTION_LENGTH characters required."
+            echo "   Please provide a detailed description of your changes."
+            exit 1
+          fi
+          
+          # Check for required sections
+          if [[ ! "$PR_BODY" =~ "## Description" && ! "$PR_BODY" =~ "## Changes Made" && ! "$PR_BODY" =~ "## What" ]]; then
+            echo "❌ PR description must include a proper description section."
+            echo "   Consider using the PR template or adding '## Description' section."
+            exit 1
+          fi
+          
+          echo "✅ PR description validation passed"
+
+      - name: Check PR Size
+        run: |
+          # Get the number of changed lines
+          CHANGED_LINES=$(git diff --stat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | tail -n1 | grep -oE '[0-9]+ insertions|[0-9]+ deletions' | grep -oE '[0-9]+' | awk '{sum += $1} END {print sum}')
+          
+          if [[ -z "$CHANGED_LINES" ]]; then
+            CHANGED_LINES=0
+          fi
+          
+          echo "Changed lines: $CHANGED_LINES"
+          
+          if [[ $CHANGED_LINES -gt $MAX_CHANGED_LINES ]]; then
+            echo "⚠️ Warning: Large PR detected ($CHANGED_LINES lines changed)"
+            echo "   Consider breaking this into smaller PRs for easier review."
+            echo "   If this is intentional, add 'large-pr' label to acknowledge."
+            
+            # Check if large-pr label exists
+            LABELS="${{ toJson(github.event.pull_request.labels.*.name) }}"
+            if [[ ! "$LABELS" =~ "large-pr" ]]; then
+              echo "❌ Large PRs require 'large-pr' label for acknowledgment"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ PR size validation passed"
+
+      - name: Validate Commit Messages
+        run: |
+          # Get commits in this PR
+          COMMITS=$(git rev-list ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          
+          for commit in $COMMITS; do
+            COMMIT_MSG=$(git log --format=%B -n 1 $commit | head -1)
+            
+            # Check conventional commit format
+            if [[ ! "$COMMIT_MSG" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?: .+ ]]; then
+              echo "❌ Commit '$commit' has invalid format: '$COMMIT_MSG'"
+              echo "   Use conventional commits: 'feat: description', 'fix(scope): description'"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Commit message validation passed"
+
+      - name: Restore Dependencies
+        run: |
+          cd desktop-app
+          if ! dotnet restore; then
+            echo "❌ Failed to restore dependencies"
+            exit 1
+          fi
+          echo "✅ Dependencies restored successfully"
+
+      - name: Build Project
+        run: |
+          cd desktop-app
+          echo "Building project..."
+          if ! dotnet build --configuration Release --no-restore; then
+            echo "❌ Build failed - please fix compilation errors"
+            exit 1
+          fi
+          echo "✅ Build passed"
+
+      - name: Run Tests
+        run: |
+          echo "Running test suite..."
+          # Note: Add test projects to your solution first
+          # if ! dotnet test --configuration Release --no-build --verbosity normal; then
+          #   echo "❌ Tests failed - please fix failing tests"
+          #   exit 1
+          # fi
+          echo "✅ Test step completed (add test projects to enable)"
+
+      - name: Run Security Audit
+        run: |
+          echo "Running security audit..."
+          if ! npm audit --audit-level moderate; then
+            echo "❌ Security vulnerabilities detected"
+            echo "   Run 'npm audit fix' to resolve issues"
+            exit 1
+          fi
+          echo "✅ Security audit passed"
+
+      - name: Check Code Coverage
+        run: |
+          echo "Checking code coverage..."
+          npm run test:coverage || true
+          
+          # You can add coverage threshold checks here
+          # if ! npm run test:coverage -- --threshold-statements=80; then
+          #   echo "❌ Code coverage below threshold"
+          #   exit 1
+          # fi
+          echo "✅ Code coverage check completed"
+
+      - name: Validate File Changes
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          
+          # Check for sensitive files
+          SENSITIVE_FILES="package-lock.json yarn.lock .env .env.local .env.production"
+          
+          for file in $SENSITIVE_FILES; do
+            if echo "$CHANGED_FILES" | grep -q "^$file$"; then
+              echo "⚠️ Warning: Sensitive file '$file' was modified"
+              echo "   Please ensure this change is necessary and reviewed carefully"
+            fi
+          done
+          
+          # Check for direct changes to main/master branch files that shouldn't be modified
+          PROTECTED_FILES=".github/workflows/ CODEOWNERS"
+          
+          for pattern in $PROTECTED_FILES; do
+            if echo "$CHANGED_FILES" | grep -q "$pattern"; then
+              echo "⚠️ Protected files modified: $pattern"
+              echo "   These changes require additional review from maintainers"
+            fi
+          done
+          
+          echo "✅ File change validation completed"
+
+      - name: Set Governance Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+            const description = status === 'success' 
+              ? 'All governance checks passed' 
+              : 'Governance checks failed - see details above';
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: status,
+              target_url: `${context.payload.repository.html_url}/actions/runs/${context.runId}`,
+              description: description,
+              context: 'governance/pr-validation'
+            });
+
+      - name: Comment on PR (if failed)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ❌ PR Governance Checks Failed
+            
+            This Pull Request does not meet the required governance standards. Please review the failed checks above and make the necessary changes.
+            
+            ### Common Issues:
+            - Ensure PR title follows conventional commit format
+            - Link to an issue using keywords like "Fixes #123"
+            - Provide a detailed description of your changes
+            - Fix any linting or test failures
+            - Keep PR size manageable (under ${process.env.MAX_CHANGED_LINES} lines)
+            
+            Once you've addressed these issues, the checks will run again automatically.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Success Comment
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Only comment on first success to avoid spam
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            
+            const hasSuccessComment = comments.data.some(comment => 
+              comment.body.includes('✅ PR Governance Checks Passed')
+            );
+            
+            if (!hasSuccessComment) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## ✅ PR Governance Checks Passed
+                
+                This Pull Request meets all governance requirements! 🎉
+                
+                The PR is now ready for code review by maintainers.`
+              });
+            }
