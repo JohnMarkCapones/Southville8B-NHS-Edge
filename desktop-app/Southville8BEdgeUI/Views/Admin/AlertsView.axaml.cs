@@ -1,10 +1,7 @@
-using Avalonia.Controls;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Layout;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using Southville8BEdgeUI.ViewModels.Admin;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -12,18 +9,18 @@ public partial class AlertsView : UserControl
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
-    
+
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
     private const string TabletClass = "tablet";
     private const string DesktopClass = "desktop";
-    
+
     // Collections to store elements that need responsive behavior
     private readonly List<Control> _responsiveTextElements = new();
     private readonly List<Control> _responsiveCardElements = new();
     private readonly List<Control> _responsiveButtonElements = new();
     private readonly List<Control> _responsiveInputElements = new();
-    
+
     // Element identification constants for optimized performance
     private const string TextElementSuffix = "Text";
     private const string ButtonElementSuffix = "Button";
@@ -37,10 +34,10 @@ public partial class AlertsView : UserControl
     {
         InitializeComponent();
         // DataContext is supplied by DataTemplates when navigated via AdminShellViewModel
-        
+
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-        
+
         // Set up size change handler
         this.SizeChanged += OnSizeChanged;
     }
@@ -96,23 +93,23 @@ public partial class AlertsView : UserControl
     {
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
-        
+
         // Performance optimization: Skip update if size class hasn't changed
         if (sizeClass == _lastSizeClass)
             return;
-            
+
         _lastSizeClass = sizeClass;
-        
+
         // Update all responsive elements
         UpdateMainContainerClasses(sizeClass);
         UpdateElementClasses(_responsiveTextElements, sizeClass);
         UpdateElementClasses(_responsiveCardElements, sizeClass);
         UpdateElementClasses(_responsiveButtonElements, sizeClass);
         UpdateElementClasses(_responsiveInputElements, sizeClass);
-        
+
         // Update layout-specific elements based on screen size
         ApplyLayoutStrategy(sizeClass, width);
-        
+
         // Update alert card elements dynamically
         UpdateAlertCardElements(sizeClass);
     }
@@ -133,7 +130,7 @@ public partial class AlertsView : UserControl
         MainGrid.Classes.Remove("main-content");
         MainGrid.Classes.Remove("main-content-tablet");
         MainGrid.Classes.Remove("main-content-mobile");
-        
+
         // Add appropriate class
         switch (sizeClass)
         {
@@ -156,7 +153,7 @@ public partial class AlertsView : UserControl
             // Remove existing responsive classes using constants
             element.Classes.Remove(MobileClass);
             element.Classes.Remove(TabletClass);
-            
+
             // Add appropriate responsive class
             if (sizeClass != DesktopClass)
             {
@@ -169,7 +166,7 @@ public partial class AlertsView : UserControl
     {
         // Create a layout configuration based on the screen size
         var layoutConfig = CreateLayoutConfig(sizeClass);
-        
+
         // Apply the layout configuration
         ApplyMainGridLayout(layoutConfig);
         ApplyHeaderLayout(layoutConfig);
@@ -191,7 +188,7 @@ public partial class AlertsView : UserControl
                 HeaderButtonsOrientation = Orientation.Vertical,
                 HeaderButtonsSpacing = 8
             },
-            
+
             TabletClass => new LayoutConfiguration
             {
                 MainGridColumns = 1,
@@ -204,7 +201,7 @@ public partial class AlertsView : UserControl
                 HeaderButtonsOrientation = Orientation.Horizontal,
                 HeaderButtonsSpacing = 8
             },
-            
+
             _ => new LayoutConfiguration // Desktop
             {
                 MainGridColumns = 2,
@@ -224,15 +221,15 @@ public partial class AlertsView : UserControl
     {
         MainGrid.ColumnDefinitions.Clear();
         MainGrid.RowDefinitions.Clear();
-        
+
         // Add row definitions
         MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); // Header
-        
+
         for (int i = 1; i < config.MainGridRows; i++)
         {
             MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
         }
-        
+
         // Add column definitions
         for (int i = 0; i < config.MainGridColumns; i++)
         {
@@ -245,18 +242,18 @@ public partial class AlertsView : UserControl
                 MainGrid.ColumnDefinitions.Add(new ColumnDefinition(i == 0 ? new GridLength(400) : GridLength.Star));
             }
         }
-        
+
         // Position cards
         Grid.SetColumn(CreateAlertCard, config.CreateCardPosition.Column);
         Grid.SetRow(CreateAlertCard, config.CreateCardPosition.Row);
-        
+
         Grid.SetColumn(ActiveAlertsCard, config.AlertsCardPosition.Column);
         Grid.SetRow(ActiveAlertsCard, config.AlertsCardPosition.Row);
-        
+
         // Update margins
         HeaderCard.Padding = config.HeaderPadding;
         CreateAlertCard.Margin = config.CardMargin;
-        
+
         if (config.MainGridColumns == 1)
         {
             ActiveAlertsCard.Margin = config.CardMargin;
@@ -271,7 +268,7 @@ public partial class AlertsView : UserControl
     {
         HeaderButtonsStack.Orientation = config.HeaderButtonsOrientation;
         HeaderButtonsStack.Spacing = config.HeaderButtonsSpacing;
-        
+
         if (config.HeaderButtonsOrientation == Orientation.Vertical)
         {
             HeaderButtonsStack.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -329,13 +326,13 @@ public partial class AlertsView : UserControl
         }
         // Note: ItemsControl children are handled through the template
     }
-    
+
     private void UpdateElementResponsiveClasses(Control element, string sizeClass)
     {
         // Remove existing responsive classes using constants
         element.Classes.Remove(MobileClass);
         element.Classes.Remove(TabletClass);
-        
+
         // Add appropriate responsive class
         if (sizeClass != DesktopClass)
         {
@@ -346,14 +343,14 @@ public partial class AlertsView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        
+
         // Initial responsive setup
         if (Bounds.Width > 0)
         {
             UpdateResponsiveClasses(Bounds.Width);
         }
     }
-    
+
     // Configuration class for layout strategies
     private class LayoutConfiguration
     {

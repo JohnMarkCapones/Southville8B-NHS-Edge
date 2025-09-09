@@ -1,8 +1,8 @@
-using Avalonia.Controls;
 using Avalonia;
+using Avalonia.Controls;
+using Southville8BEdgeUI.ViewModels.Admin;
 using System.Collections.Generic;
 using System.Linq;
-using Southville8BEdgeUI.ViewModels.Admin;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -10,7 +10,7 @@ public partial class UserManagementView : UserControl
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
-    
+
     // Collections to store elements that need responsive behavior
     private readonly List<Control> _responsiveTextElements = new();
     private readonly List<Control> _responsiveCardElements = new();
@@ -21,10 +21,10 @@ public partial class UserManagementView : UserControl
     {
         InitializeComponent();
         DataContext = new UserManagementViewModel();
-        
+
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-        
+
         // Set up size change handler
         this.SizeChanged += OnSizeChanged;
     }
@@ -79,17 +79,17 @@ public partial class UserManagementView : UserControl
     {
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
-        
+
         // Update all responsive elements
         UpdateMainContainerClasses(sizeClass);
         UpdateElementClasses(_responsiveTextElements, sizeClass);
         UpdateElementClasses(_responsiveCardElements, sizeClass);
         UpdateElementClasses(_responsiveButtonElements, sizeClass);
         UpdateElementClasses(_responsiveInputElements, sizeClass);
-        
+
         // Update layout-specific elements
         UpdateLayoutClasses(sizeClass, width);
-        
+
         // Update user card elements dynamically
         UpdateUserCardElements(sizeClass);
     }
@@ -110,7 +110,7 @@ public partial class UserManagementView : UserControl
         MainStackPanel.Classes.Remove("main-content");
         MainStackPanel.Classes.Remove("main-content-tablet");
         MainStackPanel.Classes.Remove("main-content-mobile");
-        
+
         // Add appropriate class
         switch (sizeClass)
         {
@@ -133,7 +133,7 @@ public partial class UserManagementView : UserControl
             // Remove existing responsive classes
             element.Classes.Remove("mobile");
             element.Classes.Remove("tablet");
-            
+
             // Add appropriate responsive class
             if (sizeClass != "desktop")
             {
@@ -155,7 +155,7 @@ public partial class UserManagementView : UserControl
                 // Stack header buttons vertically
                 SetupMobileHeaderLayout();
                 break;
-                
+
             case "tablet":
                 // 2x2 grid for tablets
                 SetupTabletStatsGrid();
@@ -164,7 +164,7 @@ public partial class UserManagementView : UserControl
                 // Keep header horizontal
                 SetupTabletHeaderLayout();
                 break;
-                
+
             default:
                 // 4-column grid for desktop
                 SetupDesktopStatsGrid();
@@ -265,15 +265,15 @@ public partial class UserManagementView : UserControl
     {
         HeaderGrid.ColumnDefinitions.Clear();
         HeaderGrid.RowDefinitions.Clear();
-        
+
         HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(HeaderButtons, 0);
         Grid.SetRow(HeaderButtons, 1);
         Grid.SetColumnSpan(HeaderButtons, 1);
-        
+
         HeaderButtons.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
         HeaderButtons.Margin = new Thickness(0, 12, 0, 0);
     }
@@ -287,15 +287,15 @@ public partial class UserManagementView : UserControl
     {
         HeaderGrid.ColumnDefinitions.Clear();
         HeaderGrid.RowDefinitions.Clear();
-        
+
         HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
         HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(HeaderButtons, 1);
         Grid.SetRow(HeaderButtons, 0);
         Grid.SetColumnSpan(HeaderButtons, 1);
-        
+
         HeaderButtons.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
         HeaderButtons.Margin = new Thickness(0);
     }
@@ -304,19 +304,19 @@ public partial class UserManagementView : UserControl
     {
         StatsGrid.ColumnDefinitions.Clear();
         StatsGrid.RowDefinitions.Clear();
-        
+
         StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         for (int i = 0; i < 4; i++)
         {
             StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         Grid.SetColumn(StatsCard1, 0); Grid.SetRow(StatsCard1, 0);
         Grid.SetColumn(StatsCard2, 0); Grid.SetRow(StatsCard2, 1);
         Grid.SetColumn(StatsCard3, 0); Grid.SetRow(StatsCard3, 2);
         Grid.SetColumn(StatsCard4, 0); Grid.SetRow(StatsCard4, 3);
-        
+
         // Update margins for mobile
         StatsCard1.Margin = new Thickness(0, 0, 0, 8);
         StatsCard2.Margin = new Thickness(0, 8, 0, 8);
@@ -328,18 +328,18 @@ public partial class UserManagementView : UserControl
     {
         StatsGrid.ColumnDefinitions.Clear();
         StatsGrid.RowDefinitions.Clear();
-        
+
         StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(StatsCard1, 0); Grid.SetRow(StatsCard1, 0);
         Grid.SetColumn(StatsCard2, 1); Grid.SetRow(StatsCard2, 0);
         Grid.SetColumn(StatsCard3, 0); Grid.SetRow(StatsCard3, 1);
         Grid.SetColumn(StatsCard4, 1); Grid.SetRow(StatsCard4, 1);
-        
+
         // Update margins for tablet
         StatsCard1.Margin = new Thickness(0, 0, 8, 8);
         StatsCard2.Margin = new Thickness(8, 0, 0, 8);
@@ -351,18 +351,18 @@ public partial class UserManagementView : UserControl
     {
         StatsGrid.ColumnDefinitions.Clear();
         StatsGrid.RowDefinitions.Clear();
-        
+
         for (int i = 0; i < 4; i++)
         {
             StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         }
         StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(StatsCard1, 0); Grid.SetRow(StatsCard1, 0);
         Grid.SetColumn(StatsCard2, 1); Grid.SetRow(StatsCard2, 0);
         Grid.SetColumn(StatsCard3, 2); Grid.SetRow(StatsCard3, 0);
         Grid.SetColumn(StatsCard4, 3); Grid.SetRow(StatsCard4, 0);
-        
+
         // Update margins for desktop
         StatsCard1.Margin = new Thickness(0, 0, 12, 0);
         StatsCard2.Margin = new Thickness(12, 0);
@@ -374,19 +374,19 @@ public partial class UserManagementView : UserControl
     {
         FilterGrid.ColumnDefinitions.Clear();
         FilterGrid.RowDefinitions.Clear();
-        
+
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         for (int i = 0; i < 5; i++)
         {
             FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0);
         Grid.SetColumn(RoleFilter, 0); Grid.SetRow(RoleFilter, 2);
         Grid.SetColumn(StatusFilter, 0); Grid.SetRow(StatusFilter, 3);
         Grid.SetColumn(GradeFilter, 0); Grid.SetRow(GradeFilter, 4);
-        
+
         // Hide separator on mobile
         if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
         {
@@ -394,7 +394,7 @@ public partial class UserManagementView : UserControl
             Grid.SetRow(separator, 1);
             separator.IsVisible = false;
         }
-        
+
         // Update margins for mobile
         SearchInput.Margin = new Thickness(0, 0, 0, 8);
         RoleFilter.Margin = new Thickness(0, 8, 0, 8);
@@ -406,25 +406,25 @@ public partial class UserManagementView : UserControl
     {
         FilterGrid.ColumnDefinitions.Clear();
         FilterGrid.RowDefinitions.Clear();
-        
+
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0); Grid.SetColumnSpan(SearchInput, 3);
         Grid.SetColumn(RoleFilter, 0); Grid.SetRow(RoleFilter, 1);
         Grid.SetColumn(StatusFilter, 1); Grid.SetRow(StatusFilter, 1);
         Grid.SetColumn(GradeFilter, 2); Grid.SetRow(GradeFilter, 1);
-        
+
         // Show separator on tablet/desktop
         if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
         {
             separator.IsVisible = false; // Hide in tablet layout too
         }
-        
+
         // Update margins for tablet
         SearchInput.Margin = new Thickness(0, 0, 0, 8);
         RoleFilter.Margin = new Thickness(0, 8, 8, 0);
@@ -436,20 +436,20 @@ public partial class UserManagementView : UserControl
     {
         FilterGrid.ColumnDefinitions.Clear();
         FilterGrid.RowDefinitions.Clear();
-        
+
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
         FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-        
+
         FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0); Grid.SetColumnSpan(SearchInput, 1);
         Grid.SetColumn(RoleFilter, 2); Grid.SetRow(RoleFilter, 0);
         Grid.SetColumn(StatusFilter, 3); Grid.SetRow(StatusFilter, 0);
         Grid.SetColumn(GradeFilter, 4); Grid.SetRow(GradeFilter, 0);
-        
+
         // Show separator on desktop
         if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
         {
@@ -457,7 +457,7 @@ public partial class UserManagementView : UserControl
             Grid.SetRow(separator, 0);
             separator.IsVisible = true;
         }
-        
+
         // Update margins for desktop
         SearchInput.Margin = new Thickness(0);
         RoleFilter.Margin = new Thickness(12, 0);
@@ -468,7 +468,7 @@ public partial class UserManagementView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        
+
         // Initial responsive setup
         if (Bounds.Width > 0)
         {

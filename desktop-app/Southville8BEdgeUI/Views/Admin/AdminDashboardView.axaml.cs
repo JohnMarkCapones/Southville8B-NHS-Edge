@@ -1,5 +1,5 @@
-using Avalonia.Controls;
 using Avalonia;
+using Avalonia.Controls;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,7 +9,7 @@ public partial class AdminDashboardView : UserControl
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
-    
+
     // Collections to store elements that need responsive behavior
     private readonly List<Control> _responsiveTextElements = new();
     private readonly List<Control> _responsiveCardElements = new();
@@ -20,10 +20,10 @@ public partial class AdminDashboardView : UserControl
     public AdminDashboardView()
     {
         InitializeComponent();
-        
+
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-        
+
         // Set up size change handler
         this.SizeChanged += OnSizeChanged;
     }
@@ -104,7 +104,7 @@ public partial class AdminDashboardView : UserControl
     {
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
-        
+
         // Update all responsive elements
         UpdateMainContainerClasses(sizeClass);
         UpdateElementClasses(_responsiveTextElements, sizeClass);
@@ -112,7 +112,7 @@ public partial class AdminDashboardView : UserControl
         UpdateElementClasses(_responsiveButtonElements, sizeClass);
         UpdateElementClasses(_responsiveProgressBars, sizeClass);
         UpdateElementClasses(_responsiveIcons, sizeClass);
-        
+
         // Update layout-specific elements
         UpdateLayoutClasses(sizeClass, width);
     }
@@ -133,7 +133,7 @@ public partial class AdminDashboardView : UserControl
         MainStackPanel.Classes.Remove("main-content");
         MainStackPanel.Classes.Remove("main-content-tablet");
         MainStackPanel.Classes.Remove("main-content-mobile");
-        
+
         // Add appropriate class
         switch (sizeClass)
         {
@@ -156,7 +156,7 @@ public partial class AdminDashboardView : UserControl
             // Remove existing responsive classes
             element.Classes.Remove("mobile");
             element.Classes.Remove("tablet");
-            
+
             // Add appropriate responsive class
             if (sizeClass != "desktop")
             {
@@ -176,13 +176,13 @@ public partial class AdminDashboardView : UserControl
                 // Stack two-column grids vertically
                 StackTwoColumnGrids();
                 break;
-                
+
             case "tablet":
                 // 2x3 grid for tablets
                 SetupTabletKpiGrid();
                 RestoreTwoColumnGrids();
                 break;
-                
+
             default:
                 // 5-column grid for desktop
                 SetupDesktopKpiGrid();
@@ -195,14 +195,14 @@ public partial class AdminDashboardView : UserControl
     {
         KpiGrid.ColumnDefinitions.Clear();
         KpiGrid.RowDefinitions.Clear();
-        
+
         KpiGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         for (int i = 0; i < 5; i++)
         {
             KpiGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         Grid.SetColumn(KpiCard1, 0); Grid.SetRow(KpiCard1, 0);
         Grid.SetColumn(KpiCard2, 0); Grid.SetRow(KpiCard2, 1);
         Grid.SetColumn(KpiCard3, 0); Grid.SetRow(KpiCard3, 2);
@@ -214,14 +214,14 @@ public partial class AdminDashboardView : UserControl
     {
         KpiGrid.ColumnDefinitions.Clear();
         KpiGrid.RowDefinitions.Clear();
-        
+
         KpiGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         KpiGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         KpiGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         KpiGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         KpiGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(KpiCard1, 0); Grid.SetRow(KpiCard1, 0);
         Grid.SetColumn(KpiCard2, 1); Grid.SetRow(KpiCard2, 0);
         Grid.SetColumn(KpiCard3, 2); Grid.SetRow(KpiCard3, 0);
@@ -233,13 +233,13 @@ public partial class AdminDashboardView : UserControl
     {
         KpiGrid.ColumnDefinitions.Clear();
         KpiGrid.RowDefinitions.Clear();
-        
+
         for (int i = 0; i < 5; i++)
         {
             KpiGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         }
         KpiGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         Grid.SetColumn(KpiCard1, 0); Grid.SetRow(KpiCard1, 0);
         Grid.SetColumn(KpiCard2, 1); Grid.SetRow(KpiCard2, 0);
         Grid.SetColumn(KpiCard3, 2); Grid.SetRow(KpiCard3, 0);
@@ -260,17 +260,17 @@ public partial class AdminDashboardView : UserControl
     {
         grid.ColumnDefinitions.Clear();
         grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        
+
         // Update grid positions for mobile stacking - Fix the ToList() issue
         var children = grid.Children.Cast<Control>().ToList();
-        
+
         // Add row definitions for stacking
         grid.RowDefinitions.Clear();
         for (int i = 0; i < children.Count; i++)
         {
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         // Update grid positions for mobile stacking
         for (int i = 0; i < children.Count; i++)
         {
@@ -293,11 +293,11 @@ public partial class AdminDashboardView : UserControl
         grid.ColumnDefinitions.Clear();
         grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Parse(col1)));
         grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Parse(col2)));
-        
+
         // Clear row definitions for two-column layout
         grid.RowDefinitions.Clear();
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        
+
         // Restore original grid positions - Fix the ToList() issue
         var children = grid.Children.Cast<Control>().ToList();
         for (int i = 0; i < children.Count; i++)
@@ -310,7 +310,7 @@ public partial class AdminDashboardView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        
+
         // Initial responsive setup
         if (Bounds.Width > 0)
         {

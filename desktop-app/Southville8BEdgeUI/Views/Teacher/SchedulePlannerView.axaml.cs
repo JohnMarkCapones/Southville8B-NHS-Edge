@@ -2,11 +2,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Southville8BEdgeUI.ViewModels.Teacher;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Southville8BEdgeUI.ViewModels.Teacher;
 
 namespace Southville8BEdgeUI.Views.Teacher;
 
@@ -184,7 +184,7 @@ public partial class SchedulePlannerView : UserControl
 
         using var deferral = BatchUpdate();
         {
-            UpdateElementClasses(newState); 
+            UpdateElementClasses(newState);
             UpdateGridLayouts(newState);
             UpdateScheduleLayout(newState);
             UpdateDynamicElements(newState);
@@ -389,7 +389,7 @@ public partial class SchedulePlannerView : UserControl
             return;
 
         var config = _layoutManager.GetConfiguration(state);
-        
+
         // Look for ScrollViewer in the visual tree of the schedule container
         var scrollViewer = scheduleContainer.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
         if (scrollViewer is null) return;
@@ -434,12 +434,12 @@ public partial class SchedulePlannerView : UserControl
             }
 
             // Find day header elements in the DayColumnsGrid
-            if (element is Border dayBorder && dayBorder.Parent is Grid parentGrid && 
+            if (element is Border dayBorder && dayBorder.Parent is Grid parentGrid &&
                 parentGrid.Name == ElementIdentifiers.DayColumnsGrid)
             {
                 _dayHeaderBorders.Add(dayBorder);
             }
-            
+
             // Find text blocks within time columns, day headers, or with time-related content
             if (element is TextBlock textBlock)
             {
@@ -452,18 +452,18 @@ public partial class SchedulePlannerView : UserControl
                         _timeColumnTextBlocks.Add(textBlock);
                         break;
                     }
-                    
+
                     // Check if it's within a day header border
-                    if (parent is Border dayHeaderBorder && dayHeaderBorder.Parent is Grid dayGrid && 
+                    if (parent is Border dayHeaderBorder && dayHeaderBorder.Parent is Grid dayGrid &&
                         dayGrid.Name == ElementIdentifiers.DayColumnsGrid)
                     {
                         _dayHeaderTextBlocks.Add(textBlock);
                         break;
                     }
-                    
+
                     parent = parent.Parent;
                 }
-                
+
                 // Also check for text blocks that contain time-like content or day names
                 if (textBlock.Text != null && (IsTimeText(textBlock.Text) || IsDayText(textBlock.Text)))
                 {
@@ -512,11 +512,11 @@ public partial class SchedulePlannerView : UserControl
         foreach (var textBlock in _timeColumnTextBlocks)
         {
             textBlock.FontSize = fontSize;
-            
+
             // Remove existing responsive classes
             textBlock.Classes.Remove(ResponsiveClasses.Mobile);
             textBlock.Classes.Remove(ResponsiveClasses.Tablet);
-            
+
             // Add appropriate responsive class
             if (state != ResponsiveState.Desktop)
             {
@@ -529,11 +529,11 @@ public partial class SchedulePlannerView : UserControl
         {
             border.Padding = new Thickness(padding);
             border.MinHeight = GetTimeColumnMinHeight(state);
-            
+
             // Remove existing responsive classes
             border.Classes.Remove(ResponsiveClasses.Mobile);
             border.Classes.Remove(ResponsiveClasses.Tablet);
-            
+
             // Add appropriate responsive class
             if (state != ResponsiveState.Desktop)
             {
@@ -553,11 +553,11 @@ public partial class SchedulePlannerView : UserControl
         {
             textBlock.FontSize = fontSize;
             textBlock.FontWeight = GetDayHeaderFontWeight(state);
-            
+
             // Remove existing responsive classes
             textBlock.Classes.Remove(ResponsiveClasses.Mobile);
             textBlock.Classes.Remove(ResponsiveClasses.Tablet);
-            
+
             // Add appropriate responsive class
             if (state != ResponsiveState.Desktop)
             {
@@ -569,11 +569,11 @@ public partial class SchedulePlannerView : UserControl
         foreach (var border in _dayHeaderBorders)
         {
             border.Padding = new Thickness(padding);
-            
+
             // Remove existing responsive classes
             border.Classes.Remove(ResponsiveClasses.Mobile);
             border.Classes.Remove(ResponsiveClasses.Tablet);
-            
+
             // Add appropriate responsive class
             if (state != ResponsiveState.Desktop)
             {

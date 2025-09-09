@@ -2,12 +2,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Southville8BEdgeUI.ViewModels.Teacher;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Collections.Specialized;
-using Southville8BEdgeUI.ViewModels.Teacher;
 
 namespace Southville8BEdgeUI.Views.Teacher;
 
@@ -423,7 +423,7 @@ public partial class MyAnnouncementsView : UserControl
             // Mobile: Enable horizontal scrolling for announcement cards
             scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
             scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
-            
+
             // Switch to horizontal layout
             if (_elementCache.TryGetElement<ItemsControl>(ElementIdentifiers.AnnouncementListItems, out var items) && items != null)
             {

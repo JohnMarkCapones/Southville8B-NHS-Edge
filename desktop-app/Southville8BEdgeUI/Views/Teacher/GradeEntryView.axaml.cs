@@ -2,11 +2,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Southville8BEdgeUI.ViewModels.Teacher;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Southville8BEdgeUI.ViewModels.Teacher;
 
 namespace Southville8BEdgeUI.Views.Teacher;
 

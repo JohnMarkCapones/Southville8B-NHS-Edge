@@ -1,7 +1,7 @@
-using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Southville8BEdgeUI.ViewModels;
+using System;
 
 namespace Southville8BEdgeUI
 {

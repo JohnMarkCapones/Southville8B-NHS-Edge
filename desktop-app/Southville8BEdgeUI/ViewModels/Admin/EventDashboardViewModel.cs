@@ -1,8 +1,8 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -49,12 +49,12 @@ public partial class EventDashboardViewModel : ViewModelBase
         // Sample Data for Demonstration
         Events = new ObservableCollection<EventViewModel>
         {
-            new EventViewModel 
-            { 
-                Title = "Parent-Teacher Conference", 
-                Status = "Upcoming", 
-                Type = "Meeting", 
-                StartDate = new DateTime(2024, 3, 15), 
+            new EventViewModel
+            {
+                Title = "Parent-Teacher Conference",
+                Status = "Upcoming",
+                Type = "Meeting",
+                StartDate = new DateTime(2024, 3, 15),
                 EndDate = new DateTime(2024, 3, 15),
                 StartTime = new TimeSpan(15, 0, 0), // 3:00 PM
                 EndTime = new TimeSpan(18, 0, 0), // 6:00 PM
@@ -64,12 +64,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 200,
                 CurrentAttendees = 85
             },
-            new EventViewModel 
-            { 
-                Title = "Science Fair", 
-                Status = "Upcoming", 
-                Type = "Competition", 
-                StartDate = new DateTime(2024, 3, 22), 
+            new EventViewModel
+            {
+                Title = "Science Fair",
+                Status = "Upcoming",
+                Type = "Competition",
+                StartDate = new DateTime(2024, 3, 22),
                 EndDate = new DateTime(2024, 3, 22),
                 StartTime = new TimeSpan(9, 0, 0), // 9:00 AM
                 EndTime = new TimeSpan(16, 0, 0), // 4:00 PM
@@ -79,12 +79,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 150,
                 CurrentAttendees = 67
             },
-            new EventViewModel 
-            { 
-                Title = "Spring Break", 
-                Status = "Upcoming", 
-                Type = "Holiday", 
-                StartDate = new DateTime(2024, 4, 1), 
+            new EventViewModel
+            {
+                Title = "Spring Break",
+                Status = "Upcoming",
+                Type = "Holiday",
+                StartDate = new DateTime(2024, 4, 1),
                 EndDate = new DateTime(2024, 4, 5),
                 StartTime = TimeSpan.Zero,
                 EndTime = TimeSpan.Zero,
@@ -94,12 +94,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 0,
                 CurrentAttendees = 0
             },
-            new EventViewModel 
-            { 
-                Title = "Mathematics Olympiad", 
-                Status = "Ongoing", 
-                Type = "Competition", 
-                StartDate = DateTime.Today, 
+            new EventViewModel
+            {
+                Title = "Mathematics Olympiad",
+                Status = "Ongoing",
+                Type = "Competition",
+                StartDate = DateTime.Today,
                 EndDate = DateTime.Today,
                 StartTime = new TimeSpan(10, 0, 0), // 10:00 AM
                 EndTime = new TimeSpan(15, 0, 0), // 3:00 PM
@@ -109,12 +109,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 100,
                 CurrentAttendees = 45
             },
-            new EventViewModel 
-            { 
-                Title = "Cultural Festival", 
-                Status = "Completed", 
-                Type = "Cultural", 
-                StartDate = new DateTime(2024, 2, 14), 
+            new EventViewModel
+            {
+                Title = "Cultural Festival",
+                Status = "Completed",
+                Type = "Cultural",
+                StartDate = new DateTime(2024, 2, 14),
                 EndDate = new DateTime(2024, 2, 14),
                 StartTime = new TimeSpan(9, 0, 0), // 9:00 AM
                 EndTime = new TimeSpan(17, 0, 0), // 5:00 PM
@@ -124,12 +124,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 300,
                 CurrentAttendees = 285
             },
-            new EventViewModel 
-            { 
-                Title = "Basketball Championship", 
-                Status = "Completed", 
-                Type = "Sports", 
-                StartDate = new DateTime(2024, 2, 20), 
+            new EventViewModel
+            {
+                Title = "Basketball Championship",
+                Status = "Completed",
+                Type = "Sports",
+                StartDate = new DateTime(2024, 2, 20),
                 EndDate = new DateTime(2024, 2, 22),
                 StartTime = new TimeSpan(14, 0, 0), // 2:00 PM
                 EndTime = new TimeSpan(18, 0, 0), // 6:00 PM
@@ -139,12 +139,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 200,
                 CurrentAttendees = 180
             },
-            new EventViewModel 
-            { 
-                Title = "Online Workshop: Digital Literacy", 
-                Status = "Upcoming", 
-                Type = "Academic", 
-                StartDate = new DateTime(2024, 3, 25), 
+            new EventViewModel
+            {
+                Title = "Online Workshop: Digital Literacy",
+                Status = "Upcoming",
+                Type = "Academic",
+                StartDate = new DateTime(2024, 3, 25),
                 EndDate = new DateTime(2024, 3, 25),
                 StartTime = new TimeSpan(13, 0, 0), // 1:00 PM
                 EndTime = new TimeSpan(16, 0, 0), // 4:00 PM
@@ -154,12 +154,12 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 50,
                 CurrentAttendees = 32
             },
-            new EventViewModel 
-            { 
-                Title = "Grade 12 Graduation", 
-                Status = "Upcoming", 
-                Type = "Academic", 
-                StartDate = new DateTime(2024, 5, 15), 
+            new EventViewModel
+            {
+                Title = "Grade 12 Graduation",
+                Status = "Upcoming",
+                Type = "Academic",
+                StartDate = new DateTime(2024, 5, 15),
                 EndDate = new DateTime(2024, 5, 15),
                 StartTime = new TimeSpan(10, 0, 0), // 10:00 AM
                 EndTime = new TimeSpan(12, 0, 0), // 12:00 PM
@@ -289,20 +289,20 @@ public partial class EventViewModel : ViewModelBase
         _ => "#6B7280"
     };
 
-    public string DateRange => StartDate.Date == EndDate.Date 
+    public string DateRange => StartDate.Date == EndDate.Date
         ? StartDate.ToString("MMM dd, yyyy")
         : $"{StartDate:MMM dd} - {EndDate:MMM dd, yyyy}";
 
-    public string TimeRange => StartTime == TimeSpan.Zero && EndTime == TimeSpan.Zero 
+    public string TimeRange => StartTime == TimeSpan.Zero && EndTime == TimeSpan.Zero
         ? "All Day"
         : $"{StartTime:hh\\:mm} - {EndTime:hh\\:mm}";
 
-    public string AttendeeInfo => MaxAttendees > 0 
+    public string AttendeeInfo => MaxAttendees > 0
         ? $"{CurrentAttendees}/{MaxAttendees} attendees"
         : "No limit";
 
-    public double AttendancePercentage => MaxAttendees > 0 
-        ? (double)CurrentAttendees / MaxAttendees * 100 
+    public double AttendancePercentage => MaxAttendees > 0
+        ? (double)CurrentAttendees / MaxAttendees * 100
         : 0;
 
     partial void OnStatusChanged(string value)

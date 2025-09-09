@@ -1,13 +1,12 @@
-﻿using Avalonia.Controls;
-using Avalonia;
-using Avalonia.Layout;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Southville8BEdgeUI.ViewModels.Admin;
-using Avalonia.Threading;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity; // Add this using directive
+using Avalonia.Layout;
+using Avalonia.Threading;
+using Southville8BEdgeUI.ViewModels.Admin;
+using System;
+using System.Collections.Generic;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -15,16 +14,16 @@ public partial class ChatView : UserControl
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
-    
+
     // Percentage-based width change threshold for responsive updates (5% of current width)
     private const double SignificantWidthChangePercentage = 0.05;
-    
+
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
     private const string TabletClass = "tablet";
     private const string DesktopClass = "desktop";
-    
-    
+
+
     // Consolidated collection for responsive elements by type (can be used for future optimization)
     private readonly Dictionary<string, List<Control>> _responsiveElements = new()
     {
@@ -33,10 +32,10 @@ public partial class ChatView : UserControl
         {"button", new List<Control>()},
         {"input", new List<Control>()}
     };
-    
+
     // Cache for targeted UI element updates
     private readonly List<Control> _cachedChatElements = new();
-    
+
     // Element identification constants for optimized performance
     private const string TextElementSuffix = "Text";
     private const string ButtonElementSuffix = "Button";
@@ -47,20 +46,20 @@ public partial class ChatView : UserControl
     // Cache for performance optimization
     private string _lastSizeClass = "";
     private double _lastWidth = 0;
-    
+
     // Mobile navigation state
     private bool _isMobileViewInChatMode = false;
-    
+
     // Track message collection subscriptions to prevent memory leaks
     private ChatConversationViewModel? _currentSubscribedConversation = null;
-    
+
     // Simplified scroll handling
     private bool _isScrolling = false;
 
     // Visibility state tracking for efficient cache management
     private bool _lastConversationsCardVisible = false;
     private bool _lastChatCardVisible = false;
-    
+
     // Recursion depth limit for UI traversal safety
     private const int MaxRecursionDepth = 10;
 
@@ -68,16 +67,16 @@ public partial class ChatView : UserControl
     {
         InitializeComponent();
         DataContext = new ChatViewModel();
-        
+
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-        
+
         // Set up size change handler
         this.SizeChanged += OnSizeChanged;
-        
+
         // Set up message text box event handlers
         SetupMessageTextBoxEvents();
-        
+
         // Subscribe to conversation selection changes for mobile navigation
         if (DataContext is ChatViewModel viewModel)
         {
@@ -104,7 +103,7 @@ public partial class ChatView : UserControl
         {
             // Prevent default behavior and send message immediately
             e.Handled = true;
-            
+
             // Send message immediately without delay
             if (!string.IsNullOrWhiteSpace(viewModel.NewMessage))
             {
@@ -136,7 +135,7 @@ public partial class ChatView : UserControl
         if (MessagesScrollViewer != null && !_isScrolling)
         {
             _isScrolling = true;
-            
+
             try
             {
                 // Immediate scroll without dispatcher delays
@@ -161,13 +160,13 @@ public partial class ChatView : UserControl
             {
                 _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
             }
-            
+
             // Subscribe to new conversation's messages with null safety
             if (vm.SelectedConversation?.Messages != null)
             {
                 vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
                 _currentSubscribedConversation = vm.SelectedConversation;
-                
+
                 // Immediate scroll to bottom when conversation changes
                 ScrollToBottomOfMessages();
             }
@@ -176,7 +175,7 @@ public partial class ChatView : UserControl
                 _currentSubscribedConversation = null;
             }
         }
-        
+
         // Remove NewMessage property change handler that managed focus
     }
 
@@ -184,7 +183,7 @@ public partial class ChatView : UserControl
     private void ChatViewModel_ConversationNavigationRequested(object? sender, ConversationNavigationEventArgs e)
     {
         if (_lastSizeClass == DesktopClass) return; // Don't handle navigation on desktop
-        
+
         switch (e.NavigationType)
         {
             case ConversationNavigationType.OpenChat:
@@ -196,7 +195,7 @@ public partial class ChatView : UserControl
                     // Remove focus management call
                 }
                 break;
-                
+
             case ConversationNavigationType.BackToConversations:
                 NavigateToConversations();
                 break;
@@ -268,10 +267,10 @@ public partial class ChatView : UserControl
             UserTypeComboBox,
             MessageTextBox
         });
-        
+
         // Cache chat-specific elements for targeted updates
         CacheChatElements();
-        
+
         // Initialize visibility state tracking
         _lastConversationsCardVisible = ConversationsCard?.IsVisible ?? false;
         _lastChatCardVisible = ChatCard?.IsVisible ?? false;
@@ -281,13 +280,13 @@ public partial class ChatView : UserControl
     private void CacheChatElements()
     {
         _cachedChatElements.Clear();
-        
+
         // Add elements with known classes/patterns that need responsive updates
         if (ConversationsCard != null)
         {
             FindAndCacheElementsIteratively(ConversationsCard);
         }
-        
+
         if (ChatCard != null)
         {
             FindAndCacheElementsIteratively(ChatCard);
@@ -355,26 +354,26 @@ public partial class ChatView : UserControl
     {
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
-        
+
         // Check if significant changes occurred that require updates
         bool sizeClassChanged = sizeClass != _lastSizeClass;
-        
+
         // Calculate percentage-based threshold for more proportional responsiveness
         double widthChangeThreshold = Math.Max(width * SignificantWidthChangePercentage, 10); // Minimum 10px threshold
         bool significantWidthChange = Math.Abs(width - _lastWidth) > widthChangeThreshold;
-        
+
         if (!sizeClassChanged && !significantWidthChange)
             return;
-            
+
         _lastSizeClass = sizeClass;
         _lastWidth = width;
-        
+
         // Reset mobile navigation state when switching to desktop
         if (sizeClass == DesktopClass)
         {
             _isMobileViewInChatMode = false;
         }
-        
+
         // Only update element classes when size class changes
         if (sizeClassChanged)
         {
@@ -384,11 +383,11 @@ public partial class ChatView : UserControl
             UpdateElementClasses(_responsiveElements["card"], sizeClass);
             UpdateElementClasses(_responsiveElements["button"], sizeClass);
             UpdateElementClasses(_responsiveElements["input"], sizeClass);
-            
+
             // Update cached chat elements for better performance
             UpdateCachedChatElements(sizeClass);
         }
-        
+
         // Always update layout-specific elements based on actual width
         ApplyLayoutStrategy(sizeClass, width);
     }
@@ -409,7 +408,7 @@ public partial class ChatView : UserControl
         MainGrid.Classes.Remove("main-content");
         MainGrid.Classes.Remove("main-content-tablet");
         MainGrid.Classes.Remove("main-content-mobile");
-        
+
         // Add appropriate class
         switch (sizeClass)
         {
@@ -432,7 +431,7 @@ public partial class ChatView : UserControl
             // Remove existing responsive classes using constants
             element.Classes.Remove(MobileClass);
             element.Classes.Remove(TabletClass);
-            
+
             // Add appropriate responsive class
             if (sizeClass != DesktopClass)
             {
@@ -445,7 +444,7 @@ public partial class ChatView : UserControl
     {
         // Create a layout configuration based on the screen size
         var layoutConfig = CreateLayoutConfig(sizeClass);
-        
+
         // Apply the layout configuration
         ApplyMainGridLayout(layoutConfig);
         ApplyChatHeaderLayout(layoutConfig);
@@ -538,15 +537,15 @@ public partial class ChatView : UserControl
     private void ApplyMainGridLayout(LayoutConfiguration config)
     {
         MainGrid.ColumnDefinitions.Clear();
-        
+
         if (config.MainGridColumns == 1)
         {
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            
+
             // On mobile/tablet, show conversations or chat based on navigation state
             ConversationsCard.IsVisible = config.ConversationsCardVisible;
             ChatCard.IsVisible = config.ChatCardVisible;
-            
+
             // Position both cards in the same column
             Grid.SetColumn(ConversationsCard, 0);
             Grid.SetColumn(ChatCard, 0);
@@ -555,18 +554,18 @@ public partial class ChatView : UserControl
         {
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(360)));
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            
+
             ConversationsCard.IsVisible = true;
             ChatCard.IsVisible = true;
-            
+
             Grid.SetColumn(ConversationsCard, 0);
             Grid.SetColumn(ChatCard, 1);
         }
-        
+
         // Update margins
         ConversationsCard.Margin = config.ConversationsCardMargin;
         ChatCard.Margin = config.ChatCardMargin;
-        
+
         // Show/hide back button based on configuration
         BackButton.IsVisible = config.ShowBackButton;
     }
@@ -575,9 +574,9 @@ public partial class ChatView : UserControl
     {
         ConversationsHeader.Padding = config.ConversationsHeaderPadding;
         ChatHeader.Padding = config.ChatHeaderPadding;
-        
+
         ChatHeaderButtons.Orientation = config.ChatHeaderButtonsOrientation;
-        
+
         if (config.ChatHeaderButtonsOrientation == Orientation.Vertical)
         {
             ChatHeaderButtons.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -592,18 +591,18 @@ public partial class ChatView : UserControl
     {
         MessageInputGrid.ColumnDefinitions.Clear();
         MessageInputGrid.RowDefinitions.Clear();
-        
+
         if (config.MessageInputOrientation == Orientation.Vertical)
         {
             MessageInputGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             MessageInputGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             MessageInputGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            
+
             Grid.SetColumn(MessageTextBox, 0);
             Grid.SetRow(MessageTextBox, 0);
             Grid.SetColumn(SendButton, 0);
             Grid.SetRow(SendButton, 1);
-            
+
             MessageTextBox.Margin = new Thickness(0, 0, 0, config.MessageInputSpacing);
             SendButton.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
@@ -612,12 +611,12 @@ public partial class ChatView : UserControl
             MessageInputGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             MessageInputGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
             MessageInputGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            
+
             Grid.SetColumn(MessageTextBox, 0);
             Grid.SetRow(MessageTextBox, 0);
             Grid.SetColumn(SendButton, 1);
             Grid.SetRow(SendButton, 0);
-            
+
             MessageTextBox.Margin = new Thickness(0, 0, config.MessageInputSpacing, 0);
             SendButton.HorizontalAlignment = HorizontalAlignment.Center;
         }
@@ -631,29 +630,29 @@ public partial class ChatView : UserControl
         {
             UpdateElementResponsiveClasses(element, sizeClass);
         }
-        
+
         // Smart cache refresh: Only refresh when visibility state actually changes
         var currentConversationsVisible = ConversationsCard?.IsVisible ?? false;
         var currentChatVisible = ChatCard?.IsVisible ?? false;
-        
-        if (currentConversationsVisible != _lastConversationsCardVisible || 
+
+        if (currentConversationsVisible != _lastConversationsCardVisible ||
             currentChatVisible != _lastChatCardVisible)
         {
             // Visibility state changed, refresh cache
             CacheChatElements();
-            
+
             // Update tracking state
             _lastConversationsCardVisible = currentConversationsVisible;
             _lastChatCardVisible = currentChatVisible;
         }
     }
-    
+
     private void UpdateElementResponsiveClasses(Control element, string sizeClass)
     {
         // Remove existing responsive classes using constants
         element.Classes.Remove(MobileClass);
         element.Classes.Remove(TabletClass);
-        
+
         // Add appropriate responsive class
         if (sizeClass != DesktopClass)
         {
@@ -670,11 +669,11 @@ public partial class ChatView : UserControl
         // Use cached width if available and valid
         if (_lastWidth > 0)
             return _lastWidth;
-            
+
         // Use current bounds if available
         if (Bounds.Width > 0)
             return Bounds.Width;
-            
+
         // Fallback to mobile breakpoint - 1 to ensure mobile layout
         return MobileBreakpoint - 1;
     }
@@ -683,7 +682,7 @@ public partial class ChatView : UserControl
     private void NavigateToChat()
     {
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
-        
+
         _isMobileViewInChatMode = true;
         ApplyLayoutStrategy(_lastSizeClass, GetEffectiveWidth());
     }
@@ -691,7 +690,7 @@ public partial class ChatView : UserControl
     private void NavigateToConversations()
     {
         if (_lastSizeClass == DesktopClass) return; // Don't navigate on desktop
-        
+
         _isMobileViewInChatMode = false;
         ApplyLayoutStrategy(_lastSizeClass, GetEffectiveWidth());
     }
@@ -712,29 +711,29 @@ public partial class ChatView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        
+
         // Set up ALL button click handlers
         BackButton.Click += BackButton_Click;
         SendButton.Click += SendButton_Click;
-        
+
         // Add the missing button event handlers
         NewChatButton.Click += NewChatButton_Click;
         CallButton.Click += CallButton_Click;
         VideoButton.Click += VideoButton_Click;
         InfoButton.Click += InfoButton_Click;
-        
+
         // Subscribe to conversation navigation events
         if (DataContext is ChatViewModel viewModel)
         {
             viewModel.ConversationNavigationRequested += ChatViewModel_ConversationNavigationRequested;
         }
-        
+
         // Initial responsive setup
         if (Bounds.Width > 0)
         {
             UpdateResponsiveClasses(Bounds.Width);
         }
-        
+
         // Remove initial focus call
     }
 
@@ -751,10 +750,10 @@ public partial class ChatView : UserControl
     {
         // Temporarily disable message box focus maintenance
         // _shouldMaintainTextBoxFocus = false;
-    
+
         // TODO: Implement call functionality
         System.Diagnostics.Debug.WriteLine("Call button clicked");
-    
+
         // Optional: Show some visual feedback that the button worked
         if (sender is Button button)
         {
@@ -780,7 +779,7 @@ public partial class ChatView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        
+
         // Clean up ALL event handlers
         BackButton.Click -= BackButton_Click;
         SendButton.Click -= SendButton_Click;
@@ -788,7 +787,7 @@ public partial class ChatView : UserControl
         CallButton.Click -= CallButton_Click;
         VideoButton.Click -= VideoButton_Click;
         InfoButton.Click -= InfoButton_Click;
-        
+
         // Clean up message text box events
         if (MessageTextBox != null)
         {
@@ -796,26 +795,26 @@ public partial class ChatView : UserControl
             MessageTextBox.LostFocus -= MessageTextBox_LostFocus;
             MessageTextBox.GotFocus -= MessageTextBox_GotFocus;
         }
-        
+
         if (DataContext is ChatViewModel viewModel)
         {
             viewModel.PropertyChanged -= ViewModel_PropertyChanged;
             viewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
         }
-        
+
         // Clean up message collection subscription to prevent memory leaks
         if (_currentSubscribedConversation?.Messages != null)
         {
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
         }
-        
+
         // Set to null after all cleanup operations are complete
         _currentSubscribedConversation = null;
-        
+
         // Clear cached elements
         _cachedChatElements.Clear();
     }
-    
+
     // Configuration class for layout strategies
     private class LayoutConfiguration
     {

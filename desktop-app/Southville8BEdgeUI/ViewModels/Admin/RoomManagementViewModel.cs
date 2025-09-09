@@ -1,8 +1,8 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -115,7 +115,7 @@ public partial class RoomManagementViewModel : ViewModelBase
         OccupiedRooms = Rooms.Count(r => r.Status == "Occupied");
         MaintenanceRooms = Rooms.Count(r => r.Status == "Maintenance");
         UtilizationPercentage = TotalRooms > 0 ? (double)OccupiedRooms / TotalRooms * 100 : 0;
-        
+
         OnPropertyChanged(nameof(AvailablePercentage));
         OnPropertyChanged(nameof(OccupiedPercentage));
         OnPropertyChanged(nameof(MaintenancePercentage));
@@ -155,7 +155,7 @@ public partial class RoomManagementViewModel : ViewModelBase
             room.Status = "Available";
             room.CurrentBooking = "None";
         }
-        
+
         UpdateStatistics();
         ApplyFilters();
     }
