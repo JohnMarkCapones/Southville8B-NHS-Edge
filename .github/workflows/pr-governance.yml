@@ -47,7 +47,6 @@ jobs:
       - name: Validate PR Title
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
-          
           # Check if title follows conventional commit format
           # Examples: feat: add feature, fix(api): resolve bug, docs: update readme
           if ! [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?:.+ ]]; then
