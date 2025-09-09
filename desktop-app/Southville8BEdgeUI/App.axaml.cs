@@ -1,11 +1,10 @@
-using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Southville8BEdgeUI.ViewModels;
 using Southville8BEdgeUI.Views;
+using System.Linq;
 
 namespace Southville8BEdgeUI
 {

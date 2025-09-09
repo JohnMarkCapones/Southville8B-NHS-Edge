@@ -1,9 +1,9 @@
-using System;
-using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Southville8BEdgeUI.ViewModels.Teacher;
+using System;
+using System.Collections.ObjectModel;
 
 namespace Southville8BEdgeUI.ViewModels;
 
@@ -68,7 +68,7 @@ public partial class TeacherShellViewModel : ViewModelBase
         InitializeRecentActivities();
         InitializeCalendarDays();
         UpdateColumnWidths();
-        
+
         // Update time every minute
         StartTimeUpdater();
     }

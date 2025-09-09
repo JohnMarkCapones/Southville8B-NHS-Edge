@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -33,10 +33,10 @@ public partial class StudentManagementViewModel : ViewModelBase
 
     private void FilterStudents()
     {
-        var filtered = string.IsNullOrEmpty(SearchText) 
-            ? Students 
+        var filtered = string.IsNullOrEmpty(SearchText)
+            ? Students
             : Students.Where(s => s.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
-        
+
         FilteredStudents.Clear();
         foreach (var student in filtered)
         {
