@@ -1,8 +1,8 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -263,13 +263,13 @@ public partial class ChatViewModel : ViewModelBase
     {
         // For mobile navigation: always trigger the navigation, even for the same conversation
         var wasSameConversation = SelectedConversation == conversation;
-        
+
         SelectedConversation = conversation;
         conversation.UnreadCount = 0; // Mark as read
-        
+
         // Notify the view about conversation selection for mobile navigation
         ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(conversation, ConversationNavigationType.OpenChat));
-        
+
         // Force property change notification for mobile navigation if it's the same conversation
         if (wasSameConversation)
         {
@@ -293,7 +293,7 @@ public partial class ChatViewModel : ViewModelBase
 
         // Add the message immediately
         SelectedConversation.Messages.Add(message);
-        
+
         // Update conversation info immediately
         SelectedConversation.LastMessage = NewMessage.Trim();
         SelectedConversation.LastMessageTime = DateTime.Now;
@@ -351,7 +351,7 @@ public partial class ChatConversationViewModel : ViewModelBase
     [ObservableProperty] private int _unreadCount;
     [ObservableProperty] private ObservableCollection<ChatMessageViewModel> _messages = new();
 
-    public string LastMessageTimeText => LastMessageTime.Date == DateTime.Today 
+    public string LastMessageTimeText => LastMessageTime.Date == DateTime.Today
         ? LastMessageTime.ToString("HH:mm")
         : LastMessageTime.ToString("MMM dd");
 

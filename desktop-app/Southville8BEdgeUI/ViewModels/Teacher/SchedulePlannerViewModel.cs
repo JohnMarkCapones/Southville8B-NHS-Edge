@@ -1,7 +1,7 @@
-using System;
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.ObjectModel;
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -41,8 +41,8 @@ public partial class SchedulePlannerViewModel : ViewModelBase
         TimeSlots = new ObservableCollection<TimeSlotViewModel>();
         for (int hour = 8; hour < 18; hour++)
         {
-            TimeSlots.Add(new TimeSlotViewModel 
-            { 
+            TimeSlots.Add(new TimeSlotViewModel
+            {
                 TimeRange = $"{hour:D2}:00 - {hour + 1:D2}:00",
                 Monday = new ScheduleSlotViewModel { IsOccupied = hour == 8, Subject = "Math", Grade = "8A", Room = "101" },
                 Tuesday = new ScheduleSlotViewModel { IsOccupied = hour == 10, Subject = "Science", Grade = "8B", Room = "205" },

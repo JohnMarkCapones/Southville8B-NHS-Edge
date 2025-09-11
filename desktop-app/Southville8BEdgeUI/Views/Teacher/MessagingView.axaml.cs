@@ -1,13 +1,12 @@
-using Avalonia.Controls;
 using Avalonia;
-using Avalonia.Layout;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Southville8BEdgeUI.ViewModels.Teacher;
-using Avalonia.Threading;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Threading;
+using Southville8BEdgeUI.ViewModels.Teacher;
+using System;
+using System.Collections.Generic;
 
 namespace Southville8BEdgeUI.Views.Teacher;
 
@@ -69,7 +68,7 @@ public partial class MessagingView : UserControl
         InitializeComponent();
         DataContext = new MessagingViewModel();
 
-          // Store references to elements that need responsive behavior
+        // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
 
         // Set up size change handler

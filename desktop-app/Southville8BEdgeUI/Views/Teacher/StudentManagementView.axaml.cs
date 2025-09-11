@@ -2,11 +2,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Southville8BEdgeUI.ViewModels.Teacher;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Southville8BEdgeUI.ViewModels.Teacher;
 
 namespace Southville8BEdgeUI.Views.Teacher;
 
@@ -134,21 +134,21 @@ public partial class StudentManagementView : UserControl
         };
         _periodicTimer.Tick -= OnPeriodicTick;
         _periodicTimer.Tick += OnPeriodicTick;
-        
+
         // Try to subscribe to collection changes for more efficient updates
-        if (DataContext is StudentManagementViewModel vm && 
+        if (DataContext is StudentManagementViewModel vm &&
             vm.FilteredStudents is System.Collections.Specialized.INotifyCollectionChanged collection)
         {
-            collection.CollectionChanged += (_, __) => 
+            collection.CollectionChanged += (_, __) =>
             {
                 if (_currentState != ResponsiveState.Unknown)
                     UpdateDynamicElements(_currentState);
             };
-            
+
             // Don't start periodic timer if we have collection change notifications
             return;
         }
-        
+
         _periodicTimer.Start();
     }
 
@@ -413,7 +413,7 @@ public partial class StudentManagementView : UserControl
             // Mobile: Enable horizontal scrolling for student cards
             scrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
             scrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
-            
+
             // Switch to horizontal layout
             if (_elementCache.TryGetElement<ItemsControl>(ElementIdentifiers.StudentListItems, out var items) && items != null)
             {

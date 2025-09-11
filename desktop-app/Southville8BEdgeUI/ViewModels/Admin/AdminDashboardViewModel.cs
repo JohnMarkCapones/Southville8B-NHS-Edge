@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -50,7 +48,7 @@ public partial class AdminDashboardViewModel : ViewModelBase
 
     // Grade Distribution
     [ObservableProperty] private ObservableCollection<GradeDistributionViewModel> _gradeDistribution = default!;
-    
+
     // Quick Action Commands
     public IRelayCommand? NavigateToRoomManagementCommand { get; set; }
     public IRelayCommand? NavigateToEventsDashboardCommand { get; set; }

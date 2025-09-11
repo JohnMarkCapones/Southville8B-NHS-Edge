@@ -3,9 +3,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
              mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.TeacherShellView"
              x:DataType="vm:TeacherShellViewModel">
+
+    <UserControl.Resources>
+        <converters:BoolToValueConverter x:Key="BoolToValueConverter"/>
+    </UserControl.Resources>
 
     <UserControl.Styles>
         <!-- Navigation Button Style -->
@@ -57,7 +62,7 @@
             <Setter Property="Margin" Value="24,16,12,8"/>
         </Style>
 
-        <!-- Toggle Button Style (no fixed alignment; set per-instance) -->
+        <!-- Toggle Button Style -->
         <Style Selector="Button.sidebar-toggle">
             <Setter Property="Background" Value="#10B981"/>
             <Setter Property="Foreground" Value="White"/>
@@ -77,7 +82,7 @@
             <Setter Property="RenderTransform" Value="scale(1.05)"/>
         </Style>
 
-        <!-- Close button over left sidebar (anchored to right edge) -->
+        <!-- Close button over left sidebar -->
         <Style Selector="Button.sidebar-close-middle">
             <Setter Property="Background" Value="#10B981"/>
             <Setter Property="Foreground" Value="White"/>
@@ -96,7 +101,7 @@
             <Setter Property="RenderTransform" Value="scale(1.1)"/>
         </Style>
 
-        <!-- Close button over right sidebar (anchored to left edge) -->
+        <!-- Close button over right sidebar -->
         <Style Selector="Button.sidebar-close-middle-left">
             <Setter Property="Background" Value="#10B981"/>
             <Setter Property="Foreground" Value="White"/>
@@ -134,9 +139,7 @@
             <ColumnDefinition Width="{Binding RightColumnWidth}"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ======================= -->
-        <!-- Left Navigation Pane    -->
-        <!-- ======================= -->
+        <!-- Left Navigation Pane -->
         <Border Grid.Column="0" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,1,0" 
                 IsVisible="{Binding IsLeftSidebarVisible}">
             <Grid>
@@ -231,9 +234,7 @@
             </Grid>
         </Border>
 
-        <!-- ======================= -->
-        <!-- Content Area            -->
-        <!-- ======================= -->
+        <!-- Content Area -->
         <Grid Grid.Column="1">
             <!-- Open left: hug divider -->
             <StackPanel Orientation="Horizontal"
@@ -276,9 +277,7 @@
             <ContentControl Content="{Binding CurrentContent}"/>
         </Grid>
 
-        <!-- ======================= -->
-        <!-- Right Sidebar           -->
-        <!-- ======================= -->
+        <!-- Right Sidebar -->
         <Border Grid.Column="2" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,0,0" 
                 IsVisible="{Binding IsRightSidebarVisible}">
             <Grid>
@@ -342,9 +341,8 @@
                                                 <Rectangle Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Classes" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
                                         </StackPanel>
-                                        <TextBlock Text="6" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="{Binding TotalClasses}" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="Active Classes" FontSize="9" Foreground="#9CA3AF"/>
                                     </StackPanel>
                                 </Border>
@@ -357,9 +355,8 @@
                                                 <Ellipse Width="6" Height="6" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Assignments" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
                                         </StackPanel>
-                                        <TextBlock Text="24" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="{Binding PendingAssignments}" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="Pending Grading" FontSize="9" Foreground="#9CA3AF"/>
                                     </StackPanel>
                                 </Border>
@@ -372,9 +369,8 @@
                                                 <Ellipse Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Students" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
                                         </StackPanel>
-                                        <TextBlock Text="180" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="{Binding TotalStudents}" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="Total Students" FontSize="9" Foreground="#9CA3AF"/>
                                     </StackPanel>
                                 </Border>
@@ -387,9 +383,8 @@
                                                 <Rectangle Width="6" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Messages" FontSize="11" Foreground="#6B7280"/>
-                                            <TextBlock Text="•••" FontSize="12" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
                                         </StackPanel>
-                                        <TextBlock Text="12" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
+                                        <TextBlock Text="{Binding UnreadMessages}" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
                                         <TextBlock Text="Unread Messages" FontSize="9" Foreground="#9CA3AF"/>
                                     </StackPanel>
                                 </Border>
@@ -401,18 +396,19 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Today's Schedule" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
-                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
                                 </StackPanel>
 
                                 <!-- Calendar Header -->
                                 <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Left">
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Left"
+                                                    Command="{Binding NavigatePreviousMonthCommand}">
                                                 <Path Data="M15 18L9 12L15 6" Stroke="#6B7280" StrokeThickness="2"/>
                                             </Button>
-                                            <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding CurrentMonth}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Right"
+                                                    Command="{Binding NavigateNextMonthCommand}">
                                                 <Path Data="M9 18L15 12L9 6" Stroke="#10B981" StrokeThickness="2"/>
                                             </Button>
                                         </StackPanel>
@@ -428,16 +424,16 @@
                                             <TextBlock Grid.Column="6" Text="Sun" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
                                         </Grid>
 
-                                        <!-- Calendar Dates -->
+                                        <!-- Simplified Calendar Dates - Static for now -->
                                         <Grid RowDefinitions="Auto" ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
                                             <TextBlock Grid.Column="0" Text="16" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
                                             <TextBlock Grid.Column="1" Text="17" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
                                             <TextBlock Grid.Column="2" Text="18" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
                                             <Border Grid.Column="3" Background="#10B981" CornerRadius="50" Width="24" Height="24">
-                                                <TextBlock Text="19" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding TodayDate}" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Grid.Column="4" Text="20" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="5" Text="21" TextAlignment="Center" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="5" Text="21" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
                                             <TextBlock Grid.Column="6" Text="22" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
                                         </Grid>
                                     </StackPanel>
@@ -455,14 +451,14 @@
                                                 <StackPanel VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
                                                         <Border Background="#10B981" CornerRadius="3" Padding="4,2">
-                                                            <TextBlock Text="Math" Foreground="White" FontSize="9"/>
+                                                            <TextBlock Text="{Binding CurrentClassSubject}" Foreground="White" FontSize="9"/>
                                                         </Border>
                                                         <Border Background="#3B82F6" CornerRadius="3" Padding="4,2">
-                                                            <TextBlock Text="Room 101" Foreground="White" FontSize="9"/>
+                                                            <TextBlock Text="{Binding CurrentClassRoom}" Foreground="White" FontSize="9"/>
                                                         </Border>
                                                     </StackPanel>
-                                                    <TextBlock Text="Grade 8-A Mathematics" FontSize="12" FontWeight="SemiBold" Foreground="Black"/>
-                                                    <TextBlock Text="08:00 AM - 09:30 AM" FontSize="10" Foreground="#6B7280"/>
+                                                    <TextBlock Text="{Binding CurrentClassGrade}" FontSize="12" FontWeight="SemiBold" Foreground="Black"/>
+                                                    <TextBlock Text="{Binding CurrentClassTime}" FontSize="10" Foreground="#6B7280"/>
                                                 </StackPanel>
                                                 <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                     <Path Data="M9 18L15 12L9 6" Stroke="#6B7280" StrokeThickness="2"/>
@@ -470,7 +466,8 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <Button Content="View full schedule..." Background="Transparent" Foreground="#10B981" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
+                                        <Button Content="View full schedule..." Background="Transparent" Foreground="#10B981" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"
+                                                Command="{Binding ViewFullScheduleCommand}"/>
                                     </StackPanel>
                                 </Border>
 
@@ -480,8 +477,8 @@
                                         <TextBlock Text="Next Class" FontSize="11" Foreground="#6B7280" Margin="0,0,0,8"/>
                                         <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="12">
                                             <StackPanel>
-                                                <TextBlock Text="Science - Grade 8-B" FontSize="11" Foreground="#92400E" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="10:00 AM - 11:30 AM" FontSize="10" Foreground="#92400E" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding NextClassSubject}" FontSize="11" Foreground="#92400E" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding NextClassTime}" FontSize="10" Foreground="#92400E" HorizontalAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -494,53 +491,27 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
-                                    <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>
                                 </StackPanel>
 
                                 <!-- Activity Items -->
-                                <StackPanel Spacing="12">
-                                    <!-- Activity Item 1 -->
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
-                                            <TextBlock Text="JS" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="John Smith" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
-                                                <TextBlock Text="1hr ago" FontSize="10" Foreground="#9CA3AF"/>
+                                <ItemsControl ItemsSource="{Binding RecentActivities}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:TeacherActivityItem">
+                                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                                                <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
+                                                    <TextBlock Text="{Binding StudentInitials}" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock Text="{Binding StudentName}" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
+                                                        <TextBlock Text="{Binding TimeAgo}" FontSize="10" Foreground="#9CA3AF"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Activity}" FontSize="10" Foreground="#6B7280"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                            <TextBlock Text="Submitted Assignment #3" FontSize="10" Foreground="#6B7280"/>
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <!-- Activity Item 2 -->
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
-                                            <TextBlock Text="MD" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="Maria Garcia" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
-                                                <TextBlock Text="2hrs ago" FontSize="10" Foreground="#9CA3AF"/>
-                                            </StackPanel>
-                                            <TextBlock Text="Asked question in Math class" FontSize="10" Foreground="#6B7280"/>
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <!-- Activity Item 3 -->
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
-                                            <TextBlock Text="AL" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="Anna Lee" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
-                                                <TextBlock Text="3hrs ago" FontSize="10" Foreground="#9CA3AF"/>
-                                            </StackPanel>
-                                            <TextBlock Text="Completed quiz successfully" FontSize="10" Foreground="#6B7280"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
                     </StackPanel>
