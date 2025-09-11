@@ -1,9 +1,9 @@
-using Avalonia.Controls;
 using Avalonia;
+using Avalonia.Controls;
+using Southville8BEdgeUI.ViewModels.Admin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Southville8BEdgeUI.ViewModels.Admin;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -11,13 +11,13 @@ public partial class RoomManagementView : UserControl
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
-    
+
     // Collections to store elements that need responsive behavior
     private readonly List<Control> _responsiveTextElements = new();
     private readonly List<Control> _responsiveCardElements = new();
     private readonly List<Control> _responsiveButtonElements = new();
     private readonly List<Control> _responsiveInputElements = new();
-    
+
     // Cache the separator reference to avoid repeated LINQ queries
     private Border? _filterSeparator;
 
@@ -30,10 +30,10 @@ public partial class RoomManagementView : UserControl
     {
         InitializeComponent();
         DataContext = new RoomManagementViewModel();
-        
+
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-        
+
         // Set up size change handler
         this.SizeChanged += OnSizeChanged;
     }
@@ -85,17 +85,17 @@ public partial class RoomManagementView : UserControl
     {
         // Determine the current breakpoint
         string sizeClass = GetSizeClass(width);
-        
+
         // Update all responsive elements
         UpdateMainContainerClasses(sizeClass);
         UpdateElementClasses(_responsiveTextElements, sizeClass);
         UpdateElementClasses(_responsiveCardElements, sizeClass);
         UpdateElementClasses(_responsiveButtonElements, sizeClass);
         UpdateElementClasses(_responsiveInputElements, sizeClass);
-        
+
         // Update layout-specific elements based on screen size
         ApplyLayoutStrategy(sizeClass, width);
-        
+
         // Update room card elements dynamically
         UpdateRoomCardElements(sizeClass);
     }
@@ -116,7 +116,7 @@ public partial class RoomManagementView : UserControl
         MainStackPanel.Classes.Remove("main-content");
         MainStackPanel.Classes.Remove("main-content-tablet");
         MainStackPanel.Classes.Remove("main-content-mobile");
-        
+
         // Add appropriate class
         switch (sizeClass)
         {
@@ -139,7 +139,7 @@ public partial class RoomManagementView : UserControl
             // Remove existing responsive classes
             element.Classes.Remove("mobile");
             element.Classes.Remove("tablet");
-            
+
             // Add appropriate responsive class
             if (sizeClass != "desktop")
             {
@@ -153,7 +153,7 @@ public partial class RoomManagementView : UserControl
     {
         // Create a layout configuration based on the screen size
         var layoutConfig = CreateLayoutConfig(sizeClass);
-        
+
         // Apply the layout configuration
         ApplyHeaderLayout(layoutConfig);
         ApplyStatsGridLayout(layoutConfig);
@@ -171,19 +171,19 @@ public partial class RoomManagementView : UserControl
                 HeaderButtonsPosition = (0, 1),
                 HeaderButtonsAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
                 HeaderButtonsMargin = new Thickness(0, 12, 0, 0),
-                
+
                 StatsColumns = 1,
                 StatsRows = 4,
                 StatsCardPositions = [(0, 0), (0, 1), (0, 2), (0, 3)],
 
-                StatsCardMargins = new Thickness[] 
+                StatsCardMargins = new Thickness[]
                 {
                     new(0, 0, 0, 8),
                     new(0, 8, 0, 8),
                     new(0, 8, 0, 8),
                     new(0, 8, 0, 0)
                 },
-                
+
                 FilterColumns = 1,
                 FilterRows = 5,
                 FilterSeparatorVisible = false,
@@ -203,7 +203,7 @@ public partial class RoomManagementView : UserControl
                     new(0, 8, 0, 0)
                 ]
             },
-            
+
             "tablet" => new LayoutConfiguration
             {
                 HeaderColumns = 2,
@@ -211,18 +211,18 @@ public partial class RoomManagementView : UserControl
                 HeaderButtonsPosition = (1, 0),
                 HeaderButtonsAlignment = Avalonia.Layout.HorizontalAlignment.Right,
                 HeaderButtonsMargin = new Thickness(0),
-                
+
                 StatsColumns = 2,
                 StatsRows = 2,
                 StatsCardPositions = [(0, 0), (1, 0), (0, 1), (1, 1)],
-                StatsCardMargins = new Thickness[] 
+                StatsCardMargins = new Thickness[]
                 {
                     new(0, 0, 8, 8),
                     new(8, 0, 0, 8),
                     new(0, 8, 8, 0),
                     new(8, 8, 0, 0)
                 },
-                
+
                 FilterColumns = 3,
                 FilterRows = 2,
                 FilterSeparatorVisible = false,
@@ -241,7 +241,7 @@ public partial class RoomManagementView : UserControl
                     new(8, 8, 0, 0)
                 }
             },
-            
+
             _ => new LayoutConfiguration // Desktop
             {
                 HeaderColumns = 2,
@@ -249,19 +249,19 @@ public partial class RoomManagementView : UserControl
                 HeaderButtonsPosition = (1, 0),
                 HeaderButtonsAlignment = Avalonia.Layout.HorizontalAlignment.Right,
                 HeaderButtonsMargin = new Thickness(0),
-                
+
                 StatsColumns = 4,
                 StatsRows = 1,
                 StatsCardPositions = [(0, 0), (1, 0), (2, 0), (3, 0)],
 
-                StatsCardMargins = new Thickness[] 
+                StatsCardMargins = new Thickness[]
                 {
                     new(0, 0, 12, 0),
                     new(12, 0, 12, 0),
                     new(12, 0, 12, 0),
                     new(12, 0, 0, 0)
                 },
-                
+
                 FilterColumns = 5,
                 FilterRows = 1,
                 FilterSeparatorVisible = true,
@@ -288,21 +288,21 @@ public partial class RoomManagementView : UserControl
     {
         HeaderGrid.ColumnDefinitions.Clear();
         HeaderGrid.RowDefinitions.Clear();
-        
+
         for (int i = 0; i < config.HeaderColumns; i++)
         {
             HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(i == 0 ? GridLength.Star : GridLength.Auto));
         }
-        
+
         for (int i = 0; i < config.HeaderRows; i++)
         {
             HeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         Grid.SetColumn(HeaderButtons, config.HeaderButtonsPosition.Column);
         Grid.SetRow(HeaderButtons, config.HeaderButtonsPosition.Row);
         Grid.SetColumnSpan(HeaderButtons, 1);
-        
+
         HeaderButtons.HorizontalAlignment = config.HeaderButtonsAlignment;
         HeaderButtons.Margin = config.HeaderButtonsMargin;
     }
@@ -311,17 +311,17 @@ public partial class RoomManagementView : UserControl
     {
         StatsGrid.ColumnDefinitions.Clear();
         StatsGrid.RowDefinitions.Clear();
-        
+
         for (int i = 0; i < config.StatsColumns; i++)
         {
             StatsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         }
-        
+
         for (int i = 0; i < config.StatsRows; i++)
         {
             StatsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         var statsCards = new[] { StatsCard1, StatsCard2, StatsCard3, StatsCard4 };
         for (int i = 0; i < statsCards.Length; i++)
         {
@@ -335,17 +335,17 @@ public partial class RoomManagementView : UserControl
     {
         FilterGrid.ColumnDefinitions.Clear();
         FilterGrid.RowDefinitions.Clear();
-        
+
         for (int i = 0; i < config.FilterColumns; i++)
         {
             FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(i == 0 ? GridLength.Star : GridLength.Auto));
         }
-        
+
         for (int i = 0; i < config.FilterRows; i++)
         {
             FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         }
-        
+
         Control[] filterControls = { SearchInput, FloorFilter, StatusFilter, TypeFilter };
         for (int i = 0; i < filterControls.Length; i++)
         {
@@ -355,7 +355,7 @@ public partial class RoomManagementView : UserControl
             Grid.SetColumnSpan(filterControls[i], span);
             filterControls[i].Margin = config.FilterElementMargins[i];
         }
-        
+
         // Set separator position and visibility using the cached reference
         if (_filterSeparator != null)
         {
@@ -409,13 +409,13 @@ public partial class RoomManagementView : UserControl
         }
         // Note: ItemsControl children are handled through the template - no need to process them here
     }
-    
+
     private void UpdateElementResponsiveClasses(Control element, string sizeClass)
     {
         // Remove existing responsive classes
         element.Classes.Remove("mobile");
         element.Classes.Remove("tablet");
-        
+
         // Add appropriate responsive class
         if (sizeClass != "desktop")
         {
@@ -426,14 +426,14 @@ public partial class RoomManagementView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        
+
         // Initial responsive setup
         if (Bounds.Width > 0)
         {
             UpdateResponsiveClasses(Bounds.Width);
         }
     }
-    
+
     // Configuration class for layout strategies
     private class LayoutConfiguration
     {
@@ -442,12 +442,12 @@ public partial class RoomManagementView : UserControl
         public (int Column, int Row) HeaderButtonsPosition { get; set; }
         public Avalonia.Layout.HorizontalAlignment HeaderButtonsAlignment { get; set; }
         public Thickness HeaderButtonsMargin { get; set; }
-        
+
         public int StatsColumns { get; set; }
         public int StatsRows { get; set; }
         public (int Column, int Row)[] StatsCardPositions { get; set; } = Array.Empty<(int, int)>();
         public Thickness[] StatsCardMargins { get; set; } = Array.Empty<Thickness>();
-        
+
         public int FilterColumns { get; set; }
         public int FilterRows { get; set; }
         public bool FilterSeparatorVisible { get; set; }
