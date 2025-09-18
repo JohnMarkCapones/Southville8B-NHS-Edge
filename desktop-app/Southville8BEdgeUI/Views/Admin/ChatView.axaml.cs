@@ -128,7 +128,7 @@ public partial class ChatView : UserControl
     {
         // Remove focus restoration code completely
     }
-
+        
     // Simplified and immediate scroll method
     private void ScrollToBottomOfMessages()
     {
@@ -175,8 +175,6 @@ public partial class ChatView : UserControl
                 _currentSubscribedConversation = null;
             }
         }
-
-        // Remove NewMessage property change handler that managed focus
     }
 
     // Add event handler for conversation navigation
