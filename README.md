@@ -29,10 +29,9 @@ The system is deployed across **web, mobile, and desktop platforms**, ensuring a
   * Announcements and notifications
   * Internal messaging system for teachers, students, and parents
 
-* **Finance & Administration**
+* **Administration**
 
-  * Tuition and fee tracking
-  * Payment records and reports
+  * Records and reports
 
 * **Cross-Platform Accessibility**
 
