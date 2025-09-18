@@ -121,6 +121,37 @@
             <Setter Property="RenderTransform" Value="scale(1.1)"/>
         </Style>
 
+        <!-- Dropdown Styles -->
+        <Style Selector="Border.dropdown-menu">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BoxShadow" Value="0 4 12 0 #15000000"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="MinWidth" Value="220"/>
+        </Style>
+
+        <Style Selector="Button.dropdown-item">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="Button.dropdown-item:pointerover">
+            <Setter Property="Background" Value="#F3F4F6"/>
+        </Style>
+        <Style Selector="Button.dropdown-item.logout">
+            <Setter Property="Foreground" Value="#DC2626"/>
+        </Style>
+        <Style Selector="Button.dropdown-item.logout:pointerover">
+            <Setter Property="Background" Value="#FEF2F2"/>
+        </Style>
+
         <!-- Sidebar Transition Styles -->
         <Style Selector="Border.sidebar">
             <Setter Property="Transitions">
@@ -294,21 +325,96 @@
                 <!-- Right Sidebar Content -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="0" Margin="0">
-                        <!-- User Profile Header -->
+                        <!-- User Profile Header with Dropdown -->
                         <Border Background="White" Padding="16,8,16,16">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
-                                    <Border Width="40" Height="40" Background="#E5E7EB" CornerRadius="20">
-                                        <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                    </Border>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="Black"/>
-                                            <Path Data="M7 10L12 15 17 10" Stroke="#6B7280" StrokeThickness="2" VerticalAlignment="Center"/>
+                                <Grid>
+                                    <!-- Profile button that toggles popup -->
+                                    <Button x:Name="ProfileButton" Background="Transparent" BorderThickness="0" Padding="0"
+                                            Command="{Binding ToggleUserDropdownCommand}"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                                            <Border Width="40" Height="40" Background="#E5E7EB" CornerRadius="20">
+                                                <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="Black"/>
+                                                    <Path Data="M7 10L12 15 17 10" Stroke="#6B7280" StrokeThickness="2" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="#6B7280"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="#6B7280"/>
-                                    </StackPanel>
-                                </StackPanel>
+                                    </Button>
+
+                                    <!-- Dropdown popup -->
+                                    <Popup IsOpen="{Binding IsUserDropdownVisible}"
+                                           PlacementTarget="{Binding #ProfileButton}"
+                                           Placement="Bottom"
+                                           HorizontalOffset="0"
+                                           VerticalOffset="8">
+                                        <Border Classes="dropdown-menu" ZIndex="1001" IsHitTestVisible="True">
+                                            <StackPanel Spacing="4">
+                                                <!-- Email -->
+                                                <Border Padding="12,8" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Margin="0,0,0,8">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Signed in as:" FontSize="11" Foreground="#6B7280"/>
+                                                        <TextBlock Text="{Binding UserEmail}" FontSize="12" FontWeight="SemiBold" Foreground="#374151"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Items -->
+                                                <Button Classes="dropdown-item" Command="{Binding NavigateToProfileCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="#6B7280"/>
+                                                        <TextBlock Text="Profile" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Classes="dropdown-item" Command="{Binding NavigateToSettingsCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Path Width="16" Height="16" Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" Fill="#6B7280"/>
+                                                        <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Classes="dropdown-item" Command="{Binding NavigateToNotificationsCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Path Width="16" Height="16" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" Fill="#6B7280"/>
+                                                        <TextBlock Text="Notifications" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <!-- Separator -->
+                                                <Border Height="1" Background="#E5E7EB" Margin="0,8"/>
+
+                                                <!-- Dark mode toggle -->
+                                                <Button Classes="dropdown-item" Command="{Binding ToggleDarkModeCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Path Width="16" Height="16" Data="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z" Fill="#6B7280"/>
+                                                        <TextBlock VerticalAlignment="Center">
+                                                            <TextBlock.Text>
+                                                                <Binding Path="IsDarkMode">
+                                                                    <Binding.Converter>
+                                                                        <converters:BoolToStringConverter TrueValue="Light Mode" FalseValue="Dark Mode"/>
+                                                                    </Binding.Converter>
+                                                                </Binding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <!-- Logout -->
+                                                <Button Classes="dropdown-item logout" Command="{Binding LogoutCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Path Width="16" Height="16" Data="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" Fill="#DC2626"/>
+                                                        <TextBlock Text="Logout" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
 
                                 <!-- Current Page Indicator -->
                                 <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4" Margin="0,0,0,8">
@@ -517,6 +623,17 @@
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
+        </Border>
+
+        <!-- Overlay to close dropdown when clicking outside -->
+        <Border Grid.ColumnSpan="3" Background="Transparent" 
+                IsVisible="{Binding IsUserDropdownVisible}"
+                ZIndex="1000"
+                IsHitTestVisible="False">
+            <Button Background="Transparent" BorderThickness="0" 
+                    Command="{Binding CloseUserDropdownCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    IsHitTestVisible="True"/>
         </Border>
     </Grid>
 </UserControl>
