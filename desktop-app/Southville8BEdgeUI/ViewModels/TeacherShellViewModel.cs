@@ -29,6 +29,28 @@ public partial class TeacherShellViewModel : ViewModelBase
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
 
+    // Profile dropdown state/content (manual properties to avoid source generator dependency in tooling)
+    private bool _isUserDropdownVisible;
+    public bool IsUserDropdownVisible
+    {
+        get => _isUserDropdownVisible;
+        set => SetProperty(ref _isUserDropdownVisible, value);
+    }
+
+    private string _userEmail = "st.yummy@nhis.edu";
+    public string UserEmail
+    {
+        get => _userEmail;
+        set => SetProperty(ref _userEmail, value);
+    }
+
+    private bool _isDarkMode;
+    public bool IsDarkMode
+    {
+        get => _isDarkMode;
+        set => SetProperty(ref _isDarkMode, value);
+    }
+
     // Statistics Cards Data
     [ObservableProperty] private int _totalClasses = 6;
     [ObservableProperty] private int _pendingAssignments = 24;
@@ -154,6 +176,56 @@ public partial class TeacherShellViewModel : ViewModelBase
     {
         IsRightSidebarVisible = !IsRightSidebarVisible;
         UpdateColumnWidths();
+    }
+
+    // Profile dropdown commands
+    [RelayCommand]
+    private void ToggleUserDropdown()
+    {
+        IsUserDropdownVisible = !IsUserDropdownVisible;
+    }
+
+    [RelayCommand]
+    private void CloseUserDropdown()
+    {
+        IsUserDropdownVisible = false;
+    }
+
+    [RelayCommand]
+    private void NavigateToProfile()
+    {
+        CurrentContent = new ProfileViewModel();
+        CurrentPage = "Profile";
+        IsUserDropdownVisible = false;
+    }
+
+    [RelayCommand]
+    private void NavigateToSettings()
+    {
+        CurrentContent = new SettingsViewModel();
+        CurrentPage = "Settings";
+        IsUserDropdownVisible = false;
+    }
+
+    [RelayCommand]
+    private void NavigateToNotifications()
+    {
+        CurrentContent = new NotificationsViewModel();
+        CurrentPage = "Notifications";
+        IsUserDropdownVisible = false;
+    }
+
+    [RelayCommand]
+    private void ToggleDarkMode()
+    {
+        IsDarkMode = !IsDarkMode;
+    }
+
+    [RelayCommand]
+    private void Logout()
+    {
+        // TODO: Implement logout logic - clear user session, navigate to login page
+        IsUserDropdownVisible = false;
     }
 
     // Calendar navigation commands

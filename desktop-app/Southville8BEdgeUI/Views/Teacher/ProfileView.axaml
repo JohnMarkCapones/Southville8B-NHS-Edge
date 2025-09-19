@@ -1,0 +1,180 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             x:Class="Southville8BEdgeUI.Views.Teacher.ProfileView"
+             x:DataType="vm:ProfileViewModel"
+             Background="#F9FAFB"
+             SizeChanged="OnSizeChanged">
+    <UserControl.Styles>
+        <!-- RESPONSIVE CARD STYLES (copied from TeacherDashboardView) -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <!-- RESPONSIVE TEXT STYLES -->
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- LAYOUT STYLES -->
+        <Style Selector="StackPanel.main-content">
+            <Setter Property="Spacing" Value="24"/>
+        </Style>
+        <Style Selector="StackPanel.main-content.tablet">
+            <Setter Property="Spacing" Value="16"/>
+        </Style>
+        <Style Selector="StackPanel.main-content.mobile">
+            <Setter Property="Spacing" Value="12"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="16" Margin="16" Classes="main-content">
+                <!-- Page Header -->
+                <Border Classes="card">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                        <!-- Profile Avatar -->
+                        <Border Width="64" Height="64" Background="#E5E7EB" CornerRadius="32" VerticalAlignment="Center">
+                            <TextBlock Text="SY" Foreground="#6B7280" FontWeight="Bold" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        
+                        <!-- Profile Info -->
+                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock Text="St. Yummy" FontSize="18" FontWeight="Bold"/>
+                            <TextBlock Text="Senior Math Teacher" FontSize="14" Foreground="#6B7280"/>
+                            <TextBlock Text="st.yummy@nhis.edu" FontSize="12" Foreground="#9CA3AF"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                <Border Background="#D1FAE5" CornerRadius="12" Padding="6,2">
+                                    <TextBlock Text="Active" Foreground="#065F46" FontSize="10" FontWeight="SemiBold"/>
+                                </Border>
+                                <Border Background="#FEF3C7" CornerRadius="12" Padding="6,2">
+                                    <TextBlock Text="Verified" Foreground="#92400E" FontSize="10" FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                        
+                        <!-- Action Buttons -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Content="Upload Photo" Background="Transparent" Foreground="#6B7280" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="12,8"/>
+                            <Button Content="Edit Profile" Background="#10B981" Foreground="White" BorderThickness="0" CornerRadius="6" Padding="16,8"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Content Grid -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                    <!-- Left Column -->
+                    <StackPanel Grid.Column="0" Spacing="16">
+                        <!-- Personal Information -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="Personal Information" Classes="section-header"/>
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="120,*" RowSpacing="12" ColumnSpacing="12">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Full Name" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="St. Yummy" CornerRadius="6" BorderBrush="#E5E7EB"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Email" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="st.yummy@nhis.edu" CornerRadius="6" BorderBrush="#E5E7EB"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Phone" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Watermark="Enter phone number" CornerRadius="6" BorderBrush="#E5E7EB"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Department" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Row="3" Grid.Column="1" CornerRadius="6" BorderBrush="#E5E7EB">
+                                        <ComboBoxItem Content="Mathematics"/>
+                                        <ComboBoxItem Content="Science"/>
+                                        <ComboBoxItem Content="English"/>
+                                        <ComboBoxItem Content="Social Studies"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Contact Information -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="Contact and Address" Classes="section-header"/>
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="120,*" RowSpacing="12" ColumnSpacing="12">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Address" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Watermark="Enter address" CornerRadius="6" BorderBrush="#E5E7EB"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="City" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Watermark="Enter city" CornerRadius="6" BorderBrush="#E5E7EB"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Emergency Contact" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Watermark="Emergency contact number" CornerRadius="6" BorderBrush="#E5E7EB"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Right Column -->
+                    <StackPanel Grid.Column="1" Spacing="16">
+                        <!-- Security Settings -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="16">
+                                <TextBlock Text="Security" Classes="section-header"/>
+                                <StackPanel Spacing="12">
+                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12" CornerRadius="6" BorderBrush="#E5E7EB" BorderThickness="1" Background="Transparent">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <Ellipse Width="8" Height="8" Fill="#10B981"/>
+                                            <TextBlock Grid.Column="1" Text="Change Password" VerticalAlignment="Center"/>
+                                            <Path Grid.Column="2" Width="16" Height="16" Data="M9 18L15 12L9 6" Stroke="#9CA3AF" StrokeThickness="2"/>
+                                        </Grid>
+                                    </Button>
+                                    
+                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12" CornerRadius="6" BorderBrush="#E5E7EB" BorderThickness="1" Background="Transparent">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <Ellipse Width="8" Height="8" Fill="#F59E0B"/>
+                                            <TextBlock Grid.Column="1" Text="Two-Factor Authentication" VerticalAlignment="Center"/>
+                                            <Path Grid.Column="2" Width="16" Height="16" Data="M9 18L15 12L9 6" Stroke="#9CA3AF" StrokeThickness="2"/>
+                                        </Grid>
+                                    </Button>
+                                    
+                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12" CornerRadius="6" BorderBrush="#E5E7EB" BorderThickness="1" Background="Transparent">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <Ellipse Width="8" Height="8" Fill="#6B7280"/>
+                                            <TextBlock Grid.Column="1" Text="Login History" VerticalAlignment="Center"/>
+                                            <Path Grid.Column="2" Width="16" Height="16" Data="M9 18L15 12L9 6" Stroke="#9CA3AF" StrokeThickness="2"/>
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Account Actions -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Account Actions" Classes="section-header"/>
+                                <StackPanel Spacing="8">
+                                    <Button Content="Save Changes" Background="#10B981" Foreground="White" BorderThickness="0" CornerRadius="6" Padding="16,8" HorizontalAlignment="Stretch"/>
+                                    <Button Content="Reset to Default" Background="Transparent" Foreground="#6B7280" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="16,8" HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

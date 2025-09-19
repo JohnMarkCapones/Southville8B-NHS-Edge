@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             x:Class="Southville8BEdgeUI.Views.Teacher.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             Background="#F9FAFB">
+    <UserControl.Styles>
+        <!-- Responsive styles similar to TeacherDashboardView -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+        
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="MainStackPanel" Spacing="16" Margin="16">
+                <!-- Page Header -->
+                <Border Classes="card">
+                    <Grid x:Name="HeaderGrid" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Width="36" Height="36" Background="#10B981" CornerRadius="8" VerticalAlignment="Center">
+                            <Path Width="18" Height="18" Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="Settings" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock Text="Manage appearance, notifications, and privacy preferences" FontSize="12" Foreground="#6B7280"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button x:Name="SaveButton" Content="Save" Background="#10B981" Foreground="White" BorderThickness="0" CornerRadius="4" Padding="12,6"/>
+                            <Button x:Name="ResetButton" Content="Reset" Background="Transparent" Foreground="#6B7280" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="4" Padding="12,6"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Content Grid -->
+                <Grid x:Name="ContentGrid" ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <!-- Left Column -->
+                    <StackPanel x:Name="LeftPanel" Grid.Column="0" Spacing="12">
+                        <!-- Appearance -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Appearance" Classes="section-header"/>
+                                <Grid ColumnDefinitions="120,*" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Theme" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                        <RadioButton Content="System" IsChecked="True"/>
+                                        <RadioButton Content="Light"/>
+                                        <RadioButton Content="Dark"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Accent Color" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <Button Width="20" Height="20" Background="#10B981" BorderThickness="0" CornerRadius="10"/>
+                                        <Button Width="20" Height="20" Background="#3B82F6" BorderThickness="0" CornerRadius="10"/>
+                                        <Button Width="20" Height="20" Background="#EF4444" BorderThickness="0" CornerRadius="10"/>
+                                        <Button Width="20" Height="20" Background="#F59E0B" BorderThickness="0" CornerRadius="10"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Font Size" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="1" BorderBrush="#E5E7EB" CornerRadius="6">
+                                        <ComboBoxItem Content="Small"/>
+                                        <ComboBoxItem Content="Medium"/>
+                                        <ComboBoxItem Content="Large"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Notifications -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Notifications" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <CheckBox Content="Email notifications"/>
+                                    <CheckBox Content="In-app alerts"/>
+                                    <CheckBox Content="Sound on new message"/>
+                                    <CheckBox Content="Assignment reminders"/>
+                                    <CheckBox Content="Schedule change alerts"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Right Column -->
+                    <StackPanel x:Name="RightPanel" Grid.Column="1" Spacing="12">
+                        <!-- Privacy & Security -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Privacy and Security" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <ToggleSwitch Content="Show profile to students" IsChecked="{Binding ShowProfileToStudents}"/>
+                                    <ToggleSwitch Content="Allow messages from parents" IsChecked="{Binding AllowParentMessages}"/>
+                                    <ToggleSwitch Content="Re-authenticate on sensitive actions" IsChecked="{Binding RequireReauthentication}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Data & Storage -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Data and Storage" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBlock Text="App cache"/>
+                                        <Button Grid.Column="1" Content="Clear" Background="Transparent" Foreground="#6B7280" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="4" Padding="10,6"/>
+                                    </Grid>
+                                    <StackPanel>
+                                        <TextBlock Text="Storage usage" FontSize="12" Foreground="#6B7280"/>
+                                        <ProgressBar Minimum="0" Maximum="100" Value="35" Height="6" CornerRadius="3"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Advanced -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Advanced" Classes="section-header"/>
+                                <StackPanel Spacing="8">
+                                    <Button Content="Export Data" HorizontalAlignment="Left"/>
+                                    <Button Content="Reset Settings" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
