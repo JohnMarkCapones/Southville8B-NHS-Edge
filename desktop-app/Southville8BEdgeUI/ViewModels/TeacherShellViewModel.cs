@@ -224,7 +224,7 @@ public partial class TeacherShellViewModel : ViewModelBase
     [RelayCommand]
     private void Logout()
     {
-        // Implement logout integration in real app
+        // TODO: Implement logout logic - clear user session, navigate to login page
         IsUserDropdownVisible = false;
     }
 
