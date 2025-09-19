@@ -3,7 +3,8 @@
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              x:Class="Southville8BEdgeUI.Views.Teacher.ProfileView"
              x:DataType="vm:ProfileViewModel"
-             Background="#F9FAFB">
+             Background="#F9FAFB"
+             SizeChanged="OnSizeChanged">
     <UserControl.Styles>
         <!-- RESPONSIVE CARD STYLES (copied from TeacherDashboardView) -->
         <Style Selector="Border.card">

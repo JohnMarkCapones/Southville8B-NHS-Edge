@@ -110,9 +110,9 @@
                             <StackPanel Spacing="12">
                                 <TextBlock Text="Privacy and Security" Classes="section-header"/>
                                 <StackPanel Spacing="10">
-                                    <ToggleSwitch Content="Show profile to students"/>
-                                    <ToggleSwitch Content="Allow messages from parents"/>
-                                    <ToggleSwitch Content="Re-authenticate on sensitive actions"/>
+                                    <ToggleSwitch Content="Show profile to students" IsChecked="{Binding ShowProfileToStudents}"/>
+                                    <ToggleSwitch Content="Allow messages from parents" IsChecked="{Binding AllowParentMessages}"/>
+                                    <ToggleSwitch Content="Re-authenticate on sensitive actions" IsChecked="{Binding RequireReauthentication}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

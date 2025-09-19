@@ -183,6 +183,28 @@
                 </Transitions>
             </Setter>
         </Style>
+
+        <!-- Make the fullscreen dismiss button truly invisible in all states (prevents dark hover overlay) -->
+        <Style Selector="Button.overlay-dismiss">
+          <Setter Property="Background" Value="Transparent"/>
+          <Setter Property="BorderThickness" Value="0"/>
+          <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style Selector="Button.overlay-dismiss /template/ ContentPresenter">
+          <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.overlay-dismiss:pointerover /template/ ContentPresenter">
+          <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.overlay-dismiss:pressed /template/ ContentPresenter">
+          <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.overlay-dismiss:focus /template/ ContentPresenter">
+          <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.overlay-dismiss:disabled /template/ ContentPresenter">
+          <Setter Property="Background" Value="Transparent"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid Background="#F9FAFB">
@@ -390,11 +412,12 @@
                                     </Button>
 
                                     <!-- Dropdown Popup (absolute, does not affect layout) -->
-                                    <Popup IsOpen="{Binding IsUserDropdownVisible}"
+                                    <Popup IsOpen="{Binding IsUserDropdownVisible, Mode=TwoWay}"
                                            PlacementTarget="{Binding #ProfileButton}"
                                            Placement="Bottom"
                                            HorizontalOffset="0"
-                                           VerticalOffset="8">
+                                           VerticalOffset="8"
+                                           IsLightDismissEnabled="True">
                                         <Border Classes="dropdown-menu"
                                                 ZIndex="1001"
                                                 IsHitTestVisible="True">
@@ -701,14 +724,16 @@
             </Grid>
         </Border>
 
-        <!-- Overlay to close dropdown when clicking outside -->
+        <!-- Overlay to close dropdown when clicking outside (transparent, no hover overlay) -->
         <Border Grid.ColumnSpan="3" Background="Transparent" 
                 IsVisible="{Binding IsUserDropdownVisible}"
-                ZIndex="1000"
-                IsHitTestVisible="False">
-            <Button Background="Transparent" BorderThickness="0" 
+                ZIndex="1000">
+            <Button Classes="overlay-dismiss"
+                    Background="Transparent"
+                    BorderThickness="0" 
                     Command="{Binding CloseUserDropdownCommand}"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
                     IsHitTestVisible="True"/>
         </Border>
     </Grid>
