@@ -21,9 +21,9 @@ This policy does NOT cover third-party dependencies (see Responsible Disclosure 
 
 ## Security Governance
 
-**Owner:** Repository Maintainers
+**Owner:** John Mark Capones, Richard Ramos Jr
 
-**Security Contact:** [security@yourdomain.example](mailto:security@yourdomain.example) (replace with project-specific contact)
+**Security Contact:** [security@yourdomain.example](mailto:security@yourdomain.example)
 
 **Escalation:** Lead Maintainer → Project Steering Committee → Legal Counsel (when required)
 
@@ -192,7 +192,7 @@ If you cannot reach the security contact, contact the repository maintainer or o
 
 ## Revision History
 
-* **v1.0** — Initial draft
+* **v1.1** — Initial draft
 
 ---
 
