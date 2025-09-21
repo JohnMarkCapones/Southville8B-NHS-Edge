@@ -495,9 +495,8 @@
                                             x:Name="DeleteButton"
                                             Content="Delete"
                                             Classes="danger"
-                                            Command="{Binding $parent[UserControl].((vm:EventDashboardViewModel)DataContext).DeleteEventCommand}"
-                                            CommandParameter="{Binding}"
-                                            Margin="8,0,0,0"/>
+                                            Margin="8,0,0,0"
+                                            Click="OnDeleteClicked"/>
 								</Grid>
 							</StackPanel>
 						</Border>
