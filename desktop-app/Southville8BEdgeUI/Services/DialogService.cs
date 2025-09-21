@@ -2,19 +2,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Southville8BEdgeUI.Utils;
 using System.Threading.Tasks;
 
 namespace Southville8BEdgeUI.Services;
 
 public sealed class DialogService : IDialogService
 {
-    private static IBrush GetBrush(StyledElement scope, string key, string fallbackHex)
-    {
-        if (scope.TryFindResource(key, out var val) && val is IBrush b)
-            return b;
-        return new SolidColorBrush(Color.Parse(fallbackHex));
-    }
-
     public Task<bool> ConfirmDeleteAsync(string title, string message)
     {
         var tcs = new TaskCompletionSource<bool>();
@@ -27,11 +21,11 @@ public sealed class DialogService : IDialogService
             MaxWidth = 560
         };
 
-        var surfaceBrush = GetBrush(dlg, "SurfaceBrush", "#FFFFFF");
-        var borderBrush = GetBrush(dlg, "AppBorderBrush", "#E5E7EB");
-        var textPrimary = GetBrush(dlg, "TextPrimaryBrush", "#111827");
-        var textSecondary = GetBrush(dlg, "TextSecondaryBrush", "#6B7280");
-        var dangerBrush = GetBrush(dlg, "DangerBrush", "#EF4444");
+        var surfaceBrush = ThemeHelpers.GetBrush(dlg, "SurfaceBrush", "#FFFFFF");
+        var borderBrush = ThemeHelpers.GetBrush(dlg, "AppBorderBrush", "#E5E7EB");
+        var textPrimary = ThemeHelpers.GetBrush(dlg, "TextPrimaryBrush", "#111827");
+        var textSecondary = ThemeHelpers.GetBrush(dlg, "TextSecondaryBrush", "#6B7280");
+        var dangerBrush = ThemeHelpers.GetBrush(dlg, "DangerBrush", "#EF4444");
 
         var confirmBtn = new Button
         {
