@@ -300,7 +300,7 @@
                                                                BorderThickness="0" 
                                                                CornerRadius="4"
                                                                ToolTip.Tip="Edit Announcement"
-                                                               Command="{Binding $parent[UserControl].DataContext.EditAnnouncementCommand}" 
+                                                               Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).EditAnnouncementCommand}" 
                                                                CommandParameter="{Binding}"/>
                                                         <Button Content="👁️"
                                                                 AutomationProperties.Name="View announcement"
@@ -310,7 +310,7 @@
                                                                BorderThickness="0" 
                                                                CornerRadius="4"
                                                                ToolTip.Tip="View Announcement"
-                                                               Command="{Binding $parent[UserControl].DataContext.ViewAnnouncementCommand}" 
+                                                               Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).ViewAnnouncementCommand}" 
                                                                CommandParameter="{Binding}"/>
                                                         <Button Content="🗑️"
                                                                 AutomationProperties.Name="Delete announcement"
@@ -320,7 +320,7 @@
                                                                BorderThickness="0" 
                                                                CornerRadius="4"
                                                                ToolTip.Tip="Delete Announcement"
-                                                               Command="{Binding $parent[UserControl].DataContext.DeleteAnnouncementCommand}" 
+                                                               Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).DeleteAnnouncementCommand}" 
                                                                CommandParameter="{Binding}"/>
                                                     </StackPanel>
                                                 </Grid>

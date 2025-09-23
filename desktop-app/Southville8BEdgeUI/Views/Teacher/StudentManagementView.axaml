@@ -300,7 +300,7 @@
                                                            BorderThickness="0" 
                                                            CornerRadius="4"
                                                            ToolTip.Tip="View Details"
-                                                           Command="{Binding $parent[UserControl].DataContext.ViewStudentDetailsCommand}" 
+                                                           Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ViewStudentDetailsCommand}" 
                                                            CommandParameter="{Binding}"/>
                                                     <Button Content="📝" 
                                                            Background="#10B981" 
@@ -309,7 +309,7 @@
                                                            BorderThickness="0" 
                                                            CornerRadius="4"
                                                            ToolTip.Tip="Edit Student"
-                                                           Command="{Binding $parent[UserControl].DataContext.EditStudentCommand}" 
+                                                           Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).EditStudentCommand}" 
                                                            CommandParameter="{Binding}"/>
                                                     <Button Content="📞" 
                                                            Background="#F59E0B" 
@@ -318,7 +318,7 @@
                                                            BorderThickness="0" 
                                                            CornerRadius="4"
                                                            ToolTip.Tip="Contact Parent"
-                                                           Command="{Binding $parent[UserControl].DataContext.ContactParentCommand}" 
+                                                           Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ContactParentCommand}" 
                                                            CommandParameter="{Binding}"/>
                                                 </StackPanel>
                                             </Grid>

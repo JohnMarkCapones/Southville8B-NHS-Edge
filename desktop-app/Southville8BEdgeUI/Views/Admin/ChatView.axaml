@@ -11,6 +11,7 @@
 
     <UserControl.Resources>
         <converters:BoolToStringConverter x:Key="OnlineStatusConverter" TrueValue="Online" FalseValue="Offline"/>
+        <converters:EqualityConverter x:Key="EqualityConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -514,7 +515,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:ChatConversationViewModel">
                                     <Button Classes="conversation-item"
-                                            Classes.selected="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedConversation, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding}}"
+                                            Classes.selected="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedConversation, Converter={StaticResource EqualityConverter}, ConverterParameter={Binding}}"
                                             Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectConversationCommand}"
                                             CommandParameter="{Binding}">
                                         

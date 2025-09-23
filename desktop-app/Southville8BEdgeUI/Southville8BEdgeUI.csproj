@@ -8,21 +8,32 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
+  <!-- Copy public and Assets folders to output so the login carousel can load images at runtime -->
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <None Include="public\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Assets\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.3" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.10" />
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.10" />
+    <PackageReference Include="Avalonia" Version="11.0.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.0.0" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Avalonia.Svg.Skia" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Resources\Strings\" />
+  </ItemGroup>
+
+  <!-- Southville8BEdgeUI.csproj -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <None Remove="Assets\**" />
   </ItemGroup>
 </Project>
