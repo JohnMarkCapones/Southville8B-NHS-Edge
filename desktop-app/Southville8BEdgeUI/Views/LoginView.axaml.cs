@@ -53,9 +53,8 @@ public partial class LoginView : UserControl
                 var ext = Path.GetExtension(uri.AbsolutePath).ToLowerInvariant();
                 if (ext == ".svg")
                 {
-                    using var stream = AssetLoader.Open(uri);
-                    var svgSource = new SvgSource();
-                    svgSource.Load(stream);
+                    // Use SvgSource static loader with string path (package 11.0.0.19)
+                    var svgSource = SvgSource.Load(uri.ToString());
                     var svgImage = new SvgImage { Source = svgSource };
                     slides.Add(new Image
                     {

@@ -42,10 +42,10 @@ namespace Southville8BEdgeUI.Converters
             {
                 if (value is double d && parameter is string s)
                 {
-                    var parts = s.Split(',');
+                    var parts = s.Split('|');
                     if (parts.Length == 2 &&
-                        double.TryParse(parts[0], NumberStyles.Any, culture, out var min) &&
-                        double.TryParse(parts[1], NumberStyles.Any, culture, out var max))
+                        double.TryParse(parts[0].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var min) &&
+                        double.TryParse(parts[1].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var max))
                     {
                         return d >= min && d <= max;
                     }
@@ -59,10 +59,21 @@ namespace Southville8BEdgeUI.Converters
 
         private static bool TryParseDouble(object? parameter, out double value)
         {
-            if (parameter is string s && double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out value))
-                return true;
-            value = 0;
-            return false;
+            switch (parameter)
+            {
+                case double d:
+                    value = d; return true;
+                case float f:
+                    value = f; return true;
+                case int i:
+                    value = i; return true;
+                case long l:
+                    value = l; return true;
+                case string s when double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v):
+                    value = v; return true;
+                default:
+                    value = 0; return false;
+            }
         }
     }
 }

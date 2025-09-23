@@ -114,15 +114,15 @@
                         <Border Classes="card">
                             <StackPanel Spacing="16">
                                 <TextBlock Text="Contact and Address" Classes="section-header"/>
-                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="120,*">
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Address" Foreground="#6B7280" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Watermark="Enter address" CornerRadius="6" BorderBrush="#E5E7EB" Margin="12,0,0,12"/>
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Address" Foreground="#6B7280" VerticalAlignment="Center" MinWidth="120" TextWrapping="Wrap"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Watermark="Enter address" CornerRadius="6" BorderBrush="#E5E7EB" Margin="12,0,0,12" AutomationProperties.Name="Address"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="City" Foreground="#6B7280" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Watermark="Enter city" CornerRadius="6" BorderBrush="#E5E7EB" Margin="12,0,0,12"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="City" Foreground="#6B7280" VerticalAlignment="Center" MinWidth="120" TextWrapping="Wrap"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Watermark="Enter city" CornerRadius="6" BorderBrush="#E5E7EB" Margin="12,0,0,12" AutomationProperties.Name="City"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Emergency Contact" Foreground="#6B7280" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Watermark="Emergency contact number" CornerRadius="6" BorderBrush="#E5E7EB" Margin="12,0,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Emergency Contact" Foreground="#6B7280" VerticalAlignment="Center" MinWidth="120" TextWrapping="Wrap"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Watermark="Emergency contact number" CornerRadius="6" BorderBrush="#E5E7EB" Margin="12,0,0,0" AutomationProperties.Name="Emergency Contact"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
