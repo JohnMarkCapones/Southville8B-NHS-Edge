@@ -16,6 +16,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _rememberMe;
 
+    [ObservableProperty]
+    private bool _showPassword; // controls password masking
+
     // This action can be set by the parent view model to handle navigation.
     public Action<ViewModelBase>? NavigateTo { get; set; }
 

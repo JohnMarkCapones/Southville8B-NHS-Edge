@@ -16,7 +16,6 @@ namespace Southville8BEdgeUI
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
-                .WithInterFont()
                 .LogToTrace();
     }
 }

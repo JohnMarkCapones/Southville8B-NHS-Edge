@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
         x:Class="Southville8BEdgeUI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="avares://Southville8BEdgeUI/Assets/avalonia-logo.ico"
         Title="School Management System"
 		WindowState="Maximized">
 
