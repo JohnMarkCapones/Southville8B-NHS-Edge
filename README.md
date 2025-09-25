@@ -8,7 +8,7 @@ The system is deployed across **web, mobile, and desktop platforms**, ensuring a
 
 * **Learning Management System (LMS)**
 
-  * Digital lessons, quizzes, and assignments
+  * Digital lessons, quizzes  
   * Automated grading and progress tracking
   * Gamified learning with leaderboards and achievements
   * Exam integrity features (session/device validation, randomization, anti-cheating measures)
@@ -31,7 +31,7 @@ The system is deployed across **web, mobile, and desktop platforms**, ensuring a
 
 * **Administration**
 
-  * Records and reports
+  * Records, Reports, and Analytics
 
 * **Cross-Platform Accessibility**
 
