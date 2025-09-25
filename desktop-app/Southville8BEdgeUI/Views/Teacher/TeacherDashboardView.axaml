@@ -180,9 +180,8 @@
                     <TextBlock x:Name="SubtitleText" Text="{Binding WelcomeMessage}" Classes="subtitle"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Border Background="#10B981" CornerRadius="6" Padding="8,4">
-                        <TextBlock Text="Online" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
-                    </Border>
+                    <TextBlock Text="Online" FontSize="12" FontWeight="SemiBold" Foreground="#10B981" VerticalAlignment="Center"/>
+                    <Ellipse Fill="#10B981" Width="10" Height="10" VerticalAlignment="Center"/>
                     <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="#6B7280" Command="{Binding RefreshDashboardCommand}"/>
                 </StackPanel>
             </Grid>

@@ -31,11 +31,11 @@
             </Setter>
         </Style>
         <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#F3F4F6"/>
-            <Setter Property="TextBlock.Foreground" Value="#111827"/>
+            <Setter Property="Background" Value="#3C5C7A"/>
+            <Setter Property="TextBlock.Foreground" Value="White"/>
         </Style>
         <Style Selector="Button.nav-item.active /template/ ContentPresenter">
-            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Background" Value="#4F6D8C"/>
             <Setter Property="TextBlock.Foreground" Value="White"/>
             <Setter Property="TextBlock.FontWeight" Value="SemiBold"/>
         </Style>
@@ -48,7 +48,7 @@
             </Setter>
         </Style>
         <Style Selector="Button.nav-item:pointerover Path">
-            <Setter Property="Fill" Value="#111827"/>
+            <Setter Property="Fill" Value="White"/>
         </Style>
         <Style Selector="Button.nav-item.active Path">
             <Setter Property="Fill" Value="White"/>
@@ -64,7 +64,7 @@
 
         <!-- Toggle Button Style -->
         <Style Selector="Button.sidebar-toggle">
-            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Background" Value="#4F6D8C"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="4"/>
@@ -84,7 +84,7 @@
 
         <!-- Close button over left sidebar -->
         <Style Selector="Button.sidebar-close-middle">
-            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Background" Value="#4F6D8C"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="6"/>
@@ -99,11 +99,12 @@
         </Style>
         <Style Selector="Button.sidebar-close-middle:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.1)"/>
+            <Setter Property="Background" Value="#3C5C7A"/>
         </Style>
 
         <!-- Close button over right sidebar -->
         <Style Selector="Button.sidebar-close-middle-left">
-            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Background" Value="#4F6D8C"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="6"/>
@@ -119,6 +120,7 @@
         </Style>
         <Style Selector="Button.sidebar-close-middle-left:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.1)"/>
+            <Setter Property="Background" Value="#3C5C7A"/>
         </Style>
 
         <!-- Dropdown Styles -->
@@ -201,7 +203,7 @@
                     <!-- Header Section -->
                     <Border DockPanel.Dock="Top" Padding="16,20,16,20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Border Background="#10B981" Width="32" Height="32" CornerRadius="8">
+                            <Border Background="#4F6D8C" Width="32" Height="32" CornerRadius="8">
                                 <TextBlock Text="T8" Foreground="White" FontWeight="Bold" FontSize="14"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -217,7 +219,7 @@
                         <StackPanel>
                             <TextBlock Text="ACADEMIC YEAR" Classes="section-header" Margin="0,0,0,8"/>
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Ellipse Fill="#10B981" Width="10" Height="10" VerticalAlignment="Center"/>
+                                <Ellipse Fill="#4F6D8C" Width="10" Height="10" VerticalAlignment="Center"/>
                                 <TextBlock Text="2024-2025" FontSize="12" Foreground="#374151" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
@@ -282,14 +284,19 @@
                         CornerRadius="4,0,0,4"
                         Margin="0"
                         ZIndex="1000">
-                    <Path Data="M15 18L9 12L15 6" Stroke="White" StrokeThickness="2" Width="10" Height="10"/>
+                    <TextBlock Text="❮"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
                 </Button>
             </Grid>
         </Border>
 
         <!-- Content Area -->
         <Grid Grid.Column="1">
-            <!-- Open left: hug divider -->
+            <!-- Open left: match Admin positioning (no negative margin, center the glyph) -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
@@ -301,14 +308,18 @@
                         IsVisible="{Binding ShowLeftSidebarToggle}"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Margin="-12,0,0,0"
+                        Margin="0,0,0,0"
                         ZIndex="200"
                         ToolTip.Tip="Open navigation">
-                    <Path Data="M3 12h18m-9-9l9 9-9 9" Stroke="White" StrokeThickness="2" Width="12" Height="12"/>
+                    <TextBlock Text="❯"
+                               Foreground="White"
+                               FontSize="14"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
                 </Button>
             </StackPanel>
 
-            <!-- Open right: hug divider -->
+            <!-- Open right: match Admin positioning (no negative margin, center the glyph) -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
@@ -320,9 +331,13 @@
                         IsVisible="{Binding ShowRightSidebarToggle}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
-                        Margin="0,0,-12,0"
+                        Margin="0,0,0,0"
                         ToolTip.Tip="Open sidebar">
-                    <Path Data="M21 12H3m18-9l-9 9 9 9" Stroke="White" StrokeThickness="2" Width="12" Height="12"/>
+                    <TextBlock Text="❮"
+                               Foreground="White"
+                               FontSize="14"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
                 </Button>
             </StackPanel>
 
@@ -341,7 +356,12 @@
                         CornerRadius="0,4,4,0"
                         Margin="0"
                         ZIndex="1000">
-                    <Path Data="M9 18L15 12L9 6" Stroke="White" StrokeThickness="2" Width="10" Height="10"/>
+                    <TextBlock Text="❯"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
                 </Button>
 
                 <!-- Right Sidebar Content -->
@@ -467,7 +487,11 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="#10B981" CornerRadius="3">
-                                                <Rectangle Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Path Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Classes" FontSize="11" Foreground="#6B7280"/>
                                         </StackPanel>
@@ -481,7 +505,11 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="#EF4444" CornerRadius="3">
-                                                <Ellipse Width="6" Height="6" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Path Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Assignments" FontSize="11" Foreground="#6B7280"/>
                                         </StackPanel>
@@ -495,7 +523,11 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="#F59E0B" CornerRadius="3">
-                                                <Ellipse Width="8" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Students" FontSize="11" Foreground="#6B7280"/>
                                         </StackPanel>
@@ -509,7 +541,11 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="#8B5CF6" CornerRadius="3">
-                                                <Rectangle Width="6" Height="8" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Path Data="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Messages" FontSize="11" Foreground="#6B7280"/>
                                         </StackPanel>
