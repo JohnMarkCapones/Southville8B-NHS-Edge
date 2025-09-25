@@ -252,7 +252,6 @@
       <Setter Property="CornerRadius" Value="2"/>
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="MinWidth" Value="40"/>
-      <Setter Property="ShowProgressText" Value="False"/>
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Height" Duration="0:0:0.2"/>
