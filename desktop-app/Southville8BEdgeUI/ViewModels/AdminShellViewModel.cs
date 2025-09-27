@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Southville8BEdgeUI.ViewModels.Admin;
@@ -24,7 +26,7 @@ public partial class AdminShellViewModel : ViewModelBase
     private bool _isUserDropdownVisible = false;
 
     [ObservableProperty]
-    private bool _isDarkMode = false;
+    private bool _isDarkMode = false; // toggled and applied via partial method
 
     [ObservableProperty] private string _userName = "Richard Ramos Jr";
     [ObservableProperty] private string _userRole = "Administrator";
@@ -46,6 +48,11 @@ public partial class AdminShellViewModel : ViewModelBase
     {
         _currentContent = CreateDashboardViewModel();
         UpdateColumnWidths();
+        // Initialize dark mode from current application theme
+        if (Application.Current is not null)
+        {
+            IsDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+        }
     }
 
     private AdminDashboardViewModel CreateDashboardViewModel()
@@ -90,7 +97,15 @@ public partial class AdminShellViewModel : ViewModelBase
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(); CurrentPage = "Notifications"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToHelpGuide() { CurrentContent = new HelpGuideViewModel(); CurrentPage = "Help Guide"; CloseUserDropdown(); }
-    [RelayCommand] private void ToggleDarkMode() { IsDarkMode = !IsDarkMode; CloseUserDropdown(); }
+
+    // Apply theme change on toggle
+    [RelayCommand]
+    private void ToggleDarkMode()
+    {
+        IsDarkMode = !IsDarkMode; // partial method will apply actual theme
+        CloseUserDropdown();
+    }
+
     [RelayCommand] private void Logout() { CloseUserDropdown(); NavigateTo?.Invoke(new LoginViewModel()); }
 
     [RelayCommand]
@@ -129,4 +144,11 @@ public partial class AdminShellViewModel : ViewModelBase
 
     partial void OnIsLeftSidebarVisibleChanged(bool value) => OnPropertyChanged(nameof(ShowLeftSidebarToggle));
     partial void OnIsRightSidebarVisibleChanged(bool value) => OnPropertyChanged(nameof(ShowRightSidebarToggle));
+
+    // Apply Avalonia theme when dark mode property changes
+    partial void OnIsDarkModeChanged(bool value)
+    {
+        if (Application.Current is null) return;
+        Application.Current.RequestedThemeVariant = value ? ThemeVariant.Dark : ThemeVariant.Light;
+    }
 }

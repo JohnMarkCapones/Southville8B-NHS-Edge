@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.TeacherDashboardView"
              x:DataType="vm:TeacherDashboardViewModel"
-             Background="#F9FAFB">
+             Background="{DynamicResource PageBackgroundBrush}">
 
     <UserControl.Resources>
         <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
@@ -16,8 +16,8 @@
     <UserControl.Styles>
         <!-- RESPONSIVE CARD STYLES -->
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
@@ -44,7 +44,7 @@
         <Style Selector="TextBlock.main-header">
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="TextBlock.main-header.tablet">
             <Setter Property="FontSize" Value="24"/>
@@ -55,7 +55,7 @@
 
         <Style Selector="TextBlock.subtitle">
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
         <Style Selector="TextBlock.subtitle.tablet">
             <Setter Property="FontSize" Value="13"/>
@@ -65,7 +65,7 @@
         </Style>
 
         <Style Selector="TextBlock.stat-title">
-            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
         </Style>
@@ -77,7 +77,7 @@
         </Style>
 
         <Style Selector="TextBlock.stat-value">
-            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
@@ -91,7 +91,7 @@
         <Style Selector="TextBlock.section-header">
             <Setter Property="FontSize" Value="18"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="TextBlock.section-header.tablet">
             <Setter Property="FontSize" Value="16"/>
@@ -102,7 +102,7 @@
 
         <!-- RESPONSIVE BUTTON STYLES -->
         <Style Selector="Button.quick-action">
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16,12"/>
@@ -142,8 +142,8 @@
 
         <!-- CLASS CARD STYLES -->
         <Style Selector="Border.class-card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12"/>
@@ -180,9 +180,9 @@
                     <TextBlock x:Name="SubtitleText" Text="{Binding WelcomeMessage}" Classes="subtitle"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <TextBlock Text="Online" FontSize="12" FontWeight="SemiBold" Foreground="#10B981" VerticalAlignment="Center"/>
-                    <Ellipse Fill="#10B981" Width="10" Height="10" VerticalAlignment="Center"/>
-                    <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="#6B7280" Command="{Binding RefreshDashboardCommand}"/>
+                    <TextBlock Text="Online" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+                    <Ellipse Fill="{DynamicResource SuccessBrush}" Width="10" Height="10" VerticalAlignment="Center"/>
+                    <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}" Command="{Binding RefreshDashboardCommand}"/>
                 </StackPanel>
             </Grid>
 
@@ -192,60 +192,60 @@
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="My Students" Classes="stat-title"/>
-                            <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="6" Padding="4">
-                                <TextBlock Text="👥" FontSize="16"/>
+                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource SuccessBrush}">
+                                <TextBlock Text="👥" FontSize="16" Foreground="White"/>
                             </Border>
                         </Grid>
                         <TextBlock x:Name="MyStudentsText" Text="{Binding MyStudents}" Classes="stat-value"/>
-                        <TextBlock Text="Across all classes" FontSize="12" Foreground="#10B981"/>
+                        <TextBlock Text="Across all classes" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border x:Name="KpiCard2" Grid.Column="1" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Active Classes" Classes="stat-title"/>
-                            <Border Grid.Column="1" Background="#DBEAFE" CornerRadius="6" Padding="4">
+                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource InfoBrush}">
                                 <TextBlock Text="📚" FontSize="16"/>
                             </Border>
                         </Grid>
                         <TextBlock x:Name="ActiveClassesText" Text="{Binding ActiveClasses}" Classes="stat-value"/>
-                        <TextBlock Text="This semester" FontSize="12" Foreground="#3B82F6"/>
+                        <TextBlock Text="This semester" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border x:Name="KpiCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Pending Grading" Classes="stat-title"/>
-                            <Border Grid.Column="1" Background="#FEF3C7" CornerRadius="6" Padding="4">
+                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource WarningBrush}">
                                 <TextBlock Text="📝" FontSize="16"/>
                             </Border>
                         </Grid>
                         <TextBlock x:Name="PendingAssignmentsText" Text="{Binding PendingAssignments}" Classes="stat-value"/>
-                        <ProgressBar Value="{Binding GradingProgress}" Minimum="0" Maximum="100" Classes="responsive-progress" Foreground="#F59E0B"/>
+                        <ProgressBar Value="{Binding GradingProgress}" Minimum="0" Maximum="100" Classes="responsive-progress" Foreground="{DynamicResource WarningBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border x:Name="KpiCard4" Grid.Column="3" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Average Grade" Classes="stat-title"/>
-                            <Border Grid.Column="1" Background="#EDE9FE" CornerRadius="6" Padding="4">
+                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource AccentBrush}">
                                 <TextBlock Text="📊" FontSize="16"/>
                             </Border>
                         </Grid>
                         <TextBlock x:Name="AverageGradeText" Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-                        <TextBlock Text="Class performance" FontSize="12" Foreground="#8B5CF6"/>
+                        <TextBlock Text="Class performance" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border x:Name="KpiCard5" Grid.Column="4" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Attendance Rate" Classes="stat-title"/>
-                            <Border Grid.Column="1" Background="#D1FAE5" CornerRadius="6" Padding="4">
+                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource SuccessBrush}">
                                 <TextBlock Text="✅" FontSize="16"/>
                             </Border>
                         </Grid>
                         <TextBlock x:Name="AttendanceRateText" Text="{Binding ClassAttendanceRate, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-                        <TextBlock Text="Overall attendance" FontSize="12" Foreground="#10B981"/>
+                        <TextBlock Text="Overall attendance" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -257,30 +257,30 @@
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Subject Performance" Classes="section-header"/>
-                            <Button x:Name="DetailedReportsButton" Grid.Column="1" Content="📊 Detailed Reports" Classes="quick-action" Background="#6B7280" 
+                            <Button x:Name="DetailedReportsButton" Grid.Column="1" Content="📊 Detailed Reports" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}"
                                     Command="{Binding ViewDetailedReportsCommand}" Padding="12,8" FontSize="12"/>
                         </Grid>
                         <ItemsControl ItemsSource="{Binding StudentPerformance}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:StudentPerformanceViewModel">
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,12">
-                                        <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                        <Border Grid.Column="0" CornerRadius="8" Padding="8" Margin="0,0,12,0" Background="{DynamicResource BorderBrush}">
                                             <TextBlock Text="📚" FontSize="16"/>
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Subject}" FontWeight="SemiBold"/>
                                             <TextBlock Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" FontSize="20" FontWeight="Bold"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{Binding StudentsCount}" FontSize="12" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding ImprovementText}" 
-                                                   Foreground="{Binding ImprovementColor}" 
-                                                   FontWeight="SemiBold" 
-                                                   VerticalAlignment="Center" 
+                                        <TextBlock Grid.Column="2" Text="{Binding StudentsCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding ImprovementText}"
+                                                   Foreground="{Binding ImprovementColor}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
                                                    Margin="0,0,8,0"/>
-                                        <Path Grid.Column="4" 
-                                              Data="{Binding IsImproving, Converter={StaticResource BoolToArrowConverter}}" 
-                                              Fill="{Binding ImprovementColor}" 
-                                              Width="10" Height="5" 
+                                        <Path Grid.Column="4"
+                                              Data="{Binding IsImproving, Converter={StaticResource BoolToArrowConverter}}"
+                                              Fill="{Binding ImprovementColor}"
+                                              Width="10" Height="5"
                                               VerticalAlignment="Center"/>
                                     </Grid>
                                 </DataTemplate>
@@ -294,7 +294,7 @@
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Today's Schedule" Classes="section-header"/>
-                            <TextBlock x:Name="TodayClassesText" Grid.Column="1" Text="{Binding TodayClasses}" FontSize="14" FontWeight="SemiBold" Foreground="#10B981"/>
+                            <TextBlock x:Name="TodayClassesText" Grid.Column="1" Text="{Binding TodayClasses}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}"/>
                         </Grid>
                         <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding TodaySchedule}">
@@ -305,15 +305,15 @@
                                                 <Border Grid.Column="0" Background="{Binding StatusColor}" Width="4" Height="50" CornerRadius="2" VerticalAlignment="Center"/>
                                                 <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" FontSize="12"/>
-                                                    <TextBlock Text="{Binding Grade}" FontSize="11" Foreground="#6B7280"/>
-                                                    <TextBlock Text="{Binding Time}" FontSize="10" Foreground="#9CA3AF"/>
-                                                    <TextBlock Text="{Binding Room}" FontSize="10" Foreground="#9CA3AF"/>
+                                                    <TextBlock Text="{Binding Grade}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding Room}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                                                     <Border Background="{Binding StatusColor}" CornerRadius="12" Padding="6,2" Margin="0,0,0,4">
-                                                        <TextBlock Text="{Binding Status}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
+                                                        <TextBlock Text="{Binding Status}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
                                                     </Border>
-                                                    <TextBlock Text="{Binding StudentsCount}" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StudentsCount}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -332,17 +332,17 @@
                     <StackPanel Spacing="16">
                         <TextBlock Text="Quick Actions" Classes="section-header"/>
                         <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
-                            <Button x:Name="ScheduleButton" Grid.Column="0" Grid.Row="0" Content="📅 Schedule" Classes="quick-action" Background="#10B981" 
+                            <Button x:Name="ScheduleButton" Grid.Column="0" Grid.Row="0" Content="📅 Schedule" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
                                     Command="{Binding NavigateToSchedulePlannerCommand}" Margin="0,0,8,8"/>
-                            <Button x:Name="GradesButton" Grid.Column="1" Grid.Row="0" Content="📊 Grades" Classes="quick-action" Background="#3B82F6" 
+                            <Button x:Name="GradesButton" Grid.Column="1" Grid.Row="0" Content="📊 Grades" Classes="quick-action" Background="{DynamicResource InfoBrush}"
                                     Command="{Binding NavigateToGradeEntryCommand}" Margin="8,0,8,8"/>
-                            <Button x:Name="StudentsButton" Grid.Column="2" Grid.Row="0" Content="👥 Students" Classes="quick-action" Background="#8B5CF6" 
+                            <Button x:Name="StudentsButton" Grid.Column="2" Grid.Row="0" Content="👥 Students" Classes="quick-action" Background="{DynamicResource AccentBrush}"
                                     Command="{Binding NavigateToStudentManagementCommand}" Margin="8,0,0,8"/>
-                            <Button x:Name="AnnounceButton" Grid.Column="0" Grid.Row="1" Content="📢 Announce" Classes="quick-action" Background="#F59E0B" 
+                            <Button x:Name="AnnounceButton" Grid.Column="0" Grid.Row="1" Content="📢 Announce" Classes="quick-action" Background="{DynamicResource WarningBrush}"
                                     Command="{Binding NavigateToMyAnnouncementsCommand}" Margin="0,8,8,0"/>
-                            <Button x:Name="MessagesButton" Grid.Column="1" Grid.Row="1" Content="💬 Messages" Classes="quick-action" Background="#EC4899" 
+                            <Button x:Name="MessagesButton" Grid.Column="1" Grid.Row="1" Content="💬 Messages" Classes="quick-action" Background="{DynamicResource AccentBrush}"
                                     Command="{Binding NavigateToMessagingCommand}" Margin="8,8,8,0"/>
-                            <Button x:Name="ReportsButton" Grid.Column="2" Grid.Row="1" Content="📈 Reports" Classes="quick-action" Background="#6B7280" 
+                            <Button x:Name="ReportsButton" Grid.Column="2" Grid.Row="1" Content="📈 Reports" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}"
                                     Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0"/>
                         </Grid>
                     </StackPanel>
@@ -356,20 +356,20 @@
                             <ItemsControl ItemsSource="{Binding ClassStatistics}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:ClassStatViewModel">
-                                        <Border Background="#F9FAFB" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <Border Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                                             <StackPanel Spacing="4">
                                                 <TextBlock Text="{Binding ClassName}" FontWeight="SemiBold" FontSize="12"/>
                                                 <Grid ColumnDefinitions="*,*,*">
                                                     <StackPanel Grid.Column="0" Spacing="2">
-                                                        <TextBlock Text="Students" FontSize="9" Foreground="#6B7280"/>
+                                                        <TextBlock Text="Students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="{Binding StudentsCount}" FontSize="14" FontWeight="Bold"/>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Spacing="2">
-                                                        <TextBlock Text="Attendance" FontSize="9" Foreground="#6B7280"/>
+                                                        <TextBlock Text="Attendance" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="{Binding AttendanceRate, StringFormat={}{0:F1}%}" FontSize="14" FontWeight="Bold"/>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="2" Spacing="2">
-                                                        <TextBlock Text="Avg Grade" FontSize="9" Foreground="#6B7280"/>
+                                                        <TextBlock Text="Avg Grade" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" FontSize="14" FontWeight="Bold"/>
                                                     </StackPanel>
                                                 </Grid>
@@ -411,7 +411,7 @@
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="Recent Student Activity" Classes="section-header"/>
-                            <Button x:Name="ViewAllButton" Grid.Column="1" Content="View All" Classes="quick-action" Background="#10B981" 
+                            <Button x:Name="ViewAllButton" Grid.Column="1" Content="View All" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
                                     Command="{Binding ViewAllActivitiesCommand}" Padding="8,6" FontSize="10"/>
                         </Grid>
                         <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
@@ -429,9 +429,9 @@
                                                     <Run Text="{Binding Action}"/>
                                                 </TextBlock>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <TextBlock Text="{Binding Subject}" FontSize="10" Foreground="#10B981"/>
-                                                    <TextBlock Text="•" FontSize="10" Foreground="#9CA3AF"/>
-                                                    <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="#9CA3AF"/>
+                                                    <TextBlock Text="{Binding Subject}" FontSize="10" Foreground="{DynamicResource SuccessBrush}"/>
+                                                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Grid>
@@ -448,60 +448,60 @@
                 <StackPanel Spacing="16">
                     <TextBlock Text="Weekly Schedule Overview" Classes="section-header"/>
                     <Grid x:Name="WeeklyGrid" ColumnDefinitions="*,*,*,*,*,*,*">
-                        <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,4,0">
+                        <Border Grid.Column="0" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Mon" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
-                                <TextBlock Text="120 students" FontSize="9" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="120 students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="1" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="1" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Tue" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="5" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
-                                <TextBlock Text="150 students" FontSize="9" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="150 students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="2" Background="#E0F2F1" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="2" CornerRadius="8" Padding="12" Margin="4,0" Background="{DynamicResource SuccessBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Wed" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="#10B981" HorizontalAlignment="Center"/>
-                                <TextBlock Text="120 students" FontSize="9" Foreground="#10B981" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Wed" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="120 students" FontSize="9" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="3" Background="#DBEAFE" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="3" CornerRadius="8" Padding="12" Margin="4,0" Background="{DynamicResource InfoBrush}" Opacity="0.15">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Thu" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="6" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="#3B82F6" HorizontalAlignment="Center"/>
-                                <TextBlock Text="180 students" FontSize="9" Foreground="#3B82F6" HorizontalAlignment="Center"/>
+                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="180 students" FontSize="9" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="4" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="4" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Fri" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
-                                <TextBlock Text="120 students" FontSize="9" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="120 students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="5" Background="#FEF3C7" CornerRadius="8" Padding="12" Margin="4,0">
+                        <Border Grid.Column="5" CornerRadius="8" Padding="12" Margin="4,0" Background="{DynamicResource WarningBrush}" Opacity="0.15">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Sat" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="2" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="#F59E0B" HorizontalAlignment="Center"/>
-                                <TextBlock Text="60 students" FontSize="9" Foreground="#F59E0B" HorizontalAlignment="Center"/>
+                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="60 students" FontSize="9" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="6" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0,0,0">
+                        <Border Grid.Column="6" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="4,0,0,0">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
                                 <TextBlock Text="Sun" FontSize="12" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
-                                <TextBlock Text="day" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Enjoy!" FontSize="9" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                                <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </Grid>

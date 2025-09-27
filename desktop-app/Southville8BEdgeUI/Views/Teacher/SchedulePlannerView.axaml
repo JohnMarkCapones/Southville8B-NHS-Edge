@@ -6,13 +6,13 @@
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.SchedulePlannerView"
              x:DataType="vm:SchedulePlannerViewModel"
-             Background="#F9FAFB">
+             Background="{DynamicResource PageBackgroundBrush}">
 
     <UserControl.Styles>
         <!-- Base Card Style -->
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
@@ -38,8 +38,8 @@
 
         <!-- Action Button Styles -->
         <Style Selector="Button.action-btn">
-            <Setter Property="Background" Value="#10B981"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -54,7 +54,6 @@
         </Style>
 
         <Style Selector="Button.action-btn:pointerover">
-            <Setter Property="Background" Value="#059669"/>
             <Setter Property="RenderTransform" Value="scale(1.02)"/>
         </Style>
 
@@ -65,8 +64,8 @@
 
         <!-- Secondary Button Styles -->
         <Style Selector="Button.secondary-btn">
-            <Setter Property="Background" Value="#3B82F6"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InfoBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -75,13 +74,14 @@
         </Style>
 
         <Style Selector="Button.secondary-btn:pointerover">
-            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InfoBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
         <!-- Tertiary Button Styles -->
         <Style Selector="Button.tertiary-btn">
-            <Setter Property="Background" Value="#6B7280"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="8,6"/>
@@ -90,13 +90,14 @@
         </Style>
 
         <Style Selector="Button.tertiary-btn:pointerover">
-            <Setter Property="Background" Value="#4B5563"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
         <!-- Schedule Slot Styles -->
         <Style Selector="Border.schedule-slot">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="8"/>
@@ -112,18 +113,18 @@
         </Style>
 
         <Style Selector="Border.schedule-slot:pointerover">
-            <Setter Property="Background" Value="#F9FAFB"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
         </Style>
 
         <Style Selector="Border.schedule-slot.occupied">
-            <Setter Property="Background" Value="#EEF2FF"/>
-            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <!-- No Opacity: emphasize with colored border strip -->
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InfoBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
         </Style>
 
         <Style Selector="Border.schedule-slot.occupied:pointerover">
-            <Setter Property="Background" Value="#E0E7FF"/>
-            <Setter Property="BorderBrush" Value="#2563EB"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
         </Style>
 
         <Style Selector="Border.schedule-slot.mobile">
@@ -133,8 +134,8 @@
 
         <!-- Time Header Styles -->
         <Style Selector="Border.time-header">
-            <Setter Property="Background" Value="#F9FAFB"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,0"/>
             <Setter Property="Padding" Value="12,8"/>
             <Setter Property="MinHeight" Value="60"/>
@@ -149,7 +150,7 @@
         <Style Selector="TextBlock.header">
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="TextBlock.header.mobile">
@@ -162,7 +163,7 @@
 
         <Style Selector="TextBlock.subtitle">
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
 
         <Style Selector="TextBlock.subtitle.mobile">
@@ -172,6 +173,7 @@
         <Style Selector="TextBlock.kpi-value">
             <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="TextBlock.kpi-value.mobile">
@@ -185,14 +187,15 @@
         <!-- Input Styles -->
         <Style Selector="ComboBox, TextBox, TimePicker">
             <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="ComboBox:focus-within, TextBox:focus-within, TimePicker:focus-within">
-            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
 
@@ -214,26 +217,20 @@
 
         <!-- Upcoming Class Card Styles -->
         <Style Selector="Border.upcoming-class-card">
-            <Setter Property="Background" Value="#F9FAFB"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
-                </Transitions>
-            </Setter>
         </Style>
 
         <Style Selector="Border.upcoming-class-card:pointerover">
-            <Setter Property="Background" Value="#F3F4F6"/>
-			<Setter Property="RenderTransform">
-				<Setter.Value>
-					<TranslateTransform Y="-1"/>
-				</Setter.Value>
-			</Setter>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform Y="-1"/>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style Selector="Border.upcoming-class-card.mobile">
@@ -242,8 +239,8 @@
 
         <!-- Conflict Card Styles -->
         <Style Selector="Border.conflict-card">
-            <Setter Property="Background" Value="#FEF2F2"/>
-            <Setter Property="BorderBrush" Value="#FCA5A5"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="8"/>
@@ -259,19 +256,9 @@
         <!-- Schedule Slot Template -->
         <DataTemplate x:Key="ScheduleSlotTemplate" DataType="vm:ScheduleSlotViewModel">
             <StackPanel IsVisible="{Binding IsOccupied}" VerticalAlignment="Center">
-                <TextBlock Text="{Binding Subject}" 
-                          FontWeight="SemiBold" 
-                          FontSize="11" 
-                          HorizontalAlignment="Center"
-                          TextWrapping="Wrap"/>
-                <TextBlock Text="{Binding Grade}" 
-                          FontSize="10" 
-                          Foreground="#6B7280" 
-                          HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding Room}" 
-                          FontSize="9" 
-                          Foreground="#9CA3AF" 
-                          HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Grade}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Room}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
             </StackPanel>
         </DataTemplate>
 
@@ -279,36 +266,19 @@
         <DataTemplate x:Key="UpcomingClassTemplate" DataType="vm:UpcomingClassViewModel">
             <Border Classes="upcoming-class-card">
                 <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Border Grid.Column="0" 
-                           Background="{Binding SubjectColor}" 
-                           Width="4" 
-                           Height="40" 
-                           CornerRadius="2" 
-                           VerticalAlignment="Center"/>
-                    <StackPanel Grid.Column="1" 
-                               Margin="12,0" 
-                               VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Subject}" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Grade}" FontSize="12" Foreground="#6B7280"/>
+                    <Border Grid.Column="0" Background="{Binding SubjectColor}" Width="4" Height="40" CornerRadius="2" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding Grade}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding Time}" FontSize="12" Foreground="#6B7280"/>
-                            <TextBlock Text="•" FontSize="12" Foreground="#6B7280"/>
-                            <TextBlock Text="{Binding Room}" FontSize="12" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding Time}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                            <TextBlock Text="•" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                            <TextBlock Text="{Binding Room}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                        <Button Content="✏️" 
-                               Classes="tertiary-btn"
-                               Padding="6" 
-                               ToolTip.Tip="Edit Class"
-                               Command="{Binding $parent[UserControl].((vm:SchedulePlannerViewModel)DataContext).EditClassCommand}" 
-                               CommandParameter="{Binding}"/>
-                        <Button Content="📝" 
-                               Classes="action-btn"
-                               Padding="6"
-                               ToolTip.Tip="Add Notes"
-                               Command="{Binding $parent[UserControl].((vm:SchedulePlannerViewModel)DataContext).AddNotesCommand}" 
-                               CommandParameter="{Binding}"/>
+                        <Button Content="✏️" Classes="tertiary-btn" Padding="6" ToolTip.Tip="Edit Class" Command="{Binding $parent[UserControl].((vm:SchedulePlannerViewModel)DataContext).EditClassCommand}" CommandParameter="{Binding}"/>
+                        <Button Content="📝" Classes="action-btn" Padding="6" ToolTip.Tip="Add Notes" Command="{Binding $parent[UserControl].((vm:SchedulePlannerViewModel)DataContext).AddNotesCommand}" CommandParameter="{Binding}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -318,56 +288,26 @@
         <DataTemplate x:Key="ConflictTemplate" DataType="vm:ScheduleConflictViewModel">
             <Border Classes="conflict-card">
                 <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding ConflictDescription}" 
-                              FontSize="11" 
-                              FontWeight="SemiBold" 
-                              Foreground="#DC2626"
-                              TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding Time}" 
-                              FontSize="10" 
-                              Foreground="#7F1D1D"/>
-                    <Button Content="Resolve" 
-                           Background="#EF4444" 
-                           Foreground="White" 
-                           BorderThickness="0" 
-                           CornerRadius="4" 
-                           Padding="6,2" 
-                           FontSize="10" 
-                           HorizontalAlignment="Left" 
-                           Command="{Binding ResolveCommand}"/>
+                    <TextBlock Text="{Binding ConflictDescription}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource DangerBrush}"/>
+                    <Button Content="Resolve" Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="4" Padding="6,2" FontSize="10" HorizontalAlignment="Left" Command="{Binding ResolveCommand}"/>
                 </StackPanel>
             </Border>
         </DataTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer x:Name="MainScrollViewer" 
-                  HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="MainScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="MainStackPanel" Classes="main-content">
-            
             <!-- Header Section -->
             <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="Schedule Planner" Classes="header"/>
                     <TextBlock Text="Plan and manage your weekly class schedule" Classes="subtitle"/>
                 </StackPanel>
-                
-                <StackPanel Grid.Column="1" 
-                           Orientation="Horizontal" 
-                           Spacing="12" 
-                           VerticalAlignment="Center">
-                    <ComboBox SelectedItem="{Binding SelectedWeek}" 
-                             ItemsSource="{Binding AvailableWeeks}" 
-                             MinWidth="150" 
-                             PlaceholderText="Select Week"/>
-                    <Button x:Name="AddClassButton"
-                           Content="📅 Add Class" 
-                           Classes="action-btn" 
-                           Command="{Binding AddClassCommand}"/>
-                    <Button x:Name="ExportButton"
-                           Content="📊 Export Schedule" 
-                           Classes="secondary-btn"
-                           Command="{Binding ExportScheduleCommand}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <ComboBox SelectedItem="{Binding SelectedWeek}" ItemsSource="{Binding AvailableWeeks}" MinWidth="150" PlaceholderText="Select Week"/>
+                    <Button x:Name="AddClassButton" Content="📅 Add Class" Classes="action-btn" Command="{Binding AddClassCommand}"/>
+                    <Button x:Name="ExportButton" Content="📊 Export Schedule" Classes="secondary-btn" Command="{Binding ExportScheduleCommand}"/>
                 </StackPanel>
             </Grid>
 
@@ -375,33 +315,30 @@
             <Grid x:Name="KpiGrid" ColumnDefinitions="*,*,*,*">
                 <Border x:Name="KpiCard1" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="This Week Classes" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding WeeklyClassesCount}" Classes="kpi-value" Foreground="#3B82F6"/>
-                        <TextBlock Text="Scheduled sessions" FontSize="12" Foreground="#3B82F6"/>
+                        <TextBlock Text="This Week Classes" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding WeeklyClassesCount}" Classes="kpi-value" Foreground="{DynamicResource InfoBrush}"/>
+                        <TextBlock Text="Scheduled sessions" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="KpiCard2" Grid.Column="1" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Teaching Hours" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding WeeklyHours}" Classes="kpi-value" Foreground="#10B981"/>
-                        <TextBlock Text="Total this week" FontSize="12" Foreground="#10B981"/>
+                        <TextBlock Text="Teaching Hours" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding WeeklyHours}" Classes="kpi-value" Foreground="{DynamicResource SuccessBrush}"/>
+                        <TextBlock Text="Total this week" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="KpiCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Free Periods" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding FreePeriodsCount}" Classes="kpi-value" Foreground="#F59E0B"/>
-                        <TextBlock Text="Available slots" FontSize="12" Foreground="#F59E0B"/>
+                        <TextBlock Text="Free Periods" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding FreePeriodsCount}" Classes="kpi-value" Foreground="{DynamicResource WarningBrush}"/>
+                        <TextBlock Text="Available slots" FontSize="12" Foreground="{DynamicResource WarningBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="KpiCard4" Grid.Column="3" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Conflicts" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding ConflictsCount}" Classes="kpi-value" Foreground="#EF4444"/>
-                        <TextBlock Text="Need attention" FontSize="12" Foreground="#EF4444"/>
+                        <TextBlock Text="Conflicts" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding ConflictsCount}" Classes="kpi-value" Foreground="{DynamicResource DangerBrush}"/>
+                        <TextBlock Text="Need attention" FontSize="12" Foreground="{DynamicResource DangerBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -410,23 +347,10 @@
             <Border Classes="card">
                 <StackPanel Spacing="16">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" 
-                                  Text="Weekly Schedule" 
-                                  FontSize="18" 
-                                  FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="0" Text="Weekly Schedule" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="RefreshButton"
-                                   Content="🔄 Refresh" 
-                                   Classes="tertiary-btn"
-                                   Command="{Binding RefreshScheduleCommand}"/>
-                            <Button x:Name="TemplatesButton"
-                                   Content="📋 Templates" 
-                                   Background="#8B5CF6" 
-                                   Foreground="White" 
-                                   BorderThickness="0" 
-                                   CornerRadius="6" 
-                                   Padding="8,6" 
-                                   Command="{Binding ManageTemplatesCommand}"/>
+                            <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="tertiary-btn" Command="{Binding RefreshScheduleCommand}"/>
+                            <Button x:Name="TemplatesButton" Content="📋 Templates" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="6" Padding="8,6" Command="{Binding ManageTemplatesCommand}"/>
                         </StackPanel>
                     </Grid>
 
@@ -439,47 +363,41 @@
 
                         <!-- Schedule Header -->
                         <Grid Grid.Row="0" x:Name="DayColumnsGrid" ColumnDefinitions="100,*,*,*,*,*,*,*">
-                            <Border Grid.Column="0" Background="#F9FAFB" Padding="12,8" CornerRadius="6,0,0,6">
-                                <TextBlock Text="Time" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="0" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8" CornerRadius="6,0,0,6">
+                                <TextBlock Text="Time" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="1" Background="#F9FAFB" Padding="12,8">
-                                <TextBlock Text="Monday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="1" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8">
+                                <TextBlock Text="Monday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="2" Background="#F9FAFB" Padding="12,8">
-                                <TextBlock Text="Tuesday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="2" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8">
+                                <TextBlock Text="Tuesday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="3" Background="#F9FAFB" Padding="12,8">
-                                <TextBlock Text="Wednesday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="3" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8">
+                                <TextBlock Text="Wednesday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="4" Background="#F9FAFB" Padding="12,8">
-                                <TextBlock Text="Thursday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="4" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8">
+                                <TextBlock Text="Thursday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="5" Background="#F9FAFB" Padding="12,8">
-                                <TextBlock Text="Friday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="5" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8">
+                                <TextBlock Text="Friday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="6" Background="#F9FAFB" Padding="12,8">
-                                <TextBlock Text="Saturday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="6" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8">
+                                <TextBlock Text="Saturday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
-                            <Border Grid.Column="7" Background="#F9FAFB" Padding="12,8" CornerRadius="0,6,6,0">
-                                <TextBlock Text="Sunday" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <Border Grid.Column="7" Background="{DynamicResource PageBackgroundBrush}" Padding="12,8" CornerRadius="0,6,6,0">
+                                <TextBlock Text="Sunday" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Border>
                         </Grid>
 
                         <!-- Schedule Content -->
-                        <ScrollViewer Grid.Row="1" 
-                                     MaxHeight="600" 
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer Grid.Row="1" MaxHeight="600" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding TimeSlots}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:TimeSlotViewModel">
                                         <Grid ColumnDefinitions="100,*,*,*,*,*,*,*">
                                             <!-- Time Column -->
                                             <Border x:Name="TimeColumn" Grid.Column="0" Classes="time-header">
-                                                <TextBlock Text="{Binding TimeRange}" 
-                                                          FontWeight="SemiBold" 
-                                                          HorizontalAlignment="Center" 
-                                                          VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding TimeRange}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             </Border>
 
                                             <!-- Day Columns -->
@@ -521,15 +439,12 @@
 
             <!-- Bottom Section: Upcoming Classes and Quick Actions -->
             <Grid x:Name="ContentGrid" ColumnDefinitions="2*,*">
-                
                 <!-- Upcoming Classes Panel -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Upcoming Classes" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Upcoming Classes" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl x:Name="UpcomingClassesList" 
-                                         ItemsSource="{Binding UpcomingClasses}"
-                                         ItemTemplate="{StaticResource UpcomingClassTemplate}"/>
+                            <ItemsControl x:Name="UpcomingClassesList" ItemsSource="{Binding UpcomingClasses}" ItemTemplate="{StaticResource UpcomingClassTemplate}"/>
                         </ScrollViewer>
                     </StackPanel>
                 </Border>
@@ -537,12 +452,13 @@
                 <!-- Side Panel: Quick Actions -->
                 <Border x:Name="SidePanel" Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         
                         <!-- Quick Add Form -->
                         <StackPanel x:Name="QuickAddPanel" Spacing="16">
-                            <TextBlock Text="Quick Add Class" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Quick Add Class" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             
+
                             <StackPanel x:Name="QuickAddForm" Spacing="12">
                                 <ComboBox SelectedItem="{Binding NewClassSubject}" 
                                          ItemsSource="{Binding AvailableSubjects}" 
@@ -574,10 +490,10 @@
         
                         <!-- Schedule Templates -->
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Schedule Templates" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Schedule Templates" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <Button Content="📋 Load Template" 
-                                   Background="#8B5CF6" 
-                                   Foreground="White" 
+                                   Background="{DynamicResource AccentBrush}" 
+                                   Foreground="{DynamicResource AccentTextOnAccentBrush}" 
                                    BorderThickness="0" 
                                    CornerRadius="8" 
                                    Padding="12,8" 
@@ -585,8 +501,8 @@
                                    HorizontalAlignment="Stretch" 
                                    Command="{Binding LoadTemplateCommand}"/>
                             <Button Content="💾 Save as Template" 
-                                   Background="#F59E0B" 
-                                   Foreground="White" 
+                                   Background="{DynamicResource WarningBrush}" 
+                                   Foreground="{DynamicResource AccentTextOnAccentBrush}" 
                                    BorderThickness="0" 
                                    CornerRadius="8" 
                                    Padding="12,8" 
@@ -600,7 +516,7 @@
                             <TextBlock Text="Schedule Conflicts" 
                                       FontSize="14" 
                                       FontWeight="SemiBold" 
-                                      Foreground="#EF4444"/>
+                                      Foreground="{DynamicResource DangerBrush}"/>
                             <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl x:Name="ConflictsList" 
                                              ItemsSource="{Binding Conflicts}"

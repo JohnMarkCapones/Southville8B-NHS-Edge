@@ -225,6 +225,14 @@ public partial class DashboardActivityViewModel : ViewModelBase
         "Maintenance" => "#EF4444",
         _ => "#6B7280"
     };
+
+    // New combined description used in XAML instead of Runs (avoids potential theme re-template issues with inline Runs disappearing)
+    public string Description => string.IsNullOrWhiteSpace(User) && string.IsNullOrWhiteSpace(Action)
+        ? string.Empty
+        : string.IsNullOrWhiteSpace(Action) ? User : string.IsNullOrWhiteSpace(User) ? Action : $"{User} {Action}";
+
+    partial void OnUserChanged(string value) => OnPropertyChanged(nameof(Description));
+    partial void OnActionChanged(string value) => OnPropertyChanged(nameof(Description));
 }
 
 public partial class SystemAlertViewModel : ViewModelBase

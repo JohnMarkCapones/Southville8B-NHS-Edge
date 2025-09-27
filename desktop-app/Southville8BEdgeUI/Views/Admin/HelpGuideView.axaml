@@ -7,113 +7,165 @@
              x:Class="Southville8BEdgeUI.Views.Admin.HelpGuideView"
              x:DataType="vm:HelpGuideViewModel">
 
-    <Border Background="White" Padding="24">
+    <UserControl.Styles>
+        <!-- Text Styles -->
+        <Style Selector="TextBlock.page-title">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.page-subtitle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.article-title">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.article-content">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.category-title">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.category-desc">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.empty-hint">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Containers -->
+        <Style Selector="Border.root-surface">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Border.search-card, Border.categories-card, Border.article-card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Border.inline-article">
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- Inputs -->
+        <Style Selector="TextBox">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- Buttons -->
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.category-item">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Button.category-item:pointerover">
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+        </Style>
+
+        <!-- Icon Style -->
+        <Style Selector="TextBlock.guide-icon">
+            <Setter Property="FontSize" Value="48"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Classes="root-surface" Padding="24">
         <Grid RowDefinitions="Auto,Auto,*">
             <!-- Header -->
             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
-                <TextBlock Text="Help Guide" FontSize="24" FontWeight="Bold" Foreground="#1F2937"/>
-                <TextBlock Text="Find answers to your questions and learn how to use the system effectively"
-                          FontSize="14" Foreground="#6B7280"/>
+                <TextBlock Text="Help Guide" Classes="page-title"/>
+                <TextBlock Text="Find answers to your questions and learn how to use the system effectively" Classes="page-subtitle"/>
             </StackPanel>
 
             <!-- Search Bar -->
-            <Border Grid.Row="1" Background="#F9FAFB" CornerRadius="8" Padding="16" Margin="0,0,0,24">
+            <Border Grid.Row="1" Classes="search-card" Margin="0,0,0,24">
                 <StackPanel Spacing="12">
-                    <TextBox Text="{Binding SearchText}"
-                             Watermark="Search help articles..."
-                             Padding="12"
-                             CornerRadius="6"
-                             BorderBrush="#D1D5DB"/>
-                    <Button Content="Search"
-                            Background="#DC2626"
-                            Foreground="White"
-                            BorderThickness="0"
-                            CornerRadius="6"
-                            Padding="12,8"
-                            FontWeight="SemiBold"
-                            Command="{Binding SearchHelpCommand}"/>
+                    <TextBox Text="{Binding SearchText}" Watermark="Search help articles..."/>
+                    <Button Content="Search" Classes="danger" Command="{Binding SearchHelpCommand}"/>
                 </StackPanel>
             </Border>
 
             <!-- Content Area -->
             <Grid Grid.Row="2" ColumnDefinitions="300,*">
                 <!-- Categories List -->
-                <Border Grid.Column="0" Background="#F9FAFB" CornerRadius="8" Padding="16" Margin="0,0,16,0">
+                <Border Grid.Column="0" Classes="categories-card" Margin="0,0,16,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Help Categories" FontSize="16" FontWeight="SemiBold" Foreground="#1F2937"/>
-
+                        <TextBlock Text="Help Categories" Classes="section-title"/>
                         <ItemsControl ItemsSource="{Binding HelpCategories}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Background="Transparent"
-                                            BorderThickness="0"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Left"
-                                            Padding="12"
-                                            Margin="0,0,0,8"
-                                            CornerRadius="6"
+                                    <Button Classes="category-item"
                                             Command="{Binding $parent[UserControl].((vm:HelpGuideViewModel)DataContext).SelectCategoryCommand}"
                                             CommandParameter="{Binding}">
-                                        <Button.Styles>
-                                            <Style Selector="Button:pointerover">
-                                                <Setter Property="Background" Value="White"/>
-                                            </Style>
-                                        </Button.Styles>
                                         <StackPanel Spacing="4">
-                                            <TextBlock Text="{Binding Title}"
-                                                      FontSize="14"
-                                                      FontWeight="SemiBold"
-                                                      Foreground="#1F2937"/>
-                                            <TextBlock Text="{Binding Description}"
-                                                      FontSize="12"
-                                                      Foreground="#6B7280"
-                                                      TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Title}" Classes="category-title"/>
+                                            <TextBlock Text="{Binding Description}" Classes="category-desc"/>
                                         </StackPanel>
                                     </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <!-- Contact Support -->
-                        <Button Content="Contact Support"
-                                Background="#DC2626"
-                                Foreground="White"
-                                BorderThickness="0"
-                                CornerRadius="6"
-                                Padding="12,8"
-                                FontWeight="SemiBold"
-                                HorizontalAlignment="Stretch"
-                                Command="{Binding ContactSupportCommand}"/>
+                        <Button Content="Contact Support" Classes="danger" HorizontalAlignment="Stretch" Command="{Binding ContactSupportCommand}"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Articles Content -->
-                <Border Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="24">
+                <Border Grid.Column="1" Classes="article-card" Padding="24">
                     <Grid>
                         <!-- Content when category is selected -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <StackPanel Spacing="16">
-                                <TextBlock Text="{Binding SelectedCategory.Title}"
-                                          FontSize="20"
-                                          FontWeight="Bold"
-                                          Foreground="#1F2937"/>
-
+                                <TextBlock Text="{Binding SelectedCategory.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <ItemsControl ItemsSource="{Binding SelectedCategory.Articles}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#F9FAFB"
-                                                    CornerRadius="8"
-                                                    Padding="16"
-                                                    Margin="0,0,0,12">
+                                            <Border Classes="inline-article">
                                                 <StackPanel Spacing="8">
-                                                    <TextBlock Text="{Binding Title}"
-                                                              FontSize="16"
-                                                              FontWeight="SemiBold"
-                                                              Foreground="#1F2937"/>
-                                                    <TextBlock Text="{Binding Content}"
-                                                              FontSize="14"
-                                                              Foreground="#6B7280"
-                                                              TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Title}" Classes="article-title"/>
+                                                    <TextBlock Text="{Binding Content}" Classes="article-content"/>
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
@@ -123,15 +175,9 @@
                         </ScrollViewer>
 
                         <!-- Default content when no category selected -->
-                        <StackPanel VerticalAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   Spacing="16"
-                                   IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNull}}">
-                            <TextBlock Text="📖" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
-                            <TextBlock Text="Select a category to view help articles"
-                                      FontSize="16"
-                                      Foreground="#6B7280"
-                                      HorizontalAlignment="Center"/>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16" IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNull}}">
+                            <TextBlock Text="📖" Classes="guide-icon"/>
+                            <TextBlock Text="Select a category to view help articles" Classes="empty-hint"/>
                         </StackPanel>
                     </Grid>
                 </Border>

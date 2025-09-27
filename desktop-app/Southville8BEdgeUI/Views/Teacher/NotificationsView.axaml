@@ -3,68 +3,150 @@
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
              x:Class="Southville8BEdgeUI.Views.Teacher.NotificationsView"
-             x:DataType="vm:NotificationsViewModel">
+             x:DataType="vm:NotificationsViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
     <UserControl.Resources>
         <converters:SeverityToBrushConverter x:Key="SeverityToBrush" />
         <converters:CollectionIsEmptyConverter x:Key="CollectionIsEmpty" />
         <converters:CollectionHasItemsConverter x:Key="CollectionHasItems" />
     </UserControl.Resources>
+
+    <UserControl.Styles>
+        <!-- Card container -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="Border.card-header">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.title">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="Border.badge-muted">
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Border.badge-accent">
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="6,2"/>
+        </Style>
+        <Style Selector="TextBlock.badge-text-muted">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.badge-text-accent">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.severity-icon">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Button.icon-btn">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Button.icon-btn:pointerover">
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid>
         <StackPanel Spacing="16" Margin="16">
             <!-- Page Header -->
-            <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8">
-                <Grid ColumnDefinitions="Auto,*,Auto" Margin="16">
-                    <Border Width="32" Height="32" Background="#10B981" CornerRadius="6" VerticalAlignment="Center">
-                        <Path Width="16" Height="16" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" 
-                              Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Border Classes="card-header">
+                <Grid ColumnDefinitions="Auto,*,Auto" >
+                    <Border Width="32" Height="32" Background="{DynamicResource SuccessBrush}" CornerRadius="6" VerticalAlignment="Center">
+                        <Path Width="25" Height="25" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" Fill="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <TextBlock Text="Notifications" FontSize="16" FontWeight="SemiBold"/>
-                        <TextBlock Text="Stay updated with your latest activities and alerts" FontSize="12" Foreground="#6B7280"/>
+                        <TextBlock Text="Notifications" Classes="title"/>
+                        <TextBlock Text="Stay updated with your latest activities and alerts" Classes="subtitle"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <Button Content="Mark All Read" Background="#10B981" Foreground="White" BorderThickness="0" CornerRadius="4" Padding="12,6"/>
-                        <Button Content="Settings" Background="Transparent" Foreground="#6B7280" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="4" Padding="12,6"/>
+                        <Button Content="Mark All Read" Classes="primary"/>
+                        <Button Content="Settings" Classes="outline"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- Notifications List -->
-            <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" IsVisible="{Binding Items, Converter={StaticResource CollectionHasItems}}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="600">
+            <Border Classes="card" IsVisible="{Binding Items, Converter={StaticResource CollectionHasItems}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="600" Padding="0">
                     <ItemsControl ItemsSource="{Binding Items}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:NotificationItem">
-                                <Border BorderBrush="#F3F4F6" BorderThickness="0,0,0,1" Padding="16,12">
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,12">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <!-- Severity Indicator -->
-                                        <Border Width="40" Height="40" Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}" CornerRadius="20" VerticalAlignment="Top" Opacity="0.1">
-                                            <Ellipse Width="8" Height="8" Fill="{Binding Severity, Converter={StaticResource SeverityToBrush}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Border Classes="severity-icon" Background="{DynamicResource PageBackgroundBrush}" VerticalAlignment="Top">
+                                            <Ellipse Width="10" Height="10" Fill="{Binding Severity, Converter={StaticResource SeverityToBrush}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
-                                        
+
                                         <!-- Content -->
                                         <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Top" Margin="12,0,0,0">
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
-                                            <TextBlock Text="{Binding Description}" Foreground="#6B7280" FontSize="12" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap"/>
                                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                                                <Border Background="#F3F4F6" CornerRadius="12" Padding="6,2">
-                                                    <TextBlock Text="{Binding TimeAgo}" Foreground="#6B7280" FontSize="10"/>
+                                                <Border Classes="badge-muted">
+                                                    <TextBlock Text="{Binding TimeAgo}" Classes="badge-text-muted"/>
                                                 </Border>
-                                                <Border Background="#10B981" CornerRadius="12" Padding="6,2" Opacity="0.1">
-                                                    <TextBlock Text="New" Foreground="#10B981" FontSize="10" FontWeight="SemiBold"/>
+                                                <Border Classes="badge-accent" IsVisible="{Binding IsNew}">
+                                                    <TextBlock Text="New" Classes="badge-text-accent"/>
                                                 </Border>
                                             </StackPanel>
                                         </StackPanel>
-                                        
+
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Top" Margin="12,0,0,0">
-                                            <Button Width="32" Height="32" Background="Transparent" BorderThickness="0" CornerRadius="4"
-                                                    ToolTip.Tip="Mark as read">
-                                                <Path Width="14" Height="14" Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" Fill="#6B7280"/>
+                                            <Button Classes="icon-btn" ToolTip.Tip="Mark as read">
+                                                <Path Width="14" Height="14" Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" Fill="{DynamicResource TextMutedBrush}"/>
                                             </Button>
-                                            <Button Width="32" Height="32" Background="Transparent" BorderThickness="0" CornerRadius="4"
-                                                    ToolTip.Tip="Delete">
-                                                <Path Width="14" Height="14" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" Fill="#6B7280"/>
+                                            <Button Classes="icon-btn" ToolTip.Tip="Delete">
+                                                <Path Width="14" Height="14" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" Fill="{DynamicResource TextMutedBrush}"/>
                                             </Button>
                                         </StackPanel>
                                     </Grid>
@@ -75,15 +157,14 @@
                 </ScrollViewer>
             </Border>
 
-            <!-- Empty State (if no notifications) -->
-            <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" IsVisible="{Binding Items, Converter={StaticResource CollectionIsEmpty}}">
+            <!-- Empty State -->
+            <Border Classes="card" IsVisible="{Binding Items, Converter={StaticResource CollectionIsEmpty}}">
                 <StackPanel Spacing="12" Margin="32" HorizontalAlignment="Center">
-                    <Border Width="64" Height="64" Background="#F3F4F6" CornerRadius="32" HorizontalAlignment="Center">
-                        <Path Width="32" Height="32" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" 
-                              Fill="#9CA3AF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="64" Height="64" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="32" HorizontalAlignment="Center" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <Path Width="32" Height="32" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" Fill="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="No notifications yet" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="When you receive notifications, they'll appear here" FontSize="12" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                    <TextBlock Text="No notifications yet" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="When you receive notifications, they'll appear here" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
         </StackPanel>

@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Admin.AdminDashboardView"
              x:DataType="vm:AdminDashboardViewModel"
-             Background="#F9FAFB">
+             Background="{DynamicResource PageBackgroundBrush}">
 
   <UserControl.Resources>
     <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
@@ -15,8 +15,8 @@
 
   <UserControl.Styles>
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="White"/>
-      <Setter Property="BorderBrush" Value="#E5E7EB"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="12"/>
       <Setter Property="Padding" Value="20"/>
@@ -43,13 +43,11 @@
       <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
 
-    <!-- RESPONSIVE TEXT STYLES -->
-
-    <!-- Main Header (Dashboard Title) -->
+    <!-- TEXT STYLES -->
     <Style Selector="TextBlock.main-header">
       <Setter Property="FontSize" Value="28"/>
       <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.main-header.tablet">
       <Setter Property="FontSize" Value="24"/>
@@ -58,10 +56,9 @@
       <Setter Property="FontSize" Value="20"/>
     </Style>
 
-    <!-- Subtitle Text -->
     <Style Selector="TextBlock.subtitle">
       <Setter Property="FontSize" Value="14"/>
-      <Setter Property="Foreground" Value="#6B7280"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
     </Style>
     <Style Selector="TextBlock.subtitle.tablet">
       <Setter Property="FontSize" Value="13"/>
@@ -70,11 +67,10 @@
       <Setter Property="FontSize" Value="12"/>
     </Style>
 
-    <!-- Section Headers (Performance Metrics, Quick Actions, etc.) -->
     <Style Selector="TextBlock.section-header">
       <Setter Property="FontSize" Value="18"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.section-header.tablet">
       <Setter Property="FontSize" Value="16"/>
@@ -83,9 +79,8 @@
       <Setter Property="FontSize" Value="14"/>
     </Style>
 
-    <!-- Stat Title Text (Total Students, Active Teachers, etc.) -->
     <Style Selector="TextBlock.stat-title">
-      <Setter Property="Foreground" Value="#6B7280"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="Medium"/>
     </Style>
@@ -96,9 +91,8 @@
       <Setter Property="FontSize" Value="12"/>
     </Style>
 
-    <!-- Stat Value Text (Large numbers like 1512, 45, etc.) -->
     <Style Selector="TextBlock.stat-value">
-      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
       <Setter Property="FontSize" Value="28"/>
       <Setter Property="FontWeight" Value="Bold"/>
     </Style>
@@ -109,10 +103,10 @@
       <Setter Property="FontSize" Value="20"/>
     </Style>
 
-    <!-- Medium Text (Financial values, etc.) -->
     <Style Selector="TextBlock.medium-text">
       <Setter Property="FontSize" Value="20"/>
       <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.medium-text.tablet">
       <Setter Property="FontSize" Value="18"/>
@@ -121,10 +115,10 @@
       <Setter Property="FontSize" Value="16"/>
     </Style>
 
-    <!-- Large Text (Net Revenue, etc.) -->
     <Style Selector="TextBlock.large-text">
       <Setter Property="FontSize" Value="24"/>
       <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.large-text.tablet">
       <Setter Property="FontSize" Value="20"/>
@@ -133,10 +127,10 @@
       <Setter Property="FontSize" Value="18"/>
     </Style>
 
-    <!-- Body Text (General content) -->
     <Style Selector="TextBlock.body-text">
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="Normal"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.body-text.tablet">
       <Setter Property="FontSize" Value="13"/>
@@ -145,9 +139,9 @@
       <Setter Property="FontSize" Value="12"/>
     </Style>
 
-    <!-- Small Text (Subtexts, descriptions) -->
     <Style Selector="TextBlock.small-text">
       <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.small-text.tablet">
       <Setter Property="FontSize" Value="11"/>
@@ -156,9 +150,9 @@
       <Setter Property="FontSize" Value="10"/>
     </Style>
 
-    <!-- Tiny Text (Timestamps, very small details) -->
     <Style Selector="TextBlock.tiny-text">
       <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.tiny-text.tablet">
       <Setter Property="FontSize" Value="9"/>
@@ -167,10 +161,10 @@
       <Setter Property="FontSize" Value="8"/>
     </Style>
 
-    <!-- Performance Metric Values -->
     <Style Selector="TextBlock.metric-value">
       <Setter Property="FontSize" Value="20"/>
       <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.metric-value.tablet">
       <Setter Property="FontSize" Value="18"/>
@@ -179,10 +173,10 @@
       <Setter Property="FontSize" Value="16"/>
     </Style>
 
-    <!-- Status Text (System Status, etc.) -->
     <Style Selector="TextBlock.status-text">
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.status-text.tablet">
       <Setter Property="FontSize" Value="11"/>
@@ -191,9 +185,8 @@
       <Setter Property="FontSize" Value="10"/>
     </Style>
 
-    <!-- RESPONSIVE BUTTON STYLES -->
     <Style Selector="Button.quick-action">
-      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Padding" Value="16,12"/>
@@ -219,9 +212,8 @@
       <Setter Property="RenderTransform" Value="scale(1.02)"/>
     </Style>
 
-    <!-- Alert Button Styles -->
     <Style Selector="Button.alert-button">
-      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="6"/>
       <Setter Property="Padding" Value="8,6"/>
@@ -238,20 +230,21 @@
     </Style>
 
     <Style Selector="Border.alert-card">
-      <Setter Property="Background" Value="White"/>
-      <Setter Property="BorderBrush" Value="#E5E7EB"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Padding" Value="12"/>
       <Setter Property="Margin" Value="0,0,0,8"/>
     </Style>
 
-    <!-- RESPONSIVE PROGRESS BAR STYLES -->
     <Style Selector="ProgressBar.responsive-progress">
       <Setter Property="Height" Value="4"/>
       <Setter Property="CornerRadius" Value="2"/>
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="MinWidth" Value="40"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource GraySoftBrush}"/>
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Height" Duration="0:0:0.2"/>
@@ -265,7 +258,6 @@
       <Setter Property="Height" Value="2"/>
     </Style>
 
-    <!-- RESPONSIVE ICON STYLES -->
     <Style Selector="TextBlock.icon-text">
       <Setter Property="FontSize" Value="16"/>
     </Style>
@@ -276,7 +268,6 @@
       <Setter Property="FontSize" Value="12"/>
     </Style>
 
-    <!-- RESPONSIVE LAYOUT STYLES -->
     <Style Selector="StackPanel.main-content">
       <Setter Property="Margin" Value="40"/>
       <Setter Property="Spacing" Value="24"/>
@@ -290,7 +281,6 @@
       <Setter Property="Spacing" Value="12"/>
     </Style>
 
-    <!-- Card margins for different layouts -->
     <Style Selector="Border.kpi-card-standard">
       <Setter Property="Margin" Value="0,0,12,0"/>
     </Style>
@@ -298,7 +288,6 @@
       <Setter Property="Margin" Value="0,0,0,8"/>
     </Style>
 
-    <!-- Fixed square icon container so background fits and content can't overlap -->
     <Style Selector="Border.alert-icon">
       <Setter Property="Width" Value="36"/>
       <Setter Property="Height" Value="36"/>
@@ -309,7 +298,6 @@
       <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
-    <!-- Centered glyph inside the icon container -->
     <Style Selector="TextBlock.alert-icon-glyph">
       <Setter Property="FontSize" Value="16"/>
       <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -330,7 +318,7 @@
           <TextBlock x:Name="SystemStatusText" Text="{Binding SystemStatus}" Classes="status-text"
                    Foreground="{Binding SystemStatusColor}" VerticalAlignment="Center"/>
           <Border Width="8" Height="8" CornerRadius="4" Background="{Binding SystemStatusColor}" VerticalAlignment="Center"/>
-          <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="#6B7280" Command="{Binding RefreshDashboardCommand}"/>
+          <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}" Command="{Binding RefreshDashboardCommand}"/>
         </StackPanel>
       </Grid>
 
@@ -340,36 +328,36 @@
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Total Students" Classes="stat-title"/>
-              <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="6" Padding="4">
+              <Border Grid.Column="1" Background="{DynamicResource TealSoftBrush}" CornerRadius="6" Padding="4">
                 <TextBlock x:Name="StudentsIcon" Text="👥" Classes="icon-text"/>
               </Border>
             </Grid>
             <TextBlock x:Name="TotalStudentsValue" Text="{Binding TotalStudents}" Classes="stat-value"/>
-            <TextBlock x:Name="StudentsSubtext" Text="Active enrollment" Classes="small-text" Foreground="#10B981"/>
+            <TextBlock x:Name="StudentsSubtext" Text="Active enrollment" Classes="small-text" Foreground="{DynamicResource SuccessBrush}"/>
           </StackPanel>
         </Border>
         <Border Grid.Column="1" x:Name="KpiCard2" Classes="card kpi-card-standard">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Active Teachers" Classes="stat-title"/>
-              <Border Grid.Column="1" Background="#EDE9FE" CornerRadius="6" Padding="4">
+              <Border Grid.Column="1" Background="{DynamicResource PurpleSoftBrush}" CornerRadius="6" Padding="4">
                 <TextBlock x:Name="TeachersIcon" Text="👨‍🏫" Classes="icon-text"/>
               </Border>
             </Grid>
             <TextBlock x:Name="ActiveTeachersValue" Text="{Binding ActiveTeachers}" Classes="stat-value"/>
-            <TextBlock x:Name="TeachersSubtext" Text="Faculty members" Classes="small-text" Foreground="#8B5CF6"/>
+            <TextBlock x:Name="TeachersSubtext" Text="Faculty members" Classes="small-text" Foreground="{DynamicResource PurpleBrush}"/>
           </StackPanel>
         </Border>
         <Border Grid.Column="2" x:Name="KpiCard3" Classes="card kpi-card-standard">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Online Users" Classes="stat-title"/>
-              <Border Grid.Column="1" Background="#DBEAFE" CornerRadius="6" Padding="4">
+              <Border Grid.Column="1" Background="{DynamicResource InfoSoftBrush}" CornerRadius="6" Padding="4">
                 <TextBlock x:Name="OnlineIcon" Text="🌐" Classes="icon-text"/>
               </Border>
             </Grid>
             <TextBlock x:Name="OnlineUsersValue" Text="{Binding OnlineUsersCount}" Classes="stat-value"/>
-            <TextBlock x:Name="OnlineUsersSubtext" Text="Currently active" Classes="small-text" Foreground="#3B82F6"/>
+            <TextBlock x:Name="OnlineUsersSubtext" Text="Currently active" Classes="small-text" Foreground="{DynamicResource InfoBrush}"/>
           </StackPanel>
         </Border>
         <Border Grid.Column="3" x:Name="KpiCard4" Classes="card kpi-card-standard">
@@ -377,7 +365,7 @@
             <StackPanel DockPanel.Dock="Top" Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="Room Utilization" Classes="stat-title"/>
-                <Border Grid.Column="1" Background="#FEF3C7" CornerRadius="6" Padding="4">
+                <Border Grid.Column="1" Background="{DynamicResource WarningSoftBrush}" CornerRadius="6" Padding="4">
                   <TextBlock x:Name="RoomIcon" Text="🏫" Classes="icon-text"/>
                 </Border>
               </Grid>
@@ -389,19 +377,19 @@
                          Value="{Binding RoomUtilization}"
                          Minimum="0"
                          Maximum="100"
-                         Foreground="#F59E0B"/>
+                         Foreground="{DynamicResource WarningBrush}"/>
           </DockPanel>
         </Border>
         <Border Grid.Column="4" x:Name="KpiCard5" Classes="card kpi-card-standard">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="System Uptime" Classes="stat-title"/>
-              <Border Grid.Column="1" Background="#D1FAE5" CornerRadius="6" Padding="4">
+              <Border Grid.Column="1" Background="{DynamicResource SuccessSoftBrush}" CornerRadius="6" Padding="4">
                 <TextBlock x:Name="UptimeIcon" Text="⚡" Classes="icon-text"/>
               </Border>
             </Grid>
             <TextBlock x:Name="SystemUptimeValue" Text="{Binding SystemUptime, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-            <TextBlock x:Name="UptimeSubtext" Text="Operational status" Classes="small-text" Foreground="#10B981"/>
+            <TextBlock x:Name="UptimeSubtext" Text="Operational status" Classes="small-text" Foreground="{DynamicResource SuccessBrush}"/>
           </StackPanel>
         </Border>
       </Grid>
@@ -413,14 +401,14 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Performance Metrics" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ReportsButton" Content="📊 Detailed Reports" Classes="quick-action" Background="#6B7280"
+              <Button Grid.Column="1" x:Name="ReportsButton" Content="📊 Detailed Reports" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
                       Command="{Binding ViewDetailedReportsCommand}"/>
             </Grid>
             <ItemsControl ItemsSource="{Binding PerformanceMetrics}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:PerformanceMetricViewModel">
                   <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,12">
-                    <Border Grid.Column="0" Background="#F3F4F6" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                    <Border Grid.Column="0" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
                       <TextBlock Text="{Binding Icon}" Classes="icon-text"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -450,7 +438,7 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="System Alerts" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ViewAllAlertsButton" Content="View All" Classes="alert-button" Background="#EF4444"
+              <Button Grid.Column="1" x:Name="ViewAllAlertsButton" Content="View All" Classes="alert-button" Background="{DynamicResource DangerBrush}"
                       Command="{Binding ViewAllAlertsCommand}"/>
             </Grid>
             <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
@@ -459,7 +447,6 @@
                   <DataTemplate DataType="vm:SystemAlertViewModel">
                     <Border Classes="alert-card">
                       <Grid ColumnDefinitions="Auto,*,Auto">
-                        <!-- Icon: fixed 36x36 background, centered glyph; no overlap -->
                         <Border Grid.Column="0"
                                 Classes="alert-icon"
                                 Background="{Binding SeverityColor}"
@@ -469,8 +456,8 @@
 
                         <StackPanel Grid.Column="1">
                           <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Classes="small-text"/>
-                          <TextBlock Text="{Binding Message}" Classes="tiny-text" Foreground="#6B7280" TextWrapping="Wrap"/>
-                          <TextBlock Text="{Binding Timestamp}" Classes="tiny-text" Foreground="#9CA3AF"/>
+                          <TextBlock Text="{Binding Message}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding Timestamp}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}"/>
                         </StackPanel>
 
                         <Button Grid.Column="2"
@@ -480,7 +467,7 @@
                                 Command="{Binding $parent[UserControl].((vm:AdminDashboardViewModel)DataContext).DismissAlertCommand}"
                                 CommandParameter="{Binding}">
                           <Path Data="M6 6 L 14 14 M14 6 L 6 14"
-                                Stroke="#6B7280" StrokeThickness="2"
+                                Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2"
                                 Width="12" Height="12"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
@@ -501,17 +488,17 @@
           <StackPanel Spacing="16">
             <TextBlock Text="Quick Actions" Classes="section-header"/>
             <Grid x:Name="QuickActionsGrid" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
-              <Button Grid.Column="0" Grid.Row="0" x:Name="RoomsButton" Content="🚪 Rooms" Classes="quick-action" Background="#4F46E5"
+              <Button Grid.Column="0" Grid.Row="0" x:Name="RoomsButton" Content="🚪 Rooms" Classes="quick-action" Background="{DynamicResource IndigoBrush}"
                       Command="{Binding NavigateToRoomManagementCommand}" Margin="0,0,8,8"/>
-              <Button Grid.Column="1" Grid.Row="0" x:Name="EventsButton" Content="📅 Events" Classes="quick-action" Background="#10B981"
+              <Button Grid.Column="1" Grid.Row="0" x:Name="EventsButton" Content="📅 Events" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
                       Command="{Binding NavigateToEventsDashboardCommand}" Margin="8,0,8,8"/>
-              <Button Grid.Column="2" Grid.Row="0" x:Name="UsersButton" Content="👥 Users" Classes="quick-action" Background="#8B5CF6"
+              <Button Grid.Column="2" Grid.Row="0" x:Name="UsersButton" Content="👥 Users" Classes="quick-action" Background="{DynamicResource PurpleBrush}"
                       Command="{Binding NavigateToUserManagementCommand}" Margin="8,0,0,8"/>
-              <Button Grid.Column="0" Grid.Row="1" x:Name="ChatButton" Content="💬 Chat" Classes="quick-action" Background="#F59E0B"
+              <Button Grid.Column="0" Grid.Row="1" x:Name="ChatButton" Content="💬 Chat" Classes="quick-action" Background="{DynamicResource WarningBrush}"
                       Command="{Binding NavigateToChatCommand}" Margin="0,8,8,0"/>
-              <Button Grid.Column="1" Grid.Row="1" x:Name="LibraryButton" Content="📚 Library" Classes="quick-action" Background="#EC4899"
+              <Button Grid.Column="1" Grid.Row="1" x:Name="LibraryButton" Content="📚 Library" Classes="quick-action" Background="{DynamicResource PinkBrush}"
                       Command="{Binding NavigateToELibraryCommand}" Margin="8,8,8,0"/>
-              <Button Grid.Column="2" Grid.Row="1" x:Name="ReportsActionButton" Content="📊 Reports" Classes="quick-action" Background="#6B7280"
+              <Button Grid.Column="2" Grid.Row="1" x:Name="ReportsActionButton" Content="📊 Reports" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
                       Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0"/>
             </Grid>
           </StackPanel>
@@ -524,15 +511,15 @@
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
               <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
                 <TextBlock Text="Monthly Revenue" Classes="stat-title"/>
-                <TextBlock x:Name="MonthlyRevenueValue" Text="{Binding MonthlyRevenue, StringFormat=₱{0:N0}}" Classes="medium-text" Foreground="#10B981"/>
+                <TextBlock x:Name="MonthlyRevenueValue" Text="{Binding MonthlyRevenue, StringFormat=₱{0:N0}}" Classes="medium-text" Foreground="{DynamicResource SuccessBrush}"/>
               </StackPanel>
               <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
                 <TextBlock Text="Operating Costs" Classes="stat-title"/>
-                <TextBlock x:Name="OperatingCostsValue" Text="{Binding OperatingCosts, StringFormat=₱{0:N0}}" Classes="medium-text" Foreground="#EF4444"/>
+                <TextBlock x:Name="OperatingCostsValue" Text="{Binding OperatingCosts, StringFormat=₱{0:N0}}" Classes="medium-text" Foreground="{DynamicResource DangerBrush}"/>
               </StackPanel>
               <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4" Grid.ColumnSpan="2">
                 <TextBlock Text="Net Revenue" Classes="stat-title"/>
-                <TextBlock x:Name="NetRevenueValue" Text="{Binding NetRevenue, StringFormat=₱{0:N0}}" Classes="large-text" Foreground="#3B82F6"/>
+                <TextBlock x:Name="NetRevenueValue" Text="{Binding NetRevenue, StringFormat=₱{0:N0}}" Classes="large-text" Foreground="{DynamicResource InfoBrush}"/>
               </StackPanel>
               <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
                 <TextBlock Text="Budget Utilization" Classes="stat-title"/>
@@ -540,8 +527,8 @@
                            Classes="responsive-progress"
                            Value="{Binding BudgetUtilization}"
                            Minimum="0" Maximum="100"
-                           Foreground="#4F46E5"/>
-                <TextBlock x:Name="BudgetUtilizationText" Text="{Binding BudgetUtilization, StringFormat={}{0:F1}% utilized}" Classes="small-text" Foreground="#6B7280"/>
+                           Foreground="{DynamicResource IndigoBrush}"/>
+                <TextBlock x:Name="BudgetUtilizationText" Text="{Binding BudgetUtilization, StringFormat={}{0:F1}% utilized}" Classes="small-text" Foreground="{DynamicResource TextMutedBrush}"/>
               </StackPanel>
             </Grid>
           </StackPanel>
@@ -580,20 +567,20 @@
             <TextBlock Text="Room Status Overview" Classes="section-header"/>
             <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto">
               <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
-                <Border Background="#10B981" Width="40" Height="40" CornerRadius="20">
-                  <TextBlock x:Name="AvailableRoomsText" Text="{Binding AvailableRoomsCount}" Classes="icon-text" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Border Background="{DynamicResource SuccessBrush}" Width="40" Height="40" CornerRadius="20">
+                  <TextBlock x:Name="AvailableRoomsText" Text="{Binding AvailableRoomsCount}" Classes="icon-text" FontWeight="Bold" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <TextBlock Text="Available" Classes="small-text" HorizontalAlignment="Center"/>
               </StackPanel>
               <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
-                <Border Background="#EF4444" Width="40" Height="40" CornerRadius="20">
-                  <TextBlock x:Name="OccupiedRoomsText" Text="{Binding OccupiedRooms}" Classes="icon-text" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Border Background="{DynamicResource DangerBrush}" Width="40" Height="40" CornerRadius="20">
+                  <TextBlock x:Name="OccupiedRoomsText" Text="{Binding OccupiedRooms}" Classes="icon-text" FontWeight="Bold" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <TextBlock Text="Occupied" Classes="small-text" HorizontalAlignment="Center"/>
               </StackPanel>
               <StackPanel Grid.Column="2" Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
-                <Border Background="#F59E0B" Width="40" Height="40" CornerRadius="20">
-                  <TextBlock x:Name="MaintenanceRoomsText" Text="{Binding RoomsInMaintenance}" Classes="icon-text" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Border Background="{DynamicResource WarningBrush}" Width="40" Height="40" CornerRadius="20">
+                  <TextBlock x:Name="MaintenanceRoomsText" Text="{Binding RoomsInMaintenance}" Classes="icon-text" FontWeight="Bold" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <TextBlock Text="Maintenance" Classes="small-text" HorizontalAlignment="Center"/>
               </StackPanel>
@@ -603,7 +590,7 @@
                            Classes="responsive-progress"
                            Value="{Binding RoomUtilization}"
                            Minimum="0" Maximum="100"
-                           Foreground="#4F46E5"/>
+                           Foreground="{DynamicResource IndigoBrush}"/>
                 <TextBlock x:Name="OverallUtilizationText" Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" Classes="medium-text" HorizontalAlignment="Center"/>
               </StackPanel>
             </Grid>
@@ -618,24 +605,24 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Upcoming Events" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ViewAllEventsButton" Content="View All Events" Classes="alert-button" Background="#3B82F6"
+              <Button Grid.Column="1" x:Name="ViewAllEventsButton" Content="View All Events" Classes="alert-button" Background="{DynamicResource InfoBrush}"
                       Command="{Binding NavigateToEventsDashboardCommand}"/>
             </Grid>
             <ItemsControl ItemsSource="{Binding UpcomingEvents}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:DashboardEventViewModel">
-                  <Border Background="#F9FAFB" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                  <Border Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                       <Border Grid.Column="0" Background="{Binding TypeColor}" Width="4" Height="40" CornerRadius="2" VerticalAlignment="Center"/>
                       <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Classes="body-text"/>
-                        <TextBlock Text="{Binding Time}" Classes="small-text" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding Location}" Classes="tiny-text" Foreground="#9CA3AF"/>
+                        <TextBlock Text="{Binding Time}" Classes="small-text" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding Location}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}"/>
                       </StackPanel>
                       <Border Grid.Column="2" Background="{Binding PriorityColor}" CornerRadius="12" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Priority}" Classes="tiny-text" FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="{Binding Priority}" Classes="tiny-text" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
                       </Border>
-                      <TextBlock Grid.Column="3" Text="{Binding Type}" Classes="tiny-text" Foreground="#6B7280" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="3" Text="{Binding Type}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -653,16 +640,12 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate DataType="vm:DashboardActivityViewModel">
                     <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
-                      <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Background="{Binding TypeColor}" Margin="0,0,12,0" Opacity="0.1"/>
-                      <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Margin="0,0,12,0">
+                      <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GraySoftBrush}" Margin="0,0,12,0">
                         <TextBlock Text="{Binding Icon}" HorizontalAlignment="Center" VerticalAlignment="Center" Classes="small-text"/>
                       </Border>
-                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock TextWrapping="Wrap" Classes="small-text">
-                          <Run Text="{Binding User}" FontWeight="SemiBold"/>
-                          <Run Text="{Binding Action}"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Timestamp}" Classes="tiny-text" Foreground="#9CA3AF"/>
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock TextWrapping="Wrap" Classes="small-text" Foreground="{DynamicResource TextPrimaryBrush}" Text="{Binding Description}"/>
+                        <TextBlock Text="{Binding Timestamp}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}"/>
                       </StackPanel>
                     </Grid>
                   </DataTemplate>
@@ -678,53 +661,53 @@
         <StackPanel Spacing="16">
           <TextBlock Text="Weekly Activity Overview" Classes="section-header"/>
           <Grid x:Name="WeeklyStatsGrid" ColumnDefinitions="*,*,*,*,*,*,*">
-            <Border Grid.Column="0" x:Name="WeeklyStat1" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,4,0">
+            <Border Grid.Column="0" x:Name="WeeklyStat1" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="0,0,4,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Mon" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="1,480" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
-            <Border Grid.Column="1" x:Name="WeeklyStat2" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+            <Border Grid.Column="1" x:Name="WeeklyStat2" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Tue" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="1,495" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
-            <Border Grid.Column="2" x:Name="WeeklyStat3" Background="#E0F2F1" CornerRadius="8" Padding="12" Margin="4,0">
+            <Border Grid.Column="2" x:Name="WeeklyStat3" Background="{DynamicResource TealSoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Wed" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="1,502" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#10B981" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
-            <Border Grid.Column="3" x:Name="WeeklyStat4" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+            <Border Grid.Column="3" x:Name="WeeklyStat4" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Thu" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="1,489" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
-            <Border Grid.Column="4" x:Name="WeeklyStat5" Background="#DBEAFE" CornerRadius="8" Padding="12" Margin="4,0">
+            <Border Grid.Column="4" x:Name="WeeklyStat5" Background="{DynamicResource InfoBrush}" CornerRadius="8" Padding="12" Margin="4,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Fri" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="1,512" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#3B82F6" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
-            <Border Grid.Column="5" x:Name="WeeklyStat6" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0">
+            <Border Grid.Column="5" x:Name="WeeklyStat6" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Sat" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="892" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
-            <Border Grid.Column="6" x:Name="WeeklyStat7" Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="4,0,0,0">
+            <Border Grid.Column="6" x:Name="WeeklyStat7" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0,0,0">
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Sun" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="654" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
           </Grid>
