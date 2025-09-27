@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
              x:Class="Southville8BEdgeUI.Views.Admin.AlertsView"
+             x:Name="AlertsRoot"
              x:DataType="vm:AlertsViewModel"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              Background="{DynamicResource PageBackgroundBrush}">
@@ -431,8 +432,8 @@
 													</StackPanel>
 												</StackPanel>
 												<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Right">
-													<Button Content="Expire" Command="{Binding $parent[UserControl].((vm:AlertsViewModel)DataContext).ExpireAlertCommand}" CommandParameter="{Binding}" Classes="action-btn-sm warning"/>
-													<Button Content="Delete" Command="{Binding $parent[UserControl].((vm:AlertsViewModel)DataContext).DeleteAlertCommand}" CommandParameter="{Binding}" Classes="action-btn-sm danger"/>
+													<Button Content="Expire" Command="{Binding #AlertsRoot.ExpireAlertCommand}" CommandParameter="{Binding}" Classes="action-btn-sm warning"/>
+													<Button Content="Delete" Command="{Binding #AlertsRoot.DeleteAlertCommand}" CommandParameter="{Binding}" Classes="action-btn-sm danger"/>
 												</StackPanel>
 											</StackPanel>
 

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             xmlns:avalonConv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.StudentManagementView"
              x:DataType="vm:StudentManagementViewModel"
@@ -239,7 +240,7 @@
                                                     <TextBlock Text="{Binding StudentId}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                                         <Border Classes="status-badge" Background="{Binding AttendanceStatusColor}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0">
-                                                            <TextBlock Text="{Binding AttendanceStatus}" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontWeight="SemiBold"/>
+                                                            <TextBlock Text="{Binding AttendanceStatus}" FontSize="10" Foreground="{Binding AttendanceStatusForeground}" FontWeight="SemiBold"/>
                                                         </Border>
                                                         <TextBlock Text="{Binding CurrentGrade, StringFormat=Grade: {0:F1}%}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource InfoBrush}"/>
                                                     </StackPanel>
@@ -263,7 +264,7 @@
                 <Border x:Name="StudentDetailsCard" Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
                         <TextBlock Text="Student Details" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <StackPanel Spacing="16" IsVisible="{Binding SelectedStudent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Spacing="16" IsVisible="{Binding SelectedStudent, Converter={x:Static avalonConv:ObjectConverters.IsNotNull}}">
                             <!-- Selected Student Info -->
                             <StackPanel Spacing="8">
                                 <Border Width="80" Height="80" CornerRadius="40" Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
@@ -313,7 +314,7 @@
                             </StackPanel>
                         </StackPanel>
                         <!-- No Selection Message -->
-                        <TextBlock Text="Select a student to view details" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding SelectedStudent, Converter={x:Static ObjectConverters.IsNull}}"/>
+                        <TextBlock Text="Select a student to view details" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding SelectedStudent, Converter={x:Static avalonConv:ObjectConverters.IsNull}}"/>
                     </StackPanel>
                 </Border>
             </Grid>

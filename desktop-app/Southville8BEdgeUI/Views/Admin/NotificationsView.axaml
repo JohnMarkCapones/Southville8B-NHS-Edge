@@ -3,8 +3,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="Southville8BEdgeUI.Views.Admin.NotificationsView"
+             x:Name="NotificationsRoot"
              x:DataType="vm:NotificationsViewModel"
              Background="{DynamicResource PageBackgroundBrush}">
 
@@ -127,13 +129,13 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Mark All Read" Classes="action-secondary" Command="{Binding MarkAllAsReadCommand}"/>
-                    <Button Content="Clear All" Classes="action-danger" Command="{Binding ClearAllCommand}"/>
+                    <Button Content="Mark All Read" Classes="action-secondary" Command="{Binding #NotificationsRoot.MarkAllAsReadCommand}"/>
+                    <Button Content="Clear All" Classes="action-danger" Command="{Binding #NotificationsRoot.ClearAllCommand}"/>
                 </StackPanel>
             </Grid>
 
             <!-- Notifications List -->
-            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500" IsVisible="{Binding Notifications.Count, Converter={x:Static converters:CollectionHasItemsConverter.Instance}}">
                 <ItemsControl ItemsSource="{Binding Notifications}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -154,14 +156,14 @@
                                             Content="✓"
                                             Classes="icon-success"
                                             IsVisible="{Binding !IsRead}"
-                                            Command="{Binding $parent[UserControl].((vm:NotificationsViewModel)DataContext).MarkAsReadCommand}"
+                                            Command="{Binding #NotificationsRoot.MarkAsReadCommand}"
                                             CommandParameter="{Binding}"/>
 
                                     <!-- Delete Button -->
                                     <Button Grid.Column="3"
                                             Content="✕"
                                             Classes="icon-danger"
-                                            Command="{Binding $parent[UserControl].((vm:NotificationsViewModel)DataContext).DeleteNotificationCommand}"
+                                            Command="{Binding #NotificationsRoot.DeleteNotificationCommand}"
                                             CommandParameter="{Binding}"/>
                                 </Grid>
                             </Border>
@@ -174,7 +176,7 @@
             <StackPanel VerticalAlignment="Center"
                        HorizontalAlignment="Center"
                        Spacing="16"
-                       IsVisible="{Binding !Notifications.Count}">
+                       IsVisible="{Binding Notifications.Count, Converter={x:Static converters:CollectionIsEmptyConverter.Instance}}">
                 <TextBlock Text="🔔" FontSize="48" HorizontalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
                 <TextBlock Text="No notifications" Classes="empty-text"/>
             </StackPanel>

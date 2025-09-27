@@ -71,7 +71,17 @@
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        <!-- Primary now standardized to IndigoBrush -->
         <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <!-- Success style for positive confirmations -->
+        <Style Selector="Button.success">
             <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>

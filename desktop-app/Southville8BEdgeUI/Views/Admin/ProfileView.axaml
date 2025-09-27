@@ -64,7 +64,17 @@
         </Style>
 
         <!-- Buttons -->
+        <!-- Primary now uses accent/indigo brush instead of danger -->
         <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <!-- Dedicated danger style for destructive actions (if needed later) -->
+        <Style Selector="Button.danger">
             <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>

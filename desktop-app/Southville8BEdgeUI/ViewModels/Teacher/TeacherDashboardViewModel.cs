@@ -152,28 +152,16 @@ public partial class TeacherDashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void RefreshDashboard()
-    {
-        // TODO: Implement dashboard refresh logic
-    }
+    private void RefreshDashboard() { }
 
     [RelayCommand]
-    private void ViewAllActivities()
-    {
-        // TODO: Navigate to activities page
-    }
+    private void ViewAllActivities() { }
 
     [RelayCommand]
-    private void ViewDetailedReports()
-    {
-        // TODO: Navigate to detailed reports
-    }
+    private void ViewDetailedReports() { }
 
     [RelayCommand]
-    private void StartClass(DashboardClassViewModel classItem)
-    {
-        // TODO: Start class session
-    }
+    private void StartClass(DashboardClassViewModel classItem) { }
 }
 
 // Supporting ViewModels
@@ -223,6 +211,11 @@ public partial class TeacherActivityViewModel : ViewModelBase
         "Collaboration" => "#EC4899",
         _ => "#6B7280"
     };
+
+    public string Description => string.IsNullOrWhiteSpace(Student) ? Action : string.IsNullOrWhiteSpace(Action) ? Student : $"{Student} {Action}";
+
+    partial void OnStudentChanged(string value) => OnPropertyChanged(nameof(Description));
+    partial void OnActionChanged(string value) => OnPropertyChanged(nameof(Description));
 }
 
 public partial class StudentPerformanceViewModel : ViewModelBase

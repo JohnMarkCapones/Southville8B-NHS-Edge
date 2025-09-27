@@ -693,7 +693,7 @@
               <StackPanel HorizontalAlignment="Center" Spacing="4">
                 <TextBlock Text="Fri" Classes="small-text" HorizontalAlignment="Center"/>
                 <TextBlock Text="1,512" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
             <Border Grid.Column="5" x:Name="WeeklyStat6" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">

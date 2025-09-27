@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:avalonConv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="Southville8BEdgeUI.Views.Admin.HelpGuideView"
              x:DataType="vm:HelpGuideViewModel">
@@ -156,7 +157,7 @@
                 <Border Grid.Column="1" Classes="article-card" Padding="24">
                     <Grid>
                         <!-- Content when category is selected -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding SelectedCategory, Converter={x:Static avalonConv:ObjectConverters.IsNotNull}}">
                             <StackPanel Spacing="16">
                                 <TextBlock Text="{Binding SelectedCategory.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <ItemsControl ItemsSource="{Binding SelectedCategory.Articles}">
@@ -175,7 +176,7 @@
                         </ScrollViewer>
 
                         <!-- Default content when no category selected -->
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16" IsVisible="{Binding SelectedCategory, Converter={x:Static ObjectConverters.IsNull}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16" IsVisible="{Binding SelectedCategory, Converter={x:Static avalonConv:ObjectConverters.IsNull}}">
                             <TextBlock Text="📖" Classes="guide-icon"/>
                             <TextBlock Text="Select a category to view help articles" Classes="empty-hint"/>
                         </StackPanel>

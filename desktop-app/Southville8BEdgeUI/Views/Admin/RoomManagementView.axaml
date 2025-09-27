@@ -292,13 +292,13 @@
         </Style>
 
         <!-- Status-specific styles -->
-        <Style Selector="Border.status-available /template/ Border#PART_border">
+        <Style Selector="Border.room-card.status-available">
             <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
         </Style>
-        <Style Selector="Border.status-occupied /template/ Border#PART_border">
+        <Style Selector="Border.room-card.status-occupied">
             <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
         </Style>
-        <Style Selector="Border.status-maintenance /template/ Border#PART_border">
+        <Style Selector="Border.room-card.status-maintenance">
             <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
         </Style>
     </UserControl.Styles>

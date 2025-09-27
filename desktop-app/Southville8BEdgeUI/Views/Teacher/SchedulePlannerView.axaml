@@ -5,6 +5,7 @@
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.SchedulePlannerView"
+             x:Name="SchedulePlannerRoot"
              x:DataType="vm:SchedulePlannerViewModel"
              Background="{DynamicResource PageBackgroundBrush}">
 
@@ -277,8 +278,8 @@
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                        <Button Content="✏️" Classes="tertiary-btn" Padding="6" ToolTip.Tip="Edit Class" Command="{Binding $parent[UserControl].((vm:SchedulePlannerViewModel)DataContext).EditClassCommand}" CommandParameter="{Binding}"/>
-                        <Button Content="📝" Classes="action-btn" Padding="6" ToolTip.Tip="Add Notes" Command="{Binding $parent[UserControl].((vm:SchedulePlannerViewModel)DataContext).AddNotesCommand}" CommandParameter="{Binding}"/>
+                        <Button Content="✏️" Classes="tertiary-btn" Padding="6" ToolTip.Tip="Edit Class" Command="{Binding #SchedulePlannerRoot.EditClassCommand}" CommandParameter="{Binding}"/>
+                        <Button Content="📝" Classes="action-btn" Padding="6" ToolTip.Tip="Add Notes" Command="{Binding #SchedulePlannerRoot.AddNotesCommand}" CommandParameter="{Binding}"/>
                     </StackPanel>
                 </Grid>
             </Border>

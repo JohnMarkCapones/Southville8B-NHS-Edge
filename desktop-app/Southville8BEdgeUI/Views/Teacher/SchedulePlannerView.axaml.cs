@@ -7,11 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Input; // added for ICommand
 
 namespace Southville8BEdgeUI.Views.Teacher;
 
 public partial class SchedulePlannerView : UserControl
 {
+    // Forward commands for template bindings
+    public ICommand? EditClassCommand => (DataContext as SchedulePlannerViewModel)?.EditClassCommand;
+    public ICommand? AddNotesCommand => (DataContext as SchedulePlannerViewModel)?.AddNotesCommand;
+
     #region Constants & Configuration
 
     private static class Breakpoints

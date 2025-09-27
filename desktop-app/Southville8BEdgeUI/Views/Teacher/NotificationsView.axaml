@@ -53,8 +53,10 @@
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
+        <!-- Accessible badge styles -->
         <Style Selector="Border.badge-muted">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <!-- Use CardBackgroundBrush for higher contrast in dark mode and keep outline -->
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -64,13 +66,16 @@
             <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="6,2"/>
+            <!-- Add subtle border for dark mode definition -->
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
         <Style Selector="TextBlock.badge-text-muted">
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         </Style>
         <Style Selector="TextBlock.badge-text-accent">
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
@@ -107,8 +112,8 @@
                         <TextBlock Text="Stay updated with your latest activities and alerts" Classes="subtitle"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <Button Content="Mark All Read" Classes="primary"/>
-                        <Button Content="Settings" Classes="outline"/>
+                        <Button Content="Mark All Read" Classes="primary" Command="{Binding MarkAllReadCommand}"/>
+                        <Button Content="Settings" Classes="outline" Command="{Binding OpenSettingsCommand}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -142,10 +147,10 @@
 
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Top" Margin="12,0,0,0">
-                                            <Button Classes="icon-btn" ToolTip.Tip="Mark as read">
+                                            <Button Classes="icon-btn" ToolTip.Tip="Mark as read" Command="{Binding $parent[UserControl].((vm:NotificationsViewModel)DataContext).MarkReadCommand}" CommandParameter="{Binding}">
                                                 <Path Width="14" Height="14" Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" Fill="{DynamicResource TextMutedBrush}"/>
                                             </Button>
-                                            <Button Classes="icon-btn" ToolTip.Tip="Delete">
+                                            <Button Classes="icon-btn" ToolTip.Tip="Delete" Command="{Binding $parent[UserControl].((vm:NotificationsViewModel)DataContext).DeleteCommand}" CommandParameter="{Binding}">
                                                 <Path Width="14" Height="14" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" Fill="{DynamicResource TextMutedBrush}"/>
                                             </Button>
                                         </StackPanel>
