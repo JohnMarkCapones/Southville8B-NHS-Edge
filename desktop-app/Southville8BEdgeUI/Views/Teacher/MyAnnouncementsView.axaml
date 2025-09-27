@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.MyAnnouncementsView"
              x:DataType="vm:MyAnnouncementsViewModel"
-             Background="#F9FAFB">
+             Background="{DynamicResource PageBackgroundBrush}">
 
     <UserControl.Resources>
         <converters:BooleanNegationConverter x:Key="InvertBool"/>
@@ -16,8 +16,8 @@
     <UserControl.Styles>
         <!-- Base Card Style -->
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
@@ -41,10 +41,10 @@
             <Setter Property="CornerRadius" Value="10"/>
         </Style>
 
-        <!-- Action Button Styles -->
+        <!-- Action Button Styles (Primary / Success) -->
         <Style Selector="Button.action-btn">
-            <Setter Property="Background" Value="#10B981"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -59,8 +59,11 @@
         </Style>
 
         <Style Selector="Button.action-btn:pointerover">
-            <Setter Property="Background" Value="#059669"/>
             <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+
+        <Style Selector="Button.action-btn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
         </Style>
 
         <Style Selector="Button.action-btn.mobile">
@@ -70,8 +73,8 @@
 
         <!-- Announcement Card Styles -->
         <Style Selector="Border.announcement-card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
@@ -99,7 +102,7 @@
         <Style Selector="TextBlock.header">
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="TextBlock.header.mobile">
@@ -112,7 +115,7 @@
 
         <Style Selector="TextBlock.subtitle">
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
 
         <Style Selector="TextBlock.subtitle.mobile">
@@ -122,6 +125,7 @@
         <Style Selector="TextBlock.kpi-value">
             <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="TextBlock.kpi-value.mobile">
@@ -135,14 +139,15 @@
         <!-- Input Styles -->
         <Style Selector="TextBox, ComboBox">
             <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="TextBox:focus-within, ComboBox:focus-within">
-            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
 
@@ -171,36 +176,31 @@
         <Style Selector="Border.priority-badge.mobile">
             <Setter Property="Padding" Value="4,1"/>
         </Style>
+
+        <!-- Recent Activity Item -->
+        <Style Selector="Border.recent-activity">
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer x:Name="MainScrollViewer"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="MainStackPanel" Classes="main-content">
-            
             <!-- Header -->
             <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="My Announcements" Classes="header"/>
                     <TextBlock Text="Create and manage announcements for your classes" Classes="subtitle"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" 
-                           Orientation="Horizontal" 
-                           Spacing="12" 
-                           VerticalAlignment="Center">
-                    <Button x:Name="NewAnnouncementButton"
-                           Content="📝 New Announcement" 
-                           Classes="action-btn" 
-                           Command="{Binding CreateAnnouncementCommand}"/>
-                    <Button x:Name="AnalyticsButton"
-                           Content="📊 Analytics" 
-                           Background="#3B82F6" 
-                           Foreground="White" 
-                           BorderThickness="0" 
-                           CornerRadius="8" 
-                           Padding="12,8" 
-                           FontWeight="SemiBold" 
-                           Command="{Binding ViewAnalyticsCommand}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button x:Name="NewAnnouncementButton" Content="📝 New Announcement" Classes="action-btn" Command="{Binding CreateAnnouncementCommand}"/>
+                    <Button x:Name="AnalyticsButton" Content="📊 Analytics" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" Command="{Binding ViewAnalyticsCommand}"/>
                 </StackPanel>
             </Grid>
 
@@ -208,58 +208,45 @@
             <Grid x:Name="StatsGrid" ColumnDefinitions="*,*,*,*">
                 <Border x:Name="StatsCard1" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Total Announcements" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding TotalAnnouncementsCount}" Classes="kpi-value" Foreground="#3B82F6"/>
-                        <TextBlock Text="All time" FontSize="12" Foreground="#3B82F6"/>
+                        <TextBlock Text="Total Announcements" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding TotalAnnouncementsCount}" Classes="kpi-value" Foreground="{DynamicResource InfoBrush}"/>
+                        <TextBlock Text="All time" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="StatsCard2" Grid.Column="1" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Active Posts" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding ActiveAnnouncementsCount}" Classes="kpi-value" Foreground="#10B981"/>
-                        <TextBlock Text="Currently visible" FontSize="12" Foreground="#10B981"/>
+                        <TextBlock Text="Active Posts" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding ActiveAnnouncementsCount}" Classes="kpi-value" Foreground="{DynamicResource SuccessBrush}"/>
+                        <TextBlock Text="Currently visible" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="StatsCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Total Views" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding TotalViewsCount}" Classes="kpi-value" Foreground="#F59E0B"/>
-                        <TextBlock Text="This month" FontSize="12" Foreground="#F59E0B"/>
+                        <TextBlock Text="Total Views" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding TotalViewsCount}" Classes="kpi-value" Foreground="{DynamicResource WarningBrush}"/>
+                        <TextBlock Text="This month" FontSize="12" Foreground="{DynamicResource WarningBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="StatsCard4" Grid.Column="3" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Engagement Rate" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding EngagementRate, StringFormat={}{0:F1}%}" Classes="kpi-value" Foreground="#8B5CF6"/>
-                        <TextBlock Text="Student interaction" FontSize="12" Foreground="#8B5CF6"/>
+                        <TextBlock Text="Engagement Rate" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding EngagementRate, StringFormat={}{0:F1}%}" Classes="kpi-value" Foreground="{DynamicResource AccentBrush}"/>
+                        <TextBlock Text="Student interaction" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <!-- Announcements Management -->
             <Grid x:Name="ContentGrid" ColumnDefinitions="2*,*">
-                
                 <!-- Announcements List -->
                 <Border x:Name="AnnouncementsListCard" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Recent Announcements" FontSize="18" FontWeight="SemiBold"/>
-                            <ComboBox x:Name="FilterSelector"
-                                     Grid.Column="1" 
-                                     SelectedItem="{Binding SelectedFilter}" 
-                                     ItemsSource="{Binding FilterOptions}" 
-                                     MinWidth="120"/>
+                            <TextBlock Grid.Column="0" Text="Recent Announcements" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <ComboBox x:Name="FilterSelector" Grid.Column="1" SelectedItem="{Binding SelectedFilter}" ItemsSource="{Binding FilterOptions}" MinWidth="120"/>
                         </Grid>
-
-                        <ScrollViewer x:Name="AnnouncementsListScrollViewer" 
-                                     MaxHeight="600" 
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl x:Name="AnnouncementListItems"
-                                          ItemsSource="{Binding Announcements}">
+                        <ScrollViewer x:Name="AnnouncementsListScrollViewer" MaxHeight="600" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="AnnouncementListItems" ItemsSource="{Binding Announcements}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:AnnouncementItemViewModel">
                                         <Border Classes="announcement-card">
@@ -267,94 +254,42 @@
                                                 <!-- Announcement Header -->
                                                 <Grid ColumnDefinitions="*,Auto">
                                                     <StackPanel Grid.Column="0" Spacing="4">
-                                                        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                                            <Border Classes="priority-badge"
-                                                                   Background="{Binding PriorityColor}">
-                                                                <TextBlock Text="{Binding Priority}" 
-                                                                          FontSize="10" 
-                                                                          Foreground="White" 
-                                                                          FontWeight="SemiBold"/>
+                                                            <Border Classes="priority-badge" Background="{Binding PriorityColor}">
+                                                                <TextBlock Text="{Binding Priority}" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontWeight="SemiBold"/>
                                                             </Border>
-                                                            <Border Classes="priority-badge"
-                                                                   Background="{Binding StatusColor}">
-                                                                <TextBlock Text="{Binding Status}" 
-                                                                          FontSize="10" 
-                                                                          Foreground="White" 
-                                                                          FontWeight="SemiBold"/>
+                                                            <Border Classes="priority-badge" Background="{Binding StatusColor}">
+                                                                <TextBlock Text="{Binding Status}" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontWeight="SemiBold"/>
                                                             </Border>
-                                                            <TextBlock Text="{Binding TargetClass}" 
-                                                                      FontSize="12" 
-                                                                      Foreground="#6B7280"/>
+                                                            <TextBlock Text="{Binding TargetClass}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
                                                     </StackPanel>
-                                                    
-                                                    <StackPanel Grid.Column="1" 
-                                                               Orientation="Horizontal" 
-                                                               Spacing="4">
-                                                        <Button Content="✏️"
-                                                                AutomationProperties.Name="Edit announcement"
-                                                               Background="#3B82F6" 
-                                                               Foreground="White" 
-                                                               Padding="6" 
-                                                               BorderThickness="0" 
-                                                               CornerRadius="4"
-                                                               ToolTip.Tip="Edit Announcement"
-                                                               Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).EditAnnouncementCommand}" 
-                                                               CommandParameter="{Binding}"/>
-                                                        <Button Content="👁️"
-                                                                AutomationProperties.Name="View announcement"
-                                                               Background="#10B981" 
-                                                               Foreground="White" 
-                                                               Padding="6" 
-                                                               BorderThickness="0" 
-                                                               CornerRadius="4"
-                                                               ToolTip.Tip="View Announcement"
-                                                               Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).ViewAnnouncementCommand}" 
-                                                               CommandParameter="{Binding}"/>
-                                                        <Button Content="🗑️"
-                                                                AutomationProperties.Name="Delete announcement"
-                                                               Background="#EF4444" 
-                                                               Foreground="White" 
-                                                               Padding="6" 
-                                                               BorderThickness="0" 
-                                                               CornerRadius="4"
-                                                               ToolTip.Tip="Delete Announcement"
-                                                               Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).DeleteAnnouncementCommand}" 
-                                                               CommandParameter="{Binding}"/>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                        <Button Content="✏️" AutomationProperties.Name="Edit announcement" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).EditAnnouncementCommand}" CommandParameter="{Binding}"/>
+                                                        <Button Content="👁️" AutomationProperties.Name="View announcement" Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="View Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).ViewAnnouncementCommand}" CommandParameter="{Binding}"/>
+                                                        <Button Content="🗑️" AutomationProperties.Name="Delete announcement" Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Delete Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).DeleteAnnouncementCommand}" CommandParameter="{Binding}"/>
                                                     </StackPanel>
                                                 </Grid>
-
                                                 <!-- Announcement Content Preview -->
-                                                <TextBlock Text="{Binding ContentPreview}" 
-                                                          FontSize="14" 
-                                                          Foreground="#6B7280" 
-                                                          TextWrapping="Wrap" 
-                                                          MaxLines="2"/>
-
+                                                <TextBlock Text="{Binding ContentPreview}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" MaxLines="2"/>
                                                 <!-- Announcement Footer -->
                                                 <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Grid.Column="0" 
-                                                               Orientation="Horizontal" 
-                                                               Spacing="16">
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                             <TextBlock Text="👁️" FontSize="12"/>
-                                                            <TextBlock Text="{Binding ViewCount}" FontSize="12" Foreground="#6B7280"/>
+                                                            <TextBlock Text="{Binding ViewCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                             <TextBlock Text="💬" FontSize="12"/>
-                                                            <TextBlock Text="{Binding CommentCount}" FontSize="12" Foreground="#6B7280"/>
+                                                            <TextBlock Text="{Binding CommentCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                             <TextBlock Text="📅" FontSize="12"/>
-                                                            <TextBlock Text="{Binding PostedDate}" FontSize="12" Foreground="#6B7280"/>
+                                                            <TextBlock Text="{Binding PostedDate}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
                                                     </StackPanel>
-                                                    
-                                                    <TextBlock Grid.Column="1" 
-                                                              Text="{Binding LastModified}" 
-                                                              FontSize="11" 
-                                                              Foreground="#9CA3AF"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding LastModified}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </Grid>
                                             </StackPanel>
                                         </Border>
@@ -368,71 +303,44 @@
                 <!-- Create/Edit Panel -->
                 <Border x:Name="QuickCreateCard" Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Quick Create" FontSize="18" FontWeight="SemiBold"/>
-                        
+                        <TextBlock Text="Quick Create" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <!-- Quick Create Form -->
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Title" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBlock Text="Title" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBox Text="{Binding NewAnnouncementTitle}" Watermark="Enter announcement title..."/>
                             </StackPanel>
-
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Target Class" FontSize="12" FontWeight="SemiBold"/>
-                                <ComboBox SelectedItem="{Binding NewAnnouncementClass}" 
-                                         ItemsSource="{Binding AvailableClasses}" 
-                                         HorizontalAlignment="Stretch"/>
+                                <TextBlock Text="Target Class" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <ComboBox SelectedItem="{Binding NewAnnouncementClass}" ItemsSource="{Binding AvailableClasses}" HorizontalAlignment="Stretch"/>
                             </StackPanel>
-
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Priority" FontSize="12" FontWeight="SemiBold"/>
-                                <ComboBox SelectedItem="{Binding NewAnnouncementPriority}" 
-                                         ItemsSource="{Binding PriorityOptions}" 
-                                         HorizontalAlignment="Stretch"/>
+                                <TextBlock Text="Priority" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <ComboBox SelectedItem="{Binding NewAnnouncementPriority}" ItemsSource="{Binding PriorityOptions}" HorizontalAlignment="Stretch"/>
                             </StackPanel>
-
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Content" FontSize="12" FontWeight="SemiBold"/>
-                                <TextBox Text="{Binding NewAnnouncementContent}" 
-                                        Watermark="Write your announcement..." 
-                                        AcceptsReturn="True" 
-                                        MinHeight="120"/>
+                                <TextBlock Text="Content" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBox Text="{Binding NewAnnouncementContent}" Watermark="Write your announcement..." AcceptsReturn="True" MinHeight="120"/>
                             </StackPanel>
-
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Schedule" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBlock Text="Schedule" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <CheckBox Content="Post immediately" IsChecked="{Binding PostImmediately}"/>
-                                <DatePicker SelectedDate="{Binding ScheduledDate}"
-                                           IsVisible="{Binding PostImmediately, Converter={StaticResource InvertBool}}"/>
+                                <DatePicker SelectedDate="{Binding ScheduledDate}" IsVisible="{Binding PostImmediately, Converter={StaticResource InvertBool}}"/>
                             </StackPanel>
-
-                            <Button Content="📝 Create Announcement" 
-                                   Classes="action-btn" 
-                                   HorizontalAlignment="Stretch" 
-                                   Command="{Binding CreateQuickAnnouncementCommand}"/>
+                            <Button Content="📝 Create Announcement" Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding CreateQuickAnnouncementCommand}"/>
                         </StackPanel>
-
                         <!-- Recent Activity -->
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding RecentActivity}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="vm:AnnouncementActivityViewModel">
-                                            <Border Background="#F9FAFB" 
-                                                   CornerRadius="6" 
-                                                   Padding="8" 
-                                                   Margin="0,0,0,4">
+                                            <Border Classes="recent-activity">
                                                 <StackPanel Spacing="2">
-                                                    <TextBlock Text="{Binding Activity}" 
-                                                              FontSize="11" 
-                                                              FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding AnnouncementTitle}" 
-                                                              FontSize="10" 
-                                                              Foreground="#6B7280"/>
-                                                    <TextBlock Text="{Binding Timestamp}" 
-                                                              FontSize="10" 
-                                                              Foreground="#9CA3AF"/>
+                                                    <TextBlock Text="{Binding Activity}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding AnnouncementTitle}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>

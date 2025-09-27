@@ -9,10 +9,10 @@
              x:DataType="vm:AdminShellViewModel">
 
     <UserControl.Styles>
-        <!-- Navigation Button Style -->
+        <!-- Navigation Button Style (theme-aware) -->
         <Style Selector="Button.nav-item">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#4B5563"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -36,7 +36,7 @@
             <Setter Property="TextBlock.FontWeight" Value="SemiBold"/>
         </Style>
         <Style Selector="Button.nav-item Path">
-            <Setter Property="Fill" Value="#6B7280"/>
+            <Setter Property="Fill" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Fill" Duration="0:0:0.2"/>
@@ -54,7 +54,7 @@
         <Style Selector="TextBlock.section-header">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Margin" Value="24,16,12,8"/>
         </Style>
 
@@ -68,7 +68,6 @@
             <Setter Property="Margin" Value="4"/>
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
-            <!-- Remove VerticalAlignment=Top so we can center per-instance -->
             <Setter Property="Transitions">
                 <Transitions>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
@@ -88,7 +87,6 @@
             <Setter Property="Width" Value="20"/>
             <Setter Property="Height" Value="30"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <!-- Don't force HorizontalAlignment here; set it on the element -->
             <Setter Property="Transitions">
                 <Transitions>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
@@ -122,7 +120,7 @@
             <Setter Property="Background" Value="#C64747"/>
         </Style>
 
-        <!-- Add Middle Close Button Style for Left Sidebar -->
+        <!-- Left variant -->
         <Style Selector="Button.sidebar-close-middle-left">
             <Setter Property="Background" Value="#DC5B5B"/>
             <Setter Property="Foreground" Value="White"/>
@@ -145,8 +143,8 @@
 
         <!-- Dropdown Styles -->
         <Style Selector="Border.dropdown-menu">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="BoxShadow" Value="0 4 12 0 #15000000"/>
@@ -163,9 +161,10 @@
             <Setter Property="Margin" Value="0,2"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="Button.dropdown-item:pointerover">
-            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
         </Style>
         <Style Selector="Button.dropdown-item.logout">
             <Setter Property="Foreground" Value="#DC2626"/>
@@ -184,7 +183,7 @@
             </Setter>
         </Style>
 
-        <!-- Make the fullscreen dismiss button truly invisible in all states (prevents dark hover overlay) -->
+        <!-- Overlay dismiss -->
         <Style Selector="Button.overlay-dismiss">
           <Setter Property="Background" Value="Transparent"/>
           <Setter Property="BorderThickness" Value="0"/>
@@ -207,49 +206,56 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid Background="#F9FAFB">
-        <!-- Define explicit column definitions -->
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="{Binding LeftColumnWidth}"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="{Binding RightColumnWidth}"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ======================= -->
-        <!-- Left Navigation Panel    -->
-        <!-- ======================= -->
-        <Border Grid.Column="0" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,1,0" 
+        <!-- Left Sidebar -->
+        <Border Grid.Column="0"
+                Classes="sidebar"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,1,0"
                 IsVisible="{Binding IsLeftSidebarVisible}">
           <Grid>
-
-            <!-- Main Sidebar Content -->
-            <DockPanel Margin="0,0,0,0">
-              <!-- Header Section -->
-              <Border DockPanel.Dock="Top" Padding="16,20,16,20" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
+            <DockPanel>
+              <!-- Header -->
+              <Border DockPanel.Dock="Top"
+                      Padding="16,20,16,20"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="0,0,0,1"
+                      Background="{DynamicResource CardBackgroundBrush}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <Border Background="#DC5B5B" Width="32" Height="32" CornerRadius="8">
                     <TextBlock Text="A8" Foreground="White" FontWeight="Bold" FontSize="14"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                   </Border>
                   <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Southville 8B NHIS" FontSize="14" FontWeight="Bold"/>
-                    <TextBlock Text="Admin Portal" FontSize="12" Foreground="#6B7280"/>
+                    <TextBlock Text="Southville 8B NHIS" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Admin Portal" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
 
-              <!-- Footer Section -->
-              <Border DockPanel.Dock="Bottom" Padding="20" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0">
+              <!-- Footer -->
+              <Border DockPanel.Dock="Bottom"
+                      Padding="20"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="0,1,0,0"
+                      Background="{DynamicResource CardBackgroundBrush}">
                 <StackPanel>
                   <TextBlock Text="ACADEMIC YEAR" Classes="section-header" Margin="0,0,0,8"/>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Ellipse Fill="#DC5B5B" Width="10" Height="10" VerticalAlignment="Center"/>
-                    <TextBlock Text="2024-2025" FontSize="12" Foreground="#374151" VerticalAlignment="Center"/>
+                    <TextBlock Text="2024-2025" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
 
-              <!-- Navigation Buttons -->
+              <!-- Navigation -->
               <ScrollViewer>
                 <StackPanel Spacing="4">
                   <TextBlock Text="OVERVIEW" Classes="section-header"/>
@@ -305,8 +311,7 @@
               </ScrollViewer>
             </DockPanel>
 
-            <!-- Close button: put AFTER DockPanel and raise ZIndex so it's on top -->
-            <!-- LEFT sidebar close (chevron-left) -->
+            <!-- Close -->
             <Button Classes="sidebar-close-middle"
                     Command="{Binding ToggleLeftSidebarCommand}"
                     ToolTip.Tip="Close sidebar"
@@ -322,14 +327,11 @@
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"/>
             </Button>
-
           </Grid>
         </Border>
 
-        <!-- Content Area            -->
-        <!-- ======================= -->
+        <!-- Content Column -->
         <Grid Grid.Column="1">
-            <!-- Open button: left-middle of content column, hugging the divider -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
@@ -341,8 +343,7 @@
                         IsVisible="{Binding ShowLeftSidebarToggle}"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Margin="0,0,0,0" 
-                        ZIndex="200"
+                        Margin="0"
                         ToolTip.Tip="Open navigation">
                     <TextBlock Text="❯"
                                Foreground="White"
@@ -352,14 +353,18 @@
                 </Button>
             </StackPanel>
 
-            <!-- Right sidebar open button (unchanged) -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" Spacing="4" ZIndex="100">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0"
+                        Spacing="4"
+                        ZIndex="100">
                 <Button Classes="sidebar-toggle"
                         Command="{Binding ToggleRightSidebarCommand}"
                         IsVisible="{Binding ShowRightSidebarToggle}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
-                        Margin="0,0,0,0"
+                        Margin="0"
                         ToolTip.Tip="Open sidebar">
                     <TextBlock Text="❮"
                                Foreground="White"
@@ -369,17 +374,17 @@
                 </Button>
             </StackPanel>
 
-            <!-- Main Content -->
             <ContentControl Content="{Binding CurrentContent}"/>
         </Grid>
 
-        <!-- ======================= -->
-        <!-- Right Sidebar           -->
-        <!-- ======================= -->
-        <Border Grid.Column="2" Classes="sidebar" Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,0,0" 
+        <!-- Right Sidebar -->
+        <Border Grid.Column="2"
+                Classes="sidebar"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1,0,0,0"
                 IsVisible="{Binding IsRightSidebarVisible}">
             <Grid>
-                <!-- Middle Right Close Button -->
                 <Button Classes="sidebar-close-middle-left"
                         Command="{Binding ToggleRightSidebarCommand}"
                         ToolTip.Tip="Close sidebar"
@@ -396,32 +401,33 @@
                              VerticalAlignment="Center"/>
                 </Button>
 
-                <!-- Right Sidebar Content -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="0" Margin="0">
-                        <!-- User Profile Header with Dropdown -->
-                        <Border Background="White" Padding="16,20,16,16">
+                        <!-- User Profile -->
+                        <Border Background="{DynamicResource CardBackgroundBrush}" Padding="16,20,16,16">
                             <StackPanel>
                                 <Grid>
-                                    <!-- User Profile with Dropdown Button -->
-                                    <Button x:Name="ProfileButton" Background="Transparent" BorderThickness="0" Padding="0" 
+                                    <Button x:Name="ProfileButton"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="0"
                                             Command="{Binding ToggleUserDropdownCommand}"
-                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch">
                                         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
-                                            <Border Width="40" Height="40" Background="#E5E7EB" CornerRadius="20">
-                                                <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <Border Width="40" Height="40" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="20">
+                                                <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                             </Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="Black"/>
-                                                    <TextBlock Text="▾" Foreground="#6B7280" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="▾" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="#6B7280"/>
+                                                <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Button>
 
-                                    <!-- Dropdown Popup (absolute, does not affect layout) -->
                                     <Popup IsOpen="{Binding IsUserDropdownVisible, Mode=TwoWay}"
                                            PlacementTarget="{Binding #ProfileButton}"
                                            Placement="Bottom"
@@ -432,50 +438,40 @@
                                                 ZIndex="1001"
                                                 IsHitTestVisible="True">
                                             <StackPanel Spacing="4">
-                                                <!-- Email Display -->
-                                                <Border Padding="12,8" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Margin="0,0,0,8">
+                                                <Border Padding="12,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,8">
                                                     <StackPanel Spacing="2">
-                                                        <TextBlock Text="Signed in as:" FontSize="11" Foreground="#6B7280"/>
-                                                        <TextBlock Text="{Binding UserEmail}" FontSize="12" FontWeight="SemiBold" Foreground="#374151"/>
+                                                        <TextBlock Text="Signed in as:" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <TextBlock Text="{Binding UserEmail}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                     </StackPanel>
                                                 </Border>
-                                                
-                                                <!-- Dropdown Items -->
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToProfileCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="👤" FontSize="14" VerticalAlignment="Center" Foreground="#6B7280"/>
+                                                        <TextBlock Text="👤" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="Profile" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
-                                                
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToSettingsCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="⚙" FontSize="14" VerticalAlignment="Center" Foreground="#6B7280"/>
+                                                        <TextBlock Text="⚙" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="Settings" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
-                                                
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToNotificationsCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="🔔" FontSize="14" VerticalAlignment="Center" Foreground="#6B7280"/>
+                                                        <TextBlock Text="🔔" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="Notifications" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
-                                                
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToHelpGuideCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="❓" FontSize="14" VerticalAlignment="Center" Foreground="#6B7280"/>
+                                                        <TextBlock Text="❓" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock Text="Help Guide" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
-                                                
-                                                <!-- Separator -->
-                                                <Border Height="1" Background="#E5E7EB" Margin="0,8"/>
-                                                
-                                                <!-- Dark Mode Toggle -->
+                                                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/>
                                                 <Button Classes="dropdown-item" Command="{Binding ToggleDarkModeCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="🌙" FontSize="14" VerticalAlignment="Center" Foreground="#6B7280"/>
+                                                        <TextBlock Text="🌙" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         <TextBlock VerticalAlignment="Center">
                                                             <TextBlock.Text>
                                                                 <Binding Path="IsDarkMode">
@@ -487,8 +483,6 @@
                                                         </TextBlock>
                                                     </StackPanel>
                                                 </Button>
-                                                
-                                                <!-- Logout -->
                                                 <Button Classes="dropdown-item logout" Command="{Binding LogoutCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                                         <TextBlock Text="⎋" FontSize="14" VerticalAlignment="Center" Foreground="#DC2626"/>
@@ -500,158 +494,146 @@
                                     </Popup>
                                 </Grid>
 
-                                <!-- Current Page Indicator -->
-                                <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4" Margin="0,0,0,8">
+                                <!-- Current Page -->
+                                <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4" Margin="0,0,0,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <TextBlock Text="✔" Foreground="#DC2626" FontSize="12" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding CurrentPage}" FontSize="11" Foreground="#374151" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding CurrentPage}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Date and Time -->
+                                <!-- Date / Time -->
                                 <StackPanel Orientation="Horizontal" Spacing="20">
-                                    <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4">
-                                        <TextBlock Text="{Binding CurrentDate}" FontSize="11" Foreground="#374151"/>
+                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <TextBlock Text="{Binding CurrentDate}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </Border>
-                                    <Border Background="#F3F4F6" Padding="8,6" CornerRadius="4">
-                                        <TextBlock Text="{Binding CurrentTime}" FontSize="11" Foreground="#374151"/>
+                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <TextBlock Text="{Binding CurrentTime}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </Border>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
 
-                            <!-- Statistics Cards Grid -->
-                            <Border Padding="16,8">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
-                                    <!-- Events Card -->
-                                    <Border Grid.Row="0" Grid.Column="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,4,4">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                                                <Border Width="16" Height="16" Background="#10B981" CornerRadius="3">
-                                                    <Path Data="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"
-                                                          Fill="White"
-                                                          Width="10" Height="10"
-                                                          Stretch="Uniform"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="Events" FontSize="11" Foreground="#6B7280"/>
-                                            </StackPanel>
-                                            <TextBlock Text="120" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
-                                            <TextBlock Text="Approved Events" FontSize="9" Foreground="#9CA3AF"/>
+                        <!-- Stats Cards -->
+                        <Border Padding="16,8">
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
+                                <Border Grid.Row="0" Grid.Column="0" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,4,4">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="{DynamicResource SuccessBrush}" CornerRadius="3">
+                                                <Path Data="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Events" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                    </Border>
+                                        <TextBlock Text="120" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="Approved Events" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </Border>
 
-                                    <!-- Clicks Card -->
-                                    <Border Grid.Row="0" Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,0,0,4">
-                                        <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                                                    <Border Width="16" Height="16" Background="#EF4444" CornerRadius="3">
-                                                        <!-- Click icon (mouse pointer) -->
-                                                        <Path Data="M2 1 L2 11 L5.5 8.5 L7.5 14 L9 13.2 L6.5 7.8 L11 7.8 Z"
-                                                              Fill="White"
-                                                              Width="10" Height="10"
-                                                              Stretch="Uniform"
-                                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    <TextBlock Text="Clicks" FontSize="11" Foreground="#6B7280"/>
-                                            </StackPanel>
-                                            <TextBlock Text="22k" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
-                                            <TextBlock Text="+12% Last Week" FontSize="9" Foreground="#9CA3AF"/>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,0,0,4">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="{DynamicResource DangerBrush}" CornerRadius="3">
+                                                <Path Data="M2 1 L2 11 L5.5 8.5 L7.5 14 L9 13.2 L6.5 7.8 L11 7.8 Z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Clicks" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                    </Border>
+                                        <TextBlock Text="22k" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="+12% Last Week" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </Border>
 
-                                    <!-- Students Card -->
-                                    <Border Grid.Row="1" Grid.Column="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4,4,0">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                                                <Border Width="16" Height="16" Background="#F59E0B" CornerRadius="3">
-                                                    <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                                                          Fill="White"
-                                                          Width="10" Height="10"
-                                                          Stretch="Uniform"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="Students" FontSize="11" Foreground="#6B7280"/>
-                                            </StackPanel>
-                                            <TextBlock Text="1512" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
-                                            <TextBlock Text="Registered Students" FontSize="9" Foreground="#9CA3AF"/>
+                                <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4,4,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="{DynamicResource WarningBrush}" CornerRadius="3">
+                                                <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Students" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                    </Border>
+                                        <TextBlock Text="1512" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="Registered Students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </Border>
 
-                                    <!-- Sections Card -->
-                                    <Border Grid.Row="1" Grid.Column="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,4,0,0">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                                                <Border Width="16" Height="16" Background="#8B5CF6" CornerRadius="3">
-                                                    <Path Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
-                                                          Fill="White"
-                                                          Width="10" Height="10"
-                                                          Stretch="Uniform"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="Sections" FontSize="11" Foreground="#6B7280"/>
-                                            </StackPanel>
-                                            <TextBlock Text="144" FontSize="20" FontWeight="Bold" Foreground="Black" Margin="0,2"/>
-                                            <TextBlock Text="+10% Last Week" FontSize="9" Foreground="#9CA3AF"/>
+                                <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,4,0,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                                            <Border Width="16" Height="16" Background="{DynamicResource PurpleBrush}" CornerRadius="3">
+                                                <Path Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
+                                                      Fill="White"
+                                                      Width="10" Height="10"
+                                                      Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Sections" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                    </Border>
-                                </Grid>
-                            </Border>
+                                        <TextBlock Text="144" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="+10% Last Week" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
 
-                        <!-- Event Schedule Section -->
+                        <!-- Event Schedule -->
                         <Border Padding="16,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                    <TextBlock Text="Event Schedule" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
-									<!-- <TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/> -->
+                                    <TextBlock Text="Event Schedule" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
 
-                                <!-- Calendar Header -->
-                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Left">
-                                                <TextBlock Text="❮" Foreground="#6B7280" FontSize="14" VerticalAlignment="Center"/>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4">
+                                                <TextBlock Text="❮" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" VerticalAlignment="Center"/>
                                             </Button>
-                                            <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Right">
+                                            <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4">
                                                 <TextBlock Text="❯" Foreground="#10B981" FontSize="14" VerticalAlignment="Center"/>
                                             </Button>
                                         </StackPanel>
 
-                                        <!-- Calendar Days -->
                                         <Grid ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
-                                            <TextBlock Grid.Column="0" Text="Mon" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="Tue" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="2" Text="Wed" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="3" Text="Thu" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="4" Text="Fri" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="5" Text="Sat" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="6" Text="Sun" FontSize="10" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="0" Text="Mon" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="Tue" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="Wed" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="Thu" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="Fri" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="5" Text="Sat" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="6" Text="Sun" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                                         </Grid>
 
-                                        <!-- Calendar Dates -->
                                         <Grid RowDefinitions="Auto" ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
-                                            <TextBlock Grid.Column="0" Text="16" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="1" Text="17" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="2" Text="18" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="0" Text="16" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="1" Text="17" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="2" Text="18" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
                                             <Border Grid.Column="3" Background="#10B981" CornerRadius="50" Width="24" Height="24">
                                                 <TextBlock Text="19" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <TextBlock Grid.Column="4" Text="20" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="5" Text="21" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="6" Text="22" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="4" Text="20" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="5" Text="21" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
+                                            <TextBlock Grid.Column="6" Text="22" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
                                         </Grid>
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Today Section -->
-                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,1,1" Padding="12,8">
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" Padding="12,8">
                                     <StackPanel>
-                                        <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="Black" Margin="0,0,0,8"/>
-
-                                        <!-- Event Card -->
-                                        <Border Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                        <Border Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                                             <StackPanel Orientation="Horizontal" Spacing="12">
                                                 <Border Width="4" Height="40" Background="#3B82F6" CornerRadius="2"/>
                                                 <StackPanel VerticalAlignment="Center">
@@ -663,23 +645,21 @@
                                                             <TextBlock Text="Pending" Foreground="White" FontSize="9"/>
                                                         </Border>
                                                     </StackPanel>
-                                                    <TextBlock Text="Educational Field Trip" FontSize="12" FontWeight="SemiBold" Foreground="Black"/>
-                                                    <TextBlock Text="06:00 AM - 11:00 PM" FontSize="10" Foreground="#6B7280"/>
+                                                    <TextBlock Text="Educational Field Trip" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="06:00 AM - 11:00 PM" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
-                                                <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                    <TextBlock Text="❯" Foreground="#6B7280" FontSize="14" VerticalAlignment="Center"/>
+                                                <Button Background="Transparent" BorderThickness="0">
+                                                    <TextBlock Text="❯" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" VerticalAlignment="Center"/>
                                                 </Button>
                                             </StackPanel>
                                         </Border>
-
                                         <Button Content="View more..." Background="Transparent" Foreground="#3B82F6" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Friday Event -->
-                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
                                     <StackPanel>
-                                        <TextBlock Text="Fri, June 20" FontSize="11" Foreground="#6B7280" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Fri, June 20" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                         <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="8" Padding="12">
                                             <TextBlock Text="NO EVENTS SCHEDULED" FontSize="11" Foreground="#DC2626" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                                         </Border>
@@ -688,55 +668,50 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Activity Log Section -->
+                        <!-- Activity Log -->
                         <Border Padding="16,8,16,16">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                    <TextBlock Text="Activity Log" FontSize="14" FontWeight="SemiBold" Foreground="Black"/>
-                                    <!--<TextBlock Text="•••" FontSize="14" Foreground="#D1D5DB" HorizontalAlignment="Right"/>-->
+                                    <TextBlock Text="Activity Log" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
 
-                                <!-- Activity Items -->
                                 <StackPanel Spacing="12">
-                                    <!-- Activity Item 1 -->
                                     <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
-                                            <TextBlock Text="RR" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        <Border Width="32" Height="32" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                            <TextBlock Text="RR" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="RIchard Ramos Jr" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
-                                                <TextBlock Text="2hrs ago" FontSize="10" Foreground="#9CA3AF"/>
+                                                <TextBlock Text="RIchard Ramos Jr" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="2hrs ago" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
-                                            <TextBlock Text="Deleted 2 Students to the...." FontSize="10" Foreground="#6B7280"/>
+                                            <TextBlock Text="Deleted 2 Students to the...." FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <!-- Activity Item 2 -->
                                     <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
-                                            <TextBlock Text="RR" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        <Border Width="32" Height="32" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                            <TextBlock Text="RR" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="Richard Ramos" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
-                                                <TextBlock Text="15mins ago" FontSize="10" Foreground="#9CA3AF"/>
+                                                <TextBlock Text="Richard Ramos" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="15mins ago" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
-                                            <TextBlock Text="Add 5 Students to list" FontSize="10" Foreground="#6B7280"/>
+                                            <TextBlock Text="Add 5 Students to list" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
-
-                                    <!-- Activity Item 3 -->
+                
                                     <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="32" Height="32" Background="#E5E7EB" CornerRadius="16">
-                                            <TextBlock Text="HB" FontSize="10" Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        <Border Width="32" Height="32" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                            <TextBlock Text="HB" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="Hermilo Bagtong" FontSize="11" FontWeight="SemiBold" Foreground="Black"/>
-                                                <TextBlock Text="4hrs ago" FontSize="10" Foreground="#9CA3AF"/>
+                                                <TextBlock Text="Hermilo Bagtong" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="4hrs ago" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
-                                            <TextBlock Text="Disabled 2 Students on list" FontSize="10" Foreground="#6B7280"/>
+                                            <TextBlock Text="Disabled 2 Students on list" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
@@ -747,8 +722,9 @@
             </Grid>
         </Border>
 
-        <!-- Overlay to close dropdown when clicking outside (transparent, no hover overlay) -->
-        <Border Grid.ColumnSpan="3" Background="Transparent" 
+        <!-- Dropdown overlay -->
+        <Border Grid.ColumnSpan="3"
+                Background="Transparent"
                 IsVisible="{Binding IsUserDropdownVisible}"
                 ZIndex="1000">
             <Button Classes="overlay-dismiss"

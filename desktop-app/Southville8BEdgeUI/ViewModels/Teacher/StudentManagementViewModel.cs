@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Globalization;
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -78,7 +79,32 @@ public partial class StudentInfoViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<StudentActivityViewModel> _recentActivities = new();
 
     public string Initials => string.Join("", FullName.Split(' ').Select(n => n.FirstOrDefault()));
+
     public string AttendanceStatusColor => AttendanceStatus == "Present" ? "#10B981" : "#EF4444";
+
+    // Foreground chosen for contrast; for bright backgrounds use dark text, else white.
+    public string AttendanceStatusForeground => GetContrastColor(AttendanceStatusColor);
+
+    partial void OnAttendanceStatusChanged(string value)
+    {
+        OnPropertyChanged(nameof(AttendanceStatusColor));
+        OnPropertyChanged(nameof(AttendanceStatusForeground));
+    }
+
+    private static string GetContrastColor(string hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return "#FFFFFF";
+        var c = hex.TrimStart('#');
+        if (c.Length == 3) c = string.Concat(c.Select(ch => new string(ch, 2)));
+        if (c.Length != 6) return "#FFFFFF";
+        if (!int.TryParse(c.Substring(0,2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r) ||
+            !int.TryParse(c.Substring(2,2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g) ||
+            !int.TryParse(c.Substring(4,2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b))
+            return "#FFFFFF";
+        // Relative luminance
+        double l = (0.2126*r + 0.7152*g + 0.0722*b)/255.0;
+        return l > 0.6 ? "#1F2937" : "#FFFFFF"; // dark text on light colors, white on dark
+    }
 
     public StudentInfoViewModel()
     {

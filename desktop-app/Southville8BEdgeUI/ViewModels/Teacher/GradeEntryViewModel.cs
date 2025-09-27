@@ -1,6 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Text;
+using System.IO;
+using System;
+using System.Linq;
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -15,10 +19,12 @@ public partial class GradeEntryViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<StudentGradeViewModel> _studentGrades = new();
     [ObservableProperty] private ObservableCollection<GradeDistributionItemViewModel> _gradeDistribution = new();
     [ObservableProperty] private ObservableCollection<RecentGradeEntryViewModel> _recentGradeEntries = new();
+    [ObservableProperty] private bool _hasUnsavedChanges; // tracks if any grade was edited locally
 
     public GradeEntryViewModel()
     {
         InitializeData();
+        HookStudentGradesCollection();
     }
 
     private void InitializeData()
@@ -48,8 +54,69 @@ public partial class GradeEntryViewModel : ViewModelBase
         };
     }
 
-    [RelayCommand] private void ExportGrades() { }
-    [RelayCommand] private void SaveAllGrades() { }
+    private void HookStudentGradesCollection()
+    {
+        foreach (var sg in StudentGrades)
+        {
+            sg.PropertyChanged += (_, _) => MarkDirty();
+        }
+        StudentGrades.CollectionChanged += (_, args) =>
+        {
+            if (args.NewItems != null)
+            {
+                foreach (var item in args.NewItems.OfType<StudentGradeViewModel>())
+                {
+                    item.PropertyChanged += (_, _) => MarkDirty();
+                }
+            }
+            MarkDirty();
+            ExportGradesCommand.NotifyCanExecuteChanged();
+            SaveAllGradesCommand.NotifyCanExecuteChanged();
+        };
+    }
+
+    private void MarkDirty()
+    {
+        HasUnsavedChanges = true;
+        SaveAllGradesCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanExportGrades() => StudentGrades?.Count > 0;
+    private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades?.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanExportGrades))]
+    private void ExportGrades()
+    {
+        // Simple CSV export to temp folder (placeholder implementation)
+        var sb = new StringBuilder();
+        sb.AppendLine("Student,Quiz,Assignment,Exam,Final");
+        foreach (var s in StudentGrades)
+        {
+            sb.AppendLine($"{Escape(s.StudentName)},{Escape(s.QuizGrade)},{Escape(s.AssignmentGrade)},{Escape(s.ExamGrade)},{s.FinalGrade:F2}");
+        }
+        try
+        {
+            var fileName = $"grades_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            var path = Path.Combine(Path.GetTempPath(), fileName);
+            File.WriteAllText(path, sb.ToString());
+            // TODO: surface success toast via a service / messenger
+        }
+        catch
+        {
+            // TODO: surface error toast
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveAllGrades))]
+    private void SaveAllGrades()
+    {
+        // Placeholder: simulate persistence
+        HasUnsavedChanges = false;
+        SaveAllGradesCommand.NotifyCanExecuteChanged();
+        // TODO: persist to backend / repository and raise notifications
+    }
+
+    private static string Escape(string? value) => string.IsNullOrEmpty(value) ? "" : value.Contains(',') ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 }
 
 public partial class StudentGradeViewModel : ViewModelBase

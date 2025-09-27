@@ -4,6 +4,9 @@ using CommunityToolkit.Mvvm.Input;
 using Southville8BEdgeUI.ViewModels.Teacher;
 using System;
 using System.Collections.ObjectModel;
+using System.Windows.Input;
+using Avalonia;
+using Avalonia.Styling;
 
 namespace Southville8BEdgeUI.ViewModels;
 
@@ -90,6 +93,9 @@ public partial class TeacherShellViewModel : ViewModelBase
         InitializeRecentActivities();
         InitializeCalendarDays();
         UpdateColumnWidths();
+
+        // Initialize based on current theme (system/default)
+        IsDarkMode = Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
 
         // Update time every minute
         StartTimeUpdater();
@@ -215,12 +221,7 @@ public partial class TeacherShellViewModel : ViewModelBase
         IsUserDropdownVisible = false;
     }
 
-    [RelayCommand]
-    private void ToggleDarkMode()
-    {
-        IsDarkMode = !IsDarkMode;
-    }
-
+    // Logout command
     [RelayCommand]
     private void Logout()
     {
@@ -316,6 +317,16 @@ public partial class TeacherShellViewModel : ViewModelBase
     partial void OnIsRightSidebarVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowRightSidebarToggle));
+    }
+
+    // Dark mode toggle command using MVVM Toolkit
+    [RelayCommand]
+    private void ToggleDarkMode()
+    {
+        IsDarkMode = !IsDarkMode;
+        Application.Current!.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
+        // Close profile dropdown after toggling theme (parity with AdminShellView)
+        IsUserDropdownVisible = false;
     }
 }
 
