@@ -280,14 +280,18 @@ public partial class TeacherShellViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToMyAnnouncements()
     {
-        CurrentContent = new MyAnnouncementsViewModel();
+        var vm = new MyAnnouncementsViewModel();
+        vm.NavigateTo = inner => CurrentContent = inner; // enable nested navigation (NewAnnouncementView)
+        CurrentContent = vm;
         CurrentPage = "My Announcements";
     }
 
     [RelayCommand]
     private void NavigateToMessaging()
     {
-        CurrentContent = new MessagingViewModel();
+        var vm = new MessagingViewModel();
+        vm.NavigateTo = inner => CurrentContent = inner; // enable nested navigation to NewChatView
+        CurrentContent = vm;
         CurrentPage = "Messaging";
     }
 

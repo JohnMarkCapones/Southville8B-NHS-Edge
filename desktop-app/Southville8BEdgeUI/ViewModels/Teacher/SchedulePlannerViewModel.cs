@@ -2,35 +2,55 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
+using Avalonia.Media; // Added for IBrush usage
+using Avalonia; // For Application.Current resource lookup
+using Avalonia.Styling; // For ThemeVariant
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
 public partial class SchedulePlannerViewModel : ViewModelBase
 {
-    [ObservableProperty] private string _selectedWeek = "";
+    // Week selection
+    [ObservableProperty] private string _selectedWeek = string.Empty;
     [ObservableProperty] private ObservableCollection<string> _availableWeeks = new();
-    [ObservableProperty] private int _weeklyClassesCount = 24;
-    [ObservableProperty] private int _weeklyHours = 36;
-    [ObservableProperty] private int _freePeriodsCount = 8;
-    [ObservableProperty] private int _conflictsCount = 2;
+
+    // KPI values
+    [ObservableProperty] private int _weeklyClassesCount;
+    [ObservableProperty] private int _weeklyHours;
+    [ObservableProperty] private int _freePeriodsCount;
+    [ObservableProperty] private int _conflictsCount;
+
+    // Data collections
     [ObservableProperty] private ObservableCollection<TimeSlotViewModel> _timeSlots = new();
     [ObservableProperty] private ObservableCollection<UpcomingClassViewModel> _upcomingClasses = new();
-    [ObservableProperty] private string _newClassSubject = "";
-    [ObservableProperty] private string _newClassGrade = "";
-    [ObservableProperty] private string _newClassDay = "";
-    [ObservableProperty] private TimeSpan? _newClassStartTime;
-    [ObservableProperty] private string _newClassDuration = "";
-    [ObservableProperty] private string _newClassRoom = "";
-    [ObservableProperty] private ObservableCollection<string> _availableSubjects = new() { "Mathematics", "Science", "Physics", "Chemistry" };
-    [ObservableProperty] private ObservableCollection<string> _availableGrades = new() { "Grade 8A", "Grade 8B", "Grade 9A", "Grade 9B" };
-    [ObservableProperty] private ObservableCollection<string> _availableDays = new() { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
-    [ObservableProperty] private ObservableCollection<string> _availableDurations = new() { "1 hour", "1.5 hours", "2 hours" };
     [ObservableProperty] private ObservableCollection<ScheduleConflictViewModel> _conflicts = new();
     [ObservableProperty] private bool _hasConflicts;
 
     public SchedulePlannerViewModel()
     {
         InitializeData();
+        // Subscribe to theme changes so class colors update dynamically
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += (_, __) => RefreshThemeColors();
+    }
+
+    private static IBrush ResolveBrush(string key, IBrush fallback)
+    {
+        var app = Application.Current;
+        if (app != null && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var obj) && obj is IBrush b)
+            return b;
+        return fallback;
+    }
+
+    private void RefreshThemeColors()
+    {
+        var info = ResolveBrush("InfoBrush", Brushes.Transparent);
+        var success = ResolveBrush("SuccessBrush", Brushes.Transparent);
+        // Simple mapping: first upcoming class -> info, second -> success, rest alternate
+        for (int i = 0; i < UpcomingClasses.Count; i++)
+        {
+            UpcomingClasses[i].SubjectColor = i % 2 == 0 ? info : success;
+        }
     }
 
     private void InitializeData()
@@ -38,6 +58,12 @@ public partial class SchedulePlannerViewModel : ViewModelBase
         AvailableWeeks = new ObservableCollection<string> { "Current Week", "Next Week", "Week of Feb 17", "Week of Feb 24" };
         SelectedWeek = AvailableWeeks[0];
 
+        WeeklyClassesCount = 24;
+        WeeklyHours = 36;
+        FreePeriodsCount = 8;
+        ConflictsCount = 2;
+
+        // Build timetable rows (sample data)
         TimeSlots = new ObservableCollection<TimeSlotViewModel>();
         for (int hour = 8; hour < 18; hour++)
         {
@@ -54,10 +80,13 @@ public partial class SchedulePlannerViewModel : ViewModelBase
             });
         }
 
+        var infoBrush = ResolveBrush("InfoBrush", Brushes.Transparent);
+        var successBrush = ResolveBrush("SuccessBrush", Brushes.Transparent);
+
         UpcomingClasses = new ObservableCollection<UpcomingClassViewModel>
         {
-            new() { Subject = "Mathematics", Grade = "Grade 8A", Time = "08:00 - 09:30", Room = "Room 101", SubjectColor = "#3B82F6" },
-            new() { Subject = "Science", Grade = "Grade 8B", Time = "10:00 - 11:30", Room = "Room 205", SubjectColor = "#10B981" }
+            new() { Subject = "Mathematics", Grade = "Grade 8A", Time = "08:00 - 09:30", Room = "Room 101", SubjectColor = infoBrush },
+            new() { Subject = "Science", Grade = "Grade 8B", Time = "10:00 - 11:30", Room = "Room 205", SubjectColor = successBrush }
         };
 
         Conflicts = new ObservableCollection<ScheduleConflictViewModel>
@@ -69,20 +98,18 @@ public partial class SchedulePlannerViewModel : ViewModelBase
         HasConflicts = Conflicts.Count > 0;
     }
 
-    [RelayCommand] private void AddClass() { }
-    [RelayCommand] private void ExportSchedule() { }
+    // Commands (placeholders)
     [RelayCommand] private void RefreshSchedule() { }
     [RelayCommand] private void ManageTemplates() { }
-    [RelayCommand] private void EditClass(UpcomingClassViewModel classItem) { }
-    [RelayCommand] private void AddNotes(UpcomingClassViewModel classItem) { }
-    [RelayCommand] private void QuickAddClass() { }
+    [RelayCommand] private void EditClass(UpcomingClassViewModel vm) { }
+    [RelayCommand] private void AddNotes(UpcomingClassViewModel vm) { }
     [RelayCommand] private void LoadTemplate() { }
     [RelayCommand] private void SaveTemplate() { }
 }
 
 public partial class TimeSlotViewModel : ViewModelBase
 {
-    [ObservableProperty] private string _timeRange = "";
+    [ObservableProperty] private string _timeRange = string.Empty;
     [ObservableProperty] private ScheduleSlotViewModel _monday = new();
     [ObservableProperty] private ScheduleSlotViewModel _tuesday = new();
     [ObservableProperty] private ScheduleSlotViewModel _wednesday = new();
@@ -95,24 +122,24 @@ public partial class TimeSlotViewModel : ViewModelBase
 public partial class ScheduleSlotViewModel : ViewModelBase
 {
     [ObservableProperty] private bool _isOccupied;
-    [ObservableProperty] private string _subject = "";
-    [ObservableProperty] private string _grade = "";
-    [ObservableProperty] private string _room = "";
+    [ObservableProperty] private string _subject = string.Empty;
+    [ObservableProperty] private string _grade = string.Empty;
+    [ObservableProperty] private string _room = string.Empty;
 }
 
 public partial class UpcomingClassViewModel : ViewModelBase
 {
-    [ObservableProperty] private string _subject = "";
-    [ObservableProperty] private string _grade = "";
-    [ObservableProperty] private string _time = "";
-    [ObservableProperty] private string _room = "";
-    [ObservableProperty] private string _subjectColor = "";
+    [ObservableProperty] private string _subject = string.Empty;
+    [ObservableProperty] private string _grade = string.Empty;
+    [ObservableProperty] private string _time = string.Empty;
+    [ObservableProperty] private string _room = string.Empty;
+    [ObservableProperty] private IBrush _subjectColor = Brushes.Transparent; // Themed brush
 }
 
 public partial class ScheduleConflictViewModel : ViewModelBase
 {
-    [ObservableProperty] private string _conflictDescription = "";
-    [ObservableProperty] private string _time = "";
+    [ObservableProperty] private string _conflictDescription = string.Empty;
+    [ObservableProperty] private string _time = string.Empty;
 
     [RelayCommand] private void Resolve() { }
 }

@@ -1,6 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System;
+using Avalonia;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Southville8BEdgeUI.Converters;
+using Avalonia.Data;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -33,19 +40,14 @@ public partial class AdminDashboardViewModel : ViewModelBase
 
     // Weekly Statistics
     [ObservableProperty] private ObservableCollection<WeeklyStatViewModel> _weeklyStats = default!;
-
-    // Upcoming Events List
+    // Upcoming Events
     [ObservableProperty] private ObservableCollection<DashboardEventViewModel> _upcomingEvents = default!;
-
-    // Recent Activity List
+    // Recent Activity
     [ObservableProperty] private ObservableCollection<DashboardActivityViewModel> _recentActivities = default!;
-
     // System Alerts
     [ObservableProperty] private ObservableCollection<SystemAlertViewModel> _systemAlerts = default!;
-
-    // Top Performing Metrics
+    // Top Performance Metrics
     [ObservableProperty] private ObservableCollection<PerformanceMetricViewModel> _performanceMetrics = default!;
-
     // Grade Distribution
     [ObservableProperty] private ObservableCollection<GradeDistributionViewModel> _gradeDistribution = default!;
 
@@ -60,7 +62,10 @@ public partial class AdminDashboardViewModel : ViewModelBase
     public decimal NetRevenue => MonthlyRevenue - OperatingCosts;
     public double RoomOccupancyRate => TotalRooms > 0 ? (double)OccupiedRooms / TotalRooms * 100 : 0;
     public string SystemStatus => SystemUptime > 99.5 ? "Excellent" : SystemUptime > 95 ? "Good" : "Needs Attention";
-    public string SystemStatusColor => SystemUptime > 99.5 ? "#10B981" : SystemUptime > 95 ? "#F59E0B" : "#EF4444";
+
+    public IBrush SystemStatusBrush => ResolveBrush(
+        SystemUptime > 99.5 ? "SuccessBrush" : SystemUptime > 95 ? "WarningBrush" : "DangerBrush",
+        "TextPrimaryBrush");
 
     public AdminDashboardViewModel()
     {
@@ -72,18 +77,53 @@ public partial class AdminDashboardViewModel : ViewModelBase
         InitializeGradeDistribution();
     }
 
+    private static IBrush ResolveBrush(string key, string fallbackKey)
+    {
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+                return b;
+            if (app.TryGetResource(fallbackKey, app.ActualThemeVariant, out var f) && f is IBrush fb)
+                return fb;
+        }
+        return Brushes.Transparent;
+    }
+
     private void InitializeWeeklyStats()
     {
-        WeeklyStats = new ObservableCollection<WeeklyStatViewModel>
+        var stats = new[]
         {
-            new() { Day = "Mon", StudentCount = 1480, EventCount = 3, RoomBookings = 28 },
-            new() { Day = "Tue", StudentCount = 1495, EventCount = 2, RoomBookings = 32 },
-            new() { Day = "Wed", StudentCount = 1502, EventCount = 4, RoomBookings = 35 },
-            new() { Day = "Thu", StudentCount = 1489, EventCount = 1, RoomBookings = 29 },
-            new() { Day = "Fri", StudentCount = 1512, EventCount = 5, RoomBookings = 31 },
-            new() { Day = "Sat", StudentCount = 892, EventCount = 2, RoomBookings = 15 },
-            new() { Day = "Sun", StudentCount = 654, EventCount = 1, RoomBookings = 8 }
+            new WeeklyStatViewModel { Day = "Mon", StudentCount = 1480, EventCount = 3, RoomBookings = 28 },
+            new WeeklyStatViewModel { Day = "Tue", StudentCount = 1495, EventCount = 2, RoomBookings = 32 },
+            new WeeklyStatViewModel { Day = "Wed", StudentCount = 1502, EventCount = 4, RoomBookings = 35 },
+            new WeeklyStatViewModel { Day = "Thu", StudentCount = 1489, EventCount = 1, RoomBookings = 29 },
+            new WeeklyStatViewModel { Day = "Fri", StudentCount = 1512, EventCount = 5, RoomBookings = 31 },
+            new WeeklyStatViewModel { Day = "Sat", StudentCount = 892, EventCount = 2, RoomBookings = 15 },
+            new WeeklyStatViewModel { Day = "Sun", StudentCount = 654, EventCount = 1, RoomBookings = 8 }
         };
+
+        int max = stats.Max(s => s.StudentCount);
+        string todayAbbrev = DateTime.Today.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "Mon",
+            DayOfWeek.Tuesday => "Tue",
+            DayOfWeek.Wednesday => "Wed",
+            DayOfWeek.Thursday => "Thu",
+            DayOfWeek.Friday => "Fri",
+            DayOfWeek.Saturday => "Sat",
+            DayOfWeek.Sunday => "Sun",
+            _ => string.Empty
+        };
+
+        foreach (var item in stats)
+        {
+            item.IsPeak = item.StudentCount == max;
+            item.IsToday = item.Day == todayAbbrev;
+            item.IsAboveAverage = item.StudentCount >= 1500;
+            item.RefreshTheme();
+        }
+
+        WeeklyStats = new ObservableCollection<WeeklyStatViewModel>(stats);
     }
 
     private void InitializeUpcomingEvents()
@@ -138,37 +178,18 @@ public partial class AdminDashboardViewModel : ViewModelBase
     {
         GradeDistribution = new ObservableCollection<GradeDistributionViewModel>
         {
-            new() { Grade = "Grade 8", StudentCount = 285, Percentage = 18.9, Color = "#3B82F6" },
-            new() { Grade = "Grade 9", StudentCount = 298, Percentage = 19.7, Color = "#10B981" },
-            new() { Grade = "Grade 10", StudentCount = 312, Percentage = 20.6, Color = "#F59E0B" },
-            new() { Grade = "Grade 11", StudentCount = 305, Percentage = 20.2, Color = "#8B5CF6" },
-            new() { Grade = "Grade 12", StudentCount = 312, Percentage = 20.6, Color = "#EF4444" }
+            new() { Grade = "Grade 8", StudentCount = 285, Percentage = 18.9, ColorKey = "InfoBrush" },
+            new() { Grade = "Grade 9", StudentCount = 298, Percentage = 19.7, ColorKey = "SuccessBrush" },
+            new() { Grade = "Grade 10", StudentCount = 312, Percentage = 20.6, ColorKey = "WarningBrush" },
+            new() { Grade = "Grade 11", StudentCount = 305, Percentage = 20.2, ColorKey = "PurpleBrush" },
+            new() { Grade = "Grade 12", StudentCount = 312, Percentage = 20.6, ColorKey = "DangerBrush" }
         };
     }
 
-    [RelayCommand]
-    private void RefreshDashboard()
-    {
-        // TODO: Implement dashboard refresh logic
-    }
-
-    [RelayCommand]
-    private void ViewAllAlerts()
-    {
-        // TODO: Navigate to alerts page
-    }
-
-    [RelayCommand]
-    private void DismissAlert(SystemAlertViewModel alert)
-    {
-        SystemAlerts.Remove(alert);
-    }
-
-    [RelayCommand]
-    private void ViewDetailedReports()
-    {
-        // TODO: Navigate to detailed reports
-    }
+    [RelayCommand] private void RefreshDashboard() { }
+    [RelayCommand] private void ViewAllAlerts() { }
+    [RelayCommand] private void DismissAlert(SystemAlertViewModel alert) { SystemAlerts.Remove(alert); }
+    [RelayCommand] private void ViewDetailedReports() { }
 }
 
 public partial class WeeklyStatViewModel : ViewModelBase
@@ -177,6 +198,46 @@ public partial class WeeklyStatViewModel : ViewModelBase
     [ObservableProperty] private int _studentCount;
     [ObservableProperty] private int _eventCount;
     [ObservableProperty] private int _roomBookings;
+
+    public bool IsPeak { get; set; }
+    public bool IsToday { get; set; }
+    public bool IsAboveAverage { get; set; }
+
+    private static IBrush Resolve(string key, string fallbackKey)
+    {
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallbackKey, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush BackgroundBrush
+    {
+        get
+        {
+            if (IsPeak) return Resolve("InfoSoftBrush", "GraySoftBrush");
+            if (IsToday || IsAboveAverage) return Resolve("TealSoftBrush", "SuccessSoftBrush");
+            return Resolve("GraySoftBrush", "AccentSoftBrush");
+        }
+    }
+
+    public IBrush StudentsLabelBrush
+    {
+        get
+        {
+            if (IsPeak) return Resolve("InfoBrush", "TextMutedBrush");
+            if (IsToday || IsAboveAverage) return Resolve("SuccessBrush", "TextMutedBrush");
+            return Resolve("TextMutedBrush", "TextSecondaryBrush");
+        }
+    }
+
+    public void RefreshTheme()
+    {
+        OnPropertyChanged(nameof(BackgroundBrush));
+        OnPropertyChanged(nameof(StudentsLabelBrush));
+    }
 }
 
 public partial class DashboardEventViewModel : ViewModelBase
@@ -187,22 +248,25 @@ public partial class DashboardEventViewModel : ViewModelBase
     [ObservableProperty] private string _type = "";
     [ObservableProperty] private string _priority = "";
 
-    public string TypeColor => Type switch
+    private static IBrush RB(string key) => AdminDashboardViewModel.ResolveBrushStatic(key, "TextMutedBrush");
+
+    // Use generated properties (Type / Priority) instead of backing fields to avoid MVVMTK0034
+    public IBrush TypeBrush => Type switch
     {
-        "Competition" => "#8B5CF6",
-        "Academic" => "#3B82F6",
-        "Holiday" => "#F59E0B",
-        "Sports" => "#10B981",
-        "Meeting" => "#6B7280",
-        _ => "#6B7280"
+        "Competition" => RB("PurpleBrush"),
+        "Academic" => RB("IndigoBrush"),
+        "Holiday" => RB("WarningBrush"),
+        "Sports" => RB("SuccessBrush"),
+        "Meeting" => RB("GrayButtonBrush"),
+        _ => RB("TextMutedBrush")
     };
 
-    public string PriorityColor => Priority switch
+    public IBrush PriorityBrush => Priority switch
     {
-        "High" => "#EF4444",
-        "Medium" => "#F59E0B",
-        "Low" => "#10B981",
-        _ => "#6B7280"
+        "High" => RB("DangerBrush"),
+        "Medium" => RB("WarningBrush"),
+        "Low" => RB("SuccessBrush"),
+        _ => RB("TextMutedBrush")
     };
 }
 
@@ -214,19 +278,21 @@ public partial class DashboardActivityViewModel : ViewModelBase
     [ObservableProperty] private string _icon = "";
     [ObservableProperty] private string _type = "";
 
-    public string TypeColor => Type switch
+    private static IBrush RB(string key) => AdminDashboardViewModel.ResolveBrushStatic(key, "TextMutedBrush");
+
+    // Use generated Type property
+    public IBrush TypeBrush => Type switch
     {
-        "System" => "#6B7280",
-        "Approval" => "#10B981",
-        "Event" => "#3B82F6",
-        "Registration" => "#8B5CF6",
-        "Academic" => "#F59E0B",
-        "Communication" => "#EC4899",
-        "Maintenance" => "#EF4444",
-        _ => "#6B7280"
+        "System" => RB("GrayButtonBrush"),
+        "Approval" => RB("SuccessBrush"),
+        "Event" => RB("InfoBrush"),
+        "Registration" => RB("PurpleBrush"),
+        "Academic" => RB("WarningBrush"),
+        "Communication" => RB("PinkBrush"),
+        "Maintenance" => RB("DangerBrush"),
+        _ => RB("TextMutedBrush")
     };
 
-    // New combined description used in XAML instead of Runs (avoids potential theme re-template issues with inline Runs disappearing)
     public string Description => string.IsNullOrWhiteSpace(User) && string.IsNullOrWhiteSpace(Action)
         ? string.Empty
         : string.IsNullOrWhiteSpace(Action) ? User : string.IsNullOrWhiteSpace(User) ? Action : $"{User} {Action}";
@@ -242,12 +308,15 @@ public partial class SystemAlertViewModel : ViewModelBase
     [ObservableProperty] private string _severity = "";
     [ObservableProperty] private string _timestamp = "";
 
-    public string SeverityColor => Severity switch
+    private static IBrush RB(string key) => AdminDashboardViewModel.ResolveBrushStatic(key, "TextMutedBrush");
+
+    // Use generated Severity property
+    public IBrush SeverityBrush => Severity switch
     {
-        "Critical" => "#EF4444",
-        "Warning" => "#F59E0B",
-        "Info" => "#3B82F6",
-        _ => "#6B7280"
+        "Critical" => RB("DangerBrush"),
+        "Warning" => RB("WarningBrush"),
+        "Info" => RB("InfoBrush"),
+        _ => RB("GrayButtonBrush")
     };
 
     public string SeverityIcon => Severity switch
@@ -268,7 +337,7 @@ public partial class PerformanceMetricViewModel : ViewModelBase
     [ObservableProperty] private string _icon = "";
 
     public string ChangeText => $"{(IsPositive ? "+" : "")}{Change:F1}%";
-    public string ChangeColor => IsPositive ? "#10B981" : "#EF4444";
+    public IBrush ChangeBrush => AdminDashboardViewModel.ResolveBrushStatic(IsPositive ? "SuccessBrush" : "DangerBrush", "TextPrimaryBrush");
 }
 
 public partial class GradeDistributionViewModel : ViewModelBase
@@ -276,5 +345,26 @@ public partial class GradeDistributionViewModel : ViewModelBase
     [ObservableProperty] private string _grade = "";
     [ObservableProperty] private int _studentCount;
     [ObservableProperty] private double _percentage;
-    [ObservableProperty] private string _color = "";
+    [ObservableProperty] private string _colorKey = "";
+
+    public IBrush ColorBrush => AdminDashboardViewModel.ResolveBrushStatic(ColorKey, "AccentBrush");
+
+    // Notify dependent brush when the key changes
+    partial void OnColorKeyChanged(string value) => OnPropertyChanged(nameof(ColorBrush));
+}
+
+// Static helper for nested VM brush resolution
+partial class AdminDashboardViewModel
+{
+    internal static IBrush ResolveBrushStatic(string key, string fallbackKey)
+    {
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+                return b;
+            if (app.TryGetResource(fallbackKey, app.ActualThemeVariant, out var f) && f is IBrush fb)
+                return fb;
+        }
+        return Brushes.Transparent;
+    }
 }

@@ -246,7 +246,7 @@
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
         <Style Selector="Border.message-received">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
         </Style>
 
@@ -458,8 +458,8 @@
                                             Command="{Binding $parent[UserControl].((vm:MessagingViewModel)DataContext).SelectConversationCommand}"
                                             CommandParameter="{Binding}">
                                         <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <Border Grid.Column="0" Classes="avatar" Background="{Binding RoleColor}" Margin="0,0,12,0">
-                                                <TextBlock Text="{Binding ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Border Grid.Column="0" Classes="avatar" Background="{Binding AvatarBackgroundBrush}" Margin="0,0,12,0">
+                                                <TextBlock Text="{Binding ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{Binding AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" Spacing="4">
                                                 <Grid ColumnDefinitions="*,Auto">
@@ -499,8 +499,8 @@
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                             <Button x:Name="BackButton" Grid.Column="0" Content="←" Classes="back-button" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="False"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                                <Border Classes="avatar" Background="{Binding SelectedConversation.RoleColor}">
-                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Classes="avatar" Background="{Binding SelectedConversation.AvatarBackgroundBrush}">
+                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{Binding SelectedConversation.AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock x:Name="ChatHeaderNameText" Text="{Binding SelectedConversation.ContactName}" Classes="chat-header-name"/>
@@ -524,8 +524,8 @@
                                 <DataTemplate DataType="vm:MessageViewModel">
                                     <StackPanel Margin="0,8">
                                         <TextBlock Text="{Binding DateSeparator}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,8,0,4" IsVisible="{Binding ShowDateSeparator}"/>
-                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsSent}" Classes.message-received="{Binding IsSent, Converter={StaticResource InverseBoolConverter}}" Background="{Binding MessageBackground}">
-                                            <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextColor}" TextWrapping="Wrap" Classes="message-text"/>
+                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsSent}" Classes.message-received="{Binding IsSent, Converter={StaticResource InverseBoolConverter}}">
+                                            <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextBrush}" TextWrapping="Wrap" Classes="message-text"/>
                                         </Border>
                                         <TextBlock Text="{Binding Timestamp}" FontSize="10" Classes="light" HorizontalAlignment="{Binding MessageAlignment}" Margin="12,2,12,0"/>
                                     </StackPanel>

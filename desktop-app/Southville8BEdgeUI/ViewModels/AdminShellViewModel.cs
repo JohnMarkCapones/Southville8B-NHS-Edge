@@ -74,6 +74,14 @@ public partial class AdminShellViewModel : ViewModelBase
         };
     }
 
+    private UserManagementViewModel CreateUserManagementViewModel()
+    {
+        var vm = new UserManagementViewModel();
+        vm.NavigateTo = innerVm => CurrentContent = innerVm; // inner navigation (CreateUser / ImportUsers)
+        vm.NavigateBack = () => NavigateToDashboard(); // allow inner views to return to dashboard
+        return vm;
+    }
+
     private void UpdateColumnWidths()
     {
         LeftColumnWidth = IsLeftSidebarVisible ? new GridLength(260) : new GridLength(0);
@@ -95,11 +103,23 @@ public partial class AdminShellViewModel : ViewModelBase
     }
 
     [RelayCommand] private void NavigateToDashboard() { CurrentContent = CreateDashboardViewModel(); CurrentPage = "Dashboard"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToRoomManagement() { CurrentContent = new RoomManagementViewModel(); CurrentPage = "Room Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToEventsDashboard() { CurrentContent = new EventDashboardViewModel(); CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToRoomManagement() { 
+        var vm = new RoomManagementViewModel();
+        vm.NavigateTo = inner => CurrentContent = inner; 
+        vm.NavigateBack = () => NavigateToDashboard();
+        CurrentContent = vm; CurrentPage = "Room Management"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToEventsDashboard() { 
+        var vm = new EventDashboardViewModel();
+        vm.NavigateTo = inner => CurrentContent = inner; // allow inner views (CreateEventView) to navigate
+        vm.NavigateBack = () => NavigateToDashboard();
+        CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToELibrary() { CurrentContent = new ELibraryManagementViewModel(); CurrentPage = "E-Library Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToUserManagement() { CurrentContent = new UserManagementViewModel(); CurrentPage = "User Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToChat() { CurrentContent = new ChatViewModel(); CurrentPage = "Chat"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToUserManagement() { CurrentContent = CreateUserManagementViewModel(); CurrentPage = "User Management"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToChat() { 
+        var vm = new ChatViewModel();
+        vm.NavigateTo = inner => CurrentContent = inner; // enable NewChat navigation
+        vm.NavigateBack = () => NavigateToDashboard();
+        CurrentContent = vm; CurrentPage = "Chat"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToProfile() { CurrentContent = new ProfileViewModel(); CurrentPage = "Profile"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(); CurrentPage = "Notifications"; CloseUserDropdown(); }
@@ -158,5 +178,14 @@ public partial class AdminShellViewModel : ViewModelBase
         if (_suppressThemeApply) return; // Skip applying theme on initial assignment so we respect OS/app default
         if (Application.Current is null) return;
         Application.Current.RequestedThemeVariant = value ? ThemeVariant.Dark : ThemeVariant.Light;
+        
+        // Notify the dashboard to refresh theme-dependent elements
+        if (CurrentContent is AdminDashboardViewModel dashboard)
+        {
+            foreach (var stat in dashboard.WeeklyStats)
+            {
+                stat.RefreshTheme();
+            }
+        }
     }
 }

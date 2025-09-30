@@ -3,43 +3,30 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class UserManagementViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private int _totalUsers = 342;
+    // Navigation callback supplied by shell
+    public Action<ViewModelBase>? NavigateTo { get; set; }
+    public Action? NavigateBack { get; set; }
 
-    [ObservableProperty]
-    private int _students = 285;
+    [ObservableProperty] private int _totalUsers = 342;
+    [ObservableProperty] private int _students = 285;
+    [ObservableProperty] private int _teachers = 45;
+    [ObservableProperty] private int _admins = 12;
+    [ObservableProperty] private int _activeUsers = 320;
 
-    [ObservableProperty]
-    private int _teachers = 45;
+    [ObservableProperty] private ObservableCollection<UserViewModel> _users = new();
+    [ObservableProperty] private ObservableCollection<UserViewModel> _filteredUsers = new();
 
-    [ObservableProperty]
-    private int _admins = 12;
-
-    [ObservableProperty]
-    private int _activeUsers = 320;
-
-    [ObservableProperty]
-    private ObservableCollection<UserViewModel> _users;
-
-    [ObservableProperty]
-    private ObservableCollection<UserViewModel> _filteredUsers;
-
-    [ObservableProperty]
-    private string _searchText = "";
-
-    [ObservableProperty]
-    private string? _selectedRole;
-
-    [ObservableProperty]
-    private string? _selectedStatus;
-
-    [ObservableProperty]
-    private string? _selectedGrade;
+    [ObservableProperty] private string _searchText = "";
+    [ObservableProperty] private string? _selectedRole;
+    [ObservableProperty] private string? _selectedStatus;
+    [ObservableProperty] private string? _selectedGrade;
 
     public ObservableCollection<string> RoleOptions { get; } = new() { "All Roles", "Student", "Teacher", "Admin", "Staff" };
     public ObservableCollection<string> StatusOptions { get; } = new() { "All Status", "Active", "Inactive", "Suspended", "Pending" };
@@ -56,168 +43,18 @@ public partial class UserManagementViewModel : ViewModelBase
         // Sample Data for Demonstration
         Users = new ObservableCollection<UserViewModel>
         {
-            new UserViewModel
-            {
-                FullName = "John Michael Smith",
-                Username = "j.smith2024",
-                Email = "john.smith@southville8b.edu",
-                Role = "Student",
-                Status = "Active",
-                Grade = "Grade 10",
-                StudentId = "2024-001",
-                LastLogin = DateTime.Now.AddMinutes(-30),
-                DateCreated = new DateTime(2024, 1, 15),
-                PhoneNumber = "+63 912 345 6789"
-            },
-            new UserViewModel
-            {
-                FullName = "Maria Elena Rodriguez",
-                Username = "m.rodriguez",
-                Email = "maria.rodriguez@southville8b.edu",
-                Role = "Teacher",
-                Status = "Active",
-                Grade = "Faculty",
-                EmployeeId = "T-2020-015",
-                LastLogin = DateTime.Now.AddHours(-2),
-                DateCreated = new DateTime(2020, 8, 20),
-                PhoneNumber = "+63 917 234 5678",
-                Department = "Mathematics"
-            },
-            new UserViewModel
-            {
-                FullName = "Sarah Kim Chen",
-                Username = "s.chen2025",
-                Email = "sarah.chen@southville8b.edu",
-                Role = "Student",
-                Status = "Active",
-                Grade = "Grade 9",
-                StudentId = "2025-045",
-                LastLogin = DateTime.Now.AddMinutes(-15),
-                DateCreated = new DateTime(2024, 2, 10),
-                PhoneNumber = "+63 908 123 4567"
-            },
-            new UserViewModel
-            {
-                FullName = "Robert James Wilson",
-                Username = "r.wilson",
-                Email = "robert.wilson@southville8b.edu",
-                Role = "Admin",
-                Status = "Active",
-                Grade = "N/A",
-                EmployeeId = "A-2019-003",
-                LastLogin = DateTime.Now.AddMinutes(-5),
-                DateCreated = new DateTime(2019, 6, 1),
-                PhoneNumber = "+63 915 987 6543",
-                Department = "IT Administration"
-            },
-            new UserViewModel
-            {
-                FullName = "Emma Grace Thompson",
-                Username = "e.thompson2023",
-                Email = "emma.thompson@southville8b.edu",
-                Role = "Student",
-                Status = "Inactive",
-                Grade = "Grade 12",
-                StudentId = "2023-089",
-                LastLogin = DateTime.Now.AddDays(-7),
-                DateCreated = new DateTime(2023, 1, 8),
-                PhoneNumber = "+63 919 876 5432"
-            },
-            new UserViewModel
-            {
-                FullName = "Dr. Michael David Brown",
-                Username = "m.brown",
-                Email = "michael.brown@southville8b.edu",
-                Role = "Teacher",
-                Status = "Active",
-                Grade = "Faculty",
-                EmployeeId = "T-2018-007",
-                LastLogin = DateTime.Now.AddHours(-1),
-                DateCreated = new DateTime(2018, 9, 15),
-                PhoneNumber = "+63 916 765 4321",
-                Department = "Science"
-            },
-            new UserViewModel
-            {
-                FullName = "Ashley Marie Davis",
-                Username = "a.davis2024",
-                Email = "ashley.davis@southville8b.edu",
-                Role = "Student",
-                Status = "Active",
-                Grade = "Grade 11",
-                StudentId = "2024-067",
-                LastLogin = DateTime.Now.AddMinutes(-45),
-                DateCreated = new DateTime(2024, 1, 20),
-                PhoneNumber = "+63 920 654 3210"
-            },
-            new UserViewModel
-            {
-                FullName = "Lisa Anne Garcia",
-                Username = "l.garcia",
-                Email = "lisa.garcia@southville8b.edu",
-                Role = "Staff",
-                Status = "Active",
-                Grade = "N/A",
-                EmployeeId = "S-2021-012",
-                LastLogin = DateTime.Now.AddMinutes(-90),
-                DateCreated = new DateTime(2021, 3, 10),
-                PhoneNumber = "+63 918 543 2109",
-                Department = "Library"
-            },
-            new UserViewModel
-            {
-                FullName = "James Alexander Miller",
-                Username = "j.miller2025",
-                Email = "james.miller@southville8b.edu",
-                Role = "Student",
-                Status = "Suspended",
-                Grade = "Grade 8",
-                StudentId = "2025-123",
-                LastLogin = DateTime.Now.AddDays(-3),
-                DateCreated = new DateTime(2024, 8, 25),
-                PhoneNumber = "+63 913 432 1098"
-            },
-            new UserViewModel
-            {
-                FullName = "Jennifer Rose Taylor",
-                Username = "j.taylor",
-                Email = "jennifer.taylor@southville8b.edu",
-                Role = "Teacher",
-                Status = "Active",
-                Grade = "Faculty",
-                EmployeeId = "T-2022-025",
-                LastLogin = DateTime.Now.AddMinutes(-20),
-                DateCreated = new DateTime(2022, 1, 12),
-                PhoneNumber = "+63 921 321 0987",
-                Department = "English"
-            },
-            new UserViewModel
-            {
-                FullName = "Kevin Paul Anderson",
-                Username = "k.anderson2024",
-                Email = "kevin.anderson@southville8b.edu",
-                Role = "Student",
-                Status = "Pending",
-                Grade = "Grade 9",
-                StudentId = "2024-156",
-                LastLogin = null,
-                DateCreated = DateTime.Now.AddDays(-2),
-                PhoneNumber = "+63 922 210 9876"
-            },
-            new UserViewModel
-            {
-                FullName = "Catherine Joy Martinez",
-                Username = "c.martinez",
-                Email = "catherine.martinez@southville8b.edu",
-                Role = "Admin",
-                Status = "Active",
-                Grade = "N/A",
-                EmployeeId = "A-2020-008",
-                LastLogin = DateTime.Now.AddMinutes(-10),
-                DateCreated = new DateTime(2020, 11, 5),
-                PhoneNumber = "+63 923 109 8765",
-                Department = "Academic Affairs"
-            }
+            new() { FullName = "John Michael Smith", Username="j.smith2024", Email="john.smith@southville8b.edu", Role="Student", Status="Active", Grade="Grade 10", StudentId="2024-001", LastLogin = DateTime.Now.AddMinutes(-30), DateCreated = new DateTime(2024,1,15), PhoneNumber = "+63 912 345 6789" },
+            new() { FullName = "Maria Elena Rodriguez", Username="m.rodriguez", Email="maria.rodriguez@southville8b.edu", Role="Teacher", Status="Active", Grade="Faculty", EmployeeId="T-2020-015", LastLogin = DateTime.Now.AddHours(-2), DateCreated = new DateTime(2020,8,20), PhoneNumber = "+63 917 234 5678", Department="Mathematics" },
+            new() { FullName = "Sarah Kim Chen", Username="s.chen2025", Email="sarah.chen@southville8b.edu", Role="Student", Status="Active", Grade="Grade 9", StudentId="2025-045", LastLogin = DateTime.Now.AddMinutes(-15), DateCreated = new DateTime(2024,2,10), PhoneNumber = "+63 908 123 4567" },
+            new() { FullName = "Robert James Wilson", Username="r.wilson", Email="robert.wilson@southville8b.edu", Role="Admin", Status="Active", Grade="N/A", EmployeeId="A-2019-003", LastLogin = DateTime.Now.AddMinutes(-5), DateCreated = new DateTime(2019,6,1), PhoneNumber = "+63 915 987 6543", Department = "IT Administration" },
+            new() { FullName = "Emma Grace Thompson", Username="e.thompson2023", Email="emma.thompson@southville8b.edu", Role="Student", Status="Inactive", Grade="Grade 12", StudentId="2023-089", LastLogin = DateTime.Now.AddDays(-7), DateCreated = new DateTime(2023,1,8), PhoneNumber = "+63 919 876 5432" },
+            new() { FullName = "Dr. Michael David Brown", Username="m.brown", Email="michael.brown@southville8b.edu", Role="Teacher", Status="Active", Grade="Faculty", EmployeeId="T-2018-007", LastLogin = DateTime.Now.AddHours(-1), DateCreated = new DateTime(2018,9,15), PhoneNumber = "+63 916 765 4321", Department="Science" },
+            new() { FullName = "Ashley Marie Davis", Username="a.davis2024", Email="ashley.davis@southville8b.edu", Role="Student", Status="Active", Grade="Grade 11", StudentId="2024-067", LastLogin = DateTime.Now.AddMinutes(-45), DateCreated = new DateTime(2024,1,20), PhoneNumber = "+63 920 654 3210" },
+            new() { FullName = "Lisa Anne Garcia", Username="l.garcia", Email="lisa.garcia@southville8b.edu", Role="Staff", Status="Active", Grade="N/A", EmployeeId="S-2021-012", LastLogin = DateTime.Now.AddMinutes(-90), DateCreated = new DateTime(2021,3,10), PhoneNumber = "+63 918 543 2109", Department="Library" },
+            new() { FullName = "James Alexander Miller", Username="j.miller2025", Email="james.miller@southville8b.edu", Role="Student", Status="Suspended", Grade="Grade 8", StudentId="2025-123", LastLogin = DateTime.Now.AddDays(-3), DateCreated = new DateTime(2024,8,25), PhoneNumber = "+63 913 432 1098" },
+            new() { FullName = "Jennifer Rose Taylor", Username="j.taylor", Email="jennifer.taylor@southville8b.edu", Role="Teacher", Status="Active", Grade="Faculty", EmployeeId="T-2022-025", LastLogin = DateTime.Now.AddMinutes(-20), DateCreated = new DateTime(2022,1,12), PhoneNumber = "+63 921 321 0987", Department="English" },
+            new() { FullName = "Kevin Paul Anderson", Username="k.anderson2024", Email="kevin.anderson@southville8b.edu", Role="Student", Status="Pending", Grade="Grade 9", StudentId="2024-156", LastLogin = null, DateCreated = DateTime.Now.AddDays(-2), PhoneNumber = "+63 922 210 9876" },
+            new() { FullName = "Catherine Joy Martinez", Username="c.martinez", Email="catherine.martinez@southville8b.edu", Role="Admin", Status="Active", Grade="N/A", EmployeeId="A-2020-008", LastLogin = DateTime.Now.AddMinutes(-10), DateCreated = new DateTime(2020,11,5), PhoneNumber = "+63 923 109 8765", Department = "Academic Affairs" }
         };
 
         FilteredUsers = new ObservableCollection<UserViewModel>(Users);
@@ -236,32 +73,25 @@ public partial class UserManagementViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             filtered = filtered.Where(u => u.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         u.Username.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         u.Email.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         u.StudentId.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         u.EmployeeId.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                                           u.Username.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                           u.Email.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                           u.StudentId.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                           u.EmployeeId.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedRole) && SelectedRole != "All Roles")
-        {
             filtered = filtered.Where(u => u.Role == SelectedRole);
-        }
 
         if (!string.IsNullOrWhiteSpace(SelectedStatus) && SelectedStatus != "All Status")
-        {
             filtered = filtered.Where(u => u.Status == SelectedStatus);
-        }
 
         if (!string.IsNullOrWhiteSpace(SelectedGrade) && SelectedGrade != "All Grades")
-        {
             filtered = filtered.Where(u => u.Grade == SelectedGrade);
-        }
 
         FilteredUsers.Clear();
         foreach (var user in filtered)
-        {
             FilteredUsers.Add(user);
-        }
+
         OnPropertyChanged(nameof(HasFilteredUsers));
     }
 
@@ -279,54 +109,32 @@ public partial class UserManagementViewModel : ViewModelBase
         OnPropertyChanged(nameof(ActivePercentage));
     }
 
-    [RelayCommand]
-    private void CreateUser()
+    [RelayCommand] private void CreateUser()
     {
-        // TODO: Open create user dialog
+        var vm = new CreateUserViewModel { NavigateBack = () => NavigateTo?.Invoke(this) };
+        NavigateTo?.Invoke(vm);
     }
 
-    [RelayCommand]
-    private void ImportUsers()
+    [RelayCommand] private void ImportUsers()
     {
-        // TODO: Open import users dialog
+        var vm = new ImportUsersViewModel { NavigateBack = () => NavigateTo?.Invoke(this) };
+        NavigateTo?.Invoke(vm);
     }
 
-    [RelayCommand]
-    private void ViewUserDetails(UserViewModel user)
-    {
-        // TODO: Show user details dialog
-    }
+    [RelayCommand] private void ViewUserDetails(UserViewModel user) { }
+    [RelayCommand] private void EditUser(UserViewModel user) { }
 
-    [RelayCommand]
-    private void EditUser(UserViewModel user)
+    [RelayCommand] private void ToggleUserStatus(UserViewModel user)
     {
-        // TODO: Open edit user dialog
-    }
-
-    [RelayCommand]
-    private void ToggleUserStatus(UserViewModel user)
-    {
-        if (user.IsActive)
-        {
-            user.Status = "Inactive";
-        }
-        else if (user.IsInactive)
-        {
-            user.Status = "Active";
-        }
-
+        if (user.IsActive) user.Status = "Inactive";
+        else if (user.IsInactive) user.Status = "Active";
         UpdateStatistics();
         ApplyFilters();
     }
 
-    [RelayCommand]
-    private void ResetPassword(UserViewModel user)
-    {
-        // TODO: Implement password reset functionality
-    }
+    [RelayCommand] private void ResetPassword(UserViewModel user) { }
 
-    [RelayCommand]
-    private void DeleteUser(UserViewModel user)
+    [RelayCommand] private void DeleteUser(UserViewModel user)
     {
         Users.Remove(user);
         UpdateStatistics();
@@ -360,22 +168,32 @@ public partial class UserViewModel : ViewModelBase
     public bool CanEdit => !IsPending;
     public bool CanToggleStatus => !IsPending;
 
-    public string StatusColor => Status switch
+    private static IBrush Resolve(string key, string fallback)
     {
-        "Active" => "#10B981",
-        "Inactive" => "#6B7280",
-        "Suspended" => "#EF4444",
-        "Pending" => "#F59E0B",
-        _ => "#6B7280"
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush StatusBrush => Status switch
+    {
+        "Active" => Resolve("SuccessBrush", "TextSecondaryBrush"),
+        "Inactive" => Resolve("TextSecondaryBrush", "TextMutedBrush"),
+        "Suspended" => Resolve("DangerBrush", "TextSecondaryBrush"),
+        "Pending" => Resolve("WarningBrush", "TextSecondaryBrush"),
+        _ => Resolve("TextSecondaryBrush", "TextMutedBrush")
     };
 
-    public string RoleColor => Role switch
+    public IBrush RoleBrush => Role switch
     {
-        "Student" => "#3B82F6",
-        "Teacher" => "#8B5CF6",
-        "Admin" => "#EF4444",
-        "Staff" => "#10B981",
-        _ => "#6B7280"
+        "Student" => Resolve("InfoBrush", "AccentBrush"),
+        "Teacher" => Resolve("PurpleBrush", "AccentBrush"),
+        "Admin" => Resolve("DangerBrush", "AccentBrush"),
+        "Staff" => Resolve("SuccessBrush", "AccentBrush"),
+        _ => Resolve("TextSecondaryBrush", "AccentBrush")
     };
 
     public string DisplayId => IsStudent ? StudentId : EmployeeId;
@@ -388,7 +206,7 @@ public partial class UserViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsInactive));
         OnPropertyChanged(nameof(IsSuspended));
         OnPropertyChanged(nameof(IsPending));
-        OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(StatusBrush));
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanToggleStatus));
         OnPropertyChanged(nameof(StatusActionText));
@@ -400,22 +218,11 @@ public partial class UserViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsTeacher));
         OnPropertyChanged(nameof(IsAdmin));
         OnPropertyChanged(nameof(IsStaff));
-        OnPropertyChanged(nameof(RoleColor));
+        OnPropertyChanged(nameof(RoleBrush));
         OnPropertyChanged(nameof(DisplayId));
     }
 
-    partial void OnLastLoginChanged(DateTime? value)
-    {
-        OnPropertyChanged(nameof(LastLoginText));
-    }
-
-    partial void OnStudentIdChanged(string value)
-    {
-        OnPropertyChanged(nameof(DisplayId));
-    }
-
-    partial void OnEmployeeIdChanged(string value)
-    {
-        OnPropertyChanged(nameof(DisplayId));
-    }
+    partial void OnLastLoginChanged(DateTime? value) => OnPropertyChanged(nameof(LastLoginText));
+    partial void OnStudentIdChanged(string value) => OnPropertyChanged(nameof(DisplayId));
+    partial void OnEmployeeIdChanged(string value) => OnPropertyChanged(nameof(DisplayId));
 }

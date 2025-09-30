@@ -1,0 +1,246 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="1000"
+             x:Class="Southville8BEdgeUI.Views.Admin.CreateUserView"
+             x:DataType="vm:CreateUserViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+  <UserControl.Styles>
+    <!-- Card container -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Padding" Value="28"/>
+      <Setter Property="Margin" Value="0,0,0,28"/>
+      <Setter Property="BoxShadow" Value="0 2 8 0 #10000010"/>
+    </Style>
+    <Style Selector="Border.card.tablet">
+      <Setter Property="Padding" Value="22"/>
+      <Setter Property="Margin" Value="0,0,0,22"/>
+    </Style>
+    <Style Selector="Border.card.mobile">
+      <Setter Property="Padding" Value="16"/>
+      <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+
+    <Style Selector="TextBlock.header">
+      <Setter Property="FontSize" Value="30"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.header.tablet">
+      <Setter Property="FontSize" Value="26"/>
+    </Style>
+    <Style Selector="TextBlock.header.mobile">
+      <Setter Property="FontSize" Value="22"/>
+    </Style>
+
+    <Style Selector="TextBlock.subheader">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,4,0,0"/>
+    </Style>
+    <Style Selector="TextBlock.subheader.tablet">
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="TextBlock.subheader.mobile">
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="TextBlock.section-title">
+      <Setter Property="FontSize" Value="17"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,18"/>
+    </Style>
+    <Style Selector="TextBlock.section-title.tablet">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
+    <Style Selector="TextBlock.section-title.mobile">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <Style Selector="TextBlock.group-title">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="Margin" Value="0,20,0,6"/>
+    </Style>
+
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.label.tablet">
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style Selector="TextBlock.label.mobile">
+      <Setter Property="FontSize" Value="10"/>
+    </Style>
+
+    <!-- Input fields -->
+    <Style Selector="TextBox, ComboBox">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="12"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
+    <Style Selector="TextBox.mobile, ComboBox.mobile">
+      <Setter Property="Padding" Value="10"/>
+      <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+
+    <Style Selector="TextBox:focus-within, ComboBox:focus-within">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="18,12"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="Button.primary.mobile">
+      <Setter Property="Padding" Value="14,10"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="18,12"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="Button.secondary.mobile">
+      <Setter Property="Padding" Value="14,10"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <Style Selector="TextBlock.inline-hint">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,-8,0,12"/>
+    </Style>
+
+    <Style Selector="TextBlock.validation-error">
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Margin" Value="0,4,0,0"/>
+    </Style>
+
+    <!-- Main content spacing variants -->
+    <Style Selector="StackPanel.main-content">
+      <Setter Property="Spacing" Value="32"/>
+      <Setter Property="Margin" Value="48,36,48,40"/>
+    </Style>
+    <Style Selector="StackPanel.main-content.tablet">
+      <Setter Property="Spacing" Value="24"/>
+      <Setter Property="Margin" Value="32,28,32,32"/>
+    </Style>
+    <Style Selector="StackPanel.main-content.mobile">
+      <Setter Property="Spacing" Value="20"/>
+      <Setter Property="Margin" Value="20,20,20,28"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel x:Name="MainStackPanel" Classes="main-content">
+      <!-- Header Bar -->
+      <Grid x:Name="HeaderGrid" ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+        <StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0" VerticalAlignment="Center">
+          <!-- Back Button -->
+          <Button x:Name="BackButton" Content="&#8592;" Width="40" Height="40" ToolTip.Tip="Back" Command="{Binding CancelCommand}"
+                  Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                  CornerRadius="8" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1">
+          <TextBlock x:Name="HeaderTitleText" Text="Create User" Classes="header"/>
+          <TextBlock x:Name="HeaderSubtitleText" Text="Add a new account to the system" Classes="subheader"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- BASIC INFORMATION -->
+      <Border x:Name="BasicInfoCard" Classes="card">
+        <StackPanel>
+          <TextBlock x:Name="BasicInfoSectionTitle" Text="Basic Information" Classes="section-title"/>
+          <Grid x:Name="BasicInfoGrid" ColumnDefinitions="*,*" Margin="0">
+            <!-- Left column -->
+            <StackPanel Grid.Column="0" Margin="0,0,28,0">
+              <TextBlock Text="Full Name" Classes="label"/>
+              <TextBox x:Name="FullNameInput" Text="{Binding FullName}" Watermark="e.g. Juan Dela Cruz"/>
+              <TextBlock Text="Username" Classes="label"/>
+              <TextBox x:Name="UsernameInput" Text="{Binding Username}" Watermark="unique username"/>
+              <TextBlock Text="Email" Classes="label"/>
+              <TextBox x:Name="EmailInput" Text="{Binding Email}" Watermark="user@example.com"/>
+              <TextBlock Text="Phone" Classes="label"/>
+              <TextBox x:Name="PhoneInput" Text="{Binding Phone}" Watermark="Optional"/>
+            </StackPanel>
+            <!-- Right column -->
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="Role" Classes="label"/>
+              <ComboBox x:Name="RoleCombo" ItemsSource="{Binding Roles}" SelectedItem="{Binding SelectedRole}"/>
+              <TextBlock Text="Status" Classes="label"/>
+              <ComboBox x:Name="StatusCombo" ItemsSource="{Binding Statuses}" SelectedItem="{Binding SelectedStatus}"/>
+              <TextBlock Text="Grade / Department" Classes="label"/>
+              <ComboBox x:Name="GradeDeptCombo" ItemsSource="{Binding GradesOrDepartments}" SelectedItem="{Binding SelectedGradeOrDepartment}"/>
+              <CheckBox x:Name="RequireResetCheck" IsChecked="{Binding RequirePasswordReset}" Content="Require password reset on first login" Margin="0,4,0,0" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- CREDENTIALS -->
+      <Border x:Name="CredentialsCard" Classes="card">
+        <StackPanel>
+          <TextBlock x:Name="CredentialsSectionTitle" Text="Credentials" Classes="section-title"/>
+          <Grid x:Name="CredentialsGrid" ColumnDefinitions="*,*">
+            <StackPanel Grid.Column="0" Margin="0,0,28,0">
+              <TextBlock Text="Password" Classes="label"/>
+              <TextBox x:Name="PasswordInput" PasswordChar="•"/>
+              <TextBlock Text="Use at least 8 characters." Classes="inline-hint"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="Confirm Password" Classes="label"/>
+              <TextBox x:Name="ConfirmPasswordInput" PasswordChar="•"/>
+              <TextBlock Text="Repeat the password to confirm." Classes="inline-hint"/>
+            </StackPanel>
+          </Grid>
+          <Grid x:Name="GenerateGrid" ColumnDefinitions="Auto,*" Margin="0,0,0,8" VerticalAlignment="Center">
+            <Button x:Name="GeneratePasswordButton" Grid.Column="0" Content="Generate Strong Password" Classes="secondary" Command="{Binding GeneratePasswordCommand}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="16,0,0,0" VerticalAlignment="Center">
+              <TextBlock x:Name="GeneratedPasswordText" Text="{Binding GeneratedPassword}" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
+              <ProgressBar x:Name="PasswordStrengthBar" Width="140" Height="6" Minimum="0" Maximum="100" Value="{Binding Password.Length}" CornerRadius="3" Foreground="{DynamicResource SuccessBrush}" Background="{DynamicResource BorderBrush}"/>
+              <TextBlock Text="Strength" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+            </StackPanel>
+          </Grid>
+          <TextBlock x:Name="ValidationMessageText" Text="{Binding ValidationMessage}" Classes="validation-error" IsVisible="{Binding HasValidationError}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ACTIONS -->
+      <Grid x:Name="ActionsGrid" ColumnDefinitions="Auto,Auto" HorizontalAlignment="Left">
+        <Button x:Name="SaveUserButton" Content="Save User" Classes="primary" Command="{Binding SaveUserCommand}" IsEnabled="{Binding CanSave}"/>
+        <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}" Margin="16,0,0,0"/>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

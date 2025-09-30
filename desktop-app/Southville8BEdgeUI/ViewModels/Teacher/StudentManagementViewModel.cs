@@ -4,6 +4,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Globalization;
+using Avalonia; // For Application.Current
+using Avalonia.Media; // For IBrush
+using Avalonia.Styling; // For theme variant
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -78,33 +81,12 @@ public partial class StudentInfoViewModel : ViewModelBase
     [ObservableProperty] private string _lastLogin = "2 hours ago";
     [ObservableProperty] private ObservableCollection<StudentActivityViewModel> _recentActivities = new();
 
-    public string Initials => string.Join("", FullName.Split(' ').Select(n => n.FirstOrDefault()));
+    [ObservableProperty] private IBrush _attendanceStatusBackgroundBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _attendanceStatusTextBrush = Brushes.Transparent;
 
-    public string AttendanceStatusColor => AttendanceStatus == "Present" ? "#10B981" : "#EF4444";
-
-    // Foreground chosen for contrast; for bright backgrounds use dark text, else white.
-    public string AttendanceStatusForeground => GetContrastColor(AttendanceStatusColor);
-
-    partial void OnAttendanceStatusChanged(string value)
-    {
-        OnPropertyChanged(nameof(AttendanceStatusColor));
-        OnPropertyChanged(nameof(AttendanceStatusForeground));
-    }
-
-    private static string GetContrastColor(string hex)
-    {
-        if (string.IsNullOrWhiteSpace(hex)) return "#FFFFFF";
-        var c = hex.TrimStart('#');
-        if (c.Length == 3) c = string.Concat(c.Select(ch => new string(ch, 2)));
-        if (c.Length != 6) return "#FFFFFF";
-        if (!int.TryParse(c.Substring(0,2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r) ||
-            !int.TryParse(c.Substring(2,2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g) ||
-            !int.TryParse(c.Substring(4,2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b))
-            return "#FFFFFF";
-        // Relative luminance
-        double l = (0.2126*r + 0.7152*g + 0.0722*b)/255.0;
-        return l > 0.6 ? "#1F2937" : "#FFFFFF"; // dark text on light colors, white on dark
-    }
+    public string Initials => string.Concat(FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                                .Where(p => p.Length > 0)
+                                                .Select(p => char.ToUpperInvariant(p[0])));
 
     public StudentInfoViewModel()
     {
@@ -113,6 +95,45 @@ public partial class StudentInfoViewModel : ViewModelBase
             new() { Activity = "Submitted Assignment #3", Timestamp = "1 hour ago" },
             new() { Activity = "Completed Quiz #2", Timestamp = "3 hours ago" }
         };
+        UpdateAttendanceBrushes();
+        // React to theme changes so badge updates appropriately
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += (_, __) => UpdateAttendanceBrushes();
+    }
+
+    partial void OnFullNameChanged(string value) => OnPropertyChanged(nameof(Initials));
+    partial void OnAttendanceStatusChanged(string value) => UpdateAttendanceBrushes();
+
+    private static IBrush ResolveBrush(string key)
+    {
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var val) && val is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    private void UpdateAttendanceBrushes()
+    {
+        var success = ResolveBrush("SuccessBrush");
+        var danger = ResolveBrush("DangerBrush");
+        var successSoft = ResolveBrush("SuccessSoftBrush");
+        var dangerSoft = ResolveBrush("DangerSoftBrush");
+        var textPrimary = ResolveBrush("TextPrimaryBrush");
+
+        if (string.Equals(AttendanceStatus, "Present", StringComparison.OrdinalIgnoreCase))
+        {
+            AttendanceStatusBackgroundBrush = successSoft;
+            AttendanceStatusTextBrush = success;
+        }
+        else if (string.Equals(AttendanceStatus, "Absent", StringComparison.OrdinalIgnoreCase))
+        {
+            AttendanceStatusBackgroundBrush = dangerSoft;
+            AttendanceStatusTextBrush = danger;
+        }
+        else
+        {
+            AttendanceStatusBackgroundBrush = ResolveBrush("AccentSoftBrush");
+            AttendanceStatusTextBrush = textPrimary;
+        }
     }
 }
 

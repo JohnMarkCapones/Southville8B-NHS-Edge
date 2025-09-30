@@ -11,6 +11,7 @@
 
     <UserControl.Resources>
         <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -272,16 +273,10 @@
                                             <TextBlock Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" FontSize="20" FontWeight="Bold"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding StudentsCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding ImprovementText}"
-                                                   Foreground="{Binding ImprovementColor}"
-                                                   FontWeight="SemiBold"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0"/>
-                                        <Path Grid.Column="4"
-                                              Data="{Binding IsImproving, Converter={StaticResource BoolToArrowConverter}}"
-                                              Fill="{Binding ImprovementColor}"
-                                              Width="10" Height="5"
-                                              VerticalAlignment="Center"/>
+                                        <!-- Improvement Text with theme-aware coloring -->
+                                        <TextBlock Grid.Column="3" Text="{Binding ImprovementText}" Foreground="{Binding ImprovementBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <!-- Arrow Indicator with theme-aware coloring -->
+                                        <Path Grid.Column="4" Data="{Binding IsImproving, Converter={StaticResource BoolToArrowConverter}}" Fill="{Binding ImprovementBrush}" Width="10" Height="5" VerticalAlignment="Center"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -448,60 +443,132 @@
                 <StackPanel Spacing="16">
                     <TextBlock Text="Weekly Schedule Overview" Classes="section-header"/>
                     <Grid x:Name="WeeklyGrid" ColumnDefinitions="*,*,*,*,*,*,*">
-                        <Border Grid.Column="0" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,4,0">
+                        <!-- Monday -->
+                        <Border Grid.Column="0" CornerRadius="8" Padding="12" Margin="0,0,4,0"
+                                DataContext="{Binding WeeklySchedule[0]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Mon" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="120 students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <!-- Classes Panel -->
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <!-- Rest Day Panel -->
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}" HorizontalAlignment="Center">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="1" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                        <!-- Tuesday -->
+                        <Border Grid.Column="1" CornerRadius="8" Padding="12" Margin="4,0"
+                                DataContext="{Binding WeeklySchedule[1]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Tue" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="5" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="150 students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="2" CornerRadius="8" Padding="12" Margin="4,0" Background="{DynamicResource SuccessBrush}">
+                        <!-- Wednesday -->
+                        <Border Grid.Column="2" CornerRadius="8" Padding="12" Margin="4,0"
+                                DataContext="{Binding WeeklySchedule[2]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Wed" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
-                                <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="120 students" FontSize="9" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="3" CornerRadius="8" Padding="12" Margin="4,0" Background="{DynamicResource InfoBrush}" Opacity="0.15">
+                        <!-- Thursday -->
+                        <Border Grid.Column="3" CornerRadius="8" Padding="12" Margin="4,0"
+                                DataContext="{Binding WeeklySchedule[3]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Thu" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="6" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="180 students" FontSize="9" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="4" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                        <!-- Friday -->
+                        <Border Grid.Column="4" CornerRadius="8" Padding="12" Margin="4,0"
+                                DataContext="{Binding WeeklySchedule[4]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Fri" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="4" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="120 students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="5" CornerRadius="8" Padding="12" Margin="4,0" Background="{DynamicResource WarningBrush}" Opacity="0.15">
+                        <!-- Saturday -->
+                        <Border Grid.Column="5" CornerRadius="8" Padding="12" Margin="4,0"
+                                DataContext="{Binding WeeklySchedule[5]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Sat" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="2" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20"/>
-                                <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="60 students" FontSize="9" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                        <Border Grid.Column="6" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="4,0,0,0">
+                        <!-- Sunday -->
+                        <Border Grid.Column="6" CornerRadius="8" Padding="12" Margin="4,0,0,0"
+                                DataContext="{Binding WeeklySchedule[6]}"
+                                Background="{Binding BackgroundBrush}">
                             <StackPanel HorizontalAlignment="Center" Spacing="4">
-                                <TextBlock Text="Sun" FontSize="12" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
-                                <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Day}" FontSize="12" HorizontalAlignment="Center" Foreground="{Binding TextBrush}"/>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasClasses}">
+                                    <TextBlock Text="{Binding ClassCount}" FontWeight="Bold" HorizontalAlignment="Center" FontSize="20" Foreground="{Binding TextBrush}"/>
+                                    <TextBlock Text="classes" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Students, StringFormat={}{0} students}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2" IsVisible="{Binding HasClasses, Converter={StaticResource InverseBoolConverter}}">
+                                    <TextBlock Text="Rest" FontWeight="Bold" HorizontalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="day" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Enjoy!" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </Grid>

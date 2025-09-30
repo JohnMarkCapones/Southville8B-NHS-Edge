@@ -16,7 +16,6 @@ public partial class EventDashboardView : UserControl
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
     
-    // Collections to store elements that need responsive behavior
     private readonly List<Control> _responsiveTextElements = new();
     private readonly List<Control> _responsiveCardElements = new();
     private readonly List<Control> _responsiveButtonElements = new();
@@ -25,12 +24,13 @@ public partial class EventDashboardView : UserControl
     public EventDashboardView()
     {
         InitializeComponent();
-        DataContext = new EventDashboardViewModel();
+        // Do NOT override DataContext at runtime; shell provides the VM with navigation callbacks.
+        if (Design.IsDesignMode)
+        {
+            DataContext = new EventDashboardViewModel();
+        }
 
-        // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-
-        // Set up size change handler
         this.SizeChanged += OnSizeChanged;
     }
 

@@ -414,11 +414,11 @@
 										<StackPanel Spacing="0">
 											<!-- Header Row with Priority Accent -->
 											<StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
-												<Border Width="4" Height="40" Background="{Binding PriorityColor}" CornerRadius="2" VerticalAlignment="Top"/>
+												<Border Width="4" Height="40" Background="{Binding PriorityBrush}" CornerRadius="2" VerticalAlignment="Top"/>
 												<StackPanel Spacing="8" HorizontalAlignment="Stretch">
 													<!-- Title Row -->
 													<StackPanel Orientation="Horizontal" Spacing="8">
-														<Border Background="{Binding TypeColor}" Width="12" Height="12" CornerRadius="2" VerticalAlignment="Center"/>
+														<Border Background="{Binding TypeBrush}" Width="12" Height="12" CornerRadius="2" VerticalAlignment="Center"/>
 														<TextBlock Text="{Binding Title}" Classes="alert-title" TextWrapping="Wrap" MaxWidth="350"/>
 													</StackPanel>
 													<!-- Tags Row -->
