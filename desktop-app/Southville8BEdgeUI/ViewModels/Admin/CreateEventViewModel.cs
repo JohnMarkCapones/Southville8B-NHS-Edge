@@ -49,6 +49,7 @@ public partial class CreateEventViewModel : ViewModelBase
     }
 
     public string? DateValidationMessage => StartDate > EndDate ? "End date must be after or equal to start date." : null;
+    public bool HasDateValidationError => DateValidationMessage is not null;
 
     public bool CanSave => !string.IsNullOrWhiteSpace(Title) && DateValidationMessage is null;
 
@@ -59,6 +60,7 @@ public partial class CreateEventViewModel : ViewModelBase
             StartDateOffset = new DateTimeOffset(value.Date);
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(DateValidationMessage));
+        OnPropertyChanged(nameof(HasDateValidationError));
     }
     partial void OnEndDateChanged(DateTime value)
     {
@@ -66,7 +68,12 @@ public partial class CreateEventViewModel : ViewModelBase
             EndDateOffset = new DateTimeOffset(value.Date);
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(DateValidationMessage));
+        OnPropertyChanged(nameof(HasDateValidationError));
     }
+
+    // Keep IsAllDay binding in sync when times change
+    partial void OnStartTimeChanged(TimeSpan value) => OnPropertyChanged(nameof(IsAllDay));
+    partial void OnEndTimeChanged(TimeSpan value) => OnPropertyChanged(nameof(IsAllDay));
 
     partial void OnStartDateOffsetChanged(DateTimeOffset? value)
     {

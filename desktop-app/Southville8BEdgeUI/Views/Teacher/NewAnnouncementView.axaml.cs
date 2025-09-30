@@ -11,7 +11,14 @@ public partial class NewAnnouncementView : UserControl
         InitializeComponent();
         if (Design.IsDesignMode)
         {
-            DataContext = new MyAnnouncementsViewModel();
+            DataContext = new NewAnnouncementViewModel
+            {
+                Title = "Sample Announcement",
+                TargetClass = "Grade 8A",
+                Priority = "Normal",
+                Content = "This is a sample announcement for design-time preview.",
+                PostImmediately = true
+            };
         }
     }
 

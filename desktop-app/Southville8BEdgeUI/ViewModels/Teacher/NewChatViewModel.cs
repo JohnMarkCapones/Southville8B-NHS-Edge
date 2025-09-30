@@ -10,8 +10,14 @@ public partial class NewChatViewModel : ViewModelBase
     public Action? NavigateBack { get; set; }
     public Action<ConversationViewModel>? OnConversationCreated { get; set; }
 
-    [ObservableProperty] private string _contactName = string.Empty;
-    [ObservableProperty] private string _contactRole = string.Empty; // Parent / Teacher / Admin
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    private string _contactName = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    private string _contactRole = string.Empty; // Parent / Teacher / Admin
+
     [ObservableProperty] private string _initials = string.Empty;
     [ObservableProperty] private string _firstMessage = string.Empty;
     [ObservableProperty] private bool _markAsImportant;

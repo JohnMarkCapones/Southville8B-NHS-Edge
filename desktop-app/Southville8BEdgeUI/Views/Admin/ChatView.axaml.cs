@@ -91,6 +91,7 @@ public partial class ChatView : UserControl
         {
             _attachedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
             _attachedViewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
+            _attachedViewModel = null;
         }
 
         if (DataContext is ChatViewModel vm)
@@ -98,10 +99,6 @@ public partial class ChatView : UserControl
             vm.PropertyChanged += ViewModel_PropertyChanged;
             vm.ConversationNavigationRequested += ChatViewModel_ConversationNavigationRequested;
             _attachedViewModel = vm;
-        }
-        else
-        {
-            _attachedViewModel = null;
         }
     }
 
@@ -741,58 +738,14 @@ public partial class ChatView : UserControl
         VideoButton.Click += VideoButton_Click;
         InfoButton.Click += InfoButton_Click;
 
-        // Subscribe to conversation navigation events
-        if (DataContext is ChatViewModel viewModel)
-        {
-            viewModel.ConversationNavigationRequested += ChatViewModel_ConversationNavigationRequested;
-        }
+        // NOTE: Conversation navigation & PropertyChanged handlers are now managed exclusively
+        // via OnDataContextChanged to avoid duplicate subscriptions when DataContext swaps.
 
         // Initial responsive setup
         if (Bounds.Width > 0)
         {
             UpdateResponsiveClasses(Bounds.Width);
         }
-
-        // Remove initial focus call
-    }
-
-    // Add the missing button click handlers
-    private void NewChatButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (DataContext is ChatViewModel viewModel)
-        {
-            viewModel.StartNewChatCommand.Execute(null);
-        }
-    }
-
-    private void CallButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        // Temporarily disable message box focus maintenance
-        // _shouldMaintainTextBoxFocus = false;
-
-        // TODO: Implement call functionality
-        System.Diagnostics.Debug.WriteLine("Call button clicked");
-
-        // Optional: Show some visual feedback that the button worked
-        if (sender is Button button)
-        {
-            button.IsEnabled = false;
-            Dispatcher.UIThread.Post(() => button.IsEnabled = true, DispatcherPriority.Background);
-        }
-    }
-
-    private void VideoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        // TODO: Implement video call functionality
-        // For now, just show it's working
-        System.Diagnostics.Debug.WriteLine("Video button clicked");
-    }
-
-    private void InfoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        // TODO: Implement info panel functionality
-        // For now, just show it's working
-        System.Diagnostics.Debug.WriteLine("Info button clicked");
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -815,10 +768,12 @@ public partial class ChatView : UserControl
             MessageTextBox.GotFocus -= MessageTextBox_GotFocus;
         }
 
-        if (DataContext is ChatViewModel viewModel)
+        // Detach from previously attached VM (single source of truth)
+        if (_attachedViewModel != null)
         {
-            viewModel.PropertyChanged -= ViewModel_PropertyChanged;
-            viewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
+            _attachedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _attachedViewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
+            _attachedViewModel = null;
         }
 
         // Clean up message collection subscription to prevent memory leaks
@@ -827,11 +782,36 @@ public partial class ChatView : UserControl
             _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
         }
 
-        // Set to null after all cleanup operations are complete
         _currentSubscribedConversation = null;
-
-        // Clear cached elements
         _cachedChatElements.Clear();
+    }
+
+    private void NewChatButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is ChatViewModel vm)
+        {
+            vm.StartNewChatCommand.Execute(null);
+        }
+    }
+
+    private void CallButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("Call button clicked");
+        if (sender is Button btn)
+        {
+            btn.IsEnabled = false;
+            Dispatcher.UIThread.Post(() => btn.IsEnabled = true, DispatcherPriority.Background);
+        }
+    }
+
+    private void VideoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("Video button clicked");
+    }
+
+    private void InfoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("Info button clicked");
     }
 
     // Configuration class for layout strategies

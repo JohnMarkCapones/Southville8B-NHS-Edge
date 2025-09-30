@@ -44,6 +44,14 @@ public partial class BookRoomViewModel : ViewModelBase
         }
 
         if (SelectedRoom is null) return;
+
+        // Guard against booking rooms that are not currently available
+        if (!SelectedRoom.IsAvailable)
+        {
+            StatusMessage = $"Room '{SelectedRoom.Name}' is not available.";
+            return;
+        }
+
         SelectedRoom.Status = "Occupied";
         SelectedRoom.CurrentBooking = $"{SelectedDate:MMM dd} {SelectedSlot} - {Purpose}";
         StatusMessage = "Room booked successfully.";

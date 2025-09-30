@@ -10,8 +10,14 @@ public partial class NewAnnouncementViewModel : ViewModelBase
     public Action? NavigateBack { get; set; }
     public Action<AnnouncementItemViewModel>? OnCreated { get; set; }
 
-    [ObservableProperty] private string _title = string.Empty;
-    [ObservableProperty] private string _content = string.Empty;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    private string _title = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    private string _content = string.Empty;
+
     [ObservableProperty] private string _priority = string.Empty;
     [ObservableProperty] private string _targetClass = string.Empty;
     [ObservableProperty] private bool _postImmediately = true;
@@ -24,10 +30,12 @@ public partial class NewAnnouncementViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanCreate))]
     private void Create()
     {
+        var safeContent = Content ?? string.Empty;
+        var preview = safeContent.Length > 120 ? safeContent[..120] + "..." : safeContent;
         var item = new AnnouncementItemViewModel
         {
             Title = Title,
-            ContentPreview = Content.Length > 120 ? Content.Substring(0, 120) + "..." : Content,
+            ContentPreview = preview,
             Priority = string.IsNullOrWhiteSpace(Priority) ? "Low" : Priority,
             Status = PostImmediately ? "Active" : "Scheduled",
             TargetClass = TargetClass,

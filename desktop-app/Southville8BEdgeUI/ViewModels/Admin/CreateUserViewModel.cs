@@ -94,11 +94,11 @@ public partial class CreateUserViewModel : ViewModelBase
     private static string GenerateSecurePassword()
     {
         const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@#$%^&*";
-        var bytes = RandomNumberGenerator.GetBytes(16);
-        var sb = new StringBuilder();
-        foreach (var b in bytes)
+        var sb = new StringBuilder(16);
+        for (int i = 0; i < 16; i++)
         {
-            sb.Append(chars[b % chars.Length]);
+            int idx = RandomNumberGenerator.GetInt32(chars.Length);
+            sb.Append(chars[idx]);
         }
         return sb.ToString();
     }

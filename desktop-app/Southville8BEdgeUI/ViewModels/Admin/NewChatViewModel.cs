@@ -31,6 +31,13 @@ public partial class NewChatViewModel : ViewModelBase
     public string? ParticipantsValidationMessage => SelectedParticipants.Count == 0 ? "At least one participant is required." : null;
     public string? ImageValidationMessage => HasImage && !File.Exists(ChatImagePath) ? "Image file not found." : null;
 
+    // Boolean helpers for XAML IsVisible bindings
+    public bool IsBasicValidationVisible => BasicValidationMessage is not null;
+    public bool IsParticipantsValidationVisible => ParticipantsValidationMessage is not null;
+    public bool IsImageValidationVisible => ImageValidationMessage is not null;
+
+    public bool HasSelectedAvailableUser => SelectedAvailableUser is not null;
+
     public bool CanCreate => BasicValidationMessage is null && ParticipantsValidationMessage is null && ImageValidationMessage is null;
 
     public NewChatViewModel()
@@ -45,13 +52,23 @@ public partial class NewChatViewModel : ViewModelBase
         RefreshFiltered();
     }
 
-    partial void OnChatNameChanged(string value) => OnPropertyChanged(nameof(BasicValidationMessage));
+    partial void OnChatNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(BasicValidationMessage));
+        OnPropertyChanged(nameof(IsBasicValidationVisible));
+        OnPropertyChanged(nameof(CanCreate));
+    }
     partial void OnParticipantSearchChanged(string value) => RefreshFiltered();
     partial void OnChatImagePathChanged(string value)
     {
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(ImageValidationMessage));
+        OnPropertyChanged(nameof(IsImageValidationVisible));
         OnPropertyChanged(nameof(CanCreate));
+    }
+    partial void OnSelectedAvailableUserChanged(UserOption? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedAvailableUser));
     }
 
     private void RefreshFiltered()
@@ -68,6 +85,9 @@ public partial class NewChatViewModel : ViewModelBase
         OnPropertyChanged(nameof(BasicValidationMessage));
         OnPropertyChanged(nameof(ParticipantsValidationMessage));
         OnPropertyChanged(nameof(ImageValidationMessage));
+        OnPropertyChanged(nameof(IsBasicValidationVisible));
+        OnPropertyChanged(nameof(IsParticipantsValidationVisible));
+        OnPropertyChanged(nameof(IsImageValidationVisible));
         OnPropertyChanged(nameof(CanCreate));
     }
 

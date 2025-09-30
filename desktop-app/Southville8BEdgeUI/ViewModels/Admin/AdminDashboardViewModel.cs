@@ -348,6 +348,9 @@ public partial class GradeDistributionViewModel : ViewModelBase
     [ObservableProperty] private string _colorKey = "";
 
     public IBrush ColorBrush => AdminDashboardViewModel.ResolveBrushStatic(ColorKey, "AccentBrush");
+
+    // Notify dependent brush when the key changes
+    partial void OnColorKeyChanged(string value) => OnPropertyChanged(nameof(ColorBrush));
 }
 
 // Static helper for nested VM brush resolution

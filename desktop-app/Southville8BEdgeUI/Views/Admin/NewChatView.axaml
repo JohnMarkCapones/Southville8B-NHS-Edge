@@ -1,12 +1,17 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:d="http://schemas.microsoft.com/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
              mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Admin.NewChatView"
+             x:Name="Root"
              x:DataType="vm:NewChatViewModel"
              Background="{DynamicResource PageBackgroundBrush}">
+  <UserControl.Resources>
+    <converters:InverseBoolConverter x:Key="InvertBool"/>
+  </UserControl.Resources>
   <UserControl.Styles>
     <!-- Card -->
     <Style Selector="Border.card">
@@ -125,7 +130,7 @@
               <TextBlock Text="Visibility" Classes="field-label" Margin="0,0,0,6"/>
               <StackPanel Spacing="8">
                 <RadioButton Content="Public" IsChecked="{Binding IsPublic}"/>
-                <RadioButton Content="Private" IsChecked="{Binding !IsPublic}"/>
+                <RadioButton Content="Private" IsChecked="{Binding IsPublic, Converter={StaticResource InvertBool}}"/>
               </StackPanel>
             </StackPanel>
             <StackPanel>
@@ -144,8 +149,8 @@
               <Button Content="Remove" Classes="secondary" Command="{Binding RemoveImageCommand}" IsVisible="{Binding HasImage}"/>
             </StackPanel>
           </StackPanel>
-          <TextBlock Text="{Binding ImageValidationMessage}" Classes="validation" IsVisible="{Binding ImageValidationMessage}"/>
-          <TextBlock Text="{Binding BasicValidationMessage}" Classes="validation" IsVisible="{Binding BasicValidationMessage}"/>
+          <TextBlock Text="{Binding ImageValidationMessage}" Classes="validation" IsVisible="{Binding IsImageValidationVisible}"/>
+          <TextBlock Text="{Binding BasicValidationMessage}" Classes="validation" IsVisible="{Binding IsBasicValidationVisible}"/>
         </StackPanel>
       </Border>
 
@@ -155,7 +160,7 @@
           <TextBlock Text="Add Participant" Classes="field-label"/>
           <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
             <TextBox Grid.Column="0" Grid.Row="0" Text="{Binding ParticipantSearch}" Watermark="Search users..."/>
-            <Button Grid.Column="1" Grid.Row="0" Content="Add" Classes="primary" Command="{Binding AddSelectedParticipantCommand}" IsEnabled="{Binding SelectedAvailableUser}" Margin="12,0,0,0"/>
+            <Button Grid.Column="1" Grid.Row="0" Content="Add" Classes="primary" Command="{Binding AddSelectedParticipantCommand}" IsEnabled="{Binding HasSelectedAvailableUser}" Margin="12,0,0,0"/>
             <ListBox Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Height="140" ItemsSource="{Binding FilteredAvailableUsers}" SelectedItem="{Binding SelectedAvailableUser}"/>
           </Grid>
           <TextBlock Text="Selected Participants" Classes="field-label"/>
@@ -170,13 +175,15 @@
                 <Border Classes="participant-chip">
                   <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontSize="12"/>
-                    <Button Content="?" Padding="4,0" Command="{Binding $parent[UserControl].((vm:NewChatViewModel)DataContext).RemoveParticipantCommand}" CommandParameter="{Binding}" FontSize="12"/>
+                    <Button Content="Remove" Padding="4,0"
+                            Command="{Binding #Root.RemoveParticipantUiCommand}"
+                            CommandParameter="{Binding .}" FontSize="12"/>
                   </StackPanel>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Text="{Binding ParticipantsValidationMessage}" Classes="validation" IsVisible="{Binding ParticipantsValidationMessage}"/>
+          <TextBlock Text="{Binding ParticipantsValidationMessage}" Classes="validation" IsVisible="{Binding IsParticipantsValidationVisible}"/>
         </StackPanel>
       </Border>
 

@@ -3,10 +3,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
              x:Class="Southville8BEdgeUI.Views.Admin.CreateEventView"
              x:DataType="vm:CreateEventViewModel"
              mc:Ignorable="d"
              Background="{DynamicResource PageBackgroundBrush}">
+  <UserControl.Resources>
+    <converters:InverseBoolConverter x:Key="InvertBool"/>
+  </UserControl.Resources>
   <UserControl.Styles>
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
@@ -112,14 +116,14 @@
           <TextBlock Text="End Date" Classes="field-label"/>
           <DatePicker SelectedDate="{Binding EndDateOffset}"/>
           <TextBlock Text="Start Time" Classes="field-label"/>
-          <TextBox Text="{Binding StartTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding !IsAllDay}"/>
+          <TextBox Text="{Binding StartTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding IsAllDay, Converter={StaticResource InvertBool}}"/>
           <TextBlock Text="End Time" Classes="field-label"/>
-          <TextBox Text="{Binding EndTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding !IsAllDay}"/>
+          <TextBox Text="{Binding EndTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding IsAllDay, Converter={StaticResource InvertBool}}"/>
           <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
             <CheckBox IsChecked="{Binding IsAllDay}" Content="All Day"/>
             <TextBlock Text="(When checked, time fields are disabled)" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
           </StackPanel>
-          <TextBlock Text="{Binding DateValidationMessage}" Classes="validation" IsVisible="{Binding DateValidationMessage}"/>
+          <TextBlock Text="{Binding DateValidationMessage}" Classes="validation" IsVisible="{Binding HasDateValidationError}"/>
 
           <!-- DETAILS -->
           <TextBlock Text="Details" Classes="section-title"/>

@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Southville8BEdgeUI.ViewModels.Admin;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -22,51 +23,68 @@ public partial class CreateUserView : UserControl
         InitializeComponent();
         this.SizeChanged += OnSizeChanged;
         InitializeResponsiveCollections();
+
+        // Just-in-time password capture to avoid keeping bindings for secrets
+        SaveUserButton.Click += OnSaveUserClicked;
+        CancelButton.Click += (_, _) => ClearPasswordBoxes();
+    }
+
+    private void OnSaveUserClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not CreateUserViewModel vm) return;
+        var password = (PasswordInput as TextBox)?.Text ?? string.Empty;
+        var confirm = (ConfirmPasswordInput as TextBox)?.Text ?? string.Empty;
+
+        vm.Password = password;
+        vm.ConfirmPassword = confirm;
+
+        vm.SaveUserCommand.Execute(null);
+
+        if (!vm.HasValidationError)
+        {
+            ClearPasswordBoxes();
+            vm.Password = string.Empty;
+            vm.ConfirmPassword = string.Empty;
+        }
+    }
+
+    private void ClearPasswordBoxes()
+    {
+        if (PasswordInput is TextBox p) p.Text = string.Empty;
+        if (ConfirmPasswordInput is TextBox c) c.Text = string.Empty;
     }
 
     private void InitializeResponsiveCollections()
     {
-        // Text elements
         _textElements.AddRange(new Control[]
         {
             HeaderTitleText, HeaderSubtitleText,
             BasicInfoSectionTitle, CredentialsSectionTitle,
             GeneratedPasswordText, ValidationMessageText
         });
-
-        // Cards
         _cardElements.AddRange(new Control[] { BasicInfoCard, CredentialsCard });
-
-        // Inputs
         _inputElements.AddRange(new Control[]
         {
             FullNameInput, UsernameInput, EmailInput, PhoneInput,
             RoleCombo, StatusCombo, GradeDeptCombo,
             PasswordInput, ConfirmPasswordInput
         });
-
-        // Buttons
         _buttonElements.AddRange(new Control[]
         {
             BackButton, GeneratePasswordButton, SaveUserButton, CancelButton
         });
     }
 
-    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        ApplyResponsive(e.NewSize.Width);
-    }
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e) => ApplyResponsive(e.NewSize.Width);
 
     private void ApplyResponsive(double width)
     {
         string sizeClass = width < MobileBreakpoint ? "mobile" : width < TabletBreakpoint ? "tablet" : "desktop";
-
         UpdateMainContainer(sizeClass);
         UpdateClasses(_textElements, sizeClass);
         UpdateClasses(_cardElements, sizeClass);
         UpdateClasses(_inputElements, sizeClass);
         UpdateClasses(_buttonElements, sizeClass);
-
         UpdateGrids(sizeClass);
     }
 
@@ -77,7 +95,6 @@ public partial class CreateUserView : UserControl
         MainStackPanel.Classes.Remove("main-content.mobile");
         MainStackPanel.Classes.Remove("main-content_tablet");
         MainStackPanel.Classes.Remove("main-content_mobile");
-
         switch (sizeClass)
         {
             case "mobile":
@@ -112,11 +129,12 @@ public partial class CreateUserView : UserControl
             BasicInfoGrid.ColumnDefinitions.Clear();
             BasicInfoGrid.RowDefinitions.Clear();
             BasicInfoGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            // two vertical stacks
             BasicInfoGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             BasicInfoGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            var left = BasicInfoGrid.Children.OfType<StackPanel>().First();
-            var right = BasicInfoGrid.Children.OfType<StackPanel>().Skip(1).First();
+            var stacks = BasicInfoGrid.Children.OfType<StackPanel>().Take(2).ToArray();
+            if (stacks.Length < 2) return; // insufficient children, abort layout changes
+            var left = stacks[0];
+            var right = stacks[1];
             Grid.SetColumn(left, 0); Grid.SetRow(left, 0); left.Margin = new Thickness(0,0,0,12);
             Grid.SetColumn(right, 0); Grid.SetRow(right, 1); right.Margin = new Thickness(0,12,0,0);
         }
@@ -126,8 +144,10 @@ public partial class CreateUserView : UserControl
             BasicInfoGrid.RowDefinitions.Clear();
             BasicInfoGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             BasicInfoGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            var left = BasicInfoGrid.Children.OfType<StackPanel>().First();
-            var right = BasicInfoGrid.Children.OfType<StackPanel>().Skip(1).First();
+            var stacks = BasicInfoGrid.Children.OfType<StackPanel>().Take(2).ToArray();
+            if (stacks.Length < 2) return;
+            var left = stacks[0];
+            var right = stacks[1];
             Grid.SetColumn(left, 0); Grid.SetRow(left, 0); left.Margin = new Thickness(0,0,28,0);
             Grid.SetColumn(right, 1); Grid.SetRow(right, 0); right.Margin = new Thickness(0);
         }
@@ -140,12 +160,13 @@ public partial class CreateUserView : UserControl
             CredentialsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             CredentialsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             CredentialsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            var first = CredentialsGrid.Children.OfType<StackPanel>().First();
-            var second = CredentialsGrid.Children.OfType<StackPanel>().Skip(1).First();
+            var stacks = CredentialsGrid.Children.OfType<StackPanel>().Take(2).ToArray();
+            if (stacks.Length < 2) return;
+            var first = stacks[0];
+            var second = stacks[1];
             Grid.SetColumn(first, 0); Grid.SetRow(first, 0); first.Margin = new Thickness(0,0,0,12);
             Grid.SetColumn(second, 0); Grid.SetRow(second, 1); second.Margin = new Thickness(0,12,0,0);
 
-            // Buttons layout single column
             ActionsGrid.ColumnDefinitions.Clear();
             ActionsGrid.RowDefinitions.Clear();
             ActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
@@ -160,8 +181,10 @@ public partial class CreateUserView : UserControl
             CredentialsGrid.RowDefinitions.Clear();
             CredentialsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             CredentialsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            var first = CredentialsGrid.Children.OfType<StackPanel>().First();
-            var second = CredentialsGrid.Children.OfType<StackPanel>().Skip(1).First();
+            var stacks = CredentialsGrid.Children.OfType<StackPanel>().Take(2).ToArray();
+            if (stacks.Length < 2) return;
+            var first = stacks[0];
+            var second = stacks[1];
             Grid.SetColumn(first, 0); Grid.SetRow(first, 0); first.Margin = new Thickness(0,0,28,0);
             Grid.SetColumn(second, 1); Grid.SetRow(second, 0); second.Margin = new Thickness(0);
 

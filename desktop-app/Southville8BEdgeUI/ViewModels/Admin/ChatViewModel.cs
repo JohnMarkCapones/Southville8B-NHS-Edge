@@ -5,12 +5,14 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
+using System.Collections.Specialized;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class ChatViewModel : ViewModelBase
 {
     public Action<ViewModelBase>? NavigateTo { get; set; }
+    public Action? NavigateBack { get; set; } // newly added for shell back navigation
 
     [ObservableProperty] private string _title = "Chat Management";
     [ObservableProperty] private ObservableCollection<ChatConversationViewModel> _conversations = new();
@@ -116,8 +118,33 @@ public partial class ChatViewModel : ViewModelBase
             }
         };
 
+        Conversations.CollectionChanged += Conversations_CollectionChanged;
+
         FilteredConversations = new ObservableCollection<ChatConversationViewModel>(Conversations);
         SelectedConversation = FilteredConversations.FirstOrDefault();
+
+        // Listen for theme changes to refresh dynamic brushes
+        if (Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged += (_, __) => RefreshAllThemeDependentBrushes();
+        }
+    }
+
+    private void Conversations_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (ChatConversationViewModel c in e.NewItems)
+                c.RefreshTheme();
+        }
+    }
+
+    private void RefreshAllThemeDependentBrushes()
+    {
+        foreach (var c in Conversations)
+            c.RefreshTheme();
+        if (SelectedConversation != null)
+            SelectedConversation.RefreshTheme();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
@@ -268,6 +295,14 @@ public partial class ChatConversationViewModel : ViewModelBase
         _ => Resolve("TextPrimaryBrush", "TextPrimaryBrush")
     };
 
+    public void RefreshTheme()
+    {
+        OnPropertyChanged(nameof(RoleBrush));
+        OnPropertyChanged(nameof(RoleTextBrush));
+        foreach (var m in Messages)
+            m.RefreshTheme();
+    }
+
     partial void OnLastMessageTimeChanged(DateTime value) => OnPropertyChanged(nameof(LastMessageTimeText));
     partial void OnUnreadCountChanged(int value) => OnPropertyChanged(nameof(HasUnreadMessages));
     partial void OnContactRoleChanged(string value)
@@ -304,6 +339,12 @@ public partial class ChatMessageViewModel : ViewModelBase
     public IBrush MessageTextBrush => IsFromCurrentUser
         ? Resolve("AccentTextOnAccentBrush", "TextPrimaryBrush")
         : Resolve("TextPrimaryBrush", "TextPrimaryBrush");
+
+    public void RefreshTheme()
+    {
+        OnPropertyChanged(nameof(MessageBackgroundBrush));
+        OnPropertyChanged(nameof(MessageTextBrush));
+    }
 
     partial void OnTimestampChanged(DateTime value) => OnPropertyChanged(nameof(TimestampText));
     partial void OnIsFromCurrentUserChanged(bool value)

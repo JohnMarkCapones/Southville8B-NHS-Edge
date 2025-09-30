@@ -29,6 +29,28 @@ public partial class SchedulePlannerViewModel : ViewModelBase
     public SchedulePlannerViewModel()
     {
         InitializeData();
+        // Subscribe to theme changes so class colors update dynamically
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += (_, __) => RefreshThemeColors();
+    }
+
+    private static IBrush ResolveBrush(string key, IBrush fallback)
+    {
+        var app = Application.Current;
+        if (app != null && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var obj) && obj is IBrush b)
+            return b;
+        return fallback;
+    }
+
+    private void RefreshThemeColors()
+    {
+        var info = ResolveBrush("InfoBrush", Brushes.Transparent);
+        var success = ResolveBrush("SuccessBrush", Brushes.Transparent);
+        // Simple mapping: first upcoming class -> info, second -> success, rest alternate
+        for (int i = 0; i < UpcomingClasses.Count; i++)
+        {
+            UpcomingClasses[i].SubjectColor = i % 2 == 0 ? info : success;
+        }
     }
 
     private void InitializeData()
@@ -58,17 +80,8 @@ public partial class SchedulePlannerViewModel : ViewModelBase
             });
         }
 
-        // Resolve themed brushes (fallback to transparent if not found)
-        IBrush infoBrush = Brushes.Transparent;
-        IBrush successBrush = Brushes.Transparent;
-
-        if (Application.Current is { } app)
-        {
-            if (app.Resources.TryGetResource("InfoBrush", app.ActualThemeVariant, out var infoObj) && infoObj is IBrush ib)
-                infoBrush = ib;
-            if (app.Resources.TryGetResource("SuccessBrush", app.ActualThemeVariant, out var successObj) && successObj is IBrush sb)
-                successBrush = sb;
-        }
+        var infoBrush = ResolveBrush("InfoBrush", Brushes.Transparent);
+        var successBrush = ResolveBrush("SuccessBrush", Brushes.Transparent);
 
         UpcomingClasses = new ObservableCollection<UpcomingClassViewModel>
         {
@@ -120,7 +133,7 @@ public partial class UpcomingClassViewModel : ViewModelBase
     [ObservableProperty] private string _grade = string.Empty;
     [ObservableProperty] private string _time = string.Empty;
     [ObservableProperty] private string _room = string.Empty;
-    [ObservableProperty] private IBrush _subjectColor = Brushes.Transparent; // Changed from string to IBrush
+    [ObservableProperty] private IBrush _subjectColor = Brushes.Transparent; // Themed brush
 }
 
 public partial class ScheduleConflictViewModel : ViewModelBase

@@ -77,8 +77,8 @@ public partial class AdminShellViewModel : ViewModelBase
     private UserManagementViewModel CreateUserManagementViewModel()
     {
         var vm = new UserManagementViewModel();
-        // Provide navigation so inner commands (CreateUser / ImportUsers) can swap content
-        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        vm.NavigateTo = innerVm => CurrentContent = innerVm; // inner navigation (CreateUser / ImportUsers)
+        vm.NavigateBack = () => NavigateToDashboard(); // allow inner views to return to dashboard
         return vm;
     }
 
@@ -118,6 +118,7 @@ public partial class AdminShellViewModel : ViewModelBase
     [RelayCommand] private void NavigateToChat() { 
         var vm = new ChatViewModel();
         vm.NavigateTo = inner => CurrentContent = inner; // enable NewChat navigation
+        vm.NavigateBack = () => NavigateToDashboard();
         CurrentContent = vm; CurrentPage = "Chat"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToProfile() { CurrentContent = new ProfileViewModel(); CurrentPage = "Profile"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }

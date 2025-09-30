@@ -38,6 +38,12 @@ public partial class ImportUsersViewModel : ViewModelBase
     partial void OnHasFileChanged(bool value) => OnPropertyChanged(nameof(CanImport));
     partial void OnHasFileValidationErrorChanged(bool value) => OnPropertyChanged(nameof(CanImport));
 
+    // Subscribe to column changes so CanImport updates when columns are added/removed
+    public ImportUsersViewModel()
+    {
+        CsvColumns.CollectionChanged += (_, __) => OnPropertyChanged(nameof(CanImport));
+    }
+
     [RelayCommand]
     private void BrowseFile()
     {
@@ -58,6 +64,11 @@ public partial class ImportUsersViewModel : ViewModelBase
         PreviewRows.Clear();
         SummaryText = "No file loaded.";
         ImportStatusMessage = string.Empty;
+        FileValidationMessage = string.Empty;
+        HasFileValidationError = false;
+        // Reset mappings so stale selections don't persist
+        FullNameColumn = UsernameColumn = EmailColumn = RoleColumn = StatusColumn =
+            GradeColumn = PhoneColumn = PasswordColumn = RequireResetColumn = string.Empty;
     }
 
     private void LoadSampleColumns()
@@ -78,6 +89,9 @@ public partial class ImportUsersViewModel : ViewModelBase
         RoleColumn = "Role";
         StatusColumn = "Status";
         GradeColumn = "Grade";
+        PhoneColumn = "Phone";
+        PasswordColumn = "Password";
+        RequireResetColumn = "RequireReset";
     }
 
     private void LoadSamplePreview()

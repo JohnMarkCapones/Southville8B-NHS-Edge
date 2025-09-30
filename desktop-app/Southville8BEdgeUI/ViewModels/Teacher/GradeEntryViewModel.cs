@@ -38,6 +38,12 @@ public partial class GradeEntryViewModel : ViewModelBase
     {
         InitializeData();
         HookStudentGradesCollection();
+
+        // Subscribe to theme changes to keep colors in sync with dynamic theme
+        if (Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged += (_, __) => RefreshThemeColors();
+        }
     }
 
     private static IBrush ResolveBrush(string key)
@@ -47,14 +53,46 @@ public partial class GradeEntryViewModel : ViewModelBase
         return Brushes.Transparent;
     }
 
-    private void InitializeData()
+    private void RefreshThemeColors()
     {
-        // Load themed brushes into provider before creating child view models
+        // Re-resolve brushes from current theme
         GradeColorProvider.Success = ResolveBrush("SuccessBrush");
         GradeColorProvider.Info = ResolveBrush("InfoBrush");
         GradeColorProvider.Warning = ResolveBrush("WarningBrush");
         GradeColorProvider.Danger = ResolveBrush("DangerBrush");
         GradeColorProvider.Neutral = ResolveBrush("TextSecondaryBrush");
+
+        // Update existing collections
+        foreach (var sg in StudentGrades)
+            sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
+
+        foreach (var dist in GradeDistribution)
+        {
+            dist.Color = dist.Grade switch
+            {
+                "A" => GradeColorProvider.Success,
+                "B" => GradeColorProvider.Info,
+                "C" => GradeColorProvider.Warning,
+                "D" => GradeColorProvider.Danger,
+                "F" => GradeColorProvider.Neutral,
+                _ => GradeColorProvider.Neutral
+            };
+        }
+
+        foreach (var recent in RecentGradeEntries)
+        {
+            // Attempt to parse numeric portion; fallback neutral
+            if (recent.Grade is { Length: >0 } g && g.TrimEnd('%') is string raw && double.TryParse(raw, out var val))
+                recent.GradeColor = GradeColorProvider.GetFor(val);
+            else
+                recent.GradeColor = GradeColorProvider.Neutral;
+        }
+    }
+
+    private void InitializeData()
+    {
+        // Initialize theme colors first
+        RefreshThemeColors();
 
         Classes = new ObservableCollection<string> { "Grade 8A - Math", "Grade 8B - Science", "Grade 9A - Math" };
         SelectedClass = Classes[0];
@@ -93,7 +131,6 @@ public partial class GradeEntryViewModel : ViewModelBase
                 }
                 MarkDirty();
             };
-            // Initialize color
             sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
         }
         StudentGrades.CollectionChanged += (_, args) =>

@@ -21,13 +21,13 @@ namespace Southville8BEdgeUI.ViewModels
         [ObservableProperty]
         private bool _isMaximized;
 
-        public ICommand MinimizeCommand { get; }
+        public IAsyncRelayCommand MinimizeCommand { get; }
         public ICommand MaximizeRestoreCommand { get; }
         public ICommand CloseCommand { get; }
 
         public TitleBarViewModel()
         {
-            MinimizeCommand = new RelayCommand(async () => await MinimizeAsync());
+            MinimizeCommand = new AsyncRelayCommand(MinimizeAsync);
             MaximizeRestoreCommand = new RelayCommand(MaximizeRestore);
             CloseCommand = new RelayCommand(Close);
         }

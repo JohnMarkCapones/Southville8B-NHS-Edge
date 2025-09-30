@@ -81,11 +81,12 @@ public partial class StudentInfoViewModel : ViewModelBase
     [ObservableProperty] private string _lastLogin = "2 hours ago";
     [ObservableProperty] private ObservableCollection<StudentActivityViewModel> _recentActivities = new();
 
-    // Themed attendance badge brushes
     [ObservableProperty] private IBrush _attendanceStatusBackgroundBrush = Brushes.Transparent;
     [ObservableProperty] private IBrush _attendanceStatusTextBrush = Brushes.Transparent;
 
-    public string Initials => string.Join("", FullName.Split(' ').Select(n => n.FirstOrDefault()));
+    public string Initials => string.Concat(FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                                .Where(p => p.Length > 0)
+                                                .Select(p => char.ToUpperInvariant(p[0])));
 
     public StudentInfoViewModel()
     {
@@ -95,12 +96,13 @@ public partial class StudentInfoViewModel : ViewModelBase
             new() { Activity = "Completed Quiz #2", Timestamp = "3 hours ago" }
         };
         UpdateAttendanceBrushes();
+        // React to theme changes so badge updates appropriately
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += (_, __) => UpdateAttendanceBrushes();
     }
 
-    partial void OnAttendanceStatusChanged(string value)
-    {
-        UpdateAttendanceBrushes();
-    }
+    partial void OnFullNameChanged(string value) => OnPropertyChanged(nameof(Initials));
+    partial void OnAttendanceStatusChanged(string value) => UpdateAttendanceBrushes();
 
     private static IBrush ResolveBrush(string key)
     {
@@ -111,20 +113,18 @@ public partial class StudentInfoViewModel : ViewModelBase
 
     private void UpdateAttendanceBrushes()
     {
-        // Use Success/Danger for text on soft backgrounds or direct solid variant
         var success = ResolveBrush("SuccessBrush");
         var danger = ResolveBrush("DangerBrush");
         var successSoft = ResolveBrush("SuccessSoftBrush");
         var dangerSoft = ResolveBrush("DangerSoftBrush");
-        var onAccent = ResolveBrush("AccentTextOnAccentBrush");
         var textPrimary = ResolveBrush("TextPrimaryBrush");
 
-        if (AttendanceStatus.Equals("Present", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(AttendanceStatus, "Present", StringComparison.OrdinalIgnoreCase))
         {
             AttendanceStatusBackgroundBrush = successSoft;
-            AttendanceStatusTextBrush = success; // colored text on soft background
+            AttendanceStatusTextBrush = success;
         }
-        else if (AttendanceStatus.Equals("Absent", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(AttendanceStatus, "Absent", StringComparison.OrdinalIgnoreCase))
         {
             AttendanceStatusBackgroundBrush = dangerSoft;
             AttendanceStatusTextBrush = danger;

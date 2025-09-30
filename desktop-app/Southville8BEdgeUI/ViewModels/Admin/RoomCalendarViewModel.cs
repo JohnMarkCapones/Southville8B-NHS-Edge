@@ -93,6 +93,8 @@ public partial class DayViewModel : ObservableObject
     [ObservableProperty] private bool _isToday;
     [ObservableProperty] private bool _isCleaningDay;
 
+    public bool IsOutsideCurrentMonth => !IsCurrentMonth;
+
     public ObservableCollection<CalendarEventViewModel> Events { get; } = new();
 
     public bool HasEvents => Events.Count > 0;
@@ -111,6 +113,7 @@ public partial class DayViewModel : ObservableObject
     }
 
     partial void OnIsCleaningDayChanged(bool value) => RaiseDerived();
+    partial void OnIsCurrentMonthChanged(bool value) => OnPropertyChanged(nameof(IsOutsideCurrentMonth));
 }
 
 public partial class CalendarEventViewModel : ObservableObject

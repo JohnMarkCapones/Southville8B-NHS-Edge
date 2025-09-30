@@ -127,7 +127,19 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="vm:DayViewModel">
-              <Border Classes="day-cell" Classes.outside="{Binding !IsCurrentMonth}" Classes.today="{Binding IsToday}" Classes.cleaning="{Binding IsCleaningDay}">
+              <Border Classes="day-cell" Classes.outside="{Binding IsOutsideCurrentMonth}" Classes.today="{Binding IsToday}" Classes.cleaning="{Binding IsCleaningDay}">
+                <ToolTip.Tip>
+                  <StackPanel Spacing="2" MaxWidth="240">
+                    <TextBlock Text="{Binding DayText, StringFormat=Day {0}}" FontWeight="SemiBold" FontSize="12"/>
+                    <ItemsControl ItemsSource="{Binding Events}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:CalendarEventViewModel">
+                          <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="11"/>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ToolTip.Tip>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding DayText}" FontSize="12" FontWeight="Medium"/>
                   <!-- Visible events -->
@@ -140,21 +152,6 @@
                   </ItemsControl>
                   <!-- Overflow indicator -->
                   <TextBlock Text="{Binding OverflowCount, StringFormat=+{0} more}" Classes="more-indicator" IsVisible="{Binding HasOverflow}"/>
-                  <!-- Popup for all events -->
-                  <Border IsVisible="False">
-                    <ToolTip.Tip>
-                      <StackPanel Spacing="2" MaxWidth="240">
-                        <TextBlock Text="{Binding DayText, StringFormat=Day {0}}" FontWeight="SemiBold" FontSize="12"/>
-                        <ItemsControl ItemsSource="{Binding Events}">
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:CalendarEventViewModel">
-                              <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="11"/>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </ToolTip.Tip>
-                  </Border>
                 </StackPanel>
               </Border>
             </DataTemplate>

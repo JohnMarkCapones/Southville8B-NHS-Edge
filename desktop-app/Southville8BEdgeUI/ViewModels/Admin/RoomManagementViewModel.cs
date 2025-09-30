@@ -121,6 +121,10 @@ public partial class RoomManagementViewModel : ViewModelBase
 
     [RelayCommand] private void RoomAction(RoomViewModel room)
     {
+        // Do not allow state changes if room is under maintenance
+        if (room.IsInMaintenance)
+            return;
+
         if (room.IsAvailable)
         {
             room.Status = "Occupied";

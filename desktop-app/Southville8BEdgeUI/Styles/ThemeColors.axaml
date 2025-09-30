@@ -67,6 +67,7 @@
       <SolidColorBrush x:Key="AccentBrush">#5C7AEA</SolidColorBrush>
       <SolidColorBrush x:Key="AccentHoverBrush">#4B63C9</SolidColorBrush>
       <SolidColorBrush x:Key="AccentTextOnAccentBrush">#FFFFFF</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentSoftBrush">#232B3A</SolidColorBrush>
 
       <!-- status -->
       <SolidColorBrush x:Key="SuccessBrush">#2ECC71</SolidColorBrush>

@@ -194,6 +194,7 @@ public partial class WeeklyClassViewModel : ViewModelBase
 
     public bool HasClasses => ClassCount > 0;
 
+    partial void OnClassCountChanged(int value) => OnPropertyChanged(nameof(HasClasses));
     partial void OnIsTodayChanged(bool value) => UpdateVisualState();
     partial void OnIsPeakDayChanged(bool value) => UpdateVisualState();
 
@@ -320,7 +321,12 @@ public partial class StudentPerformanceViewModel : ViewModelBase
         }
     }
 
-    partial void OnIsImprovingChanged(bool value) => OnPropertyChanged(nameof(ImprovementBrush));
+    partial void OnImprovementChanged(double value) => OnPropertyChanged(nameof(ImprovementText));
+    partial void OnIsImprovingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ImprovementBrush));
+        OnPropertyChanged(nameof(ImprovementText));
+    }
 }
 
 public partial class ClassStatViewModel : ViewModelBase

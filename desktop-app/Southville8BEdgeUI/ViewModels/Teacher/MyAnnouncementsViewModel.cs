@@ -34,6 +34,18 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
     public MyAnnouncementsViewModel()
     {
         InitializeData();
+        // Theme change subscription to refresh badge brushes
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += (_, __) => RefreshAnnouncementBadgeBrushes();
+    }
+
+    private void RefreshAnnouncementBadgeBrushes()
+    {
+        foreach (var a in Announcements)
+        {
+            a.UpdatePriorityBrushes();
+            a.UpdateStatusBrushes();
+        }
     }
 
     private void InitializeData()
@@ -44,7 +56,6 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
             new() { Title = "Science Project Deadline", Priority = "Medium", Status = "Active", TargetClass = "Grade 8B", ContentPreview = "Remember to submit your science projects by...", ViewCount = 32, CommentCount = 5, PostedDate = "1 day ago", LastModified = "3 hours ago" }
         };
 
-        // Initialize badge brushes for existing items
         foreach (var a in Announcements)
         {
             a.UpdatePriorityBrushes();

@@ -93,8 +93,8 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,24,0,0" HorizontalAlignment="Left">
-          <Button Content="?? Create" Classes="primary" Command="{Binding CreateCommand}"/>
-          <Button Content="? Cancel" Classes="secondary" Command="{Binding CancelCommand}"/>
+          <Button Content="Create" Classes="primary" Command="{Binding CreateCommand}" IsDefault="True"/>
+          <Button Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}" IsCancel="True"/>
         </StackPanel>
       </StackPanel>
     </Border>
