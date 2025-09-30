@@ -2,11 +2,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using Avalonia; // For Application.Current
+using Avalonia.Media; // For IBrush
+using Avalonia.Styling; // For theme variant lookups
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
 public partial class MyAnnouncementsViewModel : ViewModelBase
 {
+    // Navigation callback set by shell
+    public Action<ViewModelBase>? NavigateTo { get; set; }
+
     [ObservableProperty] private int _totalAnnouncementsCount = 45;
     [ObservableProperty] private int _activeAnnouncementsCount = 12;
     [ObservableProperty] private int _totalViewsCount = 1247;
@@ -37,6 +44,13 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
             new() { Title = "Science Project Deadline", Priority = "Medium", Status = "Active", TargetClass = "Grade 8B", ContentPreview = "Remember to submit your science projects by...", ViewCount = 32, CommentCount = 5, PostedDate = "1 day ago", LastModified = "3 hours ago" }
         };
 
+        // Initialize badge brushes for existing items
+        foreach (var a in Announcements)
+        {
+            a.UpdatePriorityBrushes();
+            a.UpdateStatusBrushes();
+        }
+
         RecentActivity = new ObservableCollection<AnnouncementActivityViewModel>
         {
             new() { Activity = "Created new announcement", AnnouncementTitle = "Math Quiz Next Week", Timestamp = "2 hours ago" },
@@ -44,12 +58,68 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
         };
     }
 
-    [RelayCommand] private void CreateAnnouncement() { }
+    [RelayCommand]
+    private void CreateAnnouncement()
+    {
+        if (NavigateTo == null) return;
+        var formVm = new NewAnnouncementViewModel
+        {
+            AvailableClasses = new ObservableCollection<string>(AvailableClasses),
+            PriorityOptions = new ObservableCollection<string>(PriorityOptions),
+            NavigateBack = () => NavigateTo?.Invoke(this),
+            OnCreated = item =>
+            {
+                item.UpdatePriorityBrushes();
+                item.UpdateStatusBrushes();
+                Announcements.Insert(0, item);
+                RecentActivity.Insert(0, new AnnouncementActivityViewModel
+                {
+                    Activity = "Created new announcement",
+                    AnnouncementTitle = item.Title,
+                    Timestamp = "just now"
+                });
+                TotalAnnouncementsCount = Announcements.Count;
+                ActiveAnnouncementsCount = Announcements.Count(a => a.Status == "Active");
+                NavigateTo?.Invoke(this);
+            }
+        };
+        NavigateTo(formVm);
+    }
+
     [RelayCommand] private void ViewAnalytics() { }
     [RelayCommand] private void EditAnnouncement(AnnouncementItemViewModel announcement) { }
     [RelayCommand] private void ViewAnnouncement(AnnouncementItemViewModel announcement) { }
     [RelayCommand] private void DeleteAnnouncement(AnnouncementItemViewModel announcement) { }
-    [RelayCommand] private void CreateQuickAnnouncement() { }
+    [RelayCommand] private void CreateQuickAnnouncement()
+    {
+        if (string.IsNullOrWhiteSpace(NewAnnouncementTitle)) return;
+        var item = new AnnouncementItemViewModel
+        {
+            Title = NewAnnouncementTitle,
+            Priority = string.IsNullOrWhiteSpace(NewAnnouncementPriority) ? "Low" : NewAnnouncementPriority,
+            Status = PostImmediately ? "Active" : "Scheduled",
+            TargetClass = NewAnnouncementClass,
+            ContentPreview = NewAnnouncementContent,
+            ViewCount = 0,
+            CommentCount = 0,
+            PostedDate = PostImmediately ? "now" : ScheduledDate?.ToString("MMM d") ?? "scheduled",
+            LastModified = "now"
+        };
+        item.UpdatePriorityBrushes();
+        item.UpdateStatusBrushes();
+        Announcements.Insert(0, item);
+        RecentActivity.Insert(0, new AnnouncementActivityViewModel
+        {
+            Activity = "Quick created announcement",
+            AnnouncementTitle = item.Title,
+            Timestamp = "just now"
+        });
+        TotalAnnouncementsCount = Announcements.Count;
+        ActiveAnnouncementsCount = Announcements.Count(a => a.Status == "Active");
+        // reset minimal fields
+        NewAnnouncementTitle = NewAnnouncementContent = string.Empty;
+        NewAnnouncementClass = NewAnnouncementPriority = string.Empty;
+    }
 }
 
 public partial class AnnouncementItemViewModel : ViewModelBase
@@ -64,21 +134,84 @@ public partial class AnnouncementItemViewModel : ViewModelBase
     [ObservableProperty] private string _postedDate = "";
     [ObservableProperty] private string _lastModified = "";
 
-    public string PriorityColor => Priority switch
-    {
-        "High" => "#EF4444",
-        "Medium" => "#F59E0B",
-        "Low" => "#10B981",
-        _ => "#6B7280"
-    };
+    // Themed badge brushes (background soft + text solid)
+    [ObservableProperty] private IBrush _priorityBadgeBackgroundBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _priorityBadgeTextBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _statusBadgeBackgroundBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _statusBadgeTextBrush = Brushes.Transparent;
 
-    public string StatusColor => Status switch
+    partial void OnPriorityChanged(string value) => UpdatePriorityBrushes();
+    partial void OnStatusChanged(string value) => UpdateStatusBrushes();
+
+    private static IBrush ResolveBrush(string key)
     {
-        "Active" => "#10B981",
-        "Draft" => "#6B7280",
-        "Scheduled" => "#3B82F6",
-        _ => "#6B7280"
-    };
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var obj) && obj is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    public void UpdatePriorityBrushes()
+    {
+        var success = ResolveBrush("SuccessBrush");
+        var warning = ResolveBrush("WarningBrush");
+        var danger = ResolveBrush("DangerBrush");
+        var successSoft = ResolveBrush("SuccessSoftBrush");
+        var warningSoft = ResolveBrush("WarningSoftBrush");
+        var dangerSoft = ResolveBrush("DangerSoftBrush");
+        var graySoft = ResolveBrush("GraySoftBrush");
+        var textPrimary = ResolveBrush("TextPrimaryBrush");
+
+        switch (Priority)
+        {
+            case "High":
+                PriorityBadgeBackgroundBrush = dangerSoft;
+                PriorityBadgeTextBrush = danger;
+                break;
+            case "Medium":
+                PriorityBadgeBackgroundBrush = warningSoft;
+                PriorityBadgeTextBrush = warning;
+                break;
+            case "Low":
+                PriorityBadgeBackgroundBrush = successSoft;
+                PriorityBadgeTextBrush = success;
+                break;
+            default:
+                PriorityBadgeBackgroundBrush = graySoft;
+                PriorityBadgeTextBrush = textPrimary;
+                break;
+        }
+    }
+
+    public void UpdateStatusBrushes()
+    {
+        var success = ResolveBrush("SuccessBrush");
+        var info = ResolveBrush("InfoBrush");
+        var graySoft = ResolveBrush("GraySoftBrush");
+        var successSoft = ResolveBrush("SuccessSoftBrush");
+        var infoSoft = ResolveBrush("InfoSoftBrush");
+        var textPrimary = ResolveBrush("TextPrimaryBrush");
+        var textSecondary = ResolveBrush("TextSecondaryBrush");
+
+        switch (Status)
+        {
+            case "Active":
+                StatusBadgeBackgroundBrush = successSoft;
+                StatusBadgeTextBrush = success;
+                break;
+            case "Scheduled":
+                StatusBadgeBackgroundBrush = infoSoft;
+                StatusBadgeTextBrush = info;
+                break;
+            case "Draft":
+                StatusBadgeBackgroundBrush = graySoft;
+                StatusBadgeTextBrush = textSecondary;
+                break;
+            default:
+                StatusBadgeBackgroundBrush = graySoft;
+                StatusBadgeTextBrush = textPrimary;
+                break;
+        }
+    }
 }
 
 public partial class AnnouncementActivityViewModel : ViewModelBase

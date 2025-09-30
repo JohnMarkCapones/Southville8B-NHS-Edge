@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -203,21 +205,31 @@ public partial class AlertItemViewModel : ViewModelBase
     public bool IsActive => DateTime.Now < ExpiresAt;
     public bool IsExpired => !IsActive;
 
-    public string PriorityColor => Priority switch
+    private static IBrush Resolve(string key, string fallback)
     {
-        "High" => "#EF4444",
-        "Medium" => "#F59E0B",
-        _ => "#10B981"
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush PriorityBrush => Priority switch
+    {
+        "High" => Resolve("DangerBrush", "DangerBrush"),
+        "Medium" => Resolve("WarningBrush", "WarningBrush"),
+        _ => Resolve("SuccessBrush", "SuccessBrush")
     };
 
-    public string TypeColor => Type switch
+    public IBrush TypeBrush => Type switch
     {
-        "Weather" => "#3B82F6",
-        "Class Suspension" => "#8B5CF6",
-        "Emergency" => "#EF4444",
-        "System" => "#6B7280",
-        "Announcement" => "#10B981",
-        _ => "#6B7280"
+        "Weather" => Resolve("InfoBrush", "AccentBrush"),
+        "Class Suspension" => Resolve("PurpleBrush", "InfoBrush"),
+        "Emergency" => Resolve("DangerBrush", "DangerBrush"),
+        "System" => Resolve("TextSecondaryBrush", "TextMutedBrush"),
+        "Announcement" => Resolve("SuccessBrush", "SuccessBrush"),
+        _ => Resolve("TextSecondaryBrush", "TextMutedBrush")
     };
 
     public string AudienceText => TargetAudience switch
@@ -229,4 +241,21 @@ public partial class AlertItemViewModel : ViewModelBase
     };
 
     public string TimeFrameText => $"{CreatedAt:MMM dd, hh:mm tt} → {ExpiresAt:MMM dd, hh:mm tt}";
+
+    partial void OnPriorityChanged(string value)
+    {
+        OnPropertyChanged(nameof(PriorityBrush));
+    }
+
+    partial void OnTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(TypeBrush));
+    }
+
+    partial void OnExpiresAtChanged(DateTime value)
+    {
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(IsExpired));
+        OnPropertyChanged(nameof(TimeFrameText));
+    }
 }

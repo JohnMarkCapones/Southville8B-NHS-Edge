@@ -20,12 +20,11 @@ public partial class UserManagementView : UserControl
     public UserManagementView()
     {
         InitializeComponent();
-        DataContext = new UserManagementViewModel();
+        // IMPORTANT: Do NOT create a new UserManagementViewModel here.
+        // The ViewLocator supplies the instance created by AdminShellViewModel
+        // which has NavigateTo callbacks wired for Create / Import navigation.
 
-        // Store references to elements that need responsive behavior
         InitializeResponsiveElements();
-
-        // Set up size change handler
         this.SizeChanged += OnSizeChanged;
     }
 

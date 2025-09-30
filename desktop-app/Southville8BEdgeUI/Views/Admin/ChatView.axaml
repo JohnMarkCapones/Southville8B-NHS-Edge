@@ -479,8 +479,8 @@
                                 <DataTemplate DataType="vm:ChatConversationViewModel">
                                     <Button Classes="conversation-item" Classes.selected="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedConversation, Converter={StaticResource EqualityConverter}, ConverterParameter={Binding}}" Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectConversationCommand}" CommandParameter="{Binding}">
                                         <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <Border Grid.Column="0" Classes="avatar" Background="{Binding RoleColor}" Margin="0,0,12,0">
-                                                <TextBlock Text="{Binding ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Border Grid.Column="0" Classes="avatar" Background="{Binding RoleBrush}" Margin="0,0,12,0">
+                                                <TextBlock Text="{Binding ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{Binding RoleTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" Spacing="4">
                                                 <Grid ColumnDefinitions="*,Auto">
@@ -520,8 +520,8 @@
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                             <Button x:Name="BackButton" Grid.Column="0" Content="←" Classes="back-button" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="False"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                                <Border Classes="avatar" Background="{Binding SelectedConversation.RoleColor}">
-                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Classes="avatar" Background="{Binding SelectedConversation.RoleBrush}">
+                                    <TextBlock Text="{Binding SelectedConversation.ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{Binding SelectedConversation.RoleTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock x:Name="ChatHeaderNameText" Text="{Binding SelectedConversation.ContactName}" Classes="chat-header-name"/>
@@ -545,8 +545,8 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:ChatMessageViewModel">
                                     <StackPanel Margin="0,8">
-                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsFromCurrentUser}" Classes.message-received="{Binding !IsFromCurrentUser}" Background="{Binding MessageBackground}">
-                                            <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextColor}" TextWrapping="Wrap" Classes="message-text"/>
+                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsFromCurrentUser}" Classes.message-received="{Binding !IsFromCurrentUser}" Background="{Binding MessageBackgroundBrush}">
+                                            <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextBrush}" TextWrapping="Wrap" Classes="message-text"/>
                                         </Border>
                                         <TextBlock Text="{Binding TimestampText}" FontSize="10" Classes="light" HorizontalAlignment="{Binding MessageAlignment}" Margin="12,2,12,0"/>
                                     </StackPanel>

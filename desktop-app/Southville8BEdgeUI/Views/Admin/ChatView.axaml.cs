@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using Southville8BEdgeUI.ViewModels.Admin;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -63,24 +64,44 @@ public partial class ChatView : UserControl
     // Recursion depth limit for UI traversal safety
     private const int MaxRecursionDepth = 10;
 
+    private ChatViewModel? _attachedViewModel; // track current vm for event detach
+
     public ChatView()
     {
         InitializeComponent();
-        DataContext = new ChatViewModel();
 
-        // Store references to elements that need responsive behavior
+        // Only create a design-time VM so runtime shell can inject one with navigation delegates
+        if (Design.IsDesignMode)
+        {
+            DataContext = new ChatViewModel();
+        }
+
         InitializeResponsiveElements();
-
-        // Set up size change handler
         this.SizeChanged += OnSizeChanged;
 
         // Set up message text box event handlers
         SetupMessageTextBoxEvents();
 
-        // Subscribe to conversation selection changes for mobile navigation
-        if (DataContext is ChatViewModel viewModel)
+        this.DataContextChanged += OnDataContextChanged; // react when shell sets vm
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (_attachedViewModel != null)
         {
-            viewModel.PropertyChanged += ViewModel_PropertyChanged;
+            _attachedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _attachedViewModel.ConversationNavigationRequested -= ChatViewModel_ConversationNavigationRequested;
+        }
+
+        if (DataContext is ChatViewModel vm)
+        {
+            vm.PropertyChanged += ViewModel_PropertyChanged;
+            vm.ConversationNavigationRequested += ChatViewModel_ConversationNavigationRequested;
+            _attachedViewModel = vm;
+        }
+        else
+        {
+            _attachedViewModel = null;
         }
     }
 

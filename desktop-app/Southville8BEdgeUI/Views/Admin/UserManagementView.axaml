@@ -342,7 +342,7 @@
 		<Style Selector="TextBlock.role-text">
 			<Setter Property="FontSize" Value="10"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
 		</Style>
 		<Style Selector="TextBlock.role-text.tablet">
 			<Setter Property="FontSize" Value="9"/>
@@ -469,12 +469,12 @@
 									<Border Grid.Column="1"
                                             x:Name="StatusIndicator"
                                             Classes="status-indicator"
-                                            Background="{Binding StatusColor}"
+                                            Background="{Binding StatusBrush}"
                                             Margin="0,0,8,0"/>
 									<Border Grid.Column="2"
                                             x:Name="RoleBadge"
                                             Classes="role-badge"
-                                            Background="{Binding RoleColor}">
+                                            Background="{Binding RoleBrush}">
 										<TextBlock x:Name="RoleText" Text="{Binding Role}" Classes="role-text"/>
 									</Border>
 								</Grid>

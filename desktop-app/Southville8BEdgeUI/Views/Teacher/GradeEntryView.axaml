@@ -174,7 +174,7 @@
 
         <!-- Header row background -->
         <Style Selector="Border.grade-header">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
         </Style>
@@ -187,6 +187,9 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="8"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style Selector="Border.recent-entry:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
         </Style>
     </UserControl.Styles>
 

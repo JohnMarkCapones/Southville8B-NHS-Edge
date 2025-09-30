@@ -1,0 +1,166 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             x:Class="Southville8BEdgeUI.Views.Admin.RoomCalendarView"
+             x:DataType="vm:RoomCalendarViewModel"
+             mc:Ignorable="d"
+             Background="{DynamicResource PageBackgroundBrush}">
+  <!-- Brushes -->
+  <UserControl.Resources>
+    <SolidColorBrush x:Key="CalendarCellBorder" Color="#D5D5D5"/>
+    <SolidColorBrush x:Key="CalendarCellBorderDark" Color="#303033"/>
+    <SolidColorBrush x:Key="CalendarCellBackground" Color="#FFFFFFFF" Opacity="0.6"/>
+    <SolidColorBrush x:Key="CalendarCellBackgroundDark" Color="#262626" Opacity="0.8"/>
+    <SolidColorBrush x:Key="CalendarTodayBackground" Color="#4F46E5" Opacity="0.10"/>
+    <SolidColorBrush x:Key="CalendarTodayBorder" Color="#4F46E5"/>
+    <SolidColorBrush x:Key="CalendarCleaningBackground" Color="#F59E0B" Opacity="0.07"/>
+    <SolidColorBrush x:Key="CalendarCleaningBackgroundDark" Color="#F59E0B" Opacity="0.18"/>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="TextBlock.calendar-title">
+      <Setter Property="FontSize" Value="24"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+    <Style Selector="TextBlock.day-name">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+    <Style Selector="TextBlock.date-number">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.booking-text">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+    <Style Selector="TextBlock.cleaning-text">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+      <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+    <Style Selector="Border.day-cell">
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="6"/>
+      <Setter Property="Margin" Value="4"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Background" Value="{DynamicResource CalendarCellBackground}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource CalendarCellBorder}"/>
+      <Setter Property="MinHeight" Value="90"/>
+    </Style>
+    <Style Selector="Border.day-cell:dark">
+      <Setter Property="Background" Value="{StaticResource CalendarCellBackgroundDark}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource CalendarCellBorderDark}"/>
+    </Style>
+    <Style Selector="Border.day-cell.outside">
+      <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+    <Style Selector="Border.day-cell.today">
+      <Setter Property="BorderBrush" Value="{StaticResource CalendarTodayBorder}"/>
+      <Setter Property="Background" Value="{StaticResource CalendarTodayBackground}"/>
+    </Style>
+    <Style Selector="Border.day-cell.cleaning">
+      <Setter Property="Background" Value="{StaticResource CalendarCleaningBackground}"/>
+    </Style>
+    <Style Selector="Border.day-cell.cleaning:dark">
+      <Setter Property="Background" Value="{StaticResource CalendarCleaningBackgroundDark}"/>
+    </Style>
+    <Style Selector="TextBlock.event-title">
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="Margin" Value="0,1,0,0"/>
+    </Style>
+    <Style Selector="TextBlock.event-title.highlight">
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="TextBlock.more-indicator">
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="2,2,0,0"/>
+    </Style>
+    <Style Selector="Button.cal-nav">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="14,8"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="4"/>
+    </Style>
+  </UserControl.Styles>
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <Border Margin="32" Padding="32" CornerRadius="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource CardBackgroundBrush}">
+      <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,16" VerticalAlignment="Center">
+          <Button Grid.Column="0" Content="?" Width="44" Height="44" Command="{Binding BackCommand}" Classes="cal-nav" ToolTip.Tip="Back"/>
+          <TextBlock Grid.Column="1" Text="{Binding MonthTitle}" Classes="calendar-title"/>
+          <Button Grid.Column="2" Content="?" Command="{Binding PrevMonthCommand}" Classes="cal-nav" ToolTip.Tip="Previous Month"/>
+          <Button Grid.Column="3" Content="Today" Command="{Binding TodayCommand}" Classes="cal-nav"/>
+          <Button Grid.Column="4" Content="?" Command="{Binding NextMonthCommand}" Classes="cal-nav" ToolTip.Tip="Next Month"/>
+        </Grid>
+        <UniformGrid Grid.Row="1" Columns="7" Margin="0,0,0,4">
+          <TextBlock Text="Sun" Classes="day-name"/>
+          <TextBlock Text="Mon" Classes="day-name"/>
+          <TextBlock Text="Tue" Classes="day-name"/>
+          <TextBlock Text="Wed" Classes="day-name"/>
+          <TextBlock Text="Thu" Classes="day-name"/>
+          <TextBlock Text="Fri" Classes="day-name"/>
+          <TextBlock Text="Sat" Classes="day-name"/>
+        </UniformGrid>
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding Days}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="7"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:DayViewModel">
+              <Border Classes="day-cell" Classes.outside="{Binding !IsCurrentMonth}" Classes.today="{Binding IsToday}" Classes.cleaning="{Binding IsCleaningDay}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding DayText}" FontSize="12" FontWeight="Medium"/>
+                  <!-- Visible events -->
+                  <ItemsControl ItemsSource="{Binding VisibleEvents}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="vm:CalendarEventViewModel">
+                        <TextBlock Text="{Binding Title}" Classes="event-title" Classes.highlight="{Binding IsHighlight}"/>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <!-- Overflow indicator -->
+                  <TextBlock Text="{Binding OverflowCount, StringFormat=+{0} more}" Classes="more-indicator" IsVisible="{Binding HasOverflow}"/>
+                  <!-- Popup for all events -->
+                  <Border IsVisible="False">
+                    <ToolTip.Tip>
+                      <StackPanel Spacing="2" MaxWidth="240">
+                        <TextBlock Text="{Binding DayText, StringFormat=Day {0}}" FontWeight="SemiBold" FontSize="12"/>
+                        <ItemsControl ItemsSource="{Binding Events}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:CalendarEventViewModel">
+                              <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="11"/>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </ToolTip.Tip>
+                  </Border>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+    </Border>
+  </ScrollViewer>
+</UserControl>

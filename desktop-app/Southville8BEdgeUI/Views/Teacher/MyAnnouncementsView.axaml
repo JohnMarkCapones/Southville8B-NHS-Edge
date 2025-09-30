@@ -84,6 +84,7 @@
                 <Transitions>
                     <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
                 </Transitions>
             </Setter>
         </Style>
@@ -91,6 +92,7 @@
         <Style Selector="Border.announcement-card:pointerover">
             <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
             <Setter Property="RenderTransform" Value="scale(1.02)"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
         </Style>
 
         <Style Selector="Border.announcement-card.mobile">
@@ -186,6 +188,9 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
+        <Style Selector="Border.recent-activity:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer x:Name="MainScrollViewer"
@@ -256,11 +261,11 @@
                                                     <StackPanel Grid.Column="0" Spacing="4">
                                                         <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                                            <Border Classes="priority-badge" Background="{Binding PriorityColor}">
-                                                                <TextBlock Text="{Binding Priority}" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontWeight="SemiBold"/>
+                                                            <Border Classes="priority-badge" Background="{Binding PriorityBadgeBackgroundBrush}">
+                                                                <TextBlock Text="{Binding Priority}" FontSize="10" Foreground="{Binding PriorityBadgeTextBrush}" FontWeight="SemiBold"/>
                                                             </Border>
-                                                            <Border Classes="priority-badge" Background="{Binding StatusColor}">
-                                                                <TextBlock Text="{Binding Status}" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontWeight="SemiBold"/>
+                                                            <Border Classes="priority-badge" Background="{Binding StatusBadgeBackgroundBrush}">
+                                                                <TextBlock Text="{Binding Status}" FontSize="10" Foreground="{Binding StatusBadgeTextBrush}" FontWeight="SemiBold"/>
                                                             </Border>
                                                             <TextBlock Text="{Binding TargetClass}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>

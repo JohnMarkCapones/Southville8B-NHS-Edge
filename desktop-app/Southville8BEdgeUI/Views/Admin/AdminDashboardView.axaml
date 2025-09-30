@@ -316,8 +316,8 @@
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
           <TextBlock x:Name="SystemStatusText" Text="{Binding SystemStatus}" Classes="status-text"
-                   Foreground="{Binding SystemStatusColor}" VerticalAlignment="Center"/>
-          <Border Width="8" Height="8" CornerRadius="4" Background="{Binding SystemStatusColor}" VerticalAlignment="Center"/>
+                   Foreground="{Binding SystemStatusBrush}" VerticalAlignment="Center"/>
+          <Border Width="8" Height="8" CornerRadius="4" Background="{Binding SystemStatusBrush}" VerticalAlignment="Center"/>
           <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}" Command="{Binding RefreshDashboardCommand}"/>
         </StackPanel>
       </Grid>
@@ -416,14 +416,14 @@
                       <TextBlock Text="{Binding Value, StringFormat={}{0:F1}%}" Classes="metric-value"/>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="{Binding ChangeText}"
-                               Foreground="{Binding ChangeColor}"
+                               Foreground="{Binding ChangeBrush}"
                                FontWeight="SemiBold"
                                Classes="body-text"
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
                     <Path Grid.Column="3"
                           Data="{Binding IsPositive, Converter={StaticResource BoolToArrowConverter}}"
-                          Fill="{Binding ChangeColor}"
+                          Fill="{Binding ChangeBrush}"
                           Width="10" Height="5"
                           VerticalAlignment="Center"/>
                   </Grid>
@@ -449,7 +449,7 @@
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <Border Grid.Column="0"
                                 Classes="alert-icon"
-                                Background="{Binding SeverityColor}"
+                                Background="{Binding SeverityBrush}"
                                 Margin="0,0,12,0">
                           <TextBlock Text="{Binding SeverityIcon}" Classes="alert-icon-glyph"/>
                         </Border>
@@ -545,13 +545,13 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:GradeDistributionViewModel">
                   <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
-                    <Border Grid.Column="0" Background="{Binding Color}" Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Border Grid.Column="0" Background="{Binding ColorBrush}" Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Grade}" FontWeight="SemiBold" Classes="body-text"/>
                       <ProgressBar Classes="responsive-progress"
                                    Value="{Binding Percentage}"
                                    Minimum="0" Maximum="25"
-                                   Foreground="{Binding Color}"/>
+                                   Foreground="{Binding ColorBrush}"/>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="{Binding StudentCount}" FontWeight="Bold" Classes="body-text" VerticalAlignment="Center"/>
                   </Grid>
@@ -613,13 +613,13 @@
                 <DataTemplate DataType="vm:DashboardEventViewModel">
                   <Border Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                      <Border Grid.Column="0" Background="{Binding TypeColor}" Width="4" Height="40" CornerRadius="2" VerticalAlignment="Center"/>
+                      <Border Grid.Column="0" Background="{Binding TypeBrush}" Width="4" Height="40" CornerRadius="2" VerticalAlignment="Center"/>
                       <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Classes="body-text"/>
                         <TextBlock Text="{Binding Time}" Classes="small-text" Foreground="{DynamicResource TextMutedBrush}"/>
                         <TextBlock Text="{Binding Location}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}"/>
                       </StackPanel>
-                      <Border Grid.Column="2" Background="{Binding PriorityColor}" CornerRadius="12" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                      <Border Grid.Column="2" Background="{Binding PriorityBrush}" CornerRadius="12" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Priority}" Classes="tiny-text" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
                       </Border>
                       <TextBlock Grid.Column="3" Text="{Binding Type}" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
@@ -641,7 +641,7 @@
                   <DataTemplate DataType="vm:DashboardActivityViewModel">
                     <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
                       <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GraySoftBrush}" Margin="0,0,12,0">
-                        <TextBlock Text="{Binding Icon}" HorizontalAlignment="Center" VerticalAlignment="Center" Classes="small-text"/>
+                        <TextBlock Text="{Binding Icon}" HorizontalAlignment="Center" VerticalAlignment="Center" Classes="small-text" Foreground="{Binding TypeBrush}"/>
                       </Border>
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock TextWrapping="Wrap" Classes="small-text" Foreground="{DynamicResource TextPrimaryBrush}" Text="{Binding Description}"/>
@@ -660,57 +660,25 @@
       <Border Classes="card">
         <StackPanel Spacing="16">
           <TextBlock Text="Weekly Activity Overview" Classes="section-header"/>
-          <Grid x:Name="WeeklyStatsGrid" ColumnDefinitions="*,*,*,*,*,*,*">
-            <Border Grid.Column="0" x:Name="WeeklyStat1" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="0,0,4,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Mon" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="1,480" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1" x:Name="WeeklyStat2" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Tue" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="1,495" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="2" x:Name="WeeklyStat3" Background="{DynamicResource TealSoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Wed" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="1,502" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="3" x:Name="WeeklyStat4" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Thu" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="1,489" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="4" x:Name="WeeklyStat5" Background="{DynamicResource InfoBrush}" CornerRadius="8" Padding="12" Margin="4,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Fri" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="1,512" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="5" x:Name="WeeklyStat6" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Sat" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="892" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="6" x:Name="WeeklyStat7" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="12" Margin="4,0,0,0">
-              <StackPanel HorizontalAlignment="Center" Spacing="4">
-                <TextBlock Text="Sun" Classes="small-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="654" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
-                <TextBlock Text="students" Classes="tiny-text" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-          </Grid>
+          <!-- Data-driven weekly stats only (removed legacy static borders). -->
+          <ItemsControl ItemsSource="{Binding WeeklyStats}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="7"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:WeeklyStatViewModel">
+                <Border CornerRadius="8" Padding="12" Margin="0,0,4,0" Background="{Binding BackgroundBrush}">
+                  <StackPanel HorizontalAlignment="Center" Spacing="4">
+                    <TextBlock Text="{Binding Day}" Classes="small-text" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding StudentCount}" FontWeight="Bold" Classes="body-text" HorizontalAlignment="Center"/>
+                    <TextBlock Text="students" Classes="tiny-text" Foreground="{Binding StudentsLabelBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </StackPanel>
       </Border>
     </StackPanel>

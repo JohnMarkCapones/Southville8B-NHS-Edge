@@ -14,8 +14,8 @@ namespace Southville8BEdgeUI.Views.Teacher;
 public partial class SchedulePlannerView : UserControl
 {
     // Forward commands for template bindings
-    public ICommand? EditClassCommand => (DataContext as SchedulePlannerViewModel)?.EditClassCommand;
-    public ICommand? AddNotesCommand => (DataContext as SchedulePlannerViewModel)?.AddNotesCommand;
+    public ICommand? EditClassCommand => (DataContext as Southville8BEdgeUI.ViewModels.Teacher.SchedulePlannerViewModel)?.EditClassCommand;
+    public ICommand? AddNotesCommand => (DataContext as Southville8BEdgeUI.ViewModels.Teacher.SchedulePlannerViewModel)?.AddNotesCommand;
 
     #region Constants & Configuration
 
@@ -79,7 +79,11 @@ public partial class SchedulePlannerView : UserControl
     public SchedulePlannerView()
     {
         InitializeComponent();
-        DataContext = new SchedulePlannerViewModel();
+        // Only supply a design-time DataContext so runtime shell can inject its own VM (with NavigateTo set)
+        if (Design.IsDesignMode)
+        {
+            DataContext = new SchedulePlannerViewModel();
+        }
 
         _layoutManager = new ResponsiveLayoutManager();
         _throttledUpdater = new ThrottledUpdater(TimeSpan.FromMilliseconds(100));

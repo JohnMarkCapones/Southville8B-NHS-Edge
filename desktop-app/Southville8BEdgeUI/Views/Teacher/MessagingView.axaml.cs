@@ -66,7 +66,10 @@ public partial class MessagingView : UserControl
     public MessagingView()
     {
         InitializeComponent();
-        DataContext = new MessagingViewModel();
+        if (Design.IsDesignMode)
+        {
+            DataContext = new MessagingViewModel();
+        }
 
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();

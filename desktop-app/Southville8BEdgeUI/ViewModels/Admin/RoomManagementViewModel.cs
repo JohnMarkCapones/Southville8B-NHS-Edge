@@ -3,40 +3,27 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class RoomManagementViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private int _availableRooms = 6;
+    // Navigation callbacks (set by shell)
+    public Action<ViewModelBase>? NavigateTo { get; set; }
+    public Action? NavigateBack { get; set; }
 
-    [ObservableProperty]
-    private int _occupiedRooms = 18;
-
-    [ObservableProperty]
-    private int _maintenanceRooms = 2;
-
-    [ObservableProperty]
-    private double _utilizationPercentage = 75.0;
-
-    [ObservableProperty]
-    private ObservableCollection<RoomViewModel> _rooms;
-
-    [ObservableProperty]
-    private ObservableCollection<RoomViewModel> _filteredRooms;
-
-    [ObservableProperty]
-    private string _searchText = "";
-
-    [ObservableProperty]
-    private string? _selectedFloor;
-
-    [ObservableProperty]
-    private string? _selectedStatus;
-
-    [ObservableProperty]
-    private string? _selectedType;
+    [ObservableProperty] private int _availableRooms = 6;
+    [ObservableProperty] private int _occupiedRooms = 18;
+    [ObservableProperty] private int _maintenanceRooms = 2;
+    [ObservableProperty] private double _utilizationPercentage = 75.0;
+    [ObservableProperty] private ObservableCollection<RoomViewModel> _rooms = new();
+    [ObservableProperty] private ObservableCollection<RoomViewModel> _filteredRooms = new();
+    [ObservableProperty] private string _searchText = "";
+    [ObservableProperty] private string? _selectedFloor;
+    [ObservableProperty] private string? _selectedStatus;
+    [ObservableProperty] private string? _selectedType;
 
     public ObservableCollection<string> FloorOptions { get; } = new() { "All Floors", "Floor 1", "Floor 2", "Floor 3" };
     public ObservableCollection<string> StatusOptions { get; } = new() { "All Status", "Available", "Occupied", "Maintenance" };
@@ -50,19 +37,18 @@ public partial class RoomManagementViewModel : ViewModelBase
 
     public RoomManagementViewModel()
     {
-        // Sample Data for Demonstration
         Rooms = new ObservableCollection<RoomViewModel>
         {
-            new RoomViewModel { Name = "Room 101", Status = "Available", Type = "Classroom", Capacity = 30, Floor = 1, CurrentBooking = "None", RoomId = "R101" },
-            new RoomViewModel { Name = "Science Lab A", Status = "Occupied", Type = "Laboratory", Capacity = 24, Floor = 1, CurrentBooking = "G8-Chemistry", RoomId = "SLA1" },
-            new RoomViewModel { Name = "Room 102", Status = "Available", Type = "Classroom", Capacity = 30, Floor = 1, CurrentBooking = "None", RoomId = "R102" },
-            new RoomViewModel { Name = "Computer Lab 1", Status = "Maintenance", Type = "Computer Lab", Capacity = 25, Floor = 1, CurrentBooking = "PC Upgrades", RoomId = "CL01" },
-            new RoomViewModel { Name = "Room 201", Status = "Occupied", Type = "Classroom", Capacity = 35, Floor = 2, CurrentBooking = "G9-Mathematics", RoomId = "R201" },
-            new RoomViewModel { Name = "Library Hall", Status = "Occupied", Type = "Auditorium", Capacity = 100, Floor = 2, CurrentBooking = "Guest Speaker Event", RoomId = "LH01" },
-            new RoomViewModel { Name = "Room 202", Status = "Available", Type = "Classroom", Capacity = 35, Floor = 2, CurrentBooking = "None", RoomId = "R202" },
-            new RoomViewModel { Name = "Faculty Lounge", Status = "Available", Type = "Lounge", Capacity = 15, Floor = 2, CurrentBooking = "None", RoomId = "FL01" },
-            new RoomViewModel { Name = "Room 301", Status = "Available", Type = "Classroom", Capacity = 32, Floor = 3, CurrentBooking = "None", RoomId = "R301" },
-            new RoomViewModel { Name = "Physics Lab", Status = "Occupied", Type = "Laboratory", Capacity = 20, Floor = 3, CurrentBooking = "G10-Physics", RoomId = "PL01" },
+            new() { Name = "Room 101", Status = "Available", Type = "Classroom", Capacity = 30, Floor = 1, CurrentBooking = "None", RoomId = "R101" },
+            new() { Name = "Science Lab A", Status = "Occupied", Type = "Laboratory", Capacity = 24, Floor = 1, CurrentBooking = "G8-Chemistry", RoomId = "SLA1" },
+            new() { Name = "Room 102", Status = "Available", Type = "Classroom", Capacity = 30, Floor = 1, CurrentBooking = "None", RoomId = "R102" },
+            new() { Name = "Computer Lab 1", Status = "Maintenance", Type = "Computer Lab", Capacity = 25, Floor = 1, CurrentBooking = "PC Upgrades", RoomId = "CL01" },
+            new() { Name = "Room 201", Status = "Occupied", Type = "Classroom", Capacity = 35, Floor = 2, CurrentBooking = "G9-Mathematics", RoomId = "R201" },
+            new() { Name = "Library Hall", Status = "Occupied", Type = "Auditorium", Capacity = 100, Floor = 2, CurrentBooking = "Guest Speaker Event", RoomId = "LH01" },
+            new() { Name = "Room 202", Status = "Available", Type = "Classroom", Capacity = 35, Floor = 2, CurrentBooking = "None", RoomId = "R202" },
+            new() { Name = "Faculty Lounge", Status = "Available", Type = "Lounge", Capacity = 15, Floor = 2, CurrentBooking = "None", RoomId = "FL01" },
+            new() { Name = "Room 301", Status = "Available", Type = "Classroom", Capacity = 32, Floor = 3, CurrentBooking = "None", RoomId = "R301" },
+            new() { Name = "Physics Lab", Status = "Occupied", Type = "Laboratory", Capacity = 20, Floor = 3, CurrentBooking = "G10-Physics", RoomId = "PL01" },
         };
 
         FilteredRooms = new ObservableCollection<RoomViewModel>(Rooms);
@@ -81,8 +67,8 @@ public partial class RoomManagementViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             filtered = filtered.Where(r => r.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         r.Type.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         r.RoomId.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                                           r.Type.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                           r.RoomId.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedFloor) && SelectedFloor != "All Floors")
@@ -92,20 +78,15 @@ public partial class RoomManagementViewModel : ViewModelBase
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedStatus) && SelectedStatus != "All Status")
-        {
             filtered = filtered.Where(r => r.Status == SelectedStatus);
-        }
 
         if (!string.IsNullOrWhiteSpace(SelectedType) && SelectedType != "All Types")
-        {
             filtered = filtered.Where(r => r.Type == SelectedType);
-        }
 
         FilteredRooms.Clear();
         foreach (var room in filtered)
-        {
             FilteredRooms.Add(room);
-        }
+
         OnPropertyChanged(nameof(HasFilteredRooms));
     }
 
@@ -122,40 +103,34 @@ public partial class RoomManagementViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalRooms));
     }
 
-    [RelayCommand]
-    private void ViewCalendar()
+    [RelayCommand] private void ViewCalendar()
     {
-        // TODO: Navigate to calendar view
+        if (NavigateTo is null) return;
+        var vm = new RoomCalendarViewModel { NavigateBack = () => NavigateTo?.Invoke(this) };
+        NavigateTo(vm);
     }
 
-    [RelayCommand]
-    private void BookRoom()
+    [RelayCommand] private void BookRoom()
     {
-        // TODO: Open room booking dialog
+        if (NavigateTo is null) return;
+        var vm = new BookRoomViewModel(Rooms) { NavigateBack = () => NavigateTo?.Invoke(this) };
+        NavigateTo(vm);
     }
 
-    [RelayCommand]
-    private void ViewRoomDetails(RoomViewModel room)
-    {
-        // TODO: Show room details dialog
-    }
+    [RelayCommand] private void ViewRoomDetails(RoomViewModel room) { }
 
-    [RelayCommand]
-    private void RoomAction(RoomViewModel room)
+    [RelayCommand] private void RoomAction(RoomViewModel room)
     {
         if (room.IsAvailable)
         {
-            // Book the room
             room.Status = "Occupied";
             room.CurrentBooking = "New Booking";
         }
         else if (room.IsOccupied)
         {
-            // End booking
             room.Status = "Available";
             room.CurrentBooking = "None";
         }
-
         UpdateStatistics();
         ApplyFilters();
     }
@@ -164,7 +139,7 @@ public partial class RoomManagementViewModel : ViewModelBase
 public partial class RoomViewModel : ViewModelBase
 {
     [ObservableProperty] private string _name = "";
-    [ObservableProperty] private string _status = ""; // "Available", "Occupied", "Maintenance"
+    [ObservableProperty] private string _status = ""; // Available, Occupied, Maintenance
     [ObservableProperty] private string _type = "";
     [ObservableProperty] private int _capacity;
     [ObservableProperty] private int _floor;
@@ -176,15 +151,27 @@ public partial class RoomViewModel : ViewModelBase
     public bool IsInMaintenance => Status == "Maintenance";
     public bool CanPerformAction => !IsInMaintenance;
 
-    public string StatusColor => Status switch
+    private static IBrush Resolve(string key, string fallback)
     {
-        "Available" => "#10B981",
-        "Occupied" => "#EF4444",
-        "Maintenance" => "#F59E0B",
-        _ => "#6B7280"
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush StatusBrush => Status switch
+    {
+        "Available" => Resolve("SuccessBrush", "TextSecondaryBrush"),
+        "Occupied" => Resolve("DangerBrush", "TextSecondaryBrush"),
+        "Maintenance" => Resolve("WarningBrush", "TextSecondaryBrush"),
+        _ => Resolve("TextSecondaryBrush", "TextMutedBrush")
     };
 
-    public string CurrentBookingColor => IsAvailable ? "#6B7280" : "#111827";
+    public IBrush CurrentBookingBrush => IsAvailable
+        ? Resolve("TextMutedBrush", "TextSecondaryBrush")
+        : Resolve("TextPrimaryBrush", "TextPrimaryBrush");
 
     public string ActionButtonText => Status switch
     {
@@ -199,13 +186,11 @@ public partial class RoomViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsAvailable));
         OnPropertyChanged(nameof(IsOccupied));
         OnPropertyChanged(nameof(IsInMaintenance));
-        OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(StatusBrush));
         OnPropertyChanged(nameof(ActionButtonText));
         OnPropertyChanged(nameof(CanPerformAction));
+        OnPropertyChanged(nameof(CurrentBookingBrush));
     }
 
-    partial void OnCurrentBookingChanged(string value)
-    {
-        OnPropertyChanged(nameof(CurrentBookingColor));
-    }
+    partial void OnCurrentBookingChanged(string value) => OnPropertyChanged(nameof(CurrentBookingBrush));
 }

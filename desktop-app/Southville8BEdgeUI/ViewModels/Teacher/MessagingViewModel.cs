@@ -3,32 +3,29 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Collections.Generic;
+using Avalonia; // resource lookup
+using Avalonia.Media; // IBrush
+using Avalonia.Styling; // theme variant
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
 public partial class MessagingViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private string _title = "Messaging";
-
-    [ObservableProperty]
-    private ObservableCollection<ConversationViewModel> _conversations;
-
-    [ObservableProperty]
-    private ConversationViewModel? _selectedConversation;
-
-    [ObservableProperty]
-    private string _searchText = "";
-
-    [ObservableProperty]
-    private string _newMessageText = "";
+    [ObservableProperty] private string _title = "Messaging";
+    [ObservableProperty] private ObservableCollection<ConversationViewModel> _conversations;
+    [ObservableProperty] private ConversationViewModel? _selectedConversation;
+    [ObservableProperty] private string _searchText = "";
+    [ObservableProperty] private string _newMessageText = "";
 
     public bool HasConversations => Conversations?.Any() == true;
     public bool HasSelectedConversation => SelectedConversation != null;
 
+    // Navigation callback supplied by shell
+    public Action<ViewModelBase>? NavigateTo { get; set; }
+
     public MessagingViewModel()
     {
-        // Sample conversation data for teachers
         Conversations = new ObservableCollection<ConversationViewModel>
         {
             new ConversationViewModel
@@ -57,18 +54,14 @@ public partial class MessagingViewModel : ViewModelBase
                         SenderName = "You",
                         Content = "Hello Maria! John is doing well in math. He's improved significantly in problem-solving.",
                         Timestamp = "2:35 PM",
-                        IsSent = true,
-                        DateSeparator = "",
-                        ShowDateSeparator = false
+                        IsSent = true
                     },
                     new MessageViewModel
                     {
                         SenderName = "Maria Santos",
                         Content = "Thank you for the update on John's progress.",
                         Timestamp = "2:45 PM",
-                        IsSent = false,
-                        DateSeparator = "",
-                        ShowDateSeparator = false
+                        IsSent = false
                     }
                 }
             },
@@ -98,9 +91,7 @@ public partial class MessagingViewModel : ViewModelBase
                         SenderName = "Principal Rodriguez",
                         Content = "Please submit the quarterly report by Friday.",
                         Timestamp = "1:30 PM",
-                        IsSent = false,
-                        DateSeparator = "",
-                        ShowDateSeparator = false
+                        IsSent = false
                     }
                 }
             },
@@ -130,18 +121,14 @@ public partial class MessagingViewModel : ViewModelBase
                         SenderName = "You",
                         Content = "Hello Mr. Johnson! I'm available next week on Tuesday or Thursday after 3 PM.",
                         Timestamp = "3:45 PM",
-                        IsSent = true,
-                        DateSeparator = "",
-                        ShowDateSeparator = false
+                        IsSent = true
                     },
                     new MessageViewModel
                     {
                         SenderName = "Robert Johnson",
                         Content = "Can we schedule a parent-teacher conference?",
                         Timestamp = "4:00 PM",
-                        IsSent = false,
-                        DateSeparator = "",
-                        ShowDateSeparator = false
+                        IsSent = false
                     }
                 }
             },
@@ -171,13 +158,19 @@ public partial class MessagingViewModel : ViewModelBase
                         SenderName = "Dr. Emily Chen",
                         Content = "The science fair committee meeting is tomorrow.",
                         Timestamp = "11:00 AM",
-                        IsSent = false,
-                        DateSeparator = "",
-                        ShowDateSeparator = false
+                        IsSent = false
                     }
                 }
             }
         };
+
+        // Initialize themed brushes for conversations/messages
+        foreach (var conv in Conversations)
+        {
+            conv.UpdateRoleBrushes();
+            foreach (var msg in conv.Messages)
+                msg.UpdateMessageTextBrush();
+        }
 
         SelectedConversation = Conversations.FirstOrDefault();
         if (SelectedConversation != null)
@@ -190,14 +183,12 @@ public partial class MessagingViewModel : ViewModelBase
 
     private void ApplyFilters()
     {
-        // Simple filter implementation - in a real app, you'd filter the conversations
         OnPropertyChanged(nameof(HasConversations));
     }
 
     [RelayCommand]
     private void SelectConversation(ConversationViewModel conversation)
     {
-        // Deselect previous conversation
         if (SelectedConversation != null)
         {
             SelectedConversation.IsSelected = false;
@@ -220,77 +211,46 @@ public partial class MessagingViewModel : ViewModelBase
             SenderName = "You",
             Content = NewMessageText.Trim(),
             Timestamp = DateTime.Now.ToString("h:mm tt"),
-            IsSent = true,
-            DateSeparator = "",
-            ShowDateSeparator = false
+            IsSent = true
         };
-
+        message.UpdateMessageTextBrush();
         SelectedConversation.Messages.Add(message);
         SelectedConversation.LastMessage = NewMessageText.Trim();
         SelectedConversation.LastMessageTime = "Now";
-
         NewMessageText = "";
     }
 
     [RelayCommand]
     private void NewMessage()
     {
-        // TODO: Open new message dialog
+        if (NavigateTo == null) return;
+        var newChatVm = new NewChatViewModel
+        {
+            NavigateBack = () => NavigateTo?.Invoke(this),
+            OnConversationCreated = conv =>
+            {
+                conv.UpdateRoleBrushes();
+                foreach (var m in conv.Messages) m.UpdateMessageTextBrush();
+                Conversations.Insert(0, conv);
+                if (SelectedConversation != null)
+                    SelectedConversation.IsSelected = false;
+                SelectedConversation = conv;
+                conv.IsSelected = true;
+                NavigateTo?.Invoke(this);
+            }
+        };
+        NavigateTo(newChatVm);
     }
 
-    [RelayCommand]
-    private void StartCall()
-    {
-        // TODO: Start voice call
-    }
-
-    [RelayCommand]
-    private void StartVideoCall()
-    {
-        // TODO: Start video call
-    }
-
-    [RelayCommand]
-    private void ShowContactInfo()
-    {
-        // TODO: Show contact information
-    }
-
-    [RelayCommand]
-    private void AttachFile()
-    {
-        // TODO: Open file picker
-    }
-
-    [RelayCommand]
-    private void SendAttendanceReminder()
-    {
-        // TODO: Send attendance reminder
-    }
-
-    [RelayCommand]
-    private void SendAssignmentReminder()
-    {
-        // TODO: Send assignment reminder
-    }
-
-    [RelayCommand]
-    private void SendPraiseMessage()
-    {
-        // TODO: Send praise message
-    }
-
-    [RelayCommand]
-    private void ContactParent()
-    {
-        // TODO: Contact parent
-    }
-
-    [RelayCommand]
-    private void StartConversation(ContactViewModel contact)
-    {
-        // TODO: Start new conversation with contact
-    }
+    [RelayCommand] private void StartCall() { }
+    [RelayCommand] private void StartVideoCall() { }
+    [RelayCommand] private void ShowContactInfo() { }
+    [RelayCommand] private void AttachFile() { }
+    [RelayCommand] private void SendAttendanceReminder() { }
+    [RelayCommand] private void SendAssignmentReminder() { }
+    [RelayCommand] private void SendPraiseMessage() { }
+    [RelayCommand] private void ContactParent() { }
+    [RelayCommand] private void StartConversation(ContactViewModel contact) { }
 
     partial void OnSelectedConversationChanged(ConversationViewModel? value)
     {
@@ -310,19 +270,51 @@ public partial class ConversationViewModel : ViewModelBase
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private ObservableCollection<MessageViewModel> _messages = new();
 
+    [ObservableProperty] private IBrush _avatarBackgroundBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _avatarTextBrush = Brushes.Transparent;
+
     public bool HasUnreadMessages => UnreadCount > 0;
 
-    public string RoleColor => ContactRole switch
-    {
-        "Admin" => "#EF4444",
-        "Teacher" => "#10B981",
-        "Parent" => "#3B82F6",
-        _ => "#6B7280"
-    };
+    partial void OnUnreadCountChanged(int value) => OnPropertyChanged(nameof(HasUnreadMessages));
+    partial void OnContactRoleChanged(string value) => UpdateRoleBrushes();
 
-    partial void OnUnreadCountChanged(int value)
+    private static IBrush Resolve(string key)
     {
-        OnPropertyChanged(nameof(HasUnreadMessages));
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    public void UpdateRoleBrushes()
+    {
+        var success = Resolve("SuccessBrush");
+        var info = Resolve("InfoBrush");
+        var danger = Resolve("DangerBrush");
+        var successSoft = Resolve("SuccessSoftBrush");
+        var infoSoft = Resolve("InfoSoftBrush");
+        var dangerSoft = Resolve("DangerSoftBrush");
+        var graySoft = Resolve("GraySoftBrush");
+        var textPrimary = Resolve("TextPrimaryBrush");
+
+        switch (ContactRole)
+        {
+            case "Admin":
+                AvatarBackgroundBrush = dangerSoft;
+                AvatarTextBrush = danger;
+                break;
+            case "Teacher":
+                AvatarBackgroundBrush = successSoft;
+                AvatarTextBrush = success;
+                break;
+            case "Parent":
+                AvatarBackgroundBrush = infoSoft;
+                AvatarTextBrush = info;
+                break;
+            default:
+                AvatarBackgroundBrush = graySoft;
+                AvatarTextBrush = textPrimary;
+                break;
+        }
     }
 }
 
@@ -334,10 +326,25 @@ public partial class MessageViewModel : ViewModelBase
     [ObservableProperty] private bool _isSent;
     [ObservableProperty] private string _dateSeparator = "";
     [ObservableProperty] private bool _showDateSeparator;
+    [ObservableProperty] private IBrush _messageTextBrush = Brushes.Transparent;
 
     public string MessageAlignment => IsSent ? "Right" : "Left";
-    public string MessageBackground => IsSent ? "#10B981" : "#F3F4F6";
-    public string MessageTextColor => IsSent ? "White" : "#111827";
+
+    partial void OnIsSentChanged(bool value) => UpdateMessageTextBrush();
+
+    private static IBrush Resolve(string key)
+    {
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    public void UpdateMessageTextBrush()
+    {
+        var onAccent = Resolve("AccentTextOnAccentBrush");
+        var textPrimary = Resolve("TextPrimaryBrush");
+        MessageTextBrush = IsSent ? onAccent : textPrimary;
+    }
 }
 
 public partial class ContactViewModel : ViewModelBase

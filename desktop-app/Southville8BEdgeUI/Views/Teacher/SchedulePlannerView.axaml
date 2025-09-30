@@ -118,14 +118,13 @@
         </Style>
 
         <Style Selector="Border.schedule-slot.occupied">
-            <!-- No Opacity: emphasize with colored border strip -->
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InfoSoftBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource InfoBrush}"/>
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
 
         <Style Selector="Border.schedule-slot.occupied:pointerover">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
         </Style>
 
         <Style Selector="Border.schedule-slot.mobile">
@@ -218,7 +217,7 @@
 
         <!-- Upcoming Class Card Styles -->
         <Style Selector="Border.upcoming-class-card">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
@@ -240,7 +239,7 @@
 
         <!-- Conflict Card Styles -->
         <Style Selector="Border.conflict-card">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
@@ -307,8 +306,6 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <ComboBox SelectedItem="{Binding SelectedWeek}" ItemsSource="{Binding AvailableWeeks}" MinWidth="150" PlaceholderText="Select Week"/>
-                    <Button x:Name="AddClassButton" Content="📅 Add Class" Classes="action-btn" Command="{Binding AddClassCommand}"/>
-                    <Button x:Name="ExportButton" Content="📊 Export Schedule" Classes="secondary-btn" Command="{Binding ExportScheduleCommand}"/>
                 </StackPanel>
             </Grid>
 
@@ -455,40 +452,6 @@
                     <StackPanel Spacing="16">
                         <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         
-                        <!-- Quick Add Form -->
-                        <StackPanel x:Name="QuickAddPanel" Spacing="16">
-                            <TextBlock Text="Quick Add Class" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            
-
-                            <StackPanel x:Name="QuickAddForm" Spacing="12">
-                                <ComboBox SelectedItem="{Binding NewClassSubject}" 
-                                         ItemsSource="{Binding AvailableSubjects}" 
-                                         PlaceholderText="Select Subject" 
-                                         HorizontalAlignment="Stretch"/>
-                                <ComboBox SelectedItem="{Binding NewClassGrade}" 
-                                         ItemsSource="{Binding AvailableGrades}" 
-                                         PlaceholderText="Select Grade" 
-                                         HorizontalAlignment="Stretch"/>
-                                <ComboBox SelectedItem="{Binding NewClassDay}" 
-                                         ItemsSource="{Binding AvailableDays}" 
-                                         PlaceholderText="Select Day" 
-                                         HorizontalAlignment="Stretch"/>
-                                <TimePicker SelectedTime="{Binding NewClassStartTime}" 
-                                           HorizontalAlignment="Stretch"/>
-                                <ComboBox SelectedItem="{Binding NewClassDuration}" 
-                                         ItemsSource="{Binding AvailableDurations}" 
-                                         PlaceholderText="Duration" 
-                                         HorizontalAlignment="Stretch"/>
-                                <TextBox Text="{Binding NewClassRoom}" 
-                                        Watermark="Room Number" 
-                                        HorizontalAlignment="Stretch"/>
-                                <Button Content="➕ Add Class" 
-                                       Classes="action-btn" 
-                                       HorizontalAlignment="Stretch" 
-                                       Command="{Binding QuickAddClassCommand}"/>
-                            </StackPanel>
-                        </StackPanel>
-        
                         <!-- Schedule Templates -->
                         <StackPanel Spacing="8">
                             <TextBlock Text="Schedule Templates" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>

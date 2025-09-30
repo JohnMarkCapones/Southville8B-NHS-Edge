@@ -4,73 +4,78 @@
     <!-- Light -->
     <ResourceDictionary x:Key="Light">
       <!-- surfaces -->
-      <SolidColorBrush x:Key="PageBackgroundBrush">#F9FAFB</SolidColorBrush>
-      <SolidColorBrush x:Key="CardBackgroundBrush">#FFFFFFFF</SolidColorBrush>
-      <SolidColorBrush x:Key="SidebarBackgroundBrush">#FFFFFFFF</SolidColorBrush>
-      <SolidColorBrush x:Key="BorderBrush">#E5E7EB</SolidColorBrush>
+      <SolidColorBrush x:Key="PageBackgroundBrush">#FAFAFB</SolidColorBrush>
+      <SolidColorBrush x:Key="CardBackgroundBrush">#FFFFFF</SolidColorBrush>
+      <SolidColorBrush x:Key="SidebarBackgroundBrush">#FDFDFE</SolidColorBrush>
+      <SolidColorBrush x:Key="BorderBrush">#E4E6EB</SolidColorBrush>
 
       <!-- text -->
-      <SolidColorBrush x:Key="TextPrimaryBrush">#111827</SolidColorBrush>
-      <SolidColorBrush x:Key="TextSecondaryBrush">#374151</SolidColorBrush>
-      <SolidColorBrush x:Key="TextMutedBrush">#6B7280</SolidColorBrush>
+      <SolidColorBrush x:Key="TextPrimaryBrush">#1C1E21</SolidColorBrush>
+      <SolidColorBrush x:Key="TextSecondaryBrush">#5F6C80</SolidColorBrush>
+      <SolidColorBrush x:Key="TextMutedBrush">#9AA1AD</SolidColorBrush>
 
       <!-- brand/accent (teacher shell) -->
-      <SolidColorBrush x:Key="AccentBrush">#4F6D8C</SolidColorBrush>
-      <SolidColorBrush x:Key="AccentHoverBrush">#3C5C7A</SolidColorBrush>
-      <SolidColorBrush x:Key="AccentTextOnAccentBrush">#FFFFFFFF</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentBrush">#5C7AEA</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentHoverBrush">#4B63C9</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentTextOnAccentBrush">#FFFFFF</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentSoftBrush">#EEF2FB</SolidColorBrush>
 
       <!-- status -->
-      <SolidColorBrush x:Key="SuccessBrush">#10B981</SolidColorBrush>
-      <SolidColorBrush x:Key="InfoBrush">#3B82F6</SolidColorBrush>
-      <SolidColorBrush x:Key="WarningBrush">#F59E0B</SolidColorBrush>
-      <SolidColorBrush x:Key="DangerBrush">#EF4444</SolidColorBrush>
+      <SolidColorBrush x:Key="SuccessBrush">#2ECC71</SolidColorBrush>
+      <SolidColorBrush x:Key="InfoBrush">#4CB9E7</SolidColorBrush>
+      <SolidColorBrush x:Key="WarningBrush">#F7B731</SolidColorBrush>
+      <SolidColorBrush x:Key="DangerBrush">#E74C3C</SolidColorBrush>
       <SolidColorBrush x:Key="DangerHoverBrush">#DC2626</SolidColorBrush>
 
-      <!-- additional vibrant palettes -->
+      <!-- additional vibrant palettes (unchanged) -->
       <SolidColorBrush x:Key="IndigoBrush">#4F46E5</SolidColorBrush>
       <SolidColorBrush x:Key="PurpleBrush">#8B5CF6</SolidColorBrush>
       <SolidColorBrush x:Key="PinkBrush">#EC4899</SolidColorBrush>
       <SolidColorBrush x:Key="TealBrush">#0D9488</SolidColorBrush>
       <SolidColorBrush x:Key="GrayButtonBrush">#6B7280</SolidColorBrush>
 
-      <!-- soft / subtle background tints (used for icon backgrounds, kpi backgrounds, chips) -->
-      <SolidColorBrush x:Key="SuccessSoftBrush">#D1FAE5</SolidColorBrush>
-      <SolidColorBrush x:Key="InfoSoftBrush">#DBEAFE</SolidColorBrush>
-      <SolidColorBrush x:Key="WarningSoftBrush">#FEF3C7</SolidColorBrush>
-      <SolidColorBrush x:Key="DangerSoftBrush">#FEE2E2</SolidColorBrush>
+      <!-- soft / subtle background tints -->
+      <SolidColorBrush x:Key="SuccessSoftBrush">#E6F7EE</SolidColorBrush>
+      <SolidColorBrush x:Key="InfoSoftBrush">#E6F5FB</SolidColorBrush>
+      <SolidColorBrush x:Key="WarningSoftBrush">#FFF8E6</SolidColorBrush>
+      <SolidColorBrush x:Key="DangerSoftBrush">#FDEDEC</SolidColorBrush>
       <SolidColorBrush x:Key="IndigoSoftBrush">#E0E7FF</SolidColorBrush>
       <SolidColorBrush x:Key="PurpleSoftBrush">#EDE9FE</SolidColorBrush>
       <SolidColorBrush x:Key="PinkSoftBrush">#FCE7F3</SolidColorBrush>
       <SolidColorBrush x:Key="TealSoftBrush">#E0F2F1</SolidColorBrush>
       <SolidColorBrush x:Key="GraySoftBrush">#F3F4F6</SolidColorBrush>
+
+      <!-- shadow colors -->
+      <Color x:Key="ShadowLowColor">#10000000</Color>
+      <Color x:Key="ShadowHighColor">#20000000</Color>
     </ResourceDictionary>
 
     <!-- Dark -->
     <ResourceDictionary x:Key="Dark">
       <!-- surfaces -->
-      <SolidColorBrush x:Key="PageBackgroundBrush">#121417</SolidColorBrush>
-      <SolidColorBrush x:Key="CardBackgroundBrush">#1B1F24</SolidColorBrush>
-      <SolidColorBrush x:Key="SidebarBackgroundBrush">#1B1F24</SolidColorBrush>
-      <SolidColorBrush x:Key="BorderBrush">#29313A</SolidColorBrush>
+      <SolidColorBrush x:Key="PageBackgroundBrush">#16181D</SolidColorBrush>
+      <SolidColorBrush x:Key="CardBackgroundBrush">#1F2228</SolidColorBrush>
+      <SolidColorBrush x:Key="SidebarBackgroundBrush">#1C1F25</SolidColorBrush>
+      <SolidColorBrush x:Key="BorderBrush">#2C3138</SolidColorBrush>
 
       <!-- text -->
-      <SolidColorBrush x:Key="TextPrimaryBrush">#F3F4F6</SolidColorBrush>
-      <SolidColorBrush x:Key="TextSecondaryBrush">#E5E7EB</SolidColorBrush>
+      <SolidColorBrush x:Key="TextPrimaryBrush">#F5F6FA</SolidColorBrush>
+      <SolidColorBrush x:Key="TextSecondaryBrush">#9AA1B2</SolidColorBrush>
       <SolidColorBrush x:Key="TextMutedBrush">#9CA3AF</SolidColorBrush>
 
       <!-- brand/accent -->
-      <SolidColorBrush x:Key="AccentBrush">#4F6D8C</SolidColorBrush>
-      <SolidColorBrush x:Key="AccentHoverBrush">#3C5C7A</SolidColorBrush>
-      <SolidColorBrush x:Key="AccentTextOnAccentBrush">#FFFFFFFF</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentBrush">#5C7AEA</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentHoverBrush">#4B63C9</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentTextOnAccentBrush">#FFFFFF</SolidColorBrush>
 
       <!-- status -->
-      <SolidColorBrush x:Key="SuccessBrush">#10B981</SolidColorBrush>
-      <SolidColorBrush x:Key="InfoBrush">#60A5FA</SolidColorBrush>
-      <SolidColorBrush x:Key="WarningBrush">#FBBF24</SolidColorBrush>
-      <SolidColorBrush x:Key="DangerBrush">#F87171</SolidColorBrush>
+      <SolidColorBrush x:Key="SuccessBrush">#2ECC71</SolidColorBrush>
+      <SolidColorBrush x:Key="InfoBrush">#4CB9E7</SolidColorBrush>
+      <SolidColorBrush x:Key="WarningBrush">#F7B731</SolidColorBrush>
+      <SolidColorBrush x:Key="DangerBrush">#E74C3C</SolidColorBrush>
       <SolidColorBrush x:Key="DangerHoverBrush">#DC2626</SolidColorBrush>
 
-      <!-- additional vibrant palettes (dark variants) -->
+      <!-- additional vibrant palettes (dark variants unchanged) -->
       <SolidColorBrush x:Key="IndigoBrush">#4338CA</SolidColorBrush>
       <SolidColorBrush x:Key="PurpleBrush">#7E22CE</SolidColorBrush>
       <SolidColorBrush x:Key="PinkBrush">#DB2777</SolidColorBrush>
@@ -78,15 +83,19 @@
       <SolidColorBrush x:Key="GrayButtonBrush">#4B5563</SolidColorBrush>
 
       <!-- soft / subtle background tints (dark friendly) -->
-      <SolidColorBrush x:Key="SuccessSoftBrush">#064E3B</SolidColorBrush>
-      <SolidColorBrush x:Key="InfoSoftBrush">#1E3A8A</SolidColorBrush>
-      <SolidColorBrush x:Key="WarningSoftBrush">#78350F</SolidColorBrush>
-      <SolidColorBrush x:Key="DangerSoftBrush">#7F1D1D</SolidColorBrush>
+      <SolidColorBrush x:Key="SuccessSoftBrush">#123824</SolidColorBrush>
+      <SolidColorBrush x:Key="InfoSoftBrush">#113344</SolidColorBrush>
+      <SolidColorBrush x:Key="WarningSoftBrush">#5C4420</SolidColorBrush>
+      <SolidColorBrush x:Key="DangerSoftBrush">#4A1D1C</SolidColorBrush>
       <SolidColorBrush x:Key="IndigoSoftBrush">#312E81</SolidColorBrush>
       <SolidColorBrush x:Key="PurpleSoftBrush">#3B0764</SolidColorBrush>
       <SolidColorBrush x:Key="PinkSoftBrush">#831843</SolidColorBrush>
       <SolidColorBrush x:Key="TealSoftBrush">#134E4A</SolidColorBrush>
       <SolidColorBrush x:Key="GraySoftBrush">#374151</SolidColorBrush>
+
+      <!-- shadow colors (dark theme tuned) -->
+      <Color x:Key="ShadowLowColor">#40000000</Color>
+      <Color x:Key="ShadowHighColor">#66000000</Color>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

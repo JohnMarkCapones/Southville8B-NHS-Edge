@@ -422,7 +422,7 @@
                                     <Border Grid.Column="1" 
                                             x:Name="StatusIndicator"
                                             Classes="status-indicator"
-                                            Background="{Binding StatusColor}"/>
+                                            Background="{Binding StatusBrush}"/>
                                 </Grid>
 
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
@@ -450,7 +450,7 @@
                                                Text="{Binding CurrentBooking}" 
                                                Classes="room-detail"
                                                TextWrapping="Wrap"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                               Foreground="{Binding CurrentBookingBrush}"/>
                                 </StackPanel>
 
                                 <Grid ColumnDefinitions="*,Auto">
