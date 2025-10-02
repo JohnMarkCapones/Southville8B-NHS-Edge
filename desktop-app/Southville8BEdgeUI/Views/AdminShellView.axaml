@@ -198,6 +198,10 @@
         <Style Selector="Button.dropdown-item.logout ic|FluentIcon">
             <Setter Property="Foreground" Value="#DC2626"/>
         </Style>
+        <!-- Keep logout icon red on hover -->
+        <Style Selector="Button.dropdown-item.logout:pointerover ic|FluentIcon">
+            <Setter Property="Foreground" Value="#DC2626"/>
+        </Style>
 
         <!-- Sidebar Transition Styles -->
         <Style Selector="Border.sidebar">
