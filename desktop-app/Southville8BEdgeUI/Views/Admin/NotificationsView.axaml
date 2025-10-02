@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="Southville8BEdgeUI.Views.Admin.NotificationsView"
              x:Name="NotificationsRoot"
@@ -81,6 +82,16 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
         </Style>
+        <!-- Icon foreground inheritance -->
+        <Style Selector="Button.action-secondary ic|FluentIcon, Button.action-danger ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+        </Style>
+        <Style Selector="Button.icon-success ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+        </Style>
+        <Style Selector="Button.icon-danger ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+        </Style>
 
         <!-- Cards / Containers -->
         <Style Selector="Border.root-card">
@@ -120,7 +131,10 @@
             <!-- Header -->
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="8">
-                    <TextBlock Text="Notifications" Classes="page-title"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <ic:FluentIcon Icon="Alert" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Notifications" Classes="page-title"/>
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock Text="You have" Classes="inline"/>
                         <TextBlock Text="{Binding UnreadCount}" Classes="inline-accent"/>
@@ -129,8 +143,18 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Mark All Read" Classes="action-secondary" Command="{Binding #NotificationsRoot.MarkAllAsReadCommand}"/>
-                    <Button Content="Clear All" Classes="action-danger" Command="{Binding #NotificationsRoot.ClearAllCommand}"/>
+                    <Button Classes="action-secondary" Command="{Binding #NotificationsRoot.MarkAllAsReadCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Checkmark" IconSize="Size16"/>
+                            <TextBlock Text="Mark All Read"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="action-danger" Command="{Binding #NotificationsRoot.ClearAllCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Delete" IconSize="Size16"/>
+                            <TextBlock Text="Clear All"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -141,7 +165,7 @@
                         <DataTemplate>
                             <Border Classes="notification-item">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                    <!-- Notification Type Icon -->
+                                    <!-- Notification Type Indicator -->
                                     <Border Grid.Column="0" Classes="type-indicator"/>
 
                                     <!-- Content -->
@@ -153,18 +177,20 @@
 
                                     <!-- Mark as Read Button -->
                                     <Button Grid.Column="2"
-                                            Content="✓"
                                             Classes="icon-success"
                                             IsVisible="{Binding !IsRead}"
                                             Command="{Binding #NotificationsRoot.MarkAsReadCommand}"
-                                            CommandParameter="{Binding}"/>
+                                            CommandParameter="{Binding}">
+                                        <ic:FluentIcon Icon="Checkmark" IconSize="Size16"/>
+                                    </Button>
 
                                     <!-- Delete Button -->
                                     <Button Grid.Column="3"
-                                            Content="✕"
                                             Classes="icon-danger"
                                             Command="{Binding #NotificationsRoot.DeleteNotificationCommand}"
-                                            CommandParameter="{Binding}"/>
+                                            CommandParameter="{Binding}">
+                                        <ic:FluentIcon Icon="Delete" IconSize="Size16"/>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -177,7 +203,7 @@
                        HorizontalAlignment="Center"
                        Spacing="16"
                        IsVisible="{Binding Notifications.Count, Converter={x:Static converters:CollectionIsEmptyConverter.Instance}}">
-                <TextBlock Text="🔔" FontSize="48" HorizontalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
+                <ic:FluentIcon Icon="Alert" IconSize="Size48" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                 <TextBlock Text="No notifications" Classes="empty-text"/>
             </StackPanel>
         </StackPanel>

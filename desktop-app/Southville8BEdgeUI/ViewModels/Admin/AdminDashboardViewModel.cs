@@ -142,13 +142,13 @@ public partial class AdminDashboardViewModel : ViewModelBase
     {
         RecentActivities = new ObservableCollection<DashboardActivityViewModel>
         {
-            new() { User = "System", Action = "automated backup completed successfully", Timestamp = "2m ago", Icon = "💾", Type = "System" },
-            new() { User = "Robert Wilson", Action = "approved room booking for 'Room 201'", Timestamp = "5m ago", Icon = "🚪", Type = "Approval" },
-            new() { User = "Maria Rodriguez", Action = "created new event 'Science Fair'", Timestamp = "12m ago", Icon = "📅", Type = "Event" },
-            new() { User = "System", Action = "registered new student 'Kevin Anderson'", Timestamp = "25m ago", Icon = "👥", Type = "Registration" },
-            new() { User = "Jennifer Taylor", Action = "submitted grade reports for Grade 10", Timestamp = "35m ago", Icon = "📊", Type = "Academic" },
-            new() { User = "Dr. Michael Brown", Action = "sent message to admin group", Timestamp = "1h ago", Icon = "💬", Type = "Communication" },
-            new() { User = "System", Action = "performed scheduled maintenance", Timestamp = "2h ago", Icon = "🔧", Type = "Maintenance" }
+            new() { User = "System", Action = "automated backup completed successfully", Timestamp = "2m ago", Icon = "Save", Type = "System" },
+            new() { User = "Robert Wilson", Action = "approved room booking for 'Room 201'", Timestamp = "5m ago", Icon = "CheckmarkCircle", Type = "Approval" },
+            new() { User = "Maria Rodriguez", Action = "created new event 'Science Fair'", Timestamp = "12m ago", Icon = "Calendar", Type = "Event" },
+            new() { User = "System", Action = "registered new student 'Kevin Anderson'", Timestamp = "25m ago", Icon = "PersonAdd", Type = "Registration" },
+            new() { User = "Jennifer Taylor", Action = "submitted grade reports for Grade 10", Timestamp = "35m ago", Icon = "ChartMultiple", Type = "Academic" },
+            new() { User = "Dr. Michael Brown", Action = "sent message to admin group", Timestamp = "1h ago", Icon = "Chat", Type = "Communication" },
+            new() { User = "System", Action = "performed scheduled maintenance", Timestamp = "2h ago", Icon = "Wrench", Type = "Maintenance" }
         };
     }
 
@@ -167,10 +167,10 @@ public partial class AdminDashboardViewModel : ViewModelBase
     {
         PerformanceMetrics = new ObservableCollection<PerformanceMetricViewModel>
         {
-            new() { Title = "Student Engagement", Value = 92.3, Change = 2.1, IsPositive = true, Icon = "📈" },
-            new() { Title = "Class Completion Rate", Value = 96.8, Change = 1.5, IsPositive = true, Icon = "✅" },
-            new() { Title = "Resource Utilization", Value = 84.2, Change = -1.2, IsPositive = false, Icon = "📊" },
-            new() { Title = "Digital Adoption", Value = 89.7, Change = 4.3, IsPositive = true, Icon = "💻" }
+            new() { Title = "Student Engagement", Value = 92.3, Change = 2.1, IsPositive = true, Icon = "ArrowTrendingLines" },
+            new() { Title = "Class Completion Rate", Value = 96.8, Change = 1.5, IsPositive = true, Icon = "CheckboxChecked" },
+            new() { Title = "Resource Utilization", Value = 84.2, Change = -1.2, IsPositive = false, Icon = "ChartMultiple" },
+            new() { Title = "Digital Adoption", Value = 89.7, Change = 4.3, IsPositive = true, Icon = "Desktop" }
         };
     }
 
@@ -275,7 +275,7 @@ public partial class DashboardActivityViewModel : ViewModelBase
     [ObservableProperty] private string _user = "";
     [ObservableProperty] private string _action = "";
     [ObservableProperty] private string _timestamp = "";
-    [ObservableProperty] private string _icon = "";
+    [ObservableProperty] private string _icon = ""; // Fluent icon name
     [ObservableProperty] private string _type = "";
 
     private static IBrush RB(string key) => AdminDashboardViewModel.ResolveBrushStatic(key, "TextMutedBrush");
@@ -319,12 +319,13 @@ public partial class SystemAlertViewModel : ViewModelBase
         _ => RB("GrayButtonBrush")
     };
 
+    // Fluent icon name instead of emoji
     public string SeverityIcon => Severity switch
     {
-        "Critical" => "🚨",
-        "Warning" => "⚠️",
-        "Info" => "ℹ️",
-        _ => "📋"
+        "Critical" => "ErrorCircle",
+        "Warning" => "Warning",
+        "Info" => "Info",
+        _ => "Info"
     };
 }
 
@@ -334,7 +335,7 @@ public partial class PerformanceMetricViewModel : ViewModelBase
     [ObservableProperty] private double _value;
     [ObservableProperty] private double _change;
     [ObservableProperty] private bool _isPositive;
-    [ObservableProperty] private string _icon = "";
+    [ObservableProperty] private string _icon = ""; // Fluent icon name
 
     public string ChangeText => $"{(IsPositive ? "+" : "")}{Change:F1}%";
     public IBrush ChangeBrush => AdminDashboardViewModel.ResolveBrushStatic(IsPositive ? "SuccessBrush" : "DangerBrush", "TextPrimaryBrush");

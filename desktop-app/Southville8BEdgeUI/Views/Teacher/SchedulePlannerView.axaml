@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.SchedulePlannerView"
              x:Name="SchedulePlannerRoot"
@@ -277,8 +278,12 @@
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                        <Button Content="✏️" Classes="tertiary-btn" Padding="6" ToolTip.Tip="Edit Class" Command="{Binding #SchedulePlannerRoot.EditClassCommand}" CommandParameter="{Binding}"/>
-                        <Button Content="📝" Classes="action-btn" Padding="6" ToolTip.Tip="Add Notes" Command="{Binding #SchedulePlannerRoot.AddNotesCommand}" CommandParameter="{Binding}"/>
+                        <Button Classes="tertiary-btn" Padding="6" ToolTip.Tip="Edit Class" Command="{Binding #SchedulePlannerRoot.EditClassCommand}" CommandParameter="{Binding}">
+                            <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
+                        </Button>
+                        <Button Classes="action-btn" Padding="6" ToolTip.Tip="Add Notes" Command="{Binding #SchedulePlannerRoot.AddNotesCommand}" CommandParameter="{Binding}">
+                            <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -290,7 +295,12 @@
                 <StackPanel Spacing="2">
                     <TextBlock Text="{Binding ConflictDescription}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource DangerBrush}"/>
-                    <Button Content="Resolve" Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="4" Padding="6,2" FontSize="10" HorizontalAlignment="Left" Command="{Binding ResolveCommand}"/>
+                    <Button Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="4" Padding="6,2" FontSize="10" HorizontalAlignment="Left" Command="{Binding ResolveCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <ic:FluentIcon Icon="CheckmarkCircle" IconSize="Size12"/>
+                            <TextBlock Text="Resolve"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -347,8 +357,18 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="Weekly Schedule" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="tertiary-btn" Command="{Binding RefreshScheduleCommand}"/>
-                            <Button x:Name="TemplatesButton" Content="📋 Templates" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="6" Padding="8,6" Command="{Binding ManageTemplatesCommand}"/>
+                            <Button x:Name="RefreshButton" Classes="tertiary-btn" Command="{Binding RefreshScheduleCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16"/>
+                                    <TextBlock Text="Refresh"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="TemplatesButton" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="6" Padding="8,6" Command="{Binding ManageTemplatesCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <ic:FluentIcon Icon="Clipboard" IconSize="Size16"/>
+                                    <TextBlock Text="Templates"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Grid>
 
@@ -463,7 +483,12 @@
                                    Padding="12,8" 
                                    FontWeight="SemiBold" 
                                    HorizontalAlignment="Stretch" 
-                                   Command="{Binding LoadTemplateCommand}"/>
+                                   Command="{Binding LoadTemplateCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                    <ic:FluentIcon Icon="Clipboard" IconSize="Size16"/>
+                                    <TextBlock Text="Load Template"/>
+                                </StackPanel>
+                            </Button>
                             <Button Content="💾 Save as Template" 
                                    Background="{DynamicResource WarningBrush}" 
                                    Foreground="{DynamicResource AccentTextOnAccentBrush}" 
@@ -472,7 +497,12 @@
                                    Padding="12,8" 
                                    FontWeight="SemiBold" 
                                    HorizontalAlignment="Stretch" 
-                                   Command="{Binding SaveTemplateCommand}"/>
+                                   Command="{Binding SaveTemplateCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                    <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                                    <TextBlock Text="Save as Template"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
 
                         <!-- Schedule Conflicts -->
@@ -483,7 +513,7 @@
                                       Foreground="{DynamicResource DangerBrush}"/>
                             <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl x:Name="ConflictsList" 
-                                             ItemsSource="{Binding Conflicts}"
+                                             ItemsSource="{Binding Conflicts}" 
                                              ItemTemplate="{StaticResource ConflictTemplate}"/>
                             </ScrollViewer>
                         </StackPanel>

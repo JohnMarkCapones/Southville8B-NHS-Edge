@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Admin.UserManagementView"
              x:DataType="vm:UserManagementViewModel"
@@ -362,8 +363,18 @@
 				</StackPanel>
 
 				<StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-					<Button x:Name="ImportButton" Content="📁 Import Users" Classes="secondary" Command="{Binding ImportUsersCommand}"/>
-					<Button x:Name="CreateButton" Content="➕ Create User" Classes="primary" Command="{Binding CreateUserCommand}"/>
+					<Button x:Name="ImportButton" Classes="secondary" Command="{Binding ImportUsersCommand}">
+						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+							<ic:FluentIcon Icon="Folder" IconSize="Size20"/>
+							<TextBlock Text="Import Users"/>
+						</StackPanel>
+					</Button>
+					<Button x:Name="CreateButton" Classes="primary" Command="{Binding CreateUserCommand}">
+						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+							<ic:FluentIcon Icon="Add" IconSize="Size20"/>
+							<TextBlock Text="Create User"/>
+						</StackPanel>
+					</Button>
 				</StackPanel>
 			</Grid>
 
@@ -377,8 +388,8 @@
 							<TextBlock x:Name="TotalUsersValue" Text="{Binding TotalUsers}" Classes="stat-value"/>
 							<TextBlock Text="All registered users" Classes="light" FontSize="12"/>
 						</StackPanel>
-						<Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource InfoSoftBrush}" CornerRadius="8">
-							<Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="{DynamicResource InfoBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						<Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource InfoSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+							<ic:FluentIcon Icon="PeopleTeam" IconSize="Size20" Foreground="{DynamicResource InfoBrush}"/>
 						</Border>
 					</Grid>
 				</Border>
@@ -390,8 +401,8 @@
 							<TextBlock x:Name="StudentsValue" Text="{Binding Students}" Classes="stat-value"/>
 							<TextBlock x:Name="StudentsPercentageText" Text="{Binding StudentPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
 						</StackPanel>
-						<Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource InfoSoftBrush}" CornerRadius="8">
-							<Path Data="M12 14l-1-1-1 1v4l1-1 1 1v-4zM19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 10c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" Fill="{DynamicResource InfoBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						<Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource InfoSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+							<ic:FluentIcon Icon="PeopleTeam" IconSize="Size20" Foreground="{DynamicResource InfoBrush}"/>
 						</Border>
 					</Grid>
 				</Border>
@@ -403,8 +414,8 @@
 							<TextBlock x:Name="TeachersValue" Text="{Binding Teachers}" Classes="stat-value"/>
 							<TextBlock x:Name="TeachersPercentageText" Text="{Binding TeacherPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
 						</StackPanel>
-						<Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource PurpleSoftBrush}" CornerRadius="8">
-							<Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Fill="{DynamicResource PurpleBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						<Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource PurpleSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+							<ic:FluentIcon Icon="Person" IconSize="Size20" Foreground="{DynamicResource PurpleBrush}"/>
 						</Border>
 					</Grid>
 				</Border>
@@ -466,15 +477,8 @@
 										<TextBlock x:Name="UserNameText" Text="{Binding FullName}" Classes="user-name"/>
 										<TextBlock x:Name="UsernameText" Text="{Binding Username}" Classes="light" FontSize="12"/>
 									</StackPanel>
-									<Border Grid.Column="1"
-                                            x:Name="StatusIndicator"
-                                            Classes="status-indicator"
-                                            Background="{Binding StatusBrush}"
-                                            Margin="0,0,8,0"/>
-									<Border Grid.Column="2"
-                                            x:Name="RoleBadge"
-                                            Classes="role-badge"
-                                            Background="{Binding RoleBrush}">
+									<Border Grid.Column="1" x:Name="StatusIndicator" Classes="status-indicator" Background="{Binding StatusBrush}" Margin="0,0,8,0"/>
+									<Border Grid.Column="2" x:Name="RoleBadge" Classes="role-badge" Background="{Binding RoleBrush}">
 										<TextBlock x:Name="RoleText" Text="{Binding Role}" Classes="role-text"/>
 									</Border>
 								</Grid>
@@ -562,11 +566,7 @@
                     HorizontalAlignment="Center"
                     Padding="40">
 				<StackPanel Spacing="16" HorizontalAlignment="Center">
-					<Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                          Fill="{DynamicResource TextMutedBrush}"
-                          Width="48"
-                          Height="48"
-                          HorizontalAlignment="Center"/>
+					<ic:FluentIcon Icon="PeopleTeam" IconSize="Size32" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
 					<TextBlock x:Name="EmptyTitleText" Text="No users found" Classes="empty-title" HorizontalAlignment="Center"/>
 					<TextBlock x:Name="EmptySubtitleText" Text="Try adjusting your search criteria or create a new user" Classes="light" HorizontalAlignment="Center"/>
 				</StackPanel>

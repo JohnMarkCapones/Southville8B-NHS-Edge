@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
              xmlns:avalonConv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="Southville8BEdgeUI.Views.Admin.HelpGuideView"
              x:DataType="vm:HelpGuideViewModel">
@@ -106,9 +107,10 @@
         </Style>
 
         <!-- Icon Style -->
-        <Style Selector="TextBlock.guide-icon">
-            <Setter Property="FontSize" Value="48"/>
+        <Style Selector="ic|FluentIcon.empty-icon">
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
     </UserControl.Styles>
@@ -117,7 +119,10 @@
         <Grid RowDefinitions="Auto,Auto,*">
             <!-- Header -->
             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
-                <TextBlock Text="Help Guide" Classes="page-title"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <ic:FluentIcon Icon="Notepad" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Help Guide" Classes="page-title"/>
+                </StackPanel>
                 <TextBlock Text="Find answers to your questions and learn how to use the system effectively" Classes="page-subtitle"/>
             </StackPanel>
 
@@ -125,7 +130,12 @@
             <Border Grid.Row="1" Classes="search-card" Margin="0,0,0,24">
                 <StackPanel Spacing="12">
                     <TextBox Text="{Binding SearchText}" Watermark="Search help articles..."/>
-                    <Button Content="Search" Classes="danger" Command="{Binding SearchHelpCommand}"/>
+                    <Button Classes="danger" Command="{Binding SearchHelpCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <ic:FluentIcon Icon="Search" IconSize="Size16"/>
+                            <TextBlock Text="Search"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
 
@@ -134,7 +144,10 @@
                 <!-- Categories List -->
                 <Border Grid.Column="0" Classes="categories-card" Margin="0,0,16,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Help Categories" Classes="section-title"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="List" IconSize="Size16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Help Categories" Classes="section-title"/>
+                        </StackPanel>
                         <ItemsControl ItemsSource="{Binding HelpCategories}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -142,14 +155,22 @@
                                             Command="{Binding $parent[UserControl].((vm:HelpGuideViewModel)DataContext).SelectCategoryCommand}"
                                             CommandParameter="{Binding}">
                                         <StackPanel Spacing="4">
-                                            <TextBlock Text="{Binding Title}" Classes="category-title"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <ic:FluentIcon Icon="Notepad" IconSize="Size16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding Title}" Classes="category-title"/>
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Description}" Classes="category-desc"/>
                                         </StackPanel>
                                     </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Button Content="Contact Support" Classes="danger" HorizontalAlignment="Stretch" Command="{Binding ContactSupportCommand}"/>
+                        <Button Classes="danger" HorizontalAlignment="Stretch" Command="{Binding ContactSupportCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
+                                <TextBlock Text="Contact Support"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Border>
 
@@ -159,13 +180,19 @@
                         <!-- Content when category is selected -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding SelectedCategory, Converter={x:Static avalonConv:ObjectConverters.IsNotNull}}">
                             <StackPanel Spacing="16">
-                                <TextBlock Text="{Binding SelectedCategory.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <ic:FluentIcon Icon="Notepad" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding SelectedCategory.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                </StackPanel>
                                 <ItemsControl ItemsSource="{Binding SelectedCategory.Articles}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Classes="inline-article">
                                                 <StackPanel Spacing="8">
-                                                    <TextBlock Text="{Binding Title}" Classes="article-title"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <ic:FluentIcon Icon="Notepad" IconSize="Size16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                        <TextBlock Text="{Binding Title}" Classes="article-title"/>
+                                                    </StackPanel>
                                                     <TextBlock Text="{Binding Content}" Classes="article-content"/>
                                                 </StackPanel>
                                             </Border>
@@ -177,7 +204,7 @@
 
                         <!-- Default content when no category selected -->
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16" IsVisible="{Binding SelectedCategory, Converter={x:Static avalonConv:ObjectConverters.IsNull}}">
-                            <TextBlock Text="📖" Classes="guide-icon"/>
+                            <ic:FluentIcon Icon="Notepad" IconSize="Size48" Classes="empty-icon"/>
                             <TextBlock Text="Select a category to view help articles" Classes="empty-hint"/>
                         </StackPanel>
                     </Grid>

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="Southville8BEdgeUI.Views.Admin.RoomManagementView"
              x:DataType="vm:RoomManagementViewModel"
@@ -314,8 +315,18 @@
                 </StackPanel>
 
                 <StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="ViewCalendarButton" Content="📅 View Calendar" Classes="secondary" Command="{Binding ViewCalendarCommand}"/>
-                    <Button x:Name="BookRoomButton" Content="➕ Book Room" Classes="primary" Command="{Binding BookRoomCommand}"/>
+                    <Button x:Name="ViewCalendarButton" Classes="secondary" Command="{Binding ViewCalendarCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <ic:FluentIcon Icon="Calendar" IconSize="Size20"/>
+                            <TextBlock Text="View Calendar"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="BookRoomButton" Classes="primary" Command="{Binding BookRoomCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <ic:FluentIcon Icon="Add" IconSize="Size20"/>
+                            <TextBlock Text="Book Room"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -329,8 +340,8 @@
                             <TextBlock x:Name="AvailableRoomsValue" Text="{Binding AvailableRooms}" Classes="stat-value"/>
                             <TextBlock x:Name="AvailablePercentageText" Text="{Binding AvailablePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource TealSoftBrush}" CornerRadius="8">
-                            <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" Fill="{DynamicResource SuccessBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource TealSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="CheckmarkCircle" IconSize="Size20" Foreground="{DynamicResource SuccessBrush}"/>
                         </Border>
                     </Grid>
                 </Border>
@@ -342,8 +353,8 @@
                             <TextBlock x:Name="OccupiedRoomsValue" Text="{Binding OccupiedRooms}" Classes="stat-value"/>
                             <TextBlock x:Name="OccupiedPercentageText" Text="{Binding OccupiedPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource DangerSoftBrush}" CornerRadius="8">
-                            <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Fill="{DynamicResource DangerBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource DangerSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="ErrorCircle" IconSize="Size20" Foreground="{DynamicResource DangerBrush}"/>
                         </Border>
                     </Grid>
                 </Border>
@@ -355,8 +366,8 @@
                             <TextBlock x:Name="MaintenanceRoomsValue" Text="{Binding MaintenanceRooms}" Classes="stat-value"/>
                             <TextBlock x:Name="MaintenancePercentageText" Text="{Binding MaintenancePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource WarningSoftBrush}" CornerRadius="8">
-                            <Path Data="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6.1 6.1 9 1.3 4.2c-1.1 2.4-.7 5.4 1.3 7.4 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.1-2.1c.4-.4.4-1 0-1.4z" Fill="{DynamicResource WarningBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource WarningSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Wrench" IconSize="Size20" Foreground="{DynamicResource WarningBrush}"/>
                         </Border>
                     </Grid>
                 </Border>
@@ -482,11 +493,7 @@
                     HorizontalAlignment="Center"
                     Padding="40">
                 <StackPanel Spacing="16" HorizontalAlignment="Center">
-                    <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" 
-                          Fill="{DynamicResource TextPrimaryBrush}" 
-                          Width="48" 
-                          Height="48" 
-                          HorizontalAlignment="Center"/>
+                    <ic:FluentIcon Icon="Info" IconSize="Size32" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="EmptyTitleText" Text="No rooms found" Classes="empty-title" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="EmptySubtitleText" Text="Try adjusting your search criteria or filters" Classes="subtitle" HorizontalAlignment="Center"/>
                 </StackPanel>

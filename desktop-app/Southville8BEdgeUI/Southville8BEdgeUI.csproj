@@ -26,6 +26,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <!-- Pinned SVG package for Avalonia 11 compatibility -->
     <PackageReference Include="Avalonia.Svg.Skia" Version="11.0.0.19" />
+    <!-- Fluent UI icon set -->
+    <PackageReference Include="FluentIcons.Avalonia" Version="1.1.311" />
   </ItemGroup>
 
   <ItemGroup>

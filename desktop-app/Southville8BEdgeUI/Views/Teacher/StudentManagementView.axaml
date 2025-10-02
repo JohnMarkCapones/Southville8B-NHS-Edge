@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              xmlns:avalonConv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.StudentManagementView"
              x:DataType="vm:StudentManagementViewModel"
@@ -182,7 +183,12 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <TextBox x:Name="SearchBox" Text="{Binding SearchText}" Watermark="Search students..." MinWidth="200"/>
-                    <Button x:Name="ReportButton" Content="📊 Generate Report" Classes="action-btn" Command="{Binding GenerateReportCommand}"/>
+                    <Button x:Name="ReportButton" Classes="action-btn" Command="{Binding GenerateReportCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
+                            <TextBlock Text="Generate Report"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -233,11 +239,11 @@
                                     <DataTemplate DataType="vm:StudentInfoViewModel">
                                         <Border Classes="student-card">
                                             <Grid ColumnDefinitions="60,*,Auto">
-                                                <!-- Student Avatar -->
+                                                <!-- Avatar -->
                                                 <Border Grid.Column="0" Width="50" Height="50" CornerRadius="25" Background="{DynamicResource AccentSoftBrush}" Margin="0,0,12,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                                     <TextBlock Text="{Binding Initials}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <!-- Student Info -->
+                                                <!-- Info -->
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
                                                     <TextBlock Text="{Binding FullName}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                     <TextBlock Text="{Binding StudentId}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
@@ -248,11 +254,17 @@
                                                         <TextBlock Text="{Binding CurrentGrade, StringFormat=Grade: {0:F1}%}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource InfoBrush}"/>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <!-- Action Buttons -->
+                                                <!-- Actions -->
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                    <Button Content="📊" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="8" BorderThickness="0" CornerRadius="4" ToolTip.Tip="View Details" Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ViewStudentDetailsCommand}" CommandParameter="{Binding}"/>
-                                                    <Button Content="📝" Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="8" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Student" Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).EditStudentCommand}" CommandParameter="{Binding}"/>
-                                                    <Button Content="📞" Background="{DynamicResource WarningBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="8" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Contact Parent" Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ContactParentCommand}" CommandParameter="{Binding}"/>
+                                                    <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="8" BorderThickness="0" CornerRadius="4" ToolTip.Tip="View Details" Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ViewStudentDetailsCommand}" CommandParameter="{Binding}">
+                                                        <ic:FluentIcon Icon="Person" IconSize="Size16"/>
+                                                    </Button>
+                                                    <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="8" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Student" Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).EditStudentCommand}" CommandParameter="{Binding}">
+                                                        <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
+                                                    </Button>
+                                                    <Button Background="{DynamicResource WarningBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="8" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Contact Parent" Command="{Binding $parent[UserControl].((vm:StudentManagementViewModel)DataContext).ContactParentCommand}" CommandParameter="{Binding}">
+                                                        <ic:FluentIcon Icon="Call" IconSize="Size16"/>
+                                                    </Button>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -311,12 +323,26 @@
                             <!-- Quick Actions -->
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Quick Actions" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <Button Content="📧 Send Message" Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding SendMessageCommand}"/>
-                                <Button Content="📞 Contact Parent" Background="{DynamicResource WarningBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" HorizontalAlignment="Stretch" Command="{Binding ContactParentCommand}"/>
-                                <Button Content="📝 Add Note" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" HorizontalAlignment="Stretch" Command="{Binding AddNoteCommand}"/>
+                                <Button Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding SendMessageCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <ic:FluentIcon Icon="Mail" IconSize="Size16"/>
+                                        <TextBlock Text="Send Message"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Background="{DynamicResource WarningBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" HorizontalAlignment="Stretch" Command="{Binding ContactParentCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <ic:FluentIcon Icon="Call" IconSize="Size16"/>
+                                        <TextBlock Text="Contact Parent"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" HorizontalAlignment="Stretch" Command="{Binding AddNoteCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
+                                        <TextBlock Text="Add Note"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </StackPanel>
-                        <!-- No Selection Message -->
                         <TextBlock Text="Select a student to view details" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding SelectedStudent, Converter={x:Static avalonConv:ObjectConverters.IsNull}}"/>
                     </StackPanel>
                 </Border>

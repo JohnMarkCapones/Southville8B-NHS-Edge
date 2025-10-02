@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Admin.AdminDashboardView"
              x:DataType="vm:AdminDashboardViewModel"
@@ -267,43 +268,6 @@
     <Style Selector="TextBlock.icon-text.mobile">
       <Setter Property="FontSize" Value="12"/>
     </Style>
-
-    <Style Selector="StackPanel.main-content">
-      <Setter Property="Margin" Value="40"/>
-      <Setter Property="Spacing" Value="24"/>
-    </Style>
-    <Style Selector="StackPanel.main-content-tablet">
-      <Setter Property="Margin" Value="20"/>
-      <Setter Property="Spacing" Value="16"/>
-    </Style>
-    <Style Selector="StackPanel.main-content-mobile">
-      <Setter Property="Margin" Value="12"/>
-      <Setter Property="Spacing" Value="12"/>
-    </Style>
-
-    <Style Selector="Border.kpi-card-standard">
-      <Setter Property="Margin" Value="0,0,12,0"/>
-    </Style>
-    <Style Selector="Border.kpi-card-stacked">
-      <Setter Property="Margin" Value="0,0,0,8"/>
-    </Style>
-
-    <Style Selector="Border.alert-icon">
-      <Setter Property="Width" Value="36"/>
-      <Setter Property="Height" Value="36"/>
-      <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="HorizontalAlignment" Value="Center"/>
-      <Setter Property="VerticalAlignment" Value="Center"/>
-      <Setter Property="Padding" Value="0"/>
-      <Setter Property="ClipToBounds" Value="True"/>
-    </Style>
-
-    <Style Selector="TextBlock.alert-icon-glyph">
-      <Setter Property="FontSize" Value="16"/>
-      <Setter Property="HorizontalAlignment" Value="Center"/>
-      <Setter Property="VerticalAlignment" Value="Center"/>
-      <Setter Property="TextAlignment" Value="Center"/>
-    </Style>
   </UserControl.Styles>
 
   <ScrollViewer>
@@ -318,7 +282,12 @@
           <TextBlock x:Name="SystemStatusText" Text="{Binding SystemStatus}" Classes="status-text"
                    Foreground="{Binding SystemStatusBrush}" VerticalAlignment="Center"/>
           <Border Width="8" Height="8" CornerRadius="4" Background="{Binding SystemStatusBrush}" VerticalAlignment="Center"/>
-          <Button x:Name="RefreshButton" Content="🔄 Refresh" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}" Command="{Binding RefreshDashboardCommand}"/>
+          <Button x:Name="RefreshButton" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}" Command="{Binding RefreshDashboardCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+              <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size20"/>
+              <TextBlock Text="Refresh"/>
+            </StackPanel>
+          </Button>
         </StackPanel>
       </Grid>
 
@@ -329,7 +298,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Total Students" Classes="stat-title"/>
               <Border Grid.Column="1" Background="{DynamicResource TealSoftBrush}" CornerRadius="6" Padding="4">
-                <TextBlock x:Name="StudentsIcon" Text="👥" Classes="icon-text"/>
+                <ic:FluentIcon x:Name="StudentsIcon" Icon="PeopleTeam" IconSize="Size20"/>
               </Border>
             </Grid>
             <TextBlock x:Name="TotalStudentsValue" Text="{Binding TotalStudents}" Classes="stat-value"/>
@@ -341,7 +310,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Active Teachers" Classes="stat-title"/>
               <Border Grid.Column="1" Background="{DynamicResource PurpleSoftBrush}" CornerRadius="6" Padding="4">
-                <TextBlock x:Name="TeachersIcon" Text="👨‍🏫" Classes="icon-text"/>
+                <ic:FluentIcon x:Name="TeachersIcon" Icon="Person" IconSize="Size20"/>
               </Border>
             </Grid>
             <TextBlock x:Name="ActiveTeachersValue" Text="{Binding ActiveTeachers}" Classes="stat-value"/>
@@ -353,7 +322,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Online Users" Classes="stat-title"/>
               <Border Grid.Column="1" Background="{DynamicResource InfoSoftBrush}" CornerRadius="6" Padding="4">
-                <TextBlock x:Name="OnlineIcon" Text="🌐" Classes="icon-text"/>
+                <ic:FluentIcon x:Name="OnlineIcon" Icon="Globe" IconSize="Size20"/>
               </Border>
             </Grid>
             <TextBlock x:Name="OnlineUsersValue" Text="{Binding OnlineUsersCount}" Classes="stat-value"/>
@@ -366,7 +335,7 @@
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="Room Utilization" Classes="stat-title"/>
                 <Border Grid.Column="1" Background="{DynamicResource WarningSoftBrush}" CornerRadius="6" Padding="4">
-                  <TextBlock x:Name="RoomIcon" Text="🏫" Classes="icon-text"/>
+                  <ic:FluentIcon x:Name="RoomIcon" Icon="Building" IconSize="Size20"/>
                 </Border>
               </Grid>
               <TextBlock x:Name="RoomUtilizationValue" Text="{Binding RoomUtilization, StringFormat={}{0:F1}%}" Classes="stat-value"/>
@@ -385,7 +354,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="System Uptime" Classes="stat-title"/>
               <Border Grid.Column="1" Background="{DynamicResource SuccessSoftBrush}" CornerRadius="6" Padding="4">
-                <TextBlock x:Name="UptimeIcon" Text="⚡" Classes="icon-text"/>
+                <ic:FluentIcon x:Name="UptimeIcon" Icon="Flash" IconSize="Size20"/>
               </Border>
             </Grid>
             <TextBlock x:Name="SystemUptimeValue" Text="{Binding SystemUptime, StringFormat={}{0:F1}%}" Classes="stat-value"/>
@@ -401,15 +370,20 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Performance Metrics" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ReportsButton" Content="📊 Detailed Reports" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
-                      Command="{Binding ViewDetailedReportsCommand}"/>
+              <Button Grid.Column="1" x:Name="ReportsButton" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
+                      Command="{Binding ViewDetailedReportsCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="Document" IconSize="Size20"/>
+                  <TextBlock Text="Detailed Reports"/>
+                </StackPanel>
+              </Button>
             </Grid>
             <ItemsControl ItemsSource="{Binding PerformanceMetrics}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:PerformanceMetricViewModel">
                   <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,12">
                     <Border Grid.Column="0" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
-                      <TextBlock Text="{Binding Icon}" Classes="icon-text"/>
+                      <ic:FluentIcon Icon="{Binding Icon}" IconSize="Size20"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Classes="body-text"/>
@@ -438,8 +412,13 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="System Alerts" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ViewAllAlertsButton" Content="View All" Classes="alert-button" Background="{DynamicResource DangerBrush}"
-                      Command="{Binding ViewAllAlertsCommand}"/>
+              <Button Grid.Column="1" x:Name="ViewAllAlertsButton" Classes="alert-button" Background="{DynamicResource DangerBrush}"
+                      Command="{Binding ViewAllAlertsCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <ic:FluentIcon Icon="List" IconSize="Size16"/>
+                  <TextBlock Text="View All"/>
+                </StackPanel>
+              </Button>
             </Grid>
             <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
               <ItemsControl ItemsSource="{Binding SystemAlerts}">
@@ -451,7 +430,7 @@
                                 Classes="alert-icon"
                                 Background="{Binding SeverityBrush}"
                                 Margin="0,0,12,0">
-                          <TextBlock Text="{Binding SeverityIcon}" Classes="alert-icon-glyph"/>
+                          <ic:FluentIcon Icon="{Binding SeverityIcon}" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
                         </Border>
 
                         <StackPanel Grid.Column="1">
@@ -466,10 +445,7 @@
                                 Padding="4"
                                 Command="{Binding $parent[UserControl].((vm:AdminDashboardViewModel)DataContext).DismissAlertCommand}"
                                 CommandParameter="{Binding}">
-                          <Path Data="M6 6 L 14 14 M14 6 L 6 14"
-                                Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2"
-                                Width="12" Height="12"
-                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          <ic:FluentIcon Icon="Dismiss" IconSize="Size16"/>
                         </Button>
                       </Grid>
                     </Border>
@@ -488,18 +464,48 @@
           <StackPanel Spacing="16">
             <TextBlock Text="Quick Actions" Classes="section-header"/>
             <Grid x:Name="QuickActionsGrid" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
-              <Button Grid.Column="0" Grid.Row="0" x:Name="RoomsButton" Content="🚪 Rooms" Classes="quick-action" Background="{DynamicResource IndigoBrush}"
-                      Command="{Binding NavigateToRoomManagementCommand}" Margin="0,0,8,8"/>
-              <Button Grid.Column="1" Grid.Row="0" x:Name="EventsButton" Content="📅 Events" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
-                      Command="{Binding NavigateToEventsDashboardCommand}" Margin="8,0,8,8"/>
-              <Button Grid.Column="2" Grid.Row="0" x:Name="UsersButton" Content="👥 Users" Classes="quick-action" Background="{DynamicResource PurpleBrush}"
-                      Command="{Binding NavigateToUserManagementCommand}" Margin="8,0,0,8"/>
-              <Button Grid.Column="0" Grid.Row="1" x:Name="ChatButton" Content="💬 Chat" Classes="quick-action" Background="{DynamicResource WarningBrush}"
-                      Command="{Binding NavigateToChatCommand}" Margin="0,8,8,0"/>
-              <Button Grid.Column="1" Grid.Row="1" x:Name="LibraryButton" Content="📚 Library" Classes="quick-action" Background="{DynamicResource PinkBrush}"
-                      Command="{Binding NavigateToELibraryCommand}" Margin="8,8,8,0"/>
-              <Button Grid.Column="2" Grid.Row="1" x:Name="ReportsActionButton" Content="📊 Reports" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
-                      Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0"/>
+              <Button Grid.Column="0" Grid.Row="0" x:Name="RoomsButton" Classes="quick-action" Background="{DynamicResource IndigoBrush}"
+                      Command="{Binding NavigateToRoomManagementCommand}" Margin="0,0,8,8">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="Door" IconSize="Size20"/>
+                  <TextBlock Text="Rooms"/>
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="1" Grid.Row="0" x:Name="EventsButton" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
+                      Command="{Binding NavigateToEventsDashboardCommand}" Margin="8,0,8,8">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="Calendar" IconSize="Size20"/>
+                  <TextBlock Text="Events"/>
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="2" Grid.Row="0" x:Name="UsersButton" Classes="quick-action" Background="{DynamicResource PurpleBrush}"
+                      Command="{Binding NavigateToUserManagementCommand}" Margin="8,0,0,8">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="PeopleTeam" IconSize="Size20"/>
+                  <TextBlock Text="Users"/>
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="0" Grid.Row="1" x:Name="ChatButton" Classes="quick-action" Background="{DynamicResource WarningBrush}"
+                      Command="{Binding NavigateToChatCommand}" Margin="0,8,8,0">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="Chat" IconSize="Size20"/>
+                  <TextBlock Text="Chat"/>
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="1" Grid.Row="1" x:Name="LibraryButton" Classes="quick-action" Background="{DynamicResource PinkBrush}"
+                      Command="{Binding NavigateToELibraryCommand}" Margin="8,8,8,0">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="Book" IconSize="Size20"/>
+                  <TextBlock Text="Library"/>
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="2" Grid.Row="1" x:Name="ReportsActionButton" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
+                      Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <ic:FluentIcon Icon="Document" IconSize="Size20"/>
+                  <TextBlock Text="Reports"/>
+                </StackPanel>
+              </Button>
             </Grid>
           </StackPanel>
         </Border>
@@ -605,8 +611,13 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Upcoming Events" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ViewAllEventsButton" Content="View All Events" Classes="alert-button" Background="{DynamicResource InfoBrush}"
-                      Command="{Binding NavigateToEventsDashboardCommand}"/>
+              <Button Grid.Column="1" x:Name="ViewAllEventsButton" Classes="alert-button" Background="{DynamicResource InfoBrush}"
+                      Command="{Binding NavigateToEventsDashboardCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <ic:FluentIcon Icon="Calendar" IconSize="Size16"/>
+                  <TextBlock Text="View All Events"/>
+                </StackPanel>
+              </Button>
             </Grid>
             <ItemsControl ItemsSource="{Binding UpcomingEvents}">
               <ItemsControl.ItemTemplate>
@@ -640,8 +651,8 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate DataType="vm:DashboardActivityViewModel">
                     <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
-                      <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GraySoftBrush}" Margin="0,0,12,0">
-                        <TextBlock Text="{Binding Icon}" HorizontalAlignment="Center" VerticalAlignment="Center" Classes="small-text" Foreground="{Binding TypeBrush}"/>
+                      <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GraySoftBrush}" Margin="0,0,12,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ic:FluentIcon Icon="{Binding Icon}" IconSize="Size20" Foreground="{Binding TypeBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                       </Border>
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock TextWrapping="Wrap" Classes="small-text" Foreground="{DynamicResource TextPrimaryBrush}" Text="{Binding Description}"/>

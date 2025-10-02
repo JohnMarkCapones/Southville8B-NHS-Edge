@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.MyAnnouncementsView"
              x:DataType="vm:MyAnnouncementsViewModel"
@@ -204,8 +205,18 @@
                     <TextBlock Text="Create and manage announcements for your classes" Classes="subtitle"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="NewAnnouncementButton" Content="📝 New Announcement" Classes="action-btn" Command="{Binding CreateAnnouncementCommand}"/>
-                    <Button x:Name="AnalyticsButton" Content="📊 Analytics" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" Command="{Binding ViewAnalyticsCommand}"/>
+                    <Button x:Name="NewAnnouncementButton" Classes="action-btn" Command="{Binding CreateAnnouncementCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
+                            <TextBlock Text="New Announcement"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="AnalyticsButton" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" Command="{Binding ViewAnalyticsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
+                            <TextBlock Text="Analytics"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -271,9 +282,15 @@
                                                         </StackPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                                                        <Button Content="✏️" AutomationProperties.Name="Edit announcement" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).EditAnnouncementCommand}" CommandParameter="{Binding}"/>
-                                                        <Button Content="👁️" AutomationProperties.Name="View announcement" Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="View Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).ViewAnnouncementCommand}" CommandParameter="{Binding}"/>
-                                                        <Button Content="🗑️" AutomationProperties.Name="Delete announcement" Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Delete Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).DeleteAnnouncementCommand}" CommandParameter="{Binding}"/>
+                                                        <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).EditAnnouncementCommand}" CommandParameter="{Binding}">
+                                                            <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
+                                                        </Button>
+                                                        <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="View Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).ViewAnnouncementCommand}" CommandParameter="{Binding}">
+                                                            <ic:FluentIcon Icon="Eye" IconSize="Size16"/>
+                                                        </Button>
+                                                        <Button Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="6" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Delete Announcement" Command="{Binding $parent[UserControl].((vm:MyAnnouncementsViewModel)DataContext).DeleteAnnouncementCommand}" CommandParameter="{Binding}">
+                                                            <ic:FluentIcon Icon="Delete" IconSize="Size16"/>
+                                                        </Button>
                                                     </StackPanel>
                                                 </Grid>
                                                 <!-- Announcement Content Preview -->
@@ -281,16 +298,16 @@
                                                 <!-- Announcement Footer -->
                                                 <Grid ColumnDefinitions="*,Auto">
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <TextBlock Text="👁️" FontSize="12"/>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <ic:FluentIcon Icon="Eye" IconSize="Size12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                             <TextBlock Text="{Binding ViewCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <TextBlock Text="💬" FontSize="12"/>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <ic:FluentIcon Icon="Chat" IconSize="Size12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                             <TextBlock Text="{Binding CommentCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <TextBlock Text="📅" FontSize="12"/>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <ic:FluentIcon Icon="Calendar" IconSize="Size12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                             <TextBlock Text="{Binding PostedDate}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                         </StackPanel>
                                                     </StackPanel>
@@ -332,7 +349,12 @@
                                 <CheckBox Content="Post immediately" IsChecked="{Binding PostImmediately}"/>
                                 <DatePicker SelectedDate="{Binding ScheduledDate}" IsVisible="{Binding PostImmediately, Converter={StaticResource InvertBool}}"/>
                             </StackPanel>
-                            <Button Content="📝 Create Announcement" Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding CreateQuickAnnouncementCommand}"/>
+                            <Button Classes="action-btn" HorizontalAlignment="Stretch" Command="{Binding CreateQuickAnnouncementCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                    <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
+                                    <TextBlock Text="Create Announcement"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                         <!-- Recent Activity -->
                         <StackPanel Spacing="8">
