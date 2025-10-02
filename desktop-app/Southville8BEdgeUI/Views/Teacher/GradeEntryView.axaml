@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.GradeEntryView"
              x:DataType="vm:GradeEntryViewModel"
@@ -202,8 +203,18 @@
                     <TextBlock Text="Manage student grades and assessments" Classes="subtitle"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="ExportButton" Content="📊 Export Grades" Classes="secondary-btn" Command="{Binding ExportGradesCommand}"/>
-                    <Button x:Name="SaveAllButton" Content="💾 Save All" Classes="action-btn" Command="{Binding SaveAllGradesCommand}"/>
+                    <Button x:Name="ExportButton" Classes="secondary-btn" Command="{Binding ExportGradesCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
+                            <TextBlock Text="Export Grades"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="SaveAllButton" Classes="action-btn" Command="{Binding SaveAllGradesCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                            <TextBlock Text="Save All"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -272,8 +283,12 @@
                                             <Border Grid.Column="3" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding ExamGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
                                             <Border Grid.Column="4" Classes="table-cell" Margin="4,0"><TextBlock Text="{Binding FinalGrade, StringFormat={}{0:F1}}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="{Binding GradeColor}"/></Border>
                                             <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
-                                                <Button Content="💾" Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Save Grade" Command="{Binding SaveGradeCommand}"/>
-                                                <Button Content="📝" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Notes" Command="{Binding EditNotesCommand}"/>
+                                                <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Save Grade" Command="{Binding SaveGradeCommand}">
+                                                    <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                                                </Button>
+                                                <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Notes" Command="{Binding EditNotesCommand}">
+                                                    <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
+                                                </Button>
                                             </StackPanel>
                                         </Grid>
                                     </DataTemplate>

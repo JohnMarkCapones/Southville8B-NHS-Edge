@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.TeacherShellView"
              x:DataType="vm:TeacherShellViewModel">
@@ -39,19 +40,20 @@
             <Setter Property="TextBlock.Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="TextBlock.FontWeight" Value="SemiBold"/>
         </Style>
-        <Style Selector="Button.nav-item Path">
-            <Setter Property="Fill" Value="{DynamicResource TextMutedBrush}"/>
+        <!-- FluentIcon styling inside nav items -->
+        <Style Selector="Button.nav-item ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Transitions">
                 <Transitions>
-                    <BrushTransition Property="Fill" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button.nav-item:pointerover Path">
-            <Setter Property="Fill" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+        <Style Selector="Button.nav-item:pointerover ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
         </Style>
-        <Style Selector="Button.nav-item.active Path">
-            <Setter Property="Fill" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+        <Style Selector="Button.nav-item.active ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
         </Style>
         
         <!-- Section Header Style -->
@@ -164,25 +166,13 @@
             </Setter>
         </Style>
         
-        <!-- Make the fullscreen dismiss button truly invisible in all states -->
+        <!-- Overlay dismiss button -->
         <Style Selector="Button.overlay-dismiss">
           <Setter Property="Background" Value="Transparent"/>
           <Setter Property="BorderThickness" Value="0"/>
           <Setter Property="Focusable" Value="False"/>
         </Style>
         <Style Selector="Button.overlay-dismiss /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:pointerover /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:pressed /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:focus /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:disabled /template/ ContentPresenter">
           <Setter Property="Background" Value="Transparent"/>
         </Style>
     </UserControl.Styles>
@@ -201,7 +191,6 @@
                 BorderThickness="0,0,1,0"
                 IsVisible="{Binding IsLeftSidebarVisible}">
             <Grid>
-                <!-- Main Sidebar Content -->
                 <DockPanel>
                     <!-- Header Section -->
                     <Border DockPanel.Dock="Top" Padding="16,20,16,20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
@@ -234,7 +223,7 @@
                             <TextBlock Text="OVERVIEW" Classes="section-header"/>
                             <Button Classes="nav-item" Command="{Binding NavigateToDashboardCommand}" Classes.active="{Binding IsDashboardActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <Path Width="16" Height="16" Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                                    <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
                                     <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -242,19 +231,19 @@
                             <TextBlock Text="CLASSROOM" Classes="section-header"/>
                             <Button Classes="nav-item" Command="{Binding NavigateToSchedulePlannerCommand}" Classes.active="{Binding IsSchedulePlannerActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <Path Width="16" Height="16" Data="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                                    <ic:FluentIcon Icon="Calendar" IconSize="Size16"/>
                                     <TextBlock Text="Schedule Planner" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="nav-item" Command="{Binding NavigateToGradeEntryCommand}" Classes.active="{Binding IsGradeEntryActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <Path Width="16" Height="16" Data="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 7h-2v2h-2V9H7V7h2V5h2v2h2v2z"/>
+                                    <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
                                     <TextBlock Text="Grade Entry" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="nav-item" Command="{Binding NavigateToStudentManagementCommand}" Classes.active="{Binding IsStudentManagementActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    <ic:FluentIcon Icon="Person" IconSize="Size16"/>
                                     <TextBlock Text="Student Management" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -262,7 +251,7 @@
                             <TextBlock Text="CONTENT" Classes="section-header"/>
                             <Button Classes="nav-item" Command="{Binding NavigateToMyAnnouncementsCommand}" Classes.active="{Binding IsMyAnnouncementsActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <Path Width="16" Height="16" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                    <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
                                     <TextBlock Text="My Announcements" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -270,7 +259,7 @@
                             <TextBlock Text="COMMUNICATION" Classes="section-header"/>
                             <Button Classes="nav-item" Command="{Binding NavigateToMessagingCommand}" Classes.active="{Binding IsMessagingActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <Path Width="16" Height="16" Data="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2z"/>
+                                    <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
                                     <TextBlock Text="Messaging" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -287,19 +276,13 @@
                         CornerRadius="4,0,0,4"
                         Margin="0"
                         ZIndex="1000">
-                    <TextBlock Text="❮"
-                               FontSize="14"
-                               FontWeight="Bold"
-                               Foreground="{DynamicResource AccentTextOnAccentBrush}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16"/>
                 </Button>
             </Grid>
         </Border>
 
         <!-- Content Area -->
         <Grid Grid.Column="1">
-            <!-- Open left: match Admin positioning (no negative margin, center the glyph) -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
@@ -314,15 +297,10 @@
                         Margin="0,0,0,0"
                         ZIndex="200"
                         ToolTip.Tip="Open navigation">
-                    <TextBlock Text="❯"
-                               Foreground="{DynamicResource AccentTextOnAccentBrush}"
-                               FontSize="14"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16"/>
                 </Button>
             </StackPanel>
 
-            <!-- Open right: match Admin positioning (no negative margin, center the glyph) -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
@@ -336,15 +314,10 @@
                         VerticalAlignment="Center"
                         Margin="0,0,0,0"
                         ToolTip.Tip="Open sidebar">
-                    <TextBlock Text="❮"
-                               Foreground="{DynamicResource AccentTextOnAccentBrush}"
-                               FontSize="14"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16"/>
                 </Button>
             </StackPanel>
 
-            <!-- Main Content -->
             <ContentControl Content="{Binding CurrentContent}"/>
         </Grid>
 
@@ -355,29 +328,21 @@
                 BorderThickness="1,0,0,0"
                 IsVisible="{Binding IsRightSidebarVisible}">
             <Grid>
-                <!-- Overlay close button on left edge of right sidebar -->
                 <Button Classes="sidebar-close-middle-left"
                         Command="{Binding ToggleRightSidebarCommand}"
                         ToolTip.Tip="Close sidebar"
                         CornerRadius="0,4,4,0"
                         Margin="0"
                         ZIndex="1000">
-                    <TextBlock Text="❯"
-                               FontSize="14"
-                               FontWeight="Bold"
-                               Foreground="{DynamicResource AccentTextOnAccentBrush}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16"/>
                 </Button>
 
-                <!-- Right Sidebar Content -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="0" Margin="0">
                         <!-- User Profile Header with Dropdown -->
                         <Border Background="{DynamicResource CardBackgroundBrush}" Padding="16,8,16,16">
                             <StackPanel>
                                 <Grid>
-                                    <!-- Profile button that toggles popup -->
                                     <Button x:Name="ProfileButton" Background="Transparent" BorderThickness="0" Padding="0"
                                             Command="{Binding ToggleUserDropdownCommand}"
                                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
@@ -388,14 +353,13 @@
                                             <StackPanel VerticalAlignment="Center">
                                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                                     <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <Path Data="M7 10L12 15 17 10" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2" VerticalAlignment="Center"/>
+                                                    <ic:FluentIcon Icon="ChevronDown" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Button>
 
-                                    <!-- Dropdown popup -->
                                     <Popup IsOpen="{Binding IsUserDropdownVisible, Mode=TwoWay}"
                                            PlacementTarget="{Binding #ProfileButton}"
                                            Placement="Bottom"
@@ -404,7 +368,6 @@
                                            IsLightDismissEnabled="True">
                                         <Border Classes="dropdown-menu" ZIndex="1001" IsHitTestVisible="True">
                                             <StackPanel Spacing="4">
-                                                <!-- Email -->
                                                 <Border Padding="12,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,8">
                                                     <StackPanel Spacing="2">
                                                         <TextBlock Text="Signed in as:" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
@@ -412,35 +375,32 @@
                                                     </StackPanel>
                                                 </Border>
 
-                                                <!-- Items -->
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToProfileCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" Fill="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Person" IconSize="Size16"/>
                                                         <TextBlock Text="Profile" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
 
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToSettingsCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Path Width="16" Height="16" Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" Fill="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Settings" IconSize="Size16"/>
                                                         <TextBlock Text="Settings" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
 
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToNotificationsCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Path Width="16" Height="16" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" Fill="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Info" IconSize="Size16"/>
                                                         <TextBlock Text="Notifications" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
 
-                                                <!-- Separator -->
                                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/>
 
-                                                <!-- Dark mode toggle -->
                                                 <Button Classes="dropdown-item" Command="{Binding ToggleDarkModeCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Path Width="16" Height="16" Data="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z" Fill="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Info" IconSize="Size16"/>
                                                         <TextBlock VerticalAlignment="Center">
                                                             <TextBlock.Text>
                                                                 <Binding Path="IsDarkMode">
@@ -453,10 +413,9 @@
                                                     </StackPanel>
                                                 </Button>
 
-                                                <!-- Logout -->
                                                 <Button Classes="dropdown-item logout" Command="{Binding LogoutCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Path Width="16" Height="16" Data="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" Fill="{DynamicResource DangerBrush}"/>
+                                                        <ic:FluentIcon Icon="Delete" IconSize="Size16" Foreground="{DynamicResource DangerBrush}"/>
                                                         <TextBlock Text="Logout" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
@@ -466,19 +425,19 @@
                                 </Grid>
 
                                 <!-- Current Page Indicator -->
-                                <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4" Margin="0,0,0,8">
+                                <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" Margin="0,0,0,8">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
-										<TextBlock Text="✔" Foreground="{DynamicResource DangerBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                        <ic:FluentIcon Icon="Checkmark" IconSize="Size12" Foreground="{DynamicResource DangerBrush}"/>
                                         <TextBlock Text="{Binding CurrentPage}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Border>
 
                                 <!-- Date and Time -->
                                 <StackPanel Orientation="Horizontal" Spacing="20">
-                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4">
+                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" CornerRadius="4">
                                         <TextBlock Text="{Binding CurrentDate}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </Border>
-                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4">
+                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" CornerRadius="4">
                                         <TextBlock Text="{Binding CurrentTime}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </Border>
                                 </StackPanel>
@@ -511,11 +470,7 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="{DynamicResource DangerBrush}" CornerRadius="3">
-                                                <Path Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"
-                                                      Fill="{DynamicResource AccentTextOnAccentBrush}"
-                                                      Width="10" Height="10"
-                                                      Stretch="Uniform"
-                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <ic:FluentIcon Icon="Notepad" IconSize="Size12" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Assignments" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
@@ -529,11 +484,7 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="{DynamicResource WarningBrush}" CornerRadius="3">
-                                                <Path Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                                                      Fill="{DynamicResource AccentTextOnAccentBrush}"
-                                                      Width="10" Height="10"
-                                                      Stretch="Uniform"
-                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <ic:FluentIcon Icon="Person" IconSize="Size12" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Students" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
@@ -547,11 +498,7 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
                                             <Border Width="16" Height="16" Background="{DynamicResource AccentBrush}" CornerRadius="3">
-                                                <Path Data="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"
-                                                      Fill="{DynamicResource AccentTextOnAccentBrush}"
-                                                      Width="10" Height="10"
-                                                      Stretch="Uniform"
-                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <ic:FluentIcon Icon="Chat" IconSize="Size12" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <TextBlock Text="Messages" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
@@ -563,7 +510,11 @@
                         </Border>
 
                         <!-- Schedule Section -->
-                        <Border Padding="16,8">
+                        <Border Padding="16,8" Margin="0,8,0,0"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Today's Schedule" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -575,12 +526,12 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                             <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Left"
                                                     Command="{Binding NavigatePreviousMonthCommand}">
-                                                <Path Data="M15 18L9 12L15 6" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2"/>
+                                                <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </Button>
                                             <TextBlock Text="{Binding CurrentMonth}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             <Button Background="Transparent" BorderThickness="0" Padding="4" HorizontalAlignment="Right"
                                                     Command="{Binding NavigateNextMonthCommand}">
-                                                <Path Data="M9 18L15 12L9 6" Stroke="{DynamicResource SuccessBrush}" StrokeThickness="2"/>
+                                                <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource SuccessBrush}"/>
                                             </Button>
                                         </StackPanel>
 
@@ -614,8 +565,6 @@
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" Padding="12,8">
                                     <StackPanel>
                                         <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-
-                                        <!-- Class Card -->
                                         <Border Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                                             <StackPanel Orientation="Horizontal" Spacing="12">
                                                 <Border Width="4" Height="40" Background="{DynamicResource SuccessBrush}" CornerRadius="2"/>
@@ -632,11 +581,10 @@
                                                     <TextBlock Text="{Binding CurrentClassTime}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                                 <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                    <Path Data="M9 18L15 12L9 6" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2"/>
+                                                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </Button>
                                             </StackPanel>
                                         </Border>
-
                                         <Button Content="View full schedule..." Background="Transparent" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"
                                                 Command="{Binding ViewFullScheduleCommand}"/>
                                     </StackPanel>
@@ -657,14 +605,16 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Recent Activity Section -->
-                        <Border Padding="16,8,16,16">
+                        <!-- Recent Activity Section: add border/background -->
+                        <Border Padding="16,8,16,16" Margin="0,8,0,0"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Recent Activity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
-
-                                <!-- Activity Items -->
                                 <ItemsControl ItemsSource="{Binding RecentActivities}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="vm:TeacherActivityItem">

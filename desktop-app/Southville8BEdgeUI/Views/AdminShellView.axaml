@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.AdminShellView"
              x:DataType="vm:AdminShellViewModel">
@@ -35,6 +36,7 @@
             <Setter Property="TextBlock.Foreground" Value="White"/>
             <Setter Property="TextBlock.FontWeight" Value="SemiBold"/>
         </Style>
+        <!-- Legacy Path styles (kept for safety) -->
         <Style Selector="Button.nav-item Path">
             <Setter Property="Fill" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Transitions">
@@ -48,6 +50,21 @@
         </Style>
         <Style Selector="Button.nav-item.active Path">
             <Setter Property="Fill" Value="White"/>
+        </Style>
+        <!-- FluentIcon styling inside nav items -->
+        <Style Selector="Button.nav-item ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-item:pointerover ic|FluentIcon">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.nav-item.active ic|FluentIcon">
+            <Setter Property="Foreground" Value="White"/>
         </Style>
         
         <!-- Section Header Style -->
@@ -172,6 +189,19 @@
         <Style Selector="Button.dropdown-item.logout:pointerover">
             <Setter Property="Background" Value="#FEF2F2"/>
         </Style>
+        <Style Selector="Button.dropdown-item ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="Button.dropdown-item:pointerover ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.dropdown-item.logout ic|FluentIcon">
+            <Setter Property="Foreground" Value="#DC2626"/>
+        </Style>
+        <!-- Keep logout icon red on hover -->
+        <Style Selector="Button.dropdown-item.logout:pointerover ic|FluentIcon">
+            <Setter Property="Foreground" Value="#DC2626"/>
+        </Style>
 
         <!-- Sidebar Transition Styles -->
         <Style Selector="Border.sidebar">
@@ -190,18 +220,6 @@
           <Setter Property="Focusable" Value="False"/>
         </Style>
         <Style Selector="Button.overlay-dismiss /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:pointerover /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:pressed /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:focus /template/ ContentPresenter">
-          <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.overlay-dismiss:disabled /template/ ContentPresenter">
           <Setter Property="Background" Value="Transparent"/>
         </Style>
     </UserControl.Styles>
@@ -261,7 +279,7 @@
                   <TextBlock Text="OVERVIEW" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToDashboardCommand}" Classes.active="{Binding IsDashboardActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                      <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
                       <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
@@ -269,13 +287,13 @@
                   <TextBlock Text="MANAGEMENT" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToUserManagementCommand}" Classes.active="{Binding IsUserManagementActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                      <ic:FluentIcon Icon="Person" IconSize="Size16"/>
                       <TextBlock Text="User Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
                   <Button Classes="nav-item" Command="{Binding NavigateToRoomManagementCommand}" Classes.active="{Binding IsRoomManagementActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                      <ic:FluentIcon Icon="Building" IconSize="Size16"/>
                       <TextBlock Text="Room Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
@@ -283,13 +301,13 @@
                   <TextBlock Text="CONTENT" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToEventsDashboardCommand}" Classes.active="{Binding IsEventsDashboardActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                      <ic:FluentIcon Icon="Calendar" IconSize="Size16"/>
                       <TextBlock Text="Events Dashboard" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
                   <Button Classes="nav-item" Command="{Binding NavigateToELibraryCommand}" Classes.active="{Binding IsELibraryActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>
+                      <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
                       <TextBlock Text="E-Library Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
@@ -297,13 +315,13 @@
                   <TextBlock Text="COMMUNICATION" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToAlertsCommand}" Classes.active="{Binding IsAlertsActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                      <ic:FluentIcon Icon="Alert" IconSize="Size16"/>
                       <TextBlock Text="Alerts" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
                   <Button Classes="nav-item" Command="{Binding NavigateToChatCommand}" Classes.active="{Binding IsChatActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <Path Width="16" Height="16" Data="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                      <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
                       <TextBlock Text="Chat" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
@@ -320,12 +338,7 @@
                     CornerRadius="4,0,0,4"
                     Margin="0"
                     ZIndex="1000">
-              <TextBlock Text="❮"
-                         FontSize="14"
-                         FontWeight="Bold"
-                         Foreground="White"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"/>
+              <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16" Foreground="White"/>
             </Button>
           </Grid>
         </Border>
@@ -345,11 +358,7 @@
                         VerticalAlignment="Center"
                         Margin="0"
                         ToolTip.Tip="Open navigation">
-                    <TextBlock Text="❯"
-                               Foreground="White"
-                               FontSize="14"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="White"/>
                 </Button>
             </StackPanel>
 
@@ -366,11 +375,7 @@
                         VerticalAlignment="Center"
                         Margin="0"
                         ToolTip.Tip="Open sidebar">
-                    <TextBlock Text="❮"
-                               Foreground="White"
-                               FontSize="14"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16" Foreground="White"/>
                 </Button>
             </StackPanel>
 
@@ -393,12 +398,7 @@
                         CornerRadius="0,4,4,0"
                         Margin="0"
                         ZIndex="1000">
-                  <TextBlock Text="❯"
-                             FontSize="14"
-                             FontWeight="Bold"
-                             Foreground="White"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"/>
+                  <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="White"/>
                 </Button>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -421,7 +421,7 @@
                                             <StackPanel VerticalAlignment="Center">
                                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                                     <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <TextBlock Text="▾" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <ic:FluentIcon Icon="ChevronDown" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
@@ -446,32 +446,32 @@
                                                 </Border>
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToProfileCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="👤" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Person" IconSize="Size16"/>
                                                         <TextBlock Text="Profile" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToSettingsCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="⚙" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Settings" IconSize="Size16"/>
                                                         <TextBlock Text="Settings" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToNotificationsCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="🔔" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Alert" IconSize="Size16"/>
                                                         <TextBlock Text="Notifications" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
                                                 <Button Classes="dropdown-item" Command="{Binding NavigateToHelpGuideCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="❓" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="Question" IconSize="Size16"/>
                                                         <TextBlock Text="Help Guide" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
                                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/>
                                                 <Button Classes="dropdown-item" Command="{Binding ToggleDarkModeCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="🌙" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <ic:FluentIcon Icon="WeatherMoon" IconSize="Size16"/>
                                                         <TextBlock VerticalAlignment="Center">
                                                             <TextBlock.Text>
                                                                 <Binding Path="IsDarkMode">
@@ -485,7 +485,7 @@
                                                 </Button>
                                                 <Button Classes="dropdown-item logout" Command="{Binding LogoutCommand}">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="⎋" FontSize="14" VerticalAlignment="Center" Foreground="#DC2626"/>
+                                                        <ic:FluentIcon Icon="ArrowExit" IconSize="Size16"/>
                                                         <TextBlock Text="Logout" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
@@ -497,7 +497,7 @@
                                 <!-- Current Page -->
                                 <Border Background="{DynamicResource PageBackgroundBrush}" Padding="8,6" CornerRadius="4" Margin="0,0,0,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="✔" Foreground="#DC2626" FontSize="12" VerticalAlignment="Center"/>
+                                        <ic:FluentIcon Icon="Checkmark" IconSize="Size16" Foreground="#DC2626"/>
                                         <TextBlock Text="{Binding CurrentPage}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Border>
@@ -596,13 +596,13 @@
 
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
                                     <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8" Spacing="4">
                                             <Button Background="Transparent" BorderThickness="0" Padding="4">
-                                                <TextBlock Text="❮" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" VerticalAlignment="Center"/>
+                                                <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </Button>
                                             <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             <Button Background="Transparent" BorderThickness="0" Padding="4">
-                                                <TextBlock Text="❯" Foreground="#10B981" FontSize="14" VerticalAlignment="Center"/>
+                                                <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="#10B981"/>
                                             </Button>
                                         </StackPanel>
 
@@ -649,7 +649,7 @@
                                                     <TextBlock Text="06:00 AM - 11:00 PM" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                                 <Button Background="Transparent" BorderThickness="0">
-                                                    <TextBlock Text="❯" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" VerticalAlignment="Center"/>
+                                                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </Button>
                                             </StackPanel>
                                         </Border>
@@ -668,13 +668,13 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Activity Log -->
+                        <!-- Activity Log (unchanged textual content) -->
                         <Border Padding="16,8,16,16">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Activity Log" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
-
+                                <!-- Existing sample log left as-is (no icon paths) -->
                                 <StackPanel Spacing="12">
                                     <StackPanel Orientation="Horizontal" Spacing="12">
                                         <Border Width="32" Height="32" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -688,7 +688,6 @@
                                             <TextBlock Text="Deleted 2 Students to the...." FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
-
                                     <StackPanel Orientation="Horizontal" Spacing="12">
                                         <Border Width="32" Height="32" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <TextBlock Text="RR" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -701,7 +700,6 @@
                                             <TextBlock Text="Add 5 Students to list" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
-                
                                     <StackPanel Orientation="Horizontal" Spacing="12">
                                         <Border Width="32" Height="32" Background="{DynamicResource PageBackgroundBrush}" CornerRadius="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <TextBlock Text="HB" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>

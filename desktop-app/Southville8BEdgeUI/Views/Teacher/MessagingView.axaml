@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="Southville8BEdgeUI.Views.Teacher.MessagingView"
              x:DataType="vm:MessagingViewModel"
@@ -435,8 +436,13 @@
                             <TextBlock x:Name="ConversationsHeaderText" Text="Messages" Classes="main-header"/>
                             <TextBlock x:Name="ConversationsSubtitleText" Text="Teacher Communication Hub" Classes="subtitle"/>
                         </StackPanel>
-                        <Button x:Name="NewChatButton" Grid.Column="1" Content="➕ New" Classes="primary"
-                                Command="{Binding NewMessageCommand}" VerticalAlignment="Center"/>
+                        <Button x:Name="NewChatButton" Grid.Column="1" Classes="primary"
+                                Command="{Binding NewMessageCommand}" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <ic:FluentIcon Icon="Add" IconSize="Size16"/>
+                                <TextBlock Text="New"/>
+                            </StackPanel>
+                        </Button>
                     </Grid>
                 </Border>
 
@@ -497,7 +503,9 @@
                 <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasSelectedConversation}">
                     <Border x:Name="ChatHeader" Grid.Row="0" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                            <Button x:Name="BackButton" Grid.Column="0" Content="←" Classes="back-button" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="False"/>
+                            <Button x:Name="BackButton" Grid.Column="0" Classes="back-button" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="False">
+                                <ic:FluentIcon Icon="ArrowLeft" IconSize="Size16"/>
+                            </Button>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
                                 <Border Classes="avatar" Background="{Binding SelectedConversation.AvatarBackgroundBrush}">
                                     <TextBlock Text="{Binding SelectedConversation.ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{Binding SelectedConversation.AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -512,9 +520,15 @@
                                 </StackPanel>
                             </StackPanel>
                             <StackPanel x:Name="ChatHeaderButtons" Grid.Column="3" Orientation="Horizontal" Spacing="8">
-                                <Button x:Name="CallButton" Content="📞" Classes="chat-icon"/>
-                                <Button x:Name="VideoButton" Content="📹" Classes="chat-icon"/>
-                                <Button x:Name="InfoButton" Content="ℹ️" Classes="chat-icon"/>
+                                <Button x:Name="CallButton" Classes="chat-icon">
+                                    <ic:FluentIcon Icon="Call" IconSize="Size16"/>
+                                </Button>
+                                <Button x:Name="VideoButton" Classes="chat-icon">
+                                    <ic:FluentIcon Icon="Video" IconSize="Size16"/>
+                                </Button>
+                                <Button x:Name="InfoButton" Classes="chat-icon">
+                                    <ic:FluentIcon Icon="Info" IconSize="Size16"/>
+                                </Button>
                             </StackPanel>
                         </Grid>
                     </Border>

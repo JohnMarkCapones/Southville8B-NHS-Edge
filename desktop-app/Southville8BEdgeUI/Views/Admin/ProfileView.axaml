@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="Southville8BEdgeUI.Views.Admin.ProfileView"
              x:DataType="vm:ProfileViewModel">
@@ -64,7 +65,6 @@
         </Style>
 
         <!-- Buttons -->
-        <!-- Primary now uses accent/indigo brush instead of danger -->
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
@@ -73,7 +73,6 @@
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-        <!-- Dedicated danger style for destructive actions (if needed later) -->
         <Style Selector="Button.danger">
             <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
@@ -98,6 +97,11 @@
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+
+        <!-- Icon color inside buttons -->
+        <Style Selector="Button.primary ic|FluentIcon, Button.success ic|FluentIcon, Button.danger ic|FluentIcon, Button.neutral ic|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+        </Style>
     </UserControl.Styles>
 
     <Border Background="{DynamicResource CardBackgroundBrush}" Padding="24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12">
@@ -115,14 +119,22 @@
                         <Border Classes="avatar-shell">
                             <TextBlock Text="JM" Classes="avatar-initials" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <Button Content="Upload Photo" Classes="primary" Command="{Binding UploadPhotoCommand}"/>
+                        <Button Classes="primary" Command="{Binding UploadPhotoCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <ic:FluentIcon Icon="ImageAdd" IconSize="Size16"/>
+                                <TextBlock Text="Upload Photo"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Border>
 
                 <!-- Personal Information -->
                 <Border Classes="profile-card">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Personal Information" Classes="section-title"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Person" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Personal Information" Classes="section-title"/>
+                        </StackPanel>
                         <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,16,Auto,16,Auto,16,Auto">
                             <!-- Full Name -->
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
@@ -165,10 +177,30 @@
 
                 <!-- Action Buttons -->
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-                    <Button Content="Change Password" Classes="neutral" Command="{Binding ChangePasswordCommand}"/>
-                    <Button Content="Edit Profile" Classes="primary" IsVisible="{Binding !IsEditing}" Command="{Binding EditProfileCommand}"/>
-                    <Button Content="Cancel" Classes="neutral" IsVisible="{Binding IsEditing}" Command="{Binding CancelEditCommand}"/>
-                    <Button Content="Save Changes" Classes="success" IsVisible="{Binding IsEditing}" Command="{Binding SaveProfileCommand}"/>
+                    <Button Classes="neutral" Command="{Binding ChangePasswordCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Key" IconSize="Size16"/>
+                            <TextBlock Text="Change Password"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="primary" IsVisible="{Binding !IsEditing}" Command="{Binding EditProfileCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
+                            <TextBlock Text="Edit Profile"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="neutral" IsVisible="{Binding IsEditing}" Command="{Binding CancelEditCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Dismiss" IconSize="Size16"/>
+                            <TextBlock Text="Cancel"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="success" IsVisible="{Binding IsEditing}" Command="{Binding SaveProfileCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                            <TextBlock Text="Save Changes"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

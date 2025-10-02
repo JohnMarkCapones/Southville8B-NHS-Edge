@@ -52,7 +52,8 @@ public partial class TeacherDashboardViewModel : ViewModelBase
     public IRelayCommand? NavigateToSchedulePlannerCommand { get; set; }
     public IRelayCommand? NavigateToGradeEntryCommand { get; set; }
     public IRelayCommand? NavigateToStudentManagementCommand { get; set; }
-    public IRelayCommand? NavigateToMyAnnouncementsCommand { get; set; } = default!;
+    public IRelayCommand? NavigateToMyAnnouncementsCommand { get; set; } = default!
+;
     public IRelayCommand? NavigateToMessagingCommand { get; set; }
 
     // Computed Properties
@@ -207,10 +208,9 @@ public partial class WeeklyClassViewModel : ViewModelBase
 
     public void UpdateVisualState()
     {
-        var page = Resolve("PageBackgroundBrush");
-        var accentSoft = Resolve("AccentSoftBrush");
         var success = Resolve("SuccessBrush");
         var infoSoft = Resolve("InfoSoftBrush");
+        var accentSoft = Resolve("AccentSoftBrush");
         var accentText = Resolve("AccentTextOnAccentBrush");
         var textPrimary = Resolve("TextPrimaryBrush");
 
@@ -269,10 +269,30 @@ public partial class TeacherActivityViewModel : ViewModelBase
     [ObservableProperty] private string _action = "";
     [ObservableProperty] private string _subject = "";
     [ObservableProperty] private string _timestamp = "";
-    [ObservableProperty] private string _icon = "";
+    [ObservableProperty] private string _icon = ""; // legacy emoji fallback
     [ObservableProperty] private string _type = ""; // Submission, Question, Achievement, Review, Late, Collaboration
 
     public string Description => string.IsNullOrWhiteSpace(Student) ? Action : string.IsNullOrWhiteSpace(Action) ? Student : $"{Student} {Action}";
+
+    public string IconName => Type switch
+    {
+        "Submission" => "Send",
+        "Question" => "QuestionCircle",
+        "Achievement" => "Trophy", // changed from RibbonStar (not rendering) to Trophy
+        "Review" => "Search",
+        "Late" => "Clock",
+        "Collaboration" => "PeopleTeam",
+        _ => Icon switch
+        {
+            "📝" => "Send",
+            "❓" => "QuestionCircle",
+            "✅" => "CheckmarkCircle",
+            "📊" => "DataBarVertical",
+            "⏰" => "Clock",
+            "👥" => "PeopleTeam",
+            _ => "Info"
+        }
+    };
 
     public IBrush TypeColor
     {
@@ -297,7 +317,12 @@ public partial class TeacherActivityViewModel : ViewModelBase
 
     partial void OnStudentChanged(string value) => OnPropertyChanged(nameof(Description));
     partial void OnActionChanged(string value) => OnPropertyChanged(nameof(Description));
-    partial void OnTypeChanged(string value) => OnPropertyChanged(nameof(TypeColor));
+    partial void OnTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(TypeColor));
+        OnPropertyChanged(nameof(IconName));
+    }
+    partial void OnIconChanged(string value) => OnPropertyChanged(nameof(IconName));
 }
 
 public partial class StudentPerformanceViewModel : ViewModelBase
