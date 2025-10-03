@@ -9,6 +9,10 @@
              x:Class="Southville8BEdgeUI.Views.AdminShellView"
              x:DataType="vm:AdminShellViewModel">
 
+    <UserControl.Resources>
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+    </UserControl.Resources>
+
     <UserControl.Styles>
         <!-- Navigation Button Style (theme-aware) -->
         <Style Selector="Button.nav-item">
@@ -379,7 +383,7 @@
                 </Button>
             </StackPanel>
 
-            <ContentControl Content="{Binding CurrentContent}"/>
+            <ContentControl Content="{Binding CurrentContent}" Margin="20"/>
         </Grid>
 
         <!-- Right Sidebar -->
@@ -587,22 +591,23 @@
                             </Grid>
                         </Border>
 
-                        <!-- Event Schedule -->
-                        <Border Padding="16,8">
+                        <!-- Event Schedule (modified to dynamic calendar + rotating today classes) -->
+                        <Border Padding="16,8" Margin="0,0,0,0">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="Event Schedule" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
 
+                                <!-- Dynamic Calendar Header -->
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8,8,0,0" Padding="12">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8" Spacing="4">
-                                            <Button Background="Transparent" BorderThickness="0" Padding="4">
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" Command="{Binding NavigatePreviousMonthCommand}">
                                                 <ic:FluentIcon Icon="ChevronLeft" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </Button>
-                                            <TextBlock Text="June 2025" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <Button Background="Transparent" BorderThickness="0" Padding="4">
-                                                <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="#10B981"/>
+                                            <TextBlock Text="{Binding CurrentMonth}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4" Command="{Binding NavigateNextMonthCommand}">
+                                                <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource SuccessBrush}"/>
                                             </Button>
                                         </StackPanel>
 
@@ -616,57 +621,80 @@
                                             <TextBlock Grid.Column="6" Text="Sun" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                                         </Grid>
 
-                                        <Grid RowDefinitions="Auto" ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,8,0,0">
-                                            <TextBlock Grid.Column="0" Text="16" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="1" Text="17" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="2" Text="18" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <Border Grid.Column="3" Background="#10B981" CornerRadius="50" Width="24" Height="24">
-                                                <TextBlock Text="19" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Grid.Column="4" Text="20" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="5" Text="21" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
-                                            <TextBlock Grid.Column="6" Text="22" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Padding="8,4"/>
-                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding FirstWeekDays}" Margin="0,8,0,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="7"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:CalendarDayItem">
+                                                    <Grid Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Border Background="{DynamicResource SuccessBrush}" CornerRadius="50" Width="24" Height="24" IsVisible="{Binding IsToday}"/>
+                                                        <TextBlock Text="{Binding Day}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource AccentTextOnAccentBrush}" IsVisible="{Binding IsToday}"/>
+                                                        <TextBlock Text="{Binding Day}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding IsToday, Converter={StaticResource InverseBoolConverter}}"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
                                 </Border>
 
+                                <!-- Rotating Today Event -->
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" Padding="12,8">
                                     <StackPanel>
                                         <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                         <Border Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                                <Border Width="4" Height="40" Background="#3B82F6" CornerRadius="2"/>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
-                                                        <Border Background="#22C55E" CornerRadius="3" Padding="4,2">
-                                                            <TextBlock Text="Training" Foreground="White" FontSize="9"/>
-                                                        </Border>
-                                                        <Border Background="#F59E0B" CornerRadius="3" Padding="4,2">
-                                                            <TextBlock Text="Pending" Foreground="White" FontSize="9"/>
-                                                        </Border>
-                                                    </StackPanel>
-                                                    <TextBlock Text="Educational Field Trip" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <TextBlock Text="06:00 AM - 11:00 PM" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                </StackPanel>
-                                                <Button Background="Transparent" BorderThickness="0">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                                                <Border Grid.Column="0" Width="4" Height="40" Background="{DynamicResource SuccessBrush}" CornerRadius="2" Margin="0,0,12,0"/>
+                                                <TransitioningContentControl Grid.Column="1" Content="{Binding CurrentTodayClass}" VerticalAlignment="Center">
+                                                    <TransitioningContentControl.PageTransition>
+                                                      <CompositePageTransition>
+                                                        <PageSlide Duration="0:0:0.35" />
+                                                        <CrossFade Duration="0:0:0.25" />
+                                                      </CompositePageTransition>
+                                                    </TransitioningContentControl.PageTransition>
+                                                    <TransitioningContentControl.ContentTemplate>
+                                                        <DataTemplate DataType="vm:TodayClassItem">
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
+                                                                    <Border Background="{DynamicResource SuccessBrush}" CornerRadius="3" Padding="4,2">
+                                                                        <TextBlock Text="{Binding Subject}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
+                                                                    </Border>
+                                                                    <Border Background="{DynamicResource InfoBrush}" CornerRadius="3" Padding="4,2">
+                                                                        <TextBlock Text="{Binding Room}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
+                                                                    </Border>
+                                                                </StackPanel>
+                                                                <TextBlock Text="{Binding Grade}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                                <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </TransitioningContentControl.ContentTemplate>
+                                                </TransitioningContentControl>
+                                                <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Width="32" Height="40" HorizontalAlignment="Right" VerticalAlignment="Center" Command="{Binding NextTodayClassCommand}" IsVisible="{Binding HasMultipleTodayClasses}">
                                                     <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </Button>
-                                            </StackPanel>
+                                            </Grid>
                                         </Border>
-                                        <Button Content="View more..." Background="Transparent" Foreground="#3B82F6" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
+                                        <Button Content="View more..." Background="Transparent" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
                                     </StackPanel>
                                 </Border>
 
+                                <!-- Next / Upcoming -->
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
                                     <StackPanel>
-                                        <TextBlock Text="Fri, June 20" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                        <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="8" Padding="12">
-                                            <TextBlock Text="NO EVENTS SCHEDULED" FontSize="11" Foreground="#DC2626" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Next" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                        <Border Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Opacity="0.15">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding NextClassSubject}" FontSize="11" Foreground="{DynamicResource WarningBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding NextClassTime}" FontSize="10" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
                                         </Border>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
                         </Border>
+                        <!-- End Event Schedule section -->
 
                         <!-- Activity Log (unchanged textual content) -->
                         <Border Padding="16,8,16,16">
