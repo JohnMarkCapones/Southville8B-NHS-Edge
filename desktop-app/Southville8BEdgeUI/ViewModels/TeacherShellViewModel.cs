@@ -143,7 +143,21 @@ public partial class TeacherShellViewModel : ViewModelBase
 
     private void ApplyCurrentTodayClass()
     {
-        if (TodayClasses.Count == 0) return;
+        // Clear state if no classes; prevents stale UI and stops rotation
+        if (TodayClasses.Count == 0)
+        {
+            _todayClassRotationTimer?.Stop();
+            _currentTodayClassIndex = 0;
+            CurrentTodayClass = null;
+            CurrentClassSubject = string.Empty;
+            CurrentClassGrade = string.Empty;
+            CurrentClassTime = string.Empty;
+            CurrentClassRoom = string.Empty;
+            NextClassSubject = string.Empty;
+            NextClassTime = string.Empty;
+            OnPropertyChanged(nameof(HasMultipleTodayClasses));
+            return;
+        }
         var current = TodayClasses[_currentTodayClassIndex];
         CurrentClassSubject = current.Subject;
         CurrentClassGrade = current.Grade;

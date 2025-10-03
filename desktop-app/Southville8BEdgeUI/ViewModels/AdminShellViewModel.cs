@@ -101,7 +101,20 @@ public partial class AdminShellViewModel : ViewModelBase
 
     private void ApplyCurrentTodayClass()
     {
-        if (TodayClasses.Count == 0) return;
+        // Handle empty collection: clear stale UI state and stop rotation timer
+        if (TodayClasses.Count == 0)
+        {
+            _todayRotationTimer?.Stop();
+            CurrentTodayClass = null;
+            CurrentClassSubject = string.Empty;
+            CurrentClassGrade = string.Empty;
+            CurrentClassTime = string.Empty;
+            CurrentClassRoom = string.Empty;
+            NextClassSubject = string.Empty;
+            NextClassTime = string.Empty;
+            OnPropertyChanged(nameof(HasMultipleTodayClasses));
+            return;
+        }
         var current = TodayClasses[_currentTodayClassIndex];
         CurrentClassSubject = current.Subject;
         CurrentClassGrade = current.Grade;
