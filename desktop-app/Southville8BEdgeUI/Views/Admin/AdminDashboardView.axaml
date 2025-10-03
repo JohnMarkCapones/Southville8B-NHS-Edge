@@ -29,6 +29,19 @@
         </Transitions>
       </Setter>
     </Style>
+    <!-- Added main-content spacing to match other views -->
+    <Style Selector="StackPanel.main-content">
+      <Setter Property="Margin" Value="40,0,40,40"/>
+      <Setter Property="Spacing" Value="24"/>
+    </Style>
+    <Style Selector="StackPanel.main-content.tablet">
+      <Setter Property="Margin" Value="20,0,20,20"/>
+      <Setter Property="Spacing" Value="16"/>
+    </Style>
+    <Style Selector="StackPanel.main-content.mobile">
+      <Setter Property="Margin" Value="12,0,12,12"/>
+      <Setter Property="Spacing" Value="12"/>
+    </Style>
     <Style Selector="Border.card:pointerover">
       <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
       <Setter Property="RenderTransform" Value="translate(-2px)"/>
