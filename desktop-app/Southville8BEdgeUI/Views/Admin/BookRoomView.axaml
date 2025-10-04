@@ -66,7 +66,7 @@
           <TextBlock Text="Select Room" Classes="label"/>
           <ComboBox ItemsSource="{Binding Rooms}" SelectedItem="{Binding SelectedRoom}" ItemTemplate="{StaticResource _RoomTemplate}"/>
           <TextBlock Text="Date" Classes="label"/>
-          <DatePicker SelectedDate="{Binding SelectedDate}"/>
+          <DatePicker SelectedDate="{Binding SelectedDateOffset}"/>
           <TextBlock Text="Time Slot" Classes="label"/>
           <ComboBox ItemsSource="{Binding TimeSlots}" SelectedItem="{Binding SelectedSlot}"/>
           <TextBlock Text="Purpose" Classes="label"/>

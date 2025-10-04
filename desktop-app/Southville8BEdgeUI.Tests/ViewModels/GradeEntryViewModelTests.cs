@@ -86,6 +86,5 @@ public class GradeEntryViewModelTests
         var sg = vm.StudentGrades.First();
         sg.SaveGradeCommand.Execute(null);
         sg.EditNotesCommand.Execute(null);
-        Assert.True(true);
     }
 }

@@ -49,7 +49,8 @@ public class ChatViewModelTests
     public void SelectConversation_SetsSelected_ResetsUnread_RaisesEvent()
     {
         var vm = CreateVm();
-        var target = vm.Conversations.First(c => c.UnreadCount > 0) ?? vm.Conversations.First();
+        // Use FirstOrDefault so fallback works when no unread conversations are present
+        var target = vm.Conversations.FirstOrDefault(c => c.UnreadCount > 0) ?? vm.Conversations.First();
         bool eventRaised = false;
         vm.ConversationNavigationRequested += (_, e) =>
         {

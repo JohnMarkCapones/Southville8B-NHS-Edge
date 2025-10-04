@@ -16,7 +16,6 @@
 			<Setter Property="CornerRadius" Value="12"/>
 			<Setter Property="Padding" Value="24"/>
 			<Setter Property="Margin" Value="0,0,0,24"/>
-			<Setter Property="BoxShadow" Value="0 2 8 0 {DynamicResource ShadowColorBrush}"/>
 		</Style>
 
 		<Style Selector="TextBlock.header">

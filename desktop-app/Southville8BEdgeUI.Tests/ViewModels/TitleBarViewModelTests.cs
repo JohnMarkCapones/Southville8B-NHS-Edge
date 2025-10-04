@@ -18,6 +18,7 @@ public class TitleBarViewModelTests
     {
         var vm = CreateVm();
         var win = new Window { Title = "Test", WindowState = WindowState.Normal };
+        win.Show(); // ensure platform state changes are supported
         vm.SetWindow(win);
         Assert.Equal("Test", vm.Title);
         Assert.False(vm.IsMaximized);
@@ -30,6 +31,7 @@ public class TitleBarViewModelTests
     {
         var vm = CreateVm();
         var win = new Window();
+        win.Show();
         vm.SetWindow(win);
         string? changed = null;
         ((INotifyPropertyChanged)vm).PropertyChanged += (_, e) => changed = e.PropertyName;
@@ -45,6 +47,7 @@ public class TitleBarViewModelTests
     {
         var vm = CreateVm();
         var win = new Window();
+        win.Show();
         vm.SetWindow(win);
         Assert.Equal(WindowState.Normal, win.WindowState);
         vm.MaximizeRestoreCommand.Execute(null);
@@ -58,6 +61,7 @@ public class TitleBarViewModelTests
     {
         var vm = CreateVm();
         var win = new Window();
+        win.Show();
         vm.SetWindow(win);
         await vm.MinimizeCommand.ExecuteAsync(null);
         Assert.Equal(WindowState.Minimized, win.WindowState);
@@ -69,6 +73,7 @@ public class TitleBarViewModelTests
     {
         var vm = CreateVm();
         var win = new Window();
+        win.Show();
         bool closed = false;
         win.Closed += (_, _) => closed = true;
         vm.SetWindow(win);
@@ -82,6 +87,8 @@ public class TitleBarViewModelTests
         var vm = CreateVm();
         var w1 = new Window();
         var w2 = new Window();
+        w1.Show();
+        w2.Show();
         vm.SetWindow(w1);
         vm.SetWindow(w2); // replace
         w1.WindowState = WindowState.Maximized; // should NOT update vm

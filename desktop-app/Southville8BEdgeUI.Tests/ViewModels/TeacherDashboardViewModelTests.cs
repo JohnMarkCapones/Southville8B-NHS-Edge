@@ -44,7 +44,12 @@ public class TeacherDashboardViewModelTests
     public void WeeklySchedule_Flags_IsToday_And_IsPeakDay()
     {
         var vm = CreateVm();
-        Assert.Contains(vm.WeeklySchedule, d => d.IsToday || d.Day == "Sun" || d.Day == "Mon" || d.Day == "Tue" || d.Day == "Wed" || d.Day == "Thu" || d.Day == "Fri" || d.Day == "Sat");
+        // Exactly one entry should represent today
+        Assert.Single(vm.WeeklySchedule.Where(d => d.IsToday));
+        // All day labels should be valid
+        var validDays = new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+        Assert.All(vm.WeeklySchedule, d => Assert.Contains(d.Day, validDays));
+        // Peak day logic
         int max = vm.WeeklySchedule.Max(d => d.ClassCount);
         Assert.Contains(vm.WeeklySchedule, d => d.IsPeakDay && d.ClassCount == max);
     }
