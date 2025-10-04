@@ -94,22 +94,27 @@ public partial class TeacherShellViewModel : ViewModelBase
     public bool ShowRightSidebarToggle => !IsRightSidebarVisible;
 
     private DispatcherTimer? _todayClassRotationTimer;
+    private readonly bool _enableRotation;
+    private readonly bool _enableTimeUpdater;
 
-    public TeacherShellViewModel()
+    // Added optional parameters to disable timers for unit tests.
+    public TeacherShellViewModel(bool enableRotation = true, bool enableTimeUpdater = true)
     {
+        _enableRotation = enableRotation;
+        _enableTimeUpdater = enableTimeUpdater;
         // Set the default page to the dashboard
         _currentContent = CreateDashboardViewModel();
         InitializeRecentActivities();
         InitializeTodayClasses();
         GenerateCalendarDays();
-        StartTodayClassRotation();
+        if (_enableRotation) StartTodayClassRotation();
         UpdateColumnWidths();
 
         // Initialize based on current theme (system/default)
         IsDarkMode = Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
 
-        // Update time every minute (placeholder)
-        StartTimeUpdater();
+        if (_enableTimeUpdater)
+            StartTimeUpdater();
     }
 
     private void StartTimeUpdater()
@@ -350,7 +355,19 @@ public partial class TeacherShellViewModel : ViewModelBase
     [RelayCommand]
     private void NextTodayClass()
     {
-        if (TodayClasses.Count <= 1) return;
+        if (TodayClasses.Count == 0)
+        {
+            // Ensure state cleared if collection emptied externally
+            ApplyCurrentTodayClass();
+            return;
+        }
+        if (TodayClasses.Count == 1)
+        {
+            // Just re-apply to keep consistency (no rotation possible)
+            _currentTodayClassIndex = 0;
+            ApplyCurrentTodayClass();
+            return;
+        }
         _currentTodayClassIndex = (_currentTodayClassIndex + 1) % TodayClasses.Count;
         ApplyCurrentTodayClass();
         if (_todayClassRotationTimer is { IsEnabled: true })
@@ -430,7 +447,8 @@ public partial class TeacherShellViewModel : ViewModelBase
     private void ToggleDarkMode()
     {
         IsDarkMode = !IsDarkMode;
-        Application.Current!.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
+        if (Application.Current is not null)
+            Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
         IsUserDropdownVisible = false;
     }
 }

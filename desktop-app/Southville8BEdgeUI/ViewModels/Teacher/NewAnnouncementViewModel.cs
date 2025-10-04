@@ -30,6 +30,9 @@ public partial class NewAnnouncementViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanCreate))]
     private void Create()
     {
+        // Defensive guard in case CanExecute was not re-evaluated yet
+        if (!CanCreate()) return;
+
         var safeContent = Content ?? string.Empty;
         var preview = safeContent.Length > 120 ? safeContent[..120] + "..." : safeContent;
         var item = new AnnouncementItemViewModel
