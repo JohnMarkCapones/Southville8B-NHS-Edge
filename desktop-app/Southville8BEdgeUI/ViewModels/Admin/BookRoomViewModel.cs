@@ -26,10 +26,24 @@ public partial class BookRoomViewModel : ViewModelBase
         get => SelectedDate == default ? null : new DateTimeOffset(SelectedDate.Date);
         set
         {
-            var newDate = value?.DateTime.Date;
-            if (newDate is { } d && d != SelectedDate)
+            if (value is null)
             {
-                SelectedDate = d; // triggers OnSelectedDateChanged
+                if (SelectedDate != default)
+                {
+                    SelectedDate = default; // clears date and triggers OnSelectedDateChanged
+                }
+                else
+                {
+                    // Already default, still notify binding explicitly
+                    OnPropertyChanged();
+                }
+                return;
+            }
+
+            var newDate = value.Value.Date;
+            if (newDate != SelectedDate)
+            {
+                SelectedDate = newDate; // triggers OnSelectedDateChanged
                 OnPropertyChanged();
             }
         }
