@@ -1,0 +1,142 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
+             x:Class="Southville8BEdgeUI.Views.Admin.CreateEventView"
+             x:DataType="vm:CreateEventViewModel"
+             mc:Ignorable="d"
+             Background="{DynamicResource PageBackgroundBrush}">
+  <UserControl.Resources>
+    <converters:InverseBoolConverter x:Key="InvertBool"/>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="32"/>
+    </Style>
+    <Style Selector="Border.card.mobile">
+      <Setter Property="Padding" Value="20"/>
+    </Style>
+    <Style Selector="TextBlock.section-title">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,8,0,16"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.field-label">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,12,0,4"/>
+    </Style>
+    <Style Selector="TextBox, ComboBox, DatePicker, NumericUpDown">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="10"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,0"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBox.description">
+      <Setter Property="AcceptsReturn" Value="True"/>
+      <Setter Property="MinHeight" Value="140"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="Margin" Value="0,0,0,0"/>
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="TextBlock.page-title">
+      <Setter Property="FontSize" Value="28"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.page-subtitle">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,4,0,28"/>
+    </Style>
+    <Style Selector="TextBlock.validation">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+      <Setter Property="Margin" Value="0,8,0,0"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="40" Spacing="32" x:Name="MainStack">
+      <StackPanel>
+        <TextBlock Text="Create Event" Classes="page-title"/>
+        <TextBlock Text="Add a new event to the school calendar" Classes="page-subtitle"/>
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel>
+          <!-- BASIC INFO -->
+          <TextBlock Text="Basic Information" Classes="section-title"/>
+          <TextBlock Text="Title" Classes="field-label"/>
+          <TextBox Text="{Binding Title}" Watermark="Event title"/>
+          <TextBlock Text="Status" Classes="field-label"/>
+          <ComboBox ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding Status}"/>
+          <TextBlock Text="Type" Classes="field-label"/>
+            <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding Type}"/>
+          <TextBlock Text="Location" Classes="field-label"/>
+          <ComboBox ItemsSource="{Binding LocationOptions}" SelectedItem="{Binding Location}"/>
+          <TextBlock Text="Organizer" Classes="field-label"/>
+          <TextBox Text="{Binding Organizer}" Watermark="Department or person"/>
+          <TextBlock Text="Max Attendees" Classes="field-label"/>
+          <NumericUpDown Minimum="0" Maximum="10000" Value="{Binding MaxAttendees}"/>
+
+          <!-- SCHEDULING -->
+          <TextBlock Text="Scheduling" Classes="section-title"/>
+          <TextBlock Text="Start Date" Classes="field-label"/>
+          <DatePicker SelectedDate="{Binding StartDateOffset}"/>
+          <TextBlock Text="End Date" Classes="field-label"/>
+          <DatePicker SelectedDate="{Binding EndDateOffset}"/>
+          <TextBlock Text="Start Time" Classes="field-label"/>
+          <TextBox Text="{Binding StartTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding IsAllDay, Converter={StaticResource InvertBool}}"/>
+          <TextBlock Text="End Time" Classes="field-label"/>
+          <TextBox Text="{Binding EndTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding IsAllDay, Converter={StaticResource InvertBool}}"/>
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+            <CheckBox IsChecked="{Binding IsAllDay}" Content="All Day"/>
+            <TextBlock Text="(When checked, time fields are disabled)" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+          </StackPanel>
+          <TextBlock Text="{Binding DateValidationMessage}" Classes="validation" IsVisible="{Binding HasDateValidationError}"/>
+
+          <!-- DETAILS -->
+          <TextBlock Text="Details" Classes="section-title"/>
+          <TextBlock Text="Description" Classes="field-label"/>
+          <TextBox Text="{Binding Description}" Classes="description" Watermark="Describe the event purpose, agenda, etc."/>
+
+          <!-- ACTIONS -->
+          <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,28,0,0" HorizontalAlignment="Right">
+            <Button Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}"/>
+            <Button Content="Save" Classes="primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

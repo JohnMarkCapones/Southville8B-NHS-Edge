@@ -29,7 +29,11 @@ public partial class RoomManagementView : UserControl
     public RoomManagementView()
     {
         InitializeComponent();
-        DataContext = new RoomManagementViewModel();
+        // IMPORTANT: Do NOT override DataContext at runtime; shell supplies the VM (with navigation callbacks).
+        if (Design.IsDesignMode)
+        {
+            DataContext = new RoomManagementViewModel(); // design-time preview only
+        }
 
         // Store references to elements that need responsive behavior
         InitializeResponsiveElements();

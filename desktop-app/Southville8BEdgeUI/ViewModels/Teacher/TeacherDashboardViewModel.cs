@@ -1,7 +1,10 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Avalonia;
+using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq; // added for max calculations
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -49,7 +52,8 @@ public partial class TeacherDashboardViewModel : ViewModelBase
     public IRelayCommand? NavigateToSchedulePlannerCommand { get; set; }
     public IRelayCommand? NavigateToGradeEntryCommand { get; set; }
     public IRelayCommand? NavigateToStudentManagementCommand { get; set; }
-    public IRelayCommand? NavigateToMyAnnouncementsCommand { get; set; } = default!;
+    public IRelayCommand? NavigateToMyAnnouncementsCommand { get; set; } = default!
+;
     public IRelayCommand? NavigateToMessagingCommand { get; set; }
 
     // Computed Properties
@@ -89,6 +93,27 @@ public partial class TeacherDashboardViewModel : ViewModelBase
             new() { Day = "Sat", ClassCount = 2, Students = 60, Hours = "9:00-12:00" },
             new() { Day = "Sun", ClassCount = 0, Students = 0, Hours = "Rest Day" }
         };
+
+        // Mark today & peak day for styling
+        var todayAbbrev = DateTime.Now.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "Mon",
+            DayOfWeek.Tuesday => "Tue",
+            DayOfWeek.Wednesday => "Wed",
+            DayOfWeek.Thursday => "Thu",
+            DayOfWeek.Friday => "Fri",
+            DayOfWeek.Saturday => "Sat",
+            DayOfWeek.Sunday => "Sun",
+            _ => string.Empty
+        };
+
+        int maxClasses = WeeklySchedule.Max(w => w.ClassCount);
+        foreach (var item in WeeklySchedule)
+        {
+            item.IsToday = item.Day == todayAbbrev;
+            item.IsPeakDay = item.ClassCount == maxClasses && maxClasses > 0;
+            item.UpdateVisualState();
+        }
     }
 
     private void InitializeTodaySchedule()
@@ -143,46 +168,68 @@ public partial class TeacherDashboardViewModel : ViewModelBase
     {
         SubjectDistribution = new ObservableCollection<SubjectDistributionViewModel>
         {
-            new() { Subject = "Mathematics", StudentsCount = 62, Percentage = 34.4, Color = "#3B82F6" },
-            new() { Subject = "Science", StudentsCount = 57, Percentage = 31.7, Color = "#10B981" },
-            new() { Subject = "Physics", StudentsCount = 25, Percentage = 13.9, Color = "#F59E0B" },
-            new() { Subject = "Chemistry", StudentsCount = 27, Percentage = 15.0, Color = "#8B5CF6" },
-            new() { Subject = "Advanced Math", StudentsCount = 9, Percentage = 5.0, Color = "#EF4444" }
+            new() { Subject = "Mathematics", StudentsCount = 62, Percentage = 34.4 },
+            new() { Subject = "Science", StudentsCount = 57, Percentage = 31.7 },
+            new() { Subject = "Physics", StudentsCount = 25, Percentage = 13.9 },
+            new() { Subject = "Chemistry", StudentsCount = 27, Percentage = 15.0 },
+            new() { Subject = "Advanced Math", StudentsCount = 9, Percentage = 5.0 }
         };
     }
 
-    [RelayCommand]
-    private void RefreshDashboard()
-    {
-        // TODO: Implement dashboard refresh logic
-    }
-
-    [RelayCommand]
-    private void ViewAllActivities()
-    {
-        // TODO: Navigate to activities page
-    }
-
-    [RelayCommand]
-    private void ViewDetailedReports()
-    {
-        // TODO: Navigate to detailed reports
-    }
-
-    [RelayCommand]
-    private void StartClass(DashboardClassViewModel classItem)
-    {
-        // TODO: Start class session
-    }
+    [RelayCommand] private void RefreshDashboard() { }
+    [RelayCommand] private void ViewAllActivities() { }
+    [RelayCommand] private void ViewDetailedReports() { }
+    [RelayCommand] private void StartClass(DashboardClassViewModel classItem) { }
 }
 
-// Supporting ViewModels
 public partial class WeeklyClassViewModel : ViewModelBase
 {
     [ObservableProperty] private string _day = "";
     [ObservableProperty] private int _classCount;
     [ObservableProperty] private int _students;
     [ObservableProperty] private string _hours = "";
+    [ObservableProperty] private bool _isToday;
+    [ObservableProperty] private bool _isPeakDay;
+    [ObservableProperty] private IBrush _backgroundBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _textBrush = Brushes.Transparent;
+
+    public bool HasClasses => ClassCount > 0;
+
+    partial void OnClassCountChanged(int value) => OnPropertyChanged(nameof(HasClasses));
+    partial void OnIsTodayChanged(bool value) => UpdateVisualState();
+    partial void OnIsPeakDayChanged(bool value) => UpdateVisualState();
+
+    private static IBrush Resolve(string key)
+    {
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    public void UpdateVisualState()
+    {
+        var success = Resolve("SuccessBrush");
+        var infoSoft = Resolve("InfoSoftBrush");
+        var accentSoft = Resolve("AccentSoftBrush");
+        var accentText = Resolve("AccentTextOnAccentBrush");
+        var textPrimary = Resolve("TextPrimaryBrush");
+
+        if (IsToday)
+        {
+            BackgroundBrush = success;
+            TextBrush = accentText;
+        }
+        else if (IsPeakDay)
+        {
+            BackgroundBrush = infoSoft;
+            TextBrush = textPrimary;
+        }
+        else
+        {
+            BackgroundBrush = accentSoft;
+            TextBrush = textPrimary;
+        }
+    }
 }
 
 public partial class DashboardClassViewModel : ViewModelBase
@@ -192,16 +239,28 @@ public partial class DashboardClassViewModel : ViewModelBase
     [ObservableProperty] private string _time = "";
     [ObservableProperty] private string _room = "";
     [ObservableProperty] private int _studentsCount;
-    [ObservableProperty] private string _status = "";
+    [ObservableProperty] private string _status = ""; // Completed, Next, Upcoming, In Progress
 
-    public string StatusColor => Status switch
+    public object StatusColor
     {
-        "Completed" => "#10B981",
-        "Next" => "#F59E0B",
-        "Upcoming" => "#6B7280",
-        "In Progress" => "#3B82F6",
-        _ => "#6B7280"
-    };
+        get
+        {
+            var key = Status switch
+            {
+                "Completed" => "SuccessBrush",
+                "Next" => "WarningBrush",
+                "Upcoming" => "TextMutedBrush",
+                "In Progress" => "InfoBrush",
+                _ => "TextMutedBrush"
+            };
+            var app = Application.Current;
+            if (app != null && app.TryGetResource(key, app.ActualThemeVariant, out var value) && value is IBrush b)
+                return b;
+            return Brushes.Transparent;
+        }
+    }
+
+    partial void OnStatusChanged(string value) => OnPropertyChanged(nameof(StatusColor));
 }
 
 public partial class TeacherActivityViewModel : ViewModelBase
@@ -210,19 +269,60 @@ public partial class TeacherActivityViewModel : ViewModelBase
     [ObservableProperty] private string _action = "";
     [ObservableProperty] private string _subject = "";
     [ObservableProperty] private string _timestamp = "";
-    [ObservableProperty] private string _icon = "";
-    [ObservableProperty] private string _type = "";
+    [ObservableProperty] private string _icon = ""; // legacy emoji fallback
+    [ObservableProperty] private string _type = ""; // Submission, Question, Achievement, Review, Late, Collaboration
 
-    public string TypeColor => Type switch
+    public string Description => string.IsNullOrWhiteSpace(Student) ? Action : string.IsNullOrWhiteSpace(Action) ? Student : $"{Student} {Action}";
+
+    public string IconName => Type switch
     {
-        "Submission" => "#10B981",
-        "Question" => "#3B82F6",
-        "Achievement" => "#F59E0B",
-        "Review" => "#8B5CF6",
-        "Late" => "#EF4444",
-        "Collaboration" => "#EC4899",
-        _ => "#6B7280"
+        "Submission" => "Send",
+        "Question" => "QuestionCircle",
+        "Achievement" => "Trophy", // changed from RibbonStar (not rendering) to Trophy
+        "Review" => "Search",
+        "Late" => "Clock",
+        "Collaboration" => "PeopleTeam",
+        _ => Icon switch
+        {
+            "📝" => "Send",
+            "❓" => "QuestionCircle",
+            "✅" => "CheckmarkCircle",
+            "📊" => "DataBarVertical",
+            "⏰" => "Clock",
+            "👥" => "PeopleTeam",
+            _ => "Info"
+        }
     };
+
+    public IBrush TypeColor
+    {
+        get
+        {
+            var key = Type switch
+            {
+                "Submission" => "SuccessBrush",
+                "Question" => "InfoBrush",
+                "Achievement" => "WarningBrush",
+                "Review" => "AccentBrush",
+                "Late" => "DangerBrush",
+                "Collaboration" => "AccentBrush",
+                _ => "TextMutedBrush"
+            };
+            var app = Application.Current;
+            if (app != null && app.TryGetResource(key, app.ActualThemeVariant, out var value) && value is IBrush b)
+                return b;
+            return Brushes.Transparent;
+        }
+    }
+
+    partial void OnStudentChanged(string value) => OnPropertyChanged(nameof(Description));
+    partial void OnActionChanged(string value) => OnPropertyChanged(nameof(Description));
+    partial void OnTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(TypeColor));
+        OnPropertyChanged(nameof(IconName));
+    }
+    partial void OnIconChanged(string value) => OnPropertyChanged(nameof(IconName));
 }
 
 public partial class StudentPerformanceViewModel : ViewModelBase
@@ -234,7 +334,24 @@ public partial class StudentPerformanceViewModel : ViewModelBase
     [ObservableProperty] private int _studentsCount;
 
     public string ImprovementText => $"{(IsImproving ? "+" : "")}{Improvement:F1}%";
-    public string ImprovementColor => IsImproving ? "#10B981" : "#EF4444";
+
+    public IBrush ImprovementBrush
+    {
+        get
+        {
+            var app = Application.Current;
+            if (app != null && app.TryGetResource(IsImproving ? "SuccessBrush" : "DangerBrush", app.ActualThemeVariant, out var value) && value is IBrush b)
+                return b;
+            return Brushes.Transparent;
+        }
+    }
+
+    partial void OnImprovementChanged(double value) => OnPropertyChanged(nameof(ImprovementText));
+    partial void OnIsImprovingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ImprovementBrush));
+        OnPropertyChanged(nameof(ImprovementText));
+    }
 }
 
 public partial class ClassStatViewModel : ViewModelBase
@@ -250,5 +367,25 @@ public partial class SubjectDistributionViewModel : ViewModelBase
     [ObservableProperty] private string _subject = "";
     [ObservableProperty] private int _studentsCount;
     [ObservableProperty] private double _percentage;
-    [ObservableProperty] private string _color = "";
+
+    public object Color
+    {
+        get
+        {
+            var key = Subject switch
+            {
+                "Mathematics" => "InfoBrush",
+                "Science" => "SuccessBrush",
+                "Physics" => "WarningBrush",
+                "Chemistry" => "AccentBrush",
+                _ => "DangerBrush"
+            };
+            var app = Application.Current;
+            if (app != null && app.TryGetResource(key, app.ActualThemeVariant, out var value) && value is IBrush b)
+                return b;
+            return Brushes.Transparent;
+        }
+    }
+
+    partial void OnSubjectChanged(string value) => OnPropertyChanged(nameof(Color));
 }

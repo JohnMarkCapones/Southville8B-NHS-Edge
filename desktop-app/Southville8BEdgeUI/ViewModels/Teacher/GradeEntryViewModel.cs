@@ -1,8 +1,25 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Text;
+using System.IO;
+using System;
+using System.Linq;
+using Avalonia; // For Application.Current
+using Avalonia.Media; // For IBrush
+using Avalonia.Styling; // Theme variant
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
+
+internal static class GradeColorProvider
+{
+    public static IBrush Success { get; set; } = Brushes.Transparent;
+    public static IBrush Info { get; set; } = Brushes.Transparent;
+    public static IBrush Warning { get; set; } = Brushes.Transparent;
+    public static IBrush Danger { get; set; } = Brushes.Transparent;
+    public static IBrush Neutral { get; set; } = Brushes.Transparent;
+    public static IBrush GetFor(double grade) => grade >= 90 ? Success : grade >= 80 ? Info : grade >= 70 ? Warning : Danger;
+}
 
 public partial class GradeEntryViewModel : ViewModelBase
 {
@@ -15,14 +32,68 @@ public partial class GradeEntryViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<StudentGradeViewModel> _studentGrades = new();
     [ObservableProperty] private ObservableCollection<GradeDistributionItemViewModel> _gradeDistribution = new();
     [ObservableProperty] private ObservableCollection<RecentGradeEntryViewModel> _recentGradeEntries = new();
+    [ObservableProperty] private bool _hasUnsavedChanges; // tracks if any grade was edited locally
 
     public GradeEntryViewModel()
     {
         InitializeData();
+        HookStudentGradesCollection();
+
+        // Subscribe to theme changes to keep colors in sync with dynamic theme
+        if (Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged += (_, __) => RefreshThemeColors();
+        }
+    }
+
+    private static IBrush ResolveBrush(string key)
+    {
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var value) && value is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    private void RefreshThemeColors()
+    {
+        // Re-resolve brushes from current theme
+        GradeColorProvider.Success = ResolveBrush("SuccessBrush");
+        GradeColorProvider.Info = ResolveBrush("InfoBrush");
+        GradeColorProvider.Warning = ResolveBrush("WarningBrush");
+        GradeColorProvider.Danger = ResolveBrush("DangerBrush");
+        GradeColorProvider.Neutral = ResolveBrush("TextSecondaryBrush");
+
+        // Update existing collections
+        foreach (var sg in StudentGrades)
+            sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
+
+        foreach (var dist in GradeDistribution)
+        {
+            dist.Color = dist.Grade switch
+            {
+                "A" => GradeColorProvider.Success,
+                "B" => GradeColorProvider.Info,
+                "C" => GradeColorProvider.Warning,
+                "D" => GradeColorProvider.Danger,
+                "F" => GradeColorProvider.Neutral,
+                _ => GradeColorProvider.Neutral
+            };
+        }
+
+        foreach (var recent in RecentGradeEntries)
+        {
+            // Attempt to parse numeric portion; fallback neutral
+            if (recent.Grade is { Length: >0 } g && g.TrimEnd('%') is string raw && double.TryParse(raw, out var val))
+                recent.GradeColor = GradeColorProvider.GetFor(val);
+            else
+                recent.GradeColor = GradeColorProvider.Neutral;
+        }
     }
 
     private void InitializeData()
     {
+        // Initialize theme colors first
+        RefreshThemeColors();
+
         Classes = new ObservableCollection<string> { "Grade 8A - Math", "Grade 8B - Science", "Grade 9A - Math" };
         SelectedClass = Classes[0];
 
@@ -34,22 +105,97 @@ public partial class GradeEntryViewModel : ViewModelBase
 
         GradeDistribution = new ObservableCollection<GradeDistributionItemViewModel>
         {
-            new() { Grade = "A", Count = 12, Percentage = 40, Color = "#10B981" },
-            new() { Grade = "B", Count = 8, Percentage = 26.7, Color = "#3B82F6" },
-            new() { Grade = "C", Count = 6, Percentage = 20, Color = "#F59E0B" },
-            new() { Grade = "D", Count = 3, Percentage = 10, Color = "#EF4444" },
-            new() { Grade = "F", Count = 1, Percentage = 3.3, Color = "#6B7280" }
+            new() { Grade = "A", Count = 12, Percentage = 40, Color = GradeColorProvider.Success },
+            new() { Grade = "B", Count = 8, Percentage = 26.7, Color = GradeColorProvider.Info },
+            new() { Grade = "C", Count = 6, Percentage = 20, Color = GradeColorProvider.Warning },
+            new() { Grade = "D", Count = 3, Percentage = 10, Color = GradeColorProvider.Danger },
+            new() { Grade = "F", Count = 1, Percentage = 3.3, Color = GradeColorProvider.Neutral }
         };
 
         RecentGradeEntries = new ObservableCollection<RecentGradeEntryViewModel>
         {
-            new() { StudentName = "John Smith", AssignmentName = "Quiz #3", Grade = "85%", Timestamp = "2 mins ago", GradeColor = "#10B981" },
-            new() { StudentName = "Maria Garcia", AssignmentName = "Assignment #2", Grade = "92%", Timestamp = "5 mins ago", GradeColor = "#10B981" }
+            new() { StudentName = "John Smith", AssignmentName = "Quiz #3", Grade = "85%", Timestamp = "2 mins ago", GradeColor = GradeColorProvider.Info },
+            new() { StudentName = "Maria Garcia", AssignmentName = "Assignment #2", Grade = "92%", Timestamp = "5 mins ago", GradeColor = GradeColorProvider.Success }
         };
     }
 
-    [RelayCommand] private void ExportGrades() { }
-    [RelayCommand] private void SaveAllGrades() { }
+    private void HookStudentGradesCollection()
+    {
+        foreach (var sg in StudentGrades)
+        {
+            sg.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(StudentGradeViewModel.FinalGrade))
+                {
+                    sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
+                }
+                MarkDirty();
+            };
+            sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
+        }
+        StudentGrades.CollectionChanged += (_, args) =>
+        {
+            if (args.NewItems != null)
+            {
+                foreach (var item in args.NewItems.OfType<StudentGradeViewModel>())
+                {
+                    item.GradeColor = GradeColorProvider.GetFor(item.FinalGrade);
+                    item.PropertyChanged += (_, ev) =>
+                    {
+                        if (ev.PropertyName == nameof(StudentGradeViewModel.FinalGrade))
+                            item.GradeColor = GradeColorProvider.GetFor(item.FinalGrade);
+                        MarkDirty();
+                    };
+                }
+            }
+            MarkDirty();
+            ExportGradesCommand.NotifyCanExecuteChanged();
+            SaveAllGradesCommand.NotifyCanExecuteChanged();
+        };
+    }
+
+    private void MarkDirty()
+    {
+        HasUnsavedChanges = true;
+        SaveAllGradesCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanExportGrades() => StudentGrades?.Count > 0;
+    private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades?.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanExportGrades))]
+    private void ExportGrades()
+    {
+        // Simple CSV export to temp folder (placeholder implementation)
+        var sb = new StringBuilder();
+        sb.AppendLine("Student,Quiz,Assignment,Exam,Final");
+        foreach (var s in StudentGrades)
+        {
+            sb.AppendLine($"{Escape(s.StudentName)},{Escape(s.QuizGrade)},{Escape(s.AssignmentGrade)},{Escape(s.ExamGrade)},{s.FinalGrade:F2}");
+        }
+        try
+        {
+            var fileName = $"grades_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            var path = Path.Combine(Path.GetTempPath(), fileName);
+            File.WriteAllText(path, sb.ToString());
+            // TODO: surface success toast via a service / messenger
+        }
+        catch
+        {
+            // TODO: surface error toast
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveAllGrades))]
+    private void SaveAllGrades()
+    {
+        // Placeholder: simulate persistence
+        HasUnsavedChanges = false;
+        SaveAllGradesCommand.NotifyCanExecuteChanged();
+        // TODO: persist to backend / repository and raise notifications
+    }
+
+    private static string Escape(string? value) => string.IsNullOrEmpty(value) ? "" : value.Contains(',') ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 }
 
 public partial class StudentGradeViewModel : ViewModelBase
@@ -59,8 +205,7 @@ public partial class StudentGradeViewModel : ViewModelBase
     [ObservableProperty] private string _assignmentGrade = "";
     [ObservableProperty] private string _examGrade = "";
     [ObservableProperty] private double _finalGrade;
-
-    public string GradeColor => FinalGrade >= 90 ? "#10B981" : FinalGrade >= 80 ? "#3B82F6" : FinalGrade >= 70 ? "#F59E0B" : "#EF4444";
+    [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed grade color
 
     [RelayCommand] private void SaveGrade() { }
     [RelayCommand] private void EditNotes() { }
@@ -71,7 +216,7 @@ public partial class GradeDistributionItemViewModel : ViewModelBase
     [ObservableProperty] private string _grade = "";
     [ObservableProperty] private int _count;
     [ObservableProperty] private double _percentage;
-    [ObservableProperty] private string _color = "";
+    [ObservableProperty] private IBrush _color = Brushes.Transparent; // Themed color
 }
 
 public partial class RecentGradeEntryViewModel : ViewModelBase
@@ -80,5 +225,5 @@ public partial class RecentGradeEntryViewModel : ViewModelBase
     [ObservableProperty] private string _assignmentName = "";
     [ObservableProperty] private string _grade = "";
     [ObservableProperty] private string _timestamp = "";
-    [ObservableProperty] private string _gradeColor = "";
+    [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed color
 }

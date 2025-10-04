@@ -3,16 +3,17 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
              x:Class="Southville8BEdgeUI.Views.Teacher.GradeEntryView"
              x:DataType="vm:GradeEntryViewModel"
-             Background="#F9FAFB">
+             Background="{DynamicResource PageBackgroundBrush}">
 
     <UserControl.Styles>
         <!-- Base Card Style -->
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
@@ -30,16 +31,15 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
-
         <Style Selector="Border.card.tablet">
             <Setter Property="Padding" Value="16"/>
             <Setter Property="CornerRadius" Value="10"/>
         </Style>
 
-        <!-- Action Button Styles -->
+        <!-- Action Button Styles (Primary) -->
         <Style Selector="Button.action-btn">
-            <Setter Property="Background" Value="#10B981"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -52,32 +52,39 @@
                 </Transitions>
             </Setter>
         </Style>
-
         <Style Selector="Button.action-btn:pointerover">
-            <Setter Property="Background" Value="#059669"/>
             <Setter Property="RenderTransform" Value="scale(1.02)"/>
         </Style>
-
+        <Style Selector="Button.action-btn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+        </Style>
         <Style Selector="Button.action-btn.mobile">
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
 
-        <!-- Secondary Button Styles -->
+        <!-- Secondary Button Styles (Neutral / Muted) -->
         <Style Selector="Button.secondary-btn">
-            <Setter Property="Background" Value="#6B7280"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
         </Style>
-
         <Style Selector="Button.secondary-btn:pointerover">
-            <Setter Property="Background" Value="#4B5563"/>
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
         </Style>
-
+        <Style Selector="Button.secondary-btn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+        </Style>
         <Style Selector="Button.secondary-btn.mobile">
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="FontSize" Value="12"/>
@@ -87,35 +94,29 @@
         <Style Selector="TextBlock.header">
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-
         <Style Selector="TextBlock.header.mobile">
             <Setter Property="FontSize" Value="20"/>
         </Style>
-
         <Style Selector="TextBlock.header.tablet">
             <Setter Property="FontSize" Value="24"/>
         </Style>
-
         <Style Selector="TextBlock.subtitle">
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
-
         <Style Selector="TextBlock.subtitle.mobile">
             <Setter Property="FontSize" Value="12"/>
         </Style>
-
         <Style Selector="TextBlock.kpi-value">
             <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-
         <Style Selector="TextBlock.kpi-value.mobile">
             <Setter Property="FontSize" Value="18"/>
         </Style>
-
         <Style Selector="TextBlock.kpi-value.tablet">
             <Setter Property="FontSize" Value="20"/>
         </Style>
@@ -123,14 +124,14 @@
         <!-- Input Styles -->
         <Style Selector="ComboBox, TextBox">
             <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-
         <Style Selector="ComboBox:focus-within, TextBox:focus-within">
-            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
 
@@ -139,12 +140,10 @@
             <Setter Property="Margin" Value="40"/>
             <Setter Property="Spacing" Value="24"/>
         </Style>
-
         <Style Selector="StackPanel.main-content.tablet">
             <Setter Property="Margin" Value="24"/>
             <Setter Property="Spacing" Value="20"/>
         </Style>
-
         <Style Selector="StackPanel.main-content.mobile">
             <Setter Property="Margin" Value="16"/>
             <Setter Property="Spacing" Value="16"/>
@@ -152,13 +151,12 @@
 
         <!-- Grade Table Styles -->
         <Style Selector="Border.table-cell">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="8"/>
         </Style>
-
         <Style Selector="Border.table-cell.mobile">
             <Setter Property="Padding" Value="6"/>
         </Style>
@@ -167,37 +165,56 @@
         <Style Selector="ProgressBar">
             <Setter Property="Height" Value="20"/>
             <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
         </Style>
-
         <Style Selector="ProgressBar.mobile">
             <Setter Property="Height" Value="16"/>
             <Setter Property="CornerRadius" Value="8"/>
         </Style>
+
+        <!-- Header row background -->
+        <Style Selector="Border.grade-header">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+
+        <!-- Recent entry item -->
+        <Style Selector="Border.recent-entry">
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style Selector="Border.recent-entry:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+        </Style>
     </UserControl.Styles>
 
-    <ScrollViewer x:Name="MainScrollViewer" 
-                  HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="MainScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="MainStackPanel" Classes="main-content">
-            
             <!-- Header -->
             <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="Grade Entry System" Classes="header"/>
                     <TextBlock Text="Manage student grades and assessments" Classes="subtitle"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" 
-                           Orientation="Horizontal" 
-                           Spacing="12" 
-                           VerticalAlignment="Center">
-                    <Button x:Name="ExportButton"
-                           Content="📊 Export Grades" 
-                           Classes="secondary-btn" 
-                           Command="{Binding ExportGradesCommand}"/>
-                    <Button x:Name="SaveAllButton"
-                           Content="💾 Save All" 
-                           Classes="action-btn" 
-                           Command="{Binding SaveAllGradesCommand}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button x:Name="ExportButton" Classes="secondary-btn" Command="{Binding ExportGradesCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
+                            <TextBlock Text="Export Grades"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="SaveAllButton" Classes="action-btn" Command="{Binding SaveAllGradesCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                            <TextBlock Text="Save All"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -205,56 +222,45 @@
             <Grid x:Name="StatsGrid" ColumnDefinitions="*,*,*,*">
                 <Border x:Name="StatsCard1" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Pending Grades" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding PendingGradesCount}" Classes="kpi-value" Foreground="#EF4444"/>
-                        <TextBlock Text="Require attention" FontSize="12" Foreground="#EF4444"/>
+                        <TextBlock Text="Pending Grades" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding PendingGradesCount}" Classes="kpi-value" Foreground="{DynamicResource DangerBrush}"/>
+                        <TextBlock Text="Require attention" FontSize="12" Foreground="{DynamicResource DangerBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="StatsCard2" Grid.Column="1" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Completed Today" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding CompletedTodayCount}" Classes="kpi-value" Foreground="#10B981"/>
-                        <TextBlock Text="Grades entered" FontSize="12" Foreground="#10B981"/>
+                        <TextBlock Text="Completed Today" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding CompletedTodayCount}" Classes="kpi-value" Foreground="{DynamicResource SuccessBrush}"/>
+                        <TextBlock Text="Grades entered" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="StatsCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Class Average" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding ClassAverageGrade, StringFormat={}{0:F1}%}" Classes="kpi-value" Foreground="#3B82F6"/>
-                        <TextBlock Text="Overall performance" FontSize="12" Foreground="#3B82F6"/>
+                        <TextBlock Text="Class Average" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding ClassAverageGrade, StringFormat={}{0:F1}%}" Classes="kpi-value" Foreground="{DynamicResource InfoBrush}"/>
+                        <TextBlock Text="Overall performance" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
                     </StackPanel>
                 </Border>
-                
                 <Border x:Name="StatsCard4" Grid.Column="3" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Assignments Due" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="{Binding AssignmentsDueCount}" Classes="kpi-value" Foreground="#F59E0B"/>
-                        <TextBlock Text="This week" FontSize="12" Foreground="#F59E0B"/>
+                        <TextBlock Text="Assignments Due" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding AssignmentsDueCount}" Classes="kpi-value" Foreground="{DynamicResource WarningBrush}"/>
+                        <TextBlock Text="This week" FontSize="12" Foreground="{DynamicResource WarningBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <!-- Grade Entry Section -->
             <Grid x:Name="ContentGrid" ColumnDefinitions="*,300">
-                
                 <!-- Grade Entry Table -->
                 <Border x:Name="GradeEntryCard" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Grade Entry" FontSize="18" FontWeight="SemiBold"/>
-                            <ComboBox Grid.Column="1" 
-                                     SelectedItem="{Binding SelectedClass}" 
-                                     ItemsSource="{Binding Classes}" 
-                                     MinWidth="200"/>
+                            <TextBlock Grid.Column="0" Text="Grade Entry" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <ComboBox Grid.Column="1" SelectedItem="{Binding SelectedClass}" ItemsSource="{Binding Classes}" MinWidth="200"/>
                         </Grid>
-                        
                         <!-- Grade Entry Header -->
-                        <Border x:Name="GradeTableHeader" 
-                               Background="#F9FAFB" 
-                               CornerRadius="8,8,0,0" 
-                               Padding="12,8">
+                        <Border x:Name="GradeTableHeader" Classes="grade-header" CornerRadius="8,8,0,0" Padding="12,8">
                             <Grid ColumnDefinitions="200,100,100,100,100,*">
                                 <TextBlock Grid.Column="0" Text="Student Name" FontWeight="SemiBold"/>
                                 <TextBlock Grid.Column="1" Text="Quiz" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -266,64 +272,23 @@
                         </Border>
 
                         <!-- Grade Entry Rows -->
-                        <ScrollViewer x:Name="GradeTableScrollViewer" 
-                                     MaxHeight="400" 
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="GradeTableScrollViewer" MaxHeight="400" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding StudentGrades}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:StudentGradeViewModel">
-                                        <Grid ColumnDefinitions="200,100,100,100,100,*" 
-                                             Margin="0,0,0,8" 
-                                             MinHeight="40">
-                                            <Border Grid.Column="0" Classes="table-cell">
-                                                <TextBlock Text="{Binding StudentName}" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <Border Grid.Column="1" Classes="table-cell" Margin="4,0">
-                                                <TextBox Text="{Binding QuizGrade}" 
-                                                        HorizontalAlignment="Center" 
-                                                        BorderThickness="0" 
-                                                        Background="Transparent"/>
-                                            </Border>
-                                            <Border Grid.Column="2" Classes="table-cell" Margin="4,0">
-                                                <TextBox Text="{Binding AssignmentGrade}" 
-                                                        HorizontalAlignment="Center" 
-                                                        BorderThickness="0" 
-                                                        Background="Transparent"/>
-                                            </Border>
-                                            <Border Grid.Column="3" Classes="table-cell" Margin="4,0">
-                                                <TextBox Text="{Binding ExamGrade}" 
-                                                        HorizontalAlignment="Center" 
-                                                        BorderThickness="0" 
-                                                        Background="Transparent"/>
-                                            </Border>
-                                            <Border Grid.Column="4" Classes="table-cell" Margin="4,0">
-                                                <TextBlock Text="{Binding FinalGrade, StringFormat={}{0:F1}}" 
-                                                          HorizontalAlignment="Center" 
-                                                          VerticalAlignment="Center" 
-                                                          FontWeight="Bold" 
-                                                          Foreground="{Binding GradeColor}"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="5" 
-                                                       Orientation="Horizontal" 
-                                                       HorizontalAlignment="Center" 
-                                                       Spacing="4">
-                                                <Button Content="💾" 
-                                                       Background="#10B981" 
-                                                       Foreground="White" 
-                                                       Padding="4" 
-                                                       BorderThickness="0" 
-                                                       CornerRadius="4" 
-                                                       ToolTip.Tip="Save Grade"
-                                                       Command="{Binding SaveGradeCommand}"/>
-                                                <Button Content="📝" 
-                                                       Background="#3B82F6" 
-                                                       Foreground="White" 
-                                                       Padding="4" 
-                                                       BorderThickness="0" 
-                                                       CornerRadius="4" 
-                                                       ToolTip.Tip="Edit Notes"
-                                                       Command="{Binding EditNotesCommand}"/>
+                                        <Grid ColumnDefinitions="200,100,100,100,100,*" Margin="0,0,0,8" MinHeight="40">
+                                            <Border Grid.Column="0" Classes="table-cell"><TextBlock Text="{Binding StudentName}" VerticalAlignment="Center"/></Border>
+                                            <Border Grid.Column="1" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding QuizGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
+                                            <Border Grid.Column="2" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding AssignmentGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
+                                            <Border Grid.Column="3" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding ExamGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
+                                            <Border Grid.Column="4" Classes="table-cell" Margin="4,0"><TextBlock Text="{Binding FinalGrade, StringFormat={}{0:F1}}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="{Binding GradeColor}"/></Border>
+                                            <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
+                                                <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Save Grade" Command="{Binding SaveGradeCommand}">
+                                                    <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                                                </Button>
+                                                <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Notes" Command="{Binding EditNotesCommand}">
+                                                    <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
+                                                </Button>
                                             </StackPanel>
                                         </Grid>
                                     </DataTemplate>
@@ -336,63 +301,36 @@
                 <!-- Grade Summary Panel -->
                 <Border x:Name="GradeSummaryCard" Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Grade Summary" FontSize="18" FontWeight="SemiBold"/>
-                        
+                        <TextBlock Text="Grade Summary" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <!-- Grade Distribution Chart -->
                         <StackPanel Spacing="12">
-                            <TextBlock Text="Grade Distribution" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Grade Distribution" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <ItemsControl ItemsSource="{Binding GradeDistribution}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:GradeDistributionItemViewModel">
                                         <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
-                                            <TextBlock Grid.Column="0" 
-                                                      Text="{Binding Grade}" 
-                                                      FontWeight="SemiBold" 
-                                                      MinWidth="30"/>
-                                            <ProgressBar Grid.Column="1" 
-                                                        Value="{Binding Percentage}" 
-                                                        Maximum="100" 
-                                                        Foreground="{Binding Color}" 
-                                                        Margin="8,0"/>
-                                            <TextBlock Grid.Column="2" 
-                                                      Text="{Binding Count}" 
-                                                      FontWeight="SemiBold" 
-                                                      MinWidth="30" 
-                                                      HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Column="0" Text="{Binding Grade}" FontWeight="SemiBold" MinWidth="30"/>
+                                            <ProgressBar Grid.Column="1" Value="{Binding Percentage}" Maximum="100" Foreground="{Binding Color}" Margin="8,0"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Count}" FontWeight="SemiBold" MinWidth="30" HorizontalAlignment="Right"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-
                         <!-- Recent Grade Entries -->
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Recent Entries" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Recent Entries" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding RecentGradeEntries}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="vm:RecentGradeEntryViewModel">
-                                            <Border Background="#F9FAFB" 
-                                                   CornerRadius="8" 
-                                                   Padding="8" 
-                                                   Margin="0,0,0,4">
+                                            <Border Classes="recent-entry">
                                                 <StackPanel Spacing="2">
-                                                    <TextBlock Text="{Binding StudentName}" 
-                                                              FontWeight="SemiBold" 
-                                                              FontSize="12"/>
-                                                    <TextBlock Text="{Binding AssignmentName}" 
-                                                              FontSize="11" 
-                                                              Foreground="#6B7280"/>
+                                                    <TextBlock Text="{Binding StudentName}" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding AssignmentName}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                                     <Grid ColumnDefinitions="*,Auto">
-                                                        <TextBlock Grid.Column="0" 
-                                                                  Text="{Binding Grade}" 
-                                                                  FontSize="14" 
-                                                                  FontWeight="Bold" 
-                                                                  Foreground="{Binding GradeColor}"/>
-                                                        <TextBlock Grid.Column="1" 
-                                                                  Text="{Binding Timestamp}" 
-                                                                  FontSize="10" 
-                                                                  Foreground="#9CA3AF"/>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Grade}" FontSize="14" FontWeight="Bold" Foreground="{Binding GradeColor}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                     </Grid>
                                                 </StackPanel>
                                             </Border>

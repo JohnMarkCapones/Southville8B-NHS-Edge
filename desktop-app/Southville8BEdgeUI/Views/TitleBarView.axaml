@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="40"
+             x:Class="Southville8BEdgeUI.Views.TitleBarView"
+             x:DataType="vm:TitleBarViewModel">
+	<UserControl.Resources>
+		<converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+	</UserControl.Resources>
+	<UserControl.Styles>
+		<Style Selector="Button.caption">
+			<Setter Property="Background"	 Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="0"/>
+			<Setter Property="Width" Value="46"/>
+			<Setter Property="Height" Value="32"/>
+			<Setter Property="VerticalAlignment" Value="Top"/>
+		</Style>
+		<Style Selector="Button.caption:pointerover /template/ ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}"/>
+		</Style>
+		<Style Selector="Button.caption:pressed /template/ ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}"/>
+		</Style>
+		<Style Selector="Button.caption.close:pointerover /template/ ContentPresenter">
+			<Setter Property="Background" Value="#C42B1C"/>
+		</Style>
+		<Style Selector="Button.caption.close:pointerover Path">
+			<Setter Property="Stroke" Value="White"/>
+		</Style>
+		<Style Selector="Button.caption.close:pressed /template/ ContentPresenter">
+			<Setter Property="Background" Value="#B32518"/>
+		</Style>
+	</UserControl.Styles>
+	<Grid Name="TitleBarBackground" Background="Transparent" PointerPressed="TitleBar_PointerPressed" DoubleTapped="TitleBar_DoubleTapped">
+		<Grid ColumnDefinitions="Auto,*,Auto">
+			<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="10,0">
+				<Image Source="{Binding Icon}" Width="16" Height="16" />
+				<TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+			</StackPanel>
+
+			<StackPanel Grid.Column="2" Orientation="Horizontal">
+				<Button Classes="caption" Command="{Binding MinimizeCommand}">
+					<Path Data="M0 4 H8" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1"/>
+				</Button>
+				<Button Classes="caption" Command="{Binding MaximizeRestoreCommand}">
+					<Grid>
+						<!-- Maximize icon -->
+						<Path Data="M0 0 H8 V8 H0Z" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" IsVisible="{Binding IsMaximized, Converter={StaticResource InverseBoolConverter}}"/>
+						<!-- Restore icon (two overlapping squares) -->
+						<Path Data="M0 2 H6 V8 H0Z M2 0 H8 V6 H2Z" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" IsVisible="{Binding IsMaximized}"/>
+					</Grid>
+				</Button>
+				<Button Classes="caption close" Command="{Binding CloseCommand}">
+					<Path Data="M0 0 L8 8 M0 8 L8 0" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1"/>
+				</Button>
+			</StackPanel>
+		</Grid>
+	</Grid>
+</UserControl>
