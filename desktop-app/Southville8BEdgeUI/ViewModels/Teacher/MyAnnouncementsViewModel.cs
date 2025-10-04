@@ -14,10 +14,10 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
     // Navigation callback set by shell
     public Action<ViewModelBase>? NavigateTo { get; set; }
 
-    [ObservableProperty] private int _totalAnnouncementsCount = 45;
-    [ObservableProperty] private int _activeAnnouncementsCount = 12;
-    [ObservableProperty] private int _totalViewsCount = 1247;
-    [ObservableProperty] private double _engagementRate = 78.3;
+    [ObservableProperty] private int _totalAnnouncementsCount = 0; // dynamic, computed
+    [ObservableProperty] private int _activeAnnouncementsCount = 0; // dynamic, computed
+    [ObservableProperty] private int _totalViewsCount = 1247; // keep sample metric
+    [ObservableProperty] private double _engagementRate = 78.3; // sample metric
     [ObservableProperty] private string _selectedFilter = "All";
     [ObservableProperty] private ObservableCollection<string> _filterOptions = new() { "All", "Active", "Draft", "Scheduled" };
     [ObservableProperty] private ObservableCollection<AnnouncementItemViewModel> _announcements = new();
@@ -37,12 +37,19 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
     public MyAnnouncementsViewModel()
     {
         InitializeData();
+        UpdateAnnouncementCounts();
         // Theme change subscription to refresh badge brushes (store handler for later unsubscription)
         if (Application.Current is { } app)
         {
             _themeChangedHandler = (_, __) => RefreshAnnouncementBadgeBrushes();
             app.ActualThemeVariantChanged += _themeChangedHandler;
         }
+    }
+
+    private void UpdateAnnouncementCounts()
+    {
+        TotalAnnouncementsCount = Announcements.Count;
+        ActiveAnnouncementsCount = Announcements.Count(a => a.Status == "Active");
     }
 
     private void RefreshAnnouncementBadgeBrushes()
@@ -95,8 +102,7 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
                     AnnouncementTitle = item.Title,
                     Timestamp = "just now"
                 });
-                TotalAnnouncementsCount = Announcements.Count;
-                ActiveAnnouncementsCount = Announcements.Count(a => a.Status == "Active");
+                UpdateAnnouncementCounts();
                 NavigateTo?.Invoke(this);
             }
         };
@@ -132,8 +138,7 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
             AnnouncementTitle = item.Title,
             Timestamp = "just now"
         });
-        TotalAnnouncementsCount = Announcements.Count;
-        ActiveAnnouncementsCount = Announcements.Count(a => a.Status == "Active");
+        UpdateAnnouncementCounts();
         // reset minimal fields
         NewAnnouncementTitle = NewAnnouncementContent = string.Empty;
         NewAnnouncementClass = NewAnnouncementPriority = string.Empty;

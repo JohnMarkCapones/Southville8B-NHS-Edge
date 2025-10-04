@@ -68,7 +68,8 @@ public partial class AdminShellViewModel : ViewModelBase
 
     public Action<ViewModelBase>? NavigateTo { get; set; }
 
-    public AdminShellViewModel()
+    // Added optional parameter enableRotation (default true) to allow unit tests to disable DispatcherTimer creation.
+    public AdminShellViewModel(bool enableRotation = true)
     {
         _currentContent = CreateDashboardViewModel();
         UpdateColumnWidths();
@@ -83,7 +84,8 @@ public partial class AdminShellViewModel : ViewModelBase
 
         InitializeTodayClasses();
         GenerateCalendarDays();
-        StartTodayRotation();
+        if (enableRotation)
+            StartTodayRotation();
     }
 
     private void InitializeTodayClasses()

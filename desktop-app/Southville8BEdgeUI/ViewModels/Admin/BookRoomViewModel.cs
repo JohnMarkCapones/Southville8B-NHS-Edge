@@ -19,6 +19,36 @@ public partial class BookRoomViewModel : ViewModelBase
     [ObservableProperty] private string _purpose = string.Empty;
     [ObservableProperty] private string _statusMessage = string.Empty;
 
+    // Shim property for Avalonia DatePicker (expects DateTimeOffset?).
+    // Use the generated SelectedDate property (not backing field) to avoid MVVMTK0034 warnings.
+    public DateTimeOffset? SelectedDateOffset
+    {
+        get => SelectedDate == default ? null : new DateTimeOffset(SelectedDate.Date);
+        set
+        {
+            if (value is null)
+            {
+                if (SelectedDate != default)
+                {
+                    SelectedDate = default; // clears date and triggers OnSelectedDateChanged
+                }
+                else
+                {
+                    // Already default, still notify binding explicitly
+                    OnPropertyChanged();
+                }
+                return;
+            }
+
+            var newDate = value.Value.Date;
+            if (newDate != SelectedDate)
+            {
+                SelectedDate = newDate; // triggers OnSelectedDateChanged
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public bool CanBook => SelectedRoom is not null &&
                             !string.IsNullOrWhiteSpace(SelectedSlot) &&
                             !string.IsNullOrWhiteSpace(Purpose) &&
@@ -36,7 +66,11 @@ public partial class BookRoomViewModel : ViewModelBase
     partial void OnSelectedRoomChanged(RoomViewModel? value) => OnPropertyChanged(nameof(CanBook));
     partial void OnSelectedSlotChanged(string? value) => OnPropertyChanged(nameof(CanBook));
     partial void OnPurposeChanged(string value) => OnPropertyChanged(nameof(CanBook));
-    partial void OnSelectedDateChanged(DateTime value) => OnPropertyChanged(nameof(CanBook));
+    partial void OnSelectedDateChanged(DateTime value)
+    {
+        OnPropertyChanged(nameof(CanBook));
+        OnPropertyChanged(nameof(SelectedDateOffset)); // keep picker in sync if date changed programmatically
+    }
 
     [RelayCommand]
     private void Book()
