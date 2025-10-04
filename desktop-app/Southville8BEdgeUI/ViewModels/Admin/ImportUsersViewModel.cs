@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System;
+using System.Threading.Tasks;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -32,11 +33,26 @@ public partial class ImportUsersViewModel : ViewModelBase
 
     [ObservableProperty] private string _summaryText = "No file loaded.";
     [ObservableProperty] private string _importStatusMessage = string.Empty;
+    [ObservableProperty] private bool _isImporting;
 
-    public bool CanImport => HasFile && !HasFileValidationError && CsvColumns.Count > 0;
+    // Require core mappings before enabling import (adjust as business rules evolve)
+    public bool CanImport => HasFile &&
+                              !HasFileValidationError &&
+                              CsvColumns.Count > 0 &&
+                              !string.IsNullOrWhiteSpace(FullNameColumn) &&
+                              !string.IsNullOrWhiteSpace(UsernameColumn) &&
+                              !string.IsNullOrWhiteSpace(EmailColumn) &&
+                              !IsImporting;
 
-    partial void OnHasFileChanged(bool value) => OnPropertyChanged(nameof(CanImport));
-    partial void OnHasFileValidationErrorChanged(bool value) => OnPropertyChanged(nameof(CanImport));
+    public bool HasImportCompleted => !IsImporting && !string.IsNullOrWhiteSpace(ImportStatusMessage);
+
+    partial void OnHasFileChanged(bool value) { OnPropertyChanged(nameof(CanImport)); }
+    partial void OnHasFileValidationErrorChanged(bool value) { OnPropertyChanged(nameof(CanImport)); }
+    partial void OnFullNameColumnChanged(string value) { OnPropertyChanged(nameof(CanImport)); }
+    partial void OnUsernameColumnChanged(string value) { OnPropertyChanged(nameof(CanImport)); }
+    partial void OnEmailColumnChanged(string value) { OnPropertyChanged(nameof(CanImport)); }
+    partial void OnIsImportingChanged(bool value) { OnPropertyChanged(nameof(CanImport)); OnPropertyChanged(nameof(HasImportCompleted)); }
+    partial void OnImportStatusMessageChanged(string value) => OnPropertyChanged(nameof(HasImportCompleted));
 
     // Subscribe to column changes so CanImport updates when columns are added/removed
     public ImportUsersViewModel()
@@ -58,6 +74,7 @@ public partial class ImportUsersViewModel : ViewModelBase
     [RelayCommand]
     private void ClearFile()
     {
+        if (IsImporting) return;
         SelectedFileName = "No file selected";
         HasFile = false;
         CsvColumns.Clear();
@@ -69,6 +86,7 @@ public partial class ImportUsersViewModel : ViewModelBase
         // Reset mappings so stale selections don't persist
         FullNameColumn = UsernameColumn = EmailColumn = RoleColumn = StatusColumn =
             GradeColumn = PhoneColumn = PasswordColumn = RequireResetColumn = string.Empty;
+        OnPropertyChanged(nameof(CanImport));
     }
 
     private void LoadSampleColumns()
@@ -107,22 +125,49 @@ public partial class ImportUsersViewModel : ViewModelBase
         SummaryText = $"File: {SelectedFileName} | Columns detected: {CsvColumns.Count} | Preview rows: {PreviewRows.Count}";
     }
 
+    private Task PerformImportAsync()
+    {
+        // Placeholder for real import; simulate latency
+        return Task.Delay(500);
+    }
+
     [RelayCommand]
-    private void Import()
+    private async Task Import()
     {
         if (!CanImport)
         {
             ImportStatusMessage = "Cannot import. Fix issues first.";
             return;
         }
-        // TODO: Real import logic
-        ImportStatusMessage = "Import completed (sample placeholder).";
+
+        IsImporting = true;
+        ImportStatusMessage = string.Empty;
+        try
+        {
+            await PerformImportAsync();
+            ImportStatusMessage = "Import completed successfully.";
+        }
+        catch (Exception ex)
+        {
+            ImportStatusMessage = $"Import failed: {ex.Message}";
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
+
+    [RelayCommand]
+    private void Done()
+    {
+        if (IsImporting) return;
         NavigateBack?.Invoke();
     }
 
     [RelayCommand]
     private void Cancel()
     {
+        if (IsImporting) return;
         NavigateBack?.Invoke();
     }
 }

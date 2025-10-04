@@ -176,7 +176,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontSize="12"/>
                     <Button Content="Remove" Padding="4,0"
-                            Command="{Binding #Root.RemoveParticipantUiCommand}"
+                            Command="{Binding DataContext.RemoveParticipantCommand, ElementName=Root}"
                             CommandParameter="{Binding .}" FontSize="12"/>
                   </StackPanel>
                 </Border>

@@ -4,10 +4,12 @@ using Avalonia.Layout;
 using System.Collections.Generic;
 using System.Windows.Input; // for ICommand
 using Southville8BEdgeUI.ViewModels.Admin; // to cast DataContext
+using System.ComponentModel; // for INotifyPropertyChanged
+using System.Runtime.CompilerServices; // for CallerMemberName
 
 namespace Southville8BEdgeUI.Views.Admin;
 
-public partial class AlertsView : UserControl
+public partial class AlertsView : UserControl, INotifyPropertyChanged
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
@@ -15,6 +17,15 @@ public partial class AlertsView : UserControl
     // Forwarded commands for bindings inside DataTemplates (avoid DataContext typed object issue in compiled bindings)
     public ICommand? ExpireAlertCommand => (DataContext as AlertsViewModel)?.ExpireAlertCommand;
     public ICommand? DeleteAlertCommand => (DataContext as AlertsViewModel)?.DeleteAlertCommand;
+
+    // Explicit INotifyPropertyChanged implementation to avoid hiding AvaloniaObject.PropertyChanged
+    private event PropertyChangedEventHandler? _propertyChanged;
+    event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+    {
+        add => _propertyChanged += value;
+        remove => _propertyChanged -= value;
+    }
+    private void OnPropertyChanged([CallerMemberName] string? name = null) => _propertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
@@ -44,8 +55,9 @@ public partial class AlertsView : UserControl
         this.SizeChanged += OnSizeChanged;
         DataContextChanged += (_, _) =>
         {
-            // Notify bindings that command properties may have changed (simplest: re-assign DataContext of named root to refresh element name bindings)
-            // ElementName bindings will re-evaluate automatically; no explicit notification needed.
+            // Notify bindings for forwarded command properties
+            OnPropertyChanged(nameof(ExpireAlertCommand));
+            OnPropertyChanged(nameof(DeleteAlertCommand));
         };
     }
 
@@ -249,11 +261,11 @@ public partial class AlertsView : UserControl
         // Fast path for alert cards
         if (control is Border alertCard && alertCard.Classes.Contains(AlertCardClass)) UpdateElementResponsiveClasses(alertCard, sizeClass);
         // Optimized text block check using direct string comparison
-        else if (control is TextBlock textBlock && textBlock.Name is { Length: >0 } && textBlock.Name.EndsWith(TextElementSuffix)) UpdateElementResponsiveClasses(textBlock, sizeClass);
+        else if (control is TextBlock textBlock && textBlock.Name is { Length: > 0 } && textBlock.Name.EndsWith(TextElementSuffix)) UpdateElementResponsiveClasses(textBlock, sizeClass);
         // Optimized button check using direct string comparison
-        else if (control is Button button && button.Name is { Length: >0 } && button.Name.EndsWith(ButtonElementSuffix)) UpdateElementResponsiveClasses(button, sizeClass);
+        else if (control is Button button && button.Name is { Length: > 0 } && button.Name.EndsWith(ButtonElementSuffix)) UpdateElementResponsiveClasses(button, sizeClass);
         // Check for input elements
-        else if (control.Name is { Length: >0 } && control.Name.EndsWith(InputElementSuffix)) UpdateElementResponsiveClasses(control, sizeClass);
+        else if (control.Name is { Length: > 0 } && control.Name.EndsWith(InputElementSuffix)) UpdateElementResponsiveClasses(control, sizeClass);
 
         // Recursively update children with type-specific handling
         if (control is Panel panel)

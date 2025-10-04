@@ -7,71 +7,65 @@
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
              x:Class="Southville8BEdgeUI.Views.LoginView"
              x:DataType="vm:LoginViewModel"
-             Background="{DynamicResource PanelGradientBrush}">
+             Background="{StaticResource LoginPanelGradientBrush}">
 
 	<UserControl.Resources>
-		<!-- Modern Brand Palette with Enhanced Colors -->
-		<SolidColorBrush x:Key="BrandPrimaryBrush" Color="#6366F1"/>
-		<SolidColorBrush x:Key="BrandPrimaryBrushHover" Color="#5B5AF0"/>
-		<SolidColorBrush x:Key="BrandPrimaryBrushPressed" Color="#4F46E5"/>
-		<SolidColorBrush x:Key="BrandSecondaryBrush" Color="#EC4899"/>
-		<SolidColorBrush x:Key="BrandAccentBrush" Color="#10B981"/>
-		
+		<!-- View-specific brand palette (unique keys to avoid shadowing global theme tokens) -->
+		<SolidColorBrush x:Key="LoginBrandPrimaryBrush" Color="#6366F1"/>
+		<SolidColorBrush x:Key="LoginBrandPrimaryBrushHover" Color="#5B5AF0"/>
+		<SolidColorBrush x:Key="LoginBrandPrimaryBrushPressed" Color="#4F46E5"/>
+		<SolidColorBrush x:Key="LoginBrandSecondaryBrush" Color="#EC4899"/>
+		<SolidColorBrush x:Key="LoginBrandAccentBrush" Color="#10B981"/>
 
-		<!-- Modern Text Colors -->
-		<SolidColorBrush x:Key="TextPrimaryBrush" Color="#1E293B"/>
-		<SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569"/>
-		<SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8"/>
-		<SolidColorBrush x:Key="TextMainBrush" Color="#F37071" />
-		<SolidColorBrush x:Key="TextMainSecondaryBrush" Color="#F27071"/>
-		<SolidColorBrush x:Key="TextGrayBrush" Color="#8D8D8C"/>
+		<!-- Additional login-only text accents (do not redefine global Text* brushes) -->
+		<SolidColorBrush x:Key="LoginTextMainBrush" Color="#F37071" />
+		<SolidColorBrush x:Key="LoginTextMainSecondaryBrush" Color="#F27071"/>
+		<SolidColorBrush x:Key="LoginTextGrayBrush" Color="#8D8D8C"/>
 
-		<!-- Modern Surface Colors -->
-		<SolidColorBrush x:Key="SurfaceBrush" Color="#F8FAFC"/>
-		<SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF"/>
-		<SolidColorBrush x:Key="InputBackgroundBrush" Color="#F1F5F9"/>
-		<SolidColorBrush x:Key="InputFocusBrush" Color="#FFFFFF"/>
-		<SolidColorBrush x:Key="BorderBrush" Color="#E2E8F0"/>
-		<SolidColorBrush x:Key="BorderFocusBrush" Color="#6366F1"/>
-		<SolidColorBrush x:Key="ButtonPeachBrush" Color="#F37071" />
+		<!-- Login specific surfaces / accents (avoid redefining global CardBackgroundBrush / BorderBrush / SurfaceBrush) -->
+		<SolidColorBrush x:Key="LoginButtonPeachBrush" Color="#F37071" />
+		<SolidColorBrush x:Key="LoginInputFocusBrush" Color="#FFFFFF"/>
+		<SolidColorBrush x:Key="LoginBorderFocusBrush" Color="#6366F1"/>
+		<SolidColorBrush x:Key="LoginInputHoverBgBrush" Color="#F1F5F9"/>
 
-		<!-- Primary button (blue) brushes -->
-		<LinearGradientBrush x:Key="PrimaryButtonBrush" StartPoint="0,0" EndPoint="1,1">
+		<!-- Primary button (gradient) brushes (scoped to login) -->
+		<LinearGradientBrush x:Key="LoginPrimaryButtonBrush" StartPoint="0,0" EndPoint="1,1">
 			<GradientStop Color="#2563EB" Offset="0"/>
 			<GradientStop Color="#4F46E5" Offset="1"/>
 		</LinearGradientBrush>
-		<LinearGradientBrush x:Key="PrimaryButtonBrushHover" StartPoint="0,0" EndPoint="1,1">
+		<LinearGradientBrush x:Key="LoginPrimaryButtonBrushHover" StartPoint="0,0" EndPoint="1,1">
 			<GradientStop Color="#1D4ED8" Offset="0"/>
 			<GradientStop Color="#4338CA" Offset="1"/>
 		</LinearGradientBrush>
-		<LinearGradientBrush x:Key="PrimaryButtonBrushPressed" StartPoint="0,0" EndPoint="1,1">
+		<LinearGradientBrush x:Key="LoginPrimaryButtonBrushPressed" StartPoint="0,0" EndPoint="1,1">
 			<GradientStop Color="#1E40AF" Offset="0"/>
 			<GradientStop Color="#3730A3" Offset="1"/>
 		</LinearGradientBrush>
 
-		<!-- Modern Gradients -->
-		<LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
-			<GradientStop Color="#6366F1" Offset="0"/>
-			<GradientStop Color="#5B5AF0" Offset="0.5"/>
-			<GradientStop Color="#4F46E5" Offset="1"/>
-		</LinearGradientBrush>
-
-		<LinearGradientBrush x:Key="PanelGradientBrush" StartPoint="0,0" EndPoint="1,1">
+		<!-- Background gradient for login view -->
+		<LinearGradientBrush x:Key="LoginPanelGradientBrush" StartPoint="0,0" EndPoint="1,1">
 			<GradientStop Color="#FFFFFF" Offset="0"/>
 			<GradientStop Color="#F8FAFC" Offset="0.7"/>
 			<GradientStop Color="#F1F5F9" Offset="1"/>
 		</LinearGradientBrush>
 
+		<!-- Decorative gradient -->
+		<LinearGradientBrush x:Key="LoginBrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
+			<GradientStop Color="#6366F1" Offset="0"/>
+			<GradientStop Color="#5B5AF0" Offset="0.5"/>
+			<GradientStop Color="#4F46E5" Offset="1"/>
+		</LinearGradientBrush>
+
 		<!-- Glassmorphism Effect -->
-		<SolidColorBrush x:Key="GlassBrush" Color="#F0FFFFFF"/>
+		<SolidColorBrush x:Key="LoginGlassBrush" Color="#F0FFFFFF"/>
 		<!-- Converters -->
 		<c:BoolToPasswordCharConverter x:Key="ShowPasswordToChar" MaskChar="●"/>
 	</UserControl.Resources>
 
 	<UserControl.Styles>
-		<!-- Style for the underline border around the input -->
+		<!-- Underline input (reuse global BorderBrush) -->
 		<Style Selector="Border.input-underline">
-			<Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="BorderThickness" Value="0,0,0,2"/>
 			<Setter Property="Padding" Value="0,8"/>
 			<Setter Property="Transitions">
@@ -80,17 +74,15 @@
 				</Transitions>
 			</Setter>
 		</Style>
-
-		<!-- Style to change underline color when input is focused -->
 		<Style Selector="Border.input-underline:focus-within">
-			<Setter Property="BorderBrush" Value="{StaticResource BorderFocusBrush}"/>
+			<Setter Property="BorderBrush" Value="{StaticResource LoginBorderFocusBrush}"/>
 		</Style>
 
-		<!-- Modern Button Styles (now blue) -->
+		<!-- Primary Buttons -->
 		<Style Selector="UserControl Button">
 			<Setter Property="CornerRadius" Value="12"/>
 			<Setter Property="Padding" Value="24,16"/>
-			<Setter Property="Background" Value="{StaticResource PrimaryButtonBrush}"/>
+			<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrush}"/>
 			<Setter Property="Foreground" Value="White"/>
 			<Setter Property="TextElement.Foreground" Value="White"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
@@ -109,17 +101,14 @@
 				</Transitions>
 			</Setter>
 		</Style>
-
 		<Style Selector="UserControl Button:pointerover">
 			<Setter Property="RenderTransform" Value="translateY(-1px)"/>
-			<Setter Property="Background" Value="{StaticResource PrimaryButtonBrushHover}"/>
+			<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrushHover}"/>
 		</Style>
-
 		<Style Selector="UserControl Button:pressed">
 			<Setter Property="RenderTransform" Value="translateY(1px)"/>
-			<Setter Property="Background" Value="{StaticResource PrimaryButtonBrushPressed}"/>
+			<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrushPressed}"/>
 		</Style>
-
 		<Style Selector="UserControl Button:disabled">
 			<Setter Property="Opacity" Value="0.5"/>
 			<Setter Property="Background" Value="#94A3B8"/>
@@ -129,8 +118,8 @@
 		<Style Selector="UserControl Button.link">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Foreground" Value="{StaticResource BrandPrimaryBrush}"/>
-			<Setter Property="TextElement.Foreground" Value="{StaticResource BrandPrimaryBrush}"/>
+			<Setter Property="Foreground" Value="{StaticResource LoginBrandPrimaryBrush}"/>
+			<Setter Property="TextElement.Foreground" Value="{StaticResource LoginBrandPrimaryBrush}"/>
 			<Setter Property="Padding" Value="8,6"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Cursor" Value="Hand"/>
@@ -145,16 +134,14 @@
 				</Transitions>
 			</Setter>
 		</Style>
-
 		<Style Selector="UserControl Button.link:pointerover">
-			<Setter Property="Foreground" Value="{StaticResource BrandPrimaryBrushHover}"/>
+			<Setter Property="Foreground" Value="{StaticResource LoginBrandPrimaryBrushHover}"/>
 			<Setter Property="RenderTransform" Value=""/>
 			<Setter Property="Opacity" Value="0.9"/>
-			<Setter Property="Background" Value="{StaticResource InputBackgroundBrush}"/>
+			<Setter Property="Background" Value="{StaticResource LoginInputHoverBgBrush}"/>
 		</Style>
-
 		<Style Selector="UserControl Button.link:pressed">
-			<Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="Opacity" Value="0.95"/>
 		</Style>
 
@@ -162,15 +149,14 @@
 		<Style Selector="UserControl Button.secondary">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="2"/>
-			<Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-			<Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-			<Setter Property="TextElement.Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 			<Setter Property="MinHeight" Value="44"/>
 		</Style>
-
 		<Style Selector="UserControl Button.secondary:pointerover">
-			<Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
-			<Setter Property="BorderBrush" Value="{StaticResource BrandPrimaryBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{StaticResource LoginBrandPrimaryBrush}"/>
 		</Style>
 	</UserControl.Styles>
 
@@ -181,29 +167,29 @@
 			<StackPanel Spacing="8">
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="Welco" FontSize="56" FontWeight="ExtraBold"
-                               Foreground="{StaticResource TextMainBrush}"
-							   Margin="0,0,-10,0"/>
+                               Foreground="{StaticResource LoginTextMainBrush}"
+					   Margin="0,0,-10,0"/>
 					<TextBlock Text="me" FontSize="56" FontWeight="ExtraBold"
-							   Foreground="{StaticResource TextGrayBrush}"/>
+					   Foreground="{StaticResource LoginTextGrayBrush}"/>
 					<TextBlock Text="to" FontSize="56" FontWeight="Light"
-                               Foreground="{StaticResource TextGrayBrush}"/>
+                               Foreground="{StaticResource LoginTextGrayBrush}"/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="SV8B NHS" FontSize="36" FontWeight="Bold"
-                               Foreground="{StaticResource TextMainSecondaryBrush}"/>
+                               Foreground="{StaticResource LoginTextMainSecondaryBrush}"/>
 					<TextBlock Text="School Portal" FontSize="36" FontWeight="Medium"
-                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
 				</StackPanel>
 				<!-- Subtitle -->
 				<TextBlock Text="Your gateway to academic excellence and digital learning"
                            FontSize="16" FontWeight="Regular"
-                           Foreground="{StaticResource TextMutedBrush}"
+                           Foreground="{DynamicResource TextMutedBrush}"
                            Margin="0,8,0,0"/>
 			</StackPanel>
 
 			<!-- Modern Image Carousel with Glassmorphism -->
 			<Border Height="320" Width="480"
-                    Background="{StaticResource PanelGradientBrush}"
+                    Background="{StaticResource LoginPanelGradientBrush}"
                     CornerRadius="20"
                     Margin="0,20,0,0"
                     BoxShadow="0 20 40 -12 #0000001A, 0 8 32 -8 #0000000F"
@@ -232,8 +218,8 @@
 
 		<!-- Right Panel: Modern Login Form -->
 		<Border Grid.Column="1"
-				Background="{StaticResource CardBackgroundBrush}"
-				BorderBrush="{StaticResource BorderBrush}"
+				Background="{DynamicResource CardBackgroundBrush}"
+				BorderBrush="{DynamicResource BorderBrush}"
 				CornerRadius="20"
 				Padding="32"
 				VerticalAlignment="Center"
@@ -246,41 +232,41 @@
 				<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,24">
 					<StackPanel Grid.Column="0" Spacing="8" VerticalAlignment="Top">
 						<TextBlock Text="Welcome Back!"
-								   Foreground="{StaticResource TextPrimaryBrush}"
-								   FontSize="32"
-								   FontWeight="ExtraBold"/>
+							   Foreground="{DynamicResource TextPrimaryBrush}"
+							   FontSize="32"
+							   FontWeight="ExtraBold"/>
 						<TextBlock Text="Sign in to your account to continue"
-								   Foreground="{StaticResource TextSecondaryBrush}"
-								   FontSize="16"
-								   FontWeight="Regular"/>
+							   Foreground="{DynamicResource TextSecondaryBrush}"
+							   FontSize="16"
+							   FontWeight="Regular"/>
 					</StackPanel>
 					<!-- Logo Image -->
 						<Image Grid.Column="1" 
-							   Source="avares://Southville8BEdgeUI/Assets/Images/southville-8b-logo.png"
-							   Width="80"
-							   Height="80"
-							   HorizontalAlignment="Left"
-							   VerticalAlignment="Top"
-							   Margin="16,0,0,0"/>
+						   Source="avares://Southville8BEdgeUI/Assets/Images/southville-8b-logo.png"
+						   Width="80"
+						   Height="80"
+						   HorizontalAlignment="Left"
+						   VerticalAlignment="Top"
+						   Margin="16,0,0,0"/>
 				</Grid>
 				<!-- Email Input (Row 1) -->
 				<StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,20">
 					<Border Classes="input-underline" x:Name="EmailBorder">
 						<Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
 							<PathIcon Grid.Column="0"
-									  Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-									  Width="18" Height="18"
-									  Foreground="{StaticResource TextMutedBrush}"
-									  Margin="0,0,12,0"
-									  VerticalAlignment="Center"/>
+								  Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+								  Width="18" Height="18"
+								  Foreground="{DynamicResource TextMutedBrush}"
+								  Margin="0,0,12,0"
+								  VerticalAlignment="Center"/>
 							<TextBox Grid.Column="1"
-									 BorderThickness="0"
-									 Background="Transparent"
-									 VerticalContentAlignment="Center"
-									 Text="{Binding Email}"
-									 Watermark="Enter your email address"
-									 Classes="modern-input"
-									 FontSize="15"/>
+								 BorderThickness="0"
+								 Background="Transparent"
+								 VerticalContentAlignment="Center"
+								 Text="{Binding Email}"
+								 Watermark="Enter your email address"
+								 Classes="modern-input"
+								 FontSize="15"/>
 						</Grid>
 					</Border>
 				</StackPanel>
@@ -290,29 +276,29 @@
 					<Border Classes="input-underline" x:Name="PasswordBorder">
 						<Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
 							<PathIcon Grid.Column="0"
-									  Data="M18,8h-1V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0 0 18,8M9,6A3,3 0 0,1 12,3A3,3 0 0,1 15,6V8H9V6Z"
+								  Data="M18,8h-1V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0 0 20,20V10A2,2 0 0 0 18,8M9,6A3,3 0 0,1 12,3A3,3 0 0,1 15,6V8H9V6Z"
 								  Width="18" Height="18"
-								  Foreground="{StaticResource TextMutedBrush}"
+								  Foreground="{DynamicResource TextMutedBrush}"
 								  Margin="0,0,12,0"
 								  VerticalAlignment="Center"/>
 							<TextBox Grid.Column="1"
-									 BorderThickness="0"
-									 Background="Transparent"
-									 VerticalContentAlignment="Center"
-									 Text="{Binding Password, Mode=TwoWay}"
-									 Watermark="Enter your password"
-									 Classes="modern-input"
-									 FontSize="15"
-									 PasswordChar="{Binding ShowPassword, Converter={StaticResource ShowPasswordToChar}}" />
+								 BorderThickness="0"
+								 Background="Transparent"
+								 VerticalContentAlignment="Center"
+								 Text="{Binding Password, Mode=TwoWay}"
+								 Watermark="Enter your password"
+								 Classes="modern-input"
+								 FontSize="15"
+								 PasswordChar="{Binding ShowPassword, Converter={StaticResource ShowPasswordToChar}}" />
 							<ToggleButton Grid.Column="2"
-									 Background="Transparent"
-									 BorderThickness="0"
-									 Padding="8"
-									 Cursor="Hand"
-									 IsChecked="{Binding ShowPassword, Mode=TwoWay}">
+								 Background="Transparent"
+								 BorderThickness="0"
+								 Padding="8"
+								 Cursor="Hand"
+								 IsChecked="{Binding ShowPassword, Mode=TwoWay}">
 								<PathIcon Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
-									 Width="18" Height="18"
-									 Foreground="{StaticResource TextMutedBrush}"/>
+									Width="18" Height="18"
+									Foreground="{DynamicResource TextMutedBrush}"/>
 							</ToggleButton>
 						</Grid>
 					</Border>
@@ -323,7 +309,7 @@
 					<CheckBox Grid.Column="0"
 							  Content="Keep me signed in"
 							  IsChecked="{Binding RememberMe}"
-							  Foreground="{StaticResource TextSecondaryBrush}"
+							  Foreground="{DynamicResource TextSecondaryBrush}"
 							  FontSize="14"/>
 					<Button Grid.Column="1"
 							Content="Forgot Password?"
@@ -342,7 +328,7 @@
 						HorizontalAlignment="Stretch"
 						CornerRadius="12"
 						FontWeight="SemiBold"
-						Background="{StaticResource ButtonPeachBrush}"
+						Background="{StaticResource LoginButtonPeachBrush}"
 						FontSize="16"
 						Foreground="White"
 						HorizontalContentAlignment="Center"
@@ -353,15 +339,15 @@
 						Classes="primary-button">
 					<Button.Styles>
 						<Style Selector="Button.primary-button">
-							<Setter Property="Background" Value="{StaticResource PrimaryButtonBrush}"/>
+							<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrush}"/>
 							<Setter Property="Cursor" Value="Hand"/>
 						</Style>
 						<Style Selector="Button.primary-button:pointerover">
-							<Setter Property="Background" Value="{StaticResource PrimaryButtonBrushHover}"/>
+							<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrushHover}"/>
 							<Setter Property="RenderTransform" Value="scale(1.01)"/>
 						</Style>
 						<Style Selector="Button.primary-button:pressed">
-							<Setter Property="Background" Value="{StaticResource PrimaryButtonBrushPressed}"/>
+							<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrushPressed}"/>
 							<Setter Property="RenderTransform" Value="scale(0.99)"/>
 						</Style>
 					</Button.Styles>
@@ -369,7 +355,7 @@
 
 				<!-- Divider with "or" text (Row 5) -->
 				<Grid Grid.Row="5" VerticalAlignment="Center" Margin="0,0,0,24">
-					<Border Height="1" Background="{StaticResource BorderBrush}" VerticalAlignment="Center"/>
+					<Border Height="1" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center"/>
 				</Grid>
 
 
@@ -383,14 +369,14 @@
 						Classes="link"
 						Foreground="#DC2626"
 						FontWeight="SemiBold">
-				</Button>
+					</Button>
 
 				<!-- Footer note (Row 8) -->
 				<TextBlock Grid.Row="8"
 						   Text="Secure portal access for students and faculty"
 						   HorizontalAlignment="Center"
 						   FontSize="12"
-						   Foreground="{StaticResource TextMutedBrush}"
+						   Foreground="{DynamicResource TextMutedBrush}"
 						   Margin="0,40,0,0"/>
 			</Grid>
 		</Border>

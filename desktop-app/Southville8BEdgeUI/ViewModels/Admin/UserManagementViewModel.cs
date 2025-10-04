@@ -72,11 +72,12 @@ public partial class UserManagementViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            filtered = filtered.Where(u => u.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                           u.Username.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                           u.Email.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                           u.StudentId.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                           u.EmployeeId.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(u =>
+                (!string.IsNullOrWhiteSpace(u.FullName) && u.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.Username) && u.Username.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.Email) && u.Email.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.StudentId) && u.StudentId.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.EmployeeId) && u.EmployeeId.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedRole) && SelectedRole != "All Roles")

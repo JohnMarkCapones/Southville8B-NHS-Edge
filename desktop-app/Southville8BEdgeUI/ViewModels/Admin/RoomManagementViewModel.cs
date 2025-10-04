@@ -103,23 +103,26 @@ public partial class RoomManagementViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalRooms));
     }
 
-    [RelayCommand] private void ViewCalendar()
+    [RelayCommand]
+    private void ViewCalendar()
     {
         if (NavigateTo is null) return;
         var vm = new RoomCalendarViewModel { NavigateBack = () => NavigateTo?.Invoke(this) };
-        NavigateTo(vm);
+        NavigateTo?.Invoke(vm);
     }
 
-    [RelayCommand] private void BookRoom()
+    [RelayCommand]
+    private void BookRoom()
     {
         if (NavigateTo is null) return;
         var vm = new BookRoomViewModel(Rooms) { NavigateBack = () => NavigateTo?.Invoke(this) };
-        NavigateTo(vm);
+        NavigateTo?.Invoke(vm);
     }
 
     [RelayCommand] private void ViewRoomDetails(RoomViewModel room) { }
 
-    [RelayCommand] private void RoomAction(RoomViewModel room)
+    [RelayCommand]
+    private void RoomAction(RoomViewModel room)
     {
         // Do not allow state changes if room is under maintenance
         if (room.IsInMaintenance)
@@ -140,6 +143,13 @@ public partial class RoomManagementViewModel : ViewModelBase
     }
 }
 
+public class RoomBookingEntry
+{
+    public DateTime Date { get; set; }
+    public string Slot { get; set; } = string.Empty; // e.g. "08:00 - 09:00"
+    public string Purpose { get; set; } = string.Empty;
+}
+
 public partial class RoomViewModel : ViewModelBase
 {
     [ObservableProperty] private string _name = "";
@@ -149,6 +159,12 @@ public partial class RoomViewModel : ViewModelBase
     [ObservableProperty] private int _floor;
     [ObservableProperty] private string _currentBooking = "";
     [ObservableProperty] private string _roomId = "";
+
+    // Track individual bookings for conflict detection
+    public ObservableCollection<RoomBookingEntry> Bookings { get; } = new();
+
+    public bool HasConflict(DateTime date, string slot)
+        => Bookings.Any(b => b.Date.Date == date.Date && string.Equals(b.Slot, slot, StringComparison.OrdinalIgnoreCase));
 
     public bool IsAvailable => Status == "Available";
     public bool IsOccupied => Status == "Occupied";

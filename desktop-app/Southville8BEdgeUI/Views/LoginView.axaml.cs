@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Avalonia.Svg.Skia;
+using Southville8BEdgeUI.Utils;
 
 namespace Southville8BEdgeUI.Views;
 
@@ -82,6 +83,9 @@ public partial class LoginView : UserControl
             }
         }
 
+        // Null guard – if XAML name changes or control not initialized, exit safely
+        if (LoginCarousel is null) return;
+
         LoginCarousel.ItemsSource = slides;
         LoginCarousel.SelectedIndex = slides.Count > 0 ? 0 : -1;
 
@@ -119,21 +123,24 @@ public partial class LoginView : UserControl
         {
             if (dotsHost.Children[i] is Border dot)
             {
-                dot.Background = new SolidColorBrush(i == carousel.SelectedIndex
-                    ? Color.Parse("#F37071") // active
-                    : Color.Parse("#D1D5DB")); // inactive
+                var key = i == carousel.SelectedIndex ? "AccentBrush" : "BorderBrush";
+                // Fallback colors preserve previous appearance if resources missing
+                var fallback = i == carousel.SelectedIndex ? "#F37071" : "#D1D5DB";
+                dot.Background = ThemeHelpers.GetBrush(this, key, fallback);
             }
         }
     }
 
-    private static Border CreateDot(bool active)
+    private Border CreateDot(bool active)
     {
+        var key = active ? "AccentBrush" : "BorderBrush";
+        var fallback = active ? "#F37071" : "#D1D5DB";
         return new Border
         {
             Width = 8,
             Height = 8,
             CornerRadius = new CornerRadius(4),
-            Background = new SolidColorBrush(Color.Parse(active ? "#F37071" : "#D1D5DB")),
+            Background = ThemeHelpers.GetBrush(this, key, fallback),
             Margin = new Thickness(4, 0, 4, 0)
         };
     }

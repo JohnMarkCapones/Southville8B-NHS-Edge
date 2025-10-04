@@ -103,6 +103,7 @@ public partial class AdminDashboardViewModel : ViewModelBase
         };
 
         int max = stats.Max(s => s.StudentCount);
+        double average = stats.Length > 0 ? stats.Average(s => s.StudentCount) : 0;
         string todayAbbrev = DateTime.Today.DayOfWeek switch
         {
             DayOfWeek.Monday => "Mon",
@@ -119,7 +120,7 @@ public partial class AdminDashboardViewModel : ViewModelBase
         {
             item.IsPeak = item.StudentCount == max;
             item.IsToday = item.Day == todayAbbrev;
-            item.IsAboveAverage = item.StudentCount >= 1500;
+            item.IsAboveAverage = item.StudentCount >= average;
             item.RefreshTheme();
         }
 

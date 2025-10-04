@@ -27,9 +27,18 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
       <Setter Property="Margin" Value="0,14,0,4"/>
     </Style>
-    <Style Selector="TextBox, ComboBox, CheckBox">
+    <!-- Input styles (exclude CheckBox because it doesn't support CornerRadius) -->
+    <Style Selector="TextBox, ComboBox">
       <Setter Property="Margin" Value="0,4,0,8"/>
       <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="8"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="CheckBox">
+      <Setter Property="Margin" Value="0,4,0,8"/>
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="Padding" Value="8"/>
@@ -78,8 +87,8 @@
         <CheckBox Content="Mark as important" IsChecked="{Binding MarkAsImportant}"/>
 
         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,24,0,0" HorizontalAlignment="Left">
-          <Button Content="?? Create Chat" Classes="primary" Command="{Binding CreateCommand}"/>
-          <Button Content="? Cancel" Classes="secondary" Command="{Binding CancelCommand}"/>
+          <Button Content="Create Chat" Classes="primary" Command="{Binding CreateCommand}"/>
+          <Button Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}"/>
         </StackPanel>
       </StackPanel>
     </Border>

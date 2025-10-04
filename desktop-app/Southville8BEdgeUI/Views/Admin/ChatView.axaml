@@ -13,6 +13,8 @@
     <UserControl.Resources>
         <converters:BoolToStringConverter x:Key="OnlineStatusConverter" TrueValue="Online" FalseValue="Offline"/>
         <converters:EqualityConverter x:Key="EqualityConverter" />
+        <!-- Added inverse bool converter to replace unsupported ! syntax in bindings -->
+        <converters:BooleanNegationConverter x:Key="InverseBoolConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -509,7 +511,8 @@
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasConversations}">
+                    <!-- Empty state now uses inverse converter instead of ! syntax -->
+                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding HasConversations, Converter={StaticResource InverseBoolConverter}}">
                         <ic:FluentIcon Icon="ChatMultiple" IconSize="Size32" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="NoMessagesText" Text="No conversations found" Classes="empty-title"/>
                         <TextBlock Text="Try adjusting your search criteria" Classes="subtitle"/>
@@ -559,7 +562,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:ChatMessageViewModel">
                                     <StackPanel Margin="0,8">
-                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsFromCurrentUser}" Classes.message-received="{Binding !IsFromCurrentUser}" Background="{Binding MessageBackgroundBrush}">
+                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsFromCurrentUser}" Classes.message-received="{Binding IsFromCurrentUser, Converter={StaticResource InverseBoolConverter}}" Background="{Binding MessageBackgroundBrush}">
                                             <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextBrush}" TextWrapping="Wrap" Classes="message-text"/>
                                         </Border>
                                         <TextBlock Text="{Binding TimestampText}" FontSize="10" Classes="light" HorizontalAlignment="{Binding MessageAlignment}" Margin="12,2,12,0"/>
@@ -582,7 +585,8 @@
                     </Border>
                 </Grid>
 
-                <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasSelectedConversation}">
+                <!-- Empty chat area state -->
+                <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding HasSelectedConversation, Converter={StaticResource InverseBoolConverter}}">
                     <ic:FluentIcon Icon="ChatMultiple" IconSize="Size32" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="NoConversationTitleText" Text="Select a conversation" Classes="empty-title"/>
                     <TextBlock x:Name="NoConversationSubtitleText" Text="Choose a conversation from the list to start messaging" Classes="subtitle"/>

@@ -11,7 +11,7 @@ public sealed class DialogService : IDialogService
 {
     public Task<bool> ConfirmDeleteAsync(string title, string message)
     {
-        var tcs = new TaskCompletionSource<bool>();
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var dlg = new Window
         {
             CanResize = false,
@@ -21,11 +21,16 @@ public sealed class DialogService : IDialogService
             MaxWidth = 560
         };
 
-        var surfaceBrush = ThemeHelpers.GetBrush(dlg, "SurfaceBrush", "#FFFFFF");
-        var borderBrush = ThemeHelpers.GetBrush(dlg, "AppBorderBrush", "#E5E7EB");
-        var textPrimary = ThemeHelpers.GetBrush(dlg, "TextPrimaryBrush", "#111827");
-        var textSecondary = ThemeHelpers.GetBrush(dlg, "TextSecondaryBrush", "#6B7280");
-        var dangerBrush = ThemeHelpers.GetBrush(dlg, "DangerBrush", "#EF4444");
+        // Use main window (if available) for theme resource resolution; fallback to dialog itself
+        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        var themeScope = owner as StyledElement ?? (StyledElement)dlg;
+
+        // Correct resource keys mapping to existing theme brushes
+        var surfaceBrush = ThemeHelpers.GetBrush(themeScope, "CardBackgroundBrush", "#FFFFFF");
+        var borderBrush = ThemeHelpers.GetBrush(themeScope, "BorderBrush", "#E5E7EB");
+        var textPrimary = ThemeHelpers.GetBrush(themeScope, "TextPrimaryBrush", "#111827");
+        var textSecondary = ThemeHelpers.GetBrush(themeScope, "TextSecondaryBrush", "#6B7280");
+        var dangerBrush = ThemeHelpers.GetBrush(themeScope, "DangerBrush", "#EF4444");
 
         var confirmBtn = new Button
         {
@@ -118,7 +123,6 @@ public sealed class DialogService : IDialogService
         confirmBtn.Click += (_, __) => { if (!tcs.Task.IsCompleted) tcs.TrySetResult(true); dlg.Close(); };
         dlg.Closed += (_, __) => { if (!tcs.Task.IsCompleted) tcs.TrySetResult(false); };
 
-        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
         dlg.WindowStartupLocation = owner is not null ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen;
 
         if (owner is not null)

@@ -48,32 +48,50 @@ public partial class CreateEventViewModel : ViewModelBase
         }
     }
 
-    public string? DateValidationMessage => StartDate > EndDate ? "End date must be after or equal to start date." : null;
+    private string? ComputeDateValidationMessage()
+    {
+        if (StartDate > EndDate) return "End date must be after or equal to start date.";
+        if (StartDate == EndDate && EndTime < StartTime) return "End time must be after or equal to start time.";
+        return null;
+    }
+
+    public string? DateValidationMessage => ComputeDateValidationMessage();
     public bool HasDateValidationError => DateValidationMessage is not null;
 
     public bool CanSave => !string.IsNullOrWhiteSpace(Title) && DateValidationMessage is null;
+
+    private void RaiseValidationNotifications()
+    {
+        OnPropertyChanged(nameof(CanSave));
+        OnPropertyChanged(nameof(DateValidationMessage));
+        OnPropertyChanged(nameof(HasDateValidationError));
+    }
 
     partial void OnTitleChanged(string value) => OnPropertyChanged(nameof(CanSave));
     partial void OnStartDateChanged(DateTime value)
     {
         if (StartDateOffset?.Date != value.Date)
             StartDateOffset = new DateTimeOffset(value.Date);
-        OnPropertyChanged(nameof(CanSave));
-        OnPropertyChanged(nameof(DateValidationMessage));
-        OnPropertyChanged(nameof(HasDateValidationError));
+        RaiseValidationNotifications();
     }
     partial void OnEndDateChanged(DateTime value)
     {
         if (EndDateOffset?.Date != value.Date)
             EndDateOffset = new DateTimeOffset(value.Date);
-        OnPropertyChanged(nameof(CanSave));
-        OnPropertyChanged(nameof(DateValidationMessage));
-        OnPropertyChanged(nameof(HasDateValidationError));
+        RaiseValidationNotifications();
     }
 
-    // Keep IsAllDay binding in sync when times change
-    partial void OnStartTimeChanged(TimeSpan value) => OnPropertyChanged(nameof(IsAllDay));
-    partial void OnEndTimeChanged(TimeSpan value) => OnPropertyChanged(nameof(IsAllDay));
+    // Keep IsAllDay binding in sync when times change and validate
+    partial void OnStartTimeChanged(TimeSpan value)
+    {
+        OnPropertyChanged(nameof(IsAllDay));
+        RaiseValidationNotifications();
+    }
+    partial void OnEndTimeChanged(TimeSpan value)
+    {
+        OnPropertyChanged(nameof(IsAllDay));
+        RaiseValidationNotifications();
+    }
 
     partial void OnStartDateOffsetChanged(DateTimeOffset? value)
     {

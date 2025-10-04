@@ -168,12 +168,12 @@ public partial class TeacherShellViewModel : ViewModelBase
         if (TodayClasses.Count > 1)
         {
             var next = TodayClasses[(_currentTodayClassIndex + 1) % TodayClasses.Count];
-            NextClassSubject = next.Grade;
+            NextClassSubject = next.Subject; // was next.Grade
             NextClassTime = next.Time;
         }
         else
         {
-            NextClassSubject = current.Grade;
+            NextClassSubject = current.Subject; // was current.Grade
             NextClassTime = current.Time;
         }
         OnPropertyChanged(nameof(HasMultipleTodayClasses));

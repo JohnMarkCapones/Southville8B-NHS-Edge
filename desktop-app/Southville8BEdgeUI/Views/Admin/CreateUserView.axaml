@@ -215,12 +215,14 @@
           <Grid x:Name="CredentialsGrid" ColumnDefinitions="*,*">
             <StackPanel Grid.Column="0" Margin="0,0,28,0">
               <TextBlock Text="Password" Classes="label"/>
-              <TextBox x:Name="PasswordInput" PasswordChar="•"/>
+              <!-- Added binding to Password -->
+              <TextBox x:Name="PasswordInput" Text="{Binding Password}" PasswordChar="•"/>
               <TextBlock Text="Use at least 8 characters." Classes="inline-hint"/>
             </StackPanel>
             <StackPanel Grid.Column="1">
               <TextBlock Text="Confirm Password" Classes="label"/>
-              <TextBox x:Name="ConfirmPasswordInput" PasswordChar="•"/>
+              <!-- Added binding to ConfirmPassword -->
+              <TextBox x:Name="ConfirmPasswordInput" Text="{Binding ConfirmPassword}" PasswordChar="•"/>
               <TextBlock Text="Repeat the password to confirm." Classes="inline-hint"/>
             </StackPanel>
           </Grid>

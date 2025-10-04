@@ -46,7 +46,7 @@ public partial class AlertsViewModel : ViewModelBase
 
     private void InitializeMockAlerts()
     {
-        Alerts.Add(new AlertItemViewModel
+        var a1 = new AlertItemViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Type = "Weather",
@@ -56,10 +56,12 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now.AddMinutes(-25),
             ExpiresAt = DateTime.Today.AddHours(23).AddMinutes(59),
             Priority = "High",
-            TargetAudience = "all_school"
-        });
+            TargetAudience = "all_school",
+            Parent = this
+        };
+        Alerts.Add(a1);
 
-        Alerts.Add(new AlertItemViewModel
+        var a2 = new AlertItemViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Type = "Class Suspension",
@@ -69,10 +71,12 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now.AddHours(-2),
             ExpiresAt = DateTime.Today.AddHours(12),
             Priority = "Medium",
-            TargetAudience = "grade_8"
-        });
+            TargetAudience = "grade_8",
+            Parent = this
+        };
+        Alerts.Add(a2);
 
-        Alerts.Add(new AlertItemViewModel
+        var a3 = new AlertItemViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Type = "Emergency",
@@ -82,8 +86,10 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now.AddHours(-3),
             ExpiresAt = DateTime.Now.AddMinutes(-10), // expired
             Priority = "Low",
-            TargetAudience = "all_school"
-        });
+            TargetAudience = "all_school",
+            Parent = this
+        };
+        Alerts.Add(a3);
     }
 
     private static string ToTargetAudience(string scope, string grade, string section)
@@ -128,7 +134,8 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now,
             ExpiresAt = expiresAt,
             Priority = string.IsNullOrWhiteSpace(NewPriority) ? "Low" : NewPriority.Trim(),
-            TargetAudience = ToTargetAudience(NewTargetScope, NewGradeLevel, NewSection)
+            TargetAudience = ToTargetAudience(NewTargetScope, NewGradeLevel, NewSection),
+            Parent = this
         };
 
         // Basic validation
@@ -201,6 +208,9 @@ public partial class AlertItemViewModel : ViewModelBase
     [ObservableProperty] private DateTime _expiresAt;
     [ObservableProperty] private string _priority = "Low";
     [ObservableProperty] private string _targetAudience = "all_school";
+
+    // Back reference to parent view model for command binding convenience
+    [ObservableProperty] private AlertsViewModel? _parent;
 
     public bool IsActive => DateTime.Now < ExpiresAt;
     public bool IsExpired => !IsActive;

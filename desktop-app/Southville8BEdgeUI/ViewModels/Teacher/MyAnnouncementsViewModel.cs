@@ -9,7 +9,7 @@ using Avalonia.Styling; // For theme variant lookups
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
-public partial class MyAnnouncementsViewModel : ViewModelBase
+public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
 {
     // Navigation callback set by shell
     public Action<ViewModelBase>? NavigateTo { get; set; }
@@ -31,12 +31,18 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<string> _priorityOptions = new() { "High", "Medium", "Low" };
     [ObservableProperty] private ObservableCollection<AnnouncementActivityViewModel> _recentActivity = new();
 
+    private EventHandler? _themeChangedHandler;
+    private bool _disposed;
+
     public MyAnnouncementsViewModel()
     {
         InitializeData();
-        // Theme change subscription to refresh badge brushes
+        // Theme change subscription to refresh badge brushes (store handler for later unsubscription)
         if (Application.Current is { } app)
-            app.ActualThemeVariantChanged += (_, __) => RefreshAnnouncementBadgeBrushes();
+        {
+            _themeChangedHandler = (_, __) => RefreshAnnouncementBadgeBrushes();
+            app.ActualThemeVariantChanged += _themeChangedHandler;
+        }
     }
 
     private void RefreshAnnouncementBadgeBrushes()
@@ -94,7 +100,8 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
                 NavigateTo?.Invoke(this);
             }
         };
-        NavigateTo(formVm);
+        var navigate = NavigateTo; // capture delegate to avoid race
+        navigate?.Invoke(formVm);
     }
 
     [RelayCommand] private void ViewAnalytics() { }
@@ -130,6 +137,18 @@ public partial class MyAnnouncementsViewModel : ViewModelBase
         // reset minimal fields
         NewAnnouncementTitle = NewAnnouncementContent = string.Empty;
         NewAnnouncementClass = NewAnnouncementPriority = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (_themeChangedHandler != null && Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged -= _themeChangedHandler;
+            _themeChangedHandler = null;
+        }
+        GC.SuppressFinalize(this);
     }
 }
 

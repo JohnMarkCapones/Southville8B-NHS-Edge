@@ -239,7 +239,8 @@ public partial class MessagingViewModel : ViewModelBase
                 NavigateTo?.Invoke(this);
             }
         };
-        NavigateTo(newChatVm);
+        var navigate = NavigateTo; // capture to avoid race
+        navigate?.Invoke(newChatVm);
     }
 
     [RelayCommand] private void StartCall() { }

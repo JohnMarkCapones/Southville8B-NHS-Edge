@@ -55,6 +55,7 @@
   <ScrollViewer>
     <StackPanel Margin="40" Spacing="24">
       <Grid ColumnDefinitions="Auto,*">
+        <!-- Updated back button content for clarity -->
         <Button Content="?" Width="40" Height="40" Command="{Binding BackCommand}" ToolTip.Tip="Back"
                 Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8"/>
         <TextBlock Grid.Column="1" Text="Book a Room" Classes="header" Margin="12,0,0,0" VerticalAlignment="Center"/>
@@ -84,7 +85,8 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="{Binding Name}"/>
         <TextBlock Text="{Binding Type}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
-        <TextBlock Text="{Binding Status}" Foreground="{DynamicResource WarningBrush}" FontSize="11"/>
+        <!-- Use dynamic StatusBrush from RoomViewModel -->
+        <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontSize="11"/>
       </StackPanel>
     </DataTemplate>
   </UserControl.Resources>

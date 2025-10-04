@@ -16,7 +16,7 @@
 			<Setter Property="CornerRadius" Value="12"/>
 			<Setter Property="Padding" Value="24"/>
 			<Setter Property="Margin" Value="0,0,0,24"/>
-			<Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+			<Setter Property="BoxShadow" Value="0 2 8 0 {DynamicResource ShadowColorBrush}"/>
 		</Style>
 
 		<Style Selector="TextBlock.header">
@@ -147,11 +147,11 @@
 							<Button Content="Clear" Classes="secondary" Command="{Binding ClearFileCommand}" IsVisible="{Binding HasFile}" VerticalAlignment="Center"/>
 						</StackPanel>
 						<TextBlock Grid.Column="1" Text="{Binding SelectedFileName}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
-							   VerticalAlignment="Center" Margin="20,0,0,0" TextTrimming="CharacterEllipsis"/>
+						   VerticalAlignment="Center" Margin="20,0,0,0" TextTrimming="CharacterEllipsis"/>
 					</Grid>
 
 					<TextBlock Text="{Binding FileValidationMessage}" Classes="validation-error"
-						   IsVisible="{Binding HasFileValidationError}" VerticalAlignment="Center"/>
+					   IsVisible="{Binding HasFileValidationError}" VerticalAlignment="Center"/>
 				</StackPanel>
 			</Border>
 
@@ -215,17 +215,17 @@
 				<StackPanel>
 					<TextBlock Text="Summary" Classes="section-title"/>
 					<TextBlock Text="{Binding SummaryText}" FontSize="12" Margin="0,0,0,12"
-						   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+					   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
 
 					<Grid ColumnDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Center">
 						<Button Content="Start Import" Classes="primary" Command="{Binding ImportCommand}"
-								IsEnabled="{Binding CanImport}" VerticalAlignment="Center"/>
+							IsEnabled="{Binding CanImport}" VerticalAlignment="Center"/>
 						<Button Grid.Column="1" Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}"
-								Margin="16,0,0,0" VerticalAlignment="Center"/>
+							Margin="16,0,0,0" VerticalAlignment="Center"/>
 					</Grid>
 
 					<TextBlock Text="{Binding ImportStatusMessage}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
-						   Margin="0,16,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+					   Margin="0,16,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
 				</StackPanel>
 			</Border>
 		</StackPanel>

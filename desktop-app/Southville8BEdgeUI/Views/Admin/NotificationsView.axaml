@@ -178,7 +178,7 @@
                                     <!-- Mark as Read Button -->
                                     <Button Grid.Column="2"
                                             Classes="icon-success"
-                                            IsVisible="{Binding !IsRead}"
+                                            IsVisible="{Binding IsRead, Converter={x:Static converters:BooleanNegationConverter.Instance}}"
                                             Command="{Binding #NotificationsRoot.MarkAsReadCommand}"
                                             CommandParameter="{Binding}">
                                         <ic:FluentIcon Icon="Checkmark" IconSize="Size16"/>

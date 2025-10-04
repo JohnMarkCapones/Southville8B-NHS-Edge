@@ -13,6 +13,14 @@ public static class ThemeHelpers
         if (Application.Current?.TryGetResource(key, theme, out var found) == true && found is IBrush brush)
             return brush;
 
-        return new SolidColorBrush(Color.Parse(fallbackHex));
+        // Safe fallback parsing
+        try
+        {
+            return new SolidColorBrush(Color.Parse(fallbackHex));
+        }
+        catch
+        {
+            return new SolidColorBrush(Colors.Gray);
+        }
     }
 }

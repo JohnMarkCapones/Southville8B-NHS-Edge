@@ -14,9 +14,9 @@ namespace Southville8BEdgeUI.Converters
         {
             public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             {
-                if (value is double d && TryParseDouble(parameter, out var threshold))
-                    return d >= threshold;
-                return false;
+                if (!TryParseDouble(value, out var numeric)) return false;
+                if (!TryParseDouble(parameter, out var threshold)) return false;
+                return numeric >= threshold;
             }
 
             public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -27,9 +27,9 @@ namespace Southville8BEdgeUI.Converters
         {
             public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             {
-                if (value is double d && TryParseDouble(parameter, out var threshold))
-                    return d < threshold;
-                return false;
+                if (!TryParseDouble(value, out var numeric)) return false;
+                if (!TryParseDouble(parameter, out var threshold)) return false;
+                return numeric < threshold;
             }
 
             public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -38,29 +38,31 @@ namespace Southville8BEdgeUI.Converters
 
         private sealed class BetweenConverter : IValueConverter
         {
+            // Accept parameter as "min|max" or "min,max" or "min;max" (whitespace ignored)
+            private static readonly char[] _delims = ['|', ',', ';'];
             public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             {
-                if (value is double d && parameter is string s)
-                {
-                    var parts = s.Split('|');
-                    if (parts.Length == 2 &&
-                        double.TryParse(parts[0].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var min) &&
-                        double.TryParse(parts[1].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var max))
-                    {
-                        return d >= min && d <= max;
-                    }
-                }
-                return false;
+                if (!TryParseDouble(value, out var numeric)) return false;
+                if (parameter is not string s) return false;
+                var parts = s.Split(_delims, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length != 2) return false;
+                if (!double.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var min)) return false;
+                if (!double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var max)) return false;
+                // If min > max swap (be permissive)
+                if (min > max) (min, max) = (max, min);
+                return numeric >= min && numeric <= max;
             }
 
             public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
                 => throw new NotImplementedException();
         }
 
-        private static bool TryParseDouble(object? parameter, out double value)
+        private static bool TryParseDouble(object? obj, out double value)
         {
-            switch (parameter)
+            switch (obj)
             {
+                case null:
+                    value = 0; return false;
                 case double d:
                     value = d; return true;
                 case float f:
@@ -69,6 +71,12 @@ namespace Southville8BEdgeUI.Converters
                     value = i; return true;
                 case long l:
                     value = l; return true;
+                case decimal m:
+                    value = (double)m; return true;
+                case short s16:
+                    value = s16; return true;
+                case byte b:
+                    value = b; return true;
                 case string s when double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v):
                     value = v; return true;
                 default:

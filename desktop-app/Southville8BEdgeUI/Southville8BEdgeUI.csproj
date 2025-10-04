@@ -16,6 +16,8 @@
     <None Include="Assets\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Keep assets also as Avalonia resources for XAML referencing -->
+    <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,11 +34,5 @@
 
   <ItemGroup>
     <Folder Include="Resources\Strings\" />
-  </ItemGroup>
-
-  <!-- Southville8BEdgeUI.csproj -->
-  <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
-    <None Remove="Assets\**" />
   </ItemGroup>
 </Project>

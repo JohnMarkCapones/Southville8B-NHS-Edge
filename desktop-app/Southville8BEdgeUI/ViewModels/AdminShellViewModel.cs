@@ -91,9 +91,9 @@ public partial class AdminShellViewModel : ViewModelBase
         // Mock data moved from XAML (admin events / activities)
         TodayClasses = new ObservableCollection<TodayClassItem>
         {
-            new() { Subject="Educational Field Trip", Grade="Training • Pending", Time="06:00 AM - 11:00 PM", Room="Off-Campus" },
-            new() { Subject="Faculty Meeting", Grade="Meeting • Confirmed", Time="01:00 PM - 02:00 PM", Room="Conference Hall" },
-            new() { Subject="Library System Maintenance", Grade="System • Scheduled", Time="03:00 PM - 04:30 PM", Room="IT Lab" }
+            new() { Subject="Educational Field Trip", Grade="Training - Pending", Time="06:00 AM - 11:00 PM", Room="Off-Campus" },
+            new() { Subject="Faculty Meeting", Grade="Meeting - Confirmed", Time="01:00 PM - 02:00 PM", Room="Conference Hall" },
+            new() { Subject="Library System Maintenance", Grade="System - Scheduled", Time="03:00 PM - 04:30 PM", Room="IT Lab" }
         };
         _currentTodayClassIndex = 0;
         ApplyCurrentTodayClass();

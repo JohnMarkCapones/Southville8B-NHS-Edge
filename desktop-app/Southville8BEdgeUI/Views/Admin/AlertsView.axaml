@@ -440,17 +440,13 @@
 													</StackPanel>
 													<!-- Tags Row -->
 													<StackPanel Orientation="Horizontal" Spacing="6">
-														<Border Classes="tag">
-															<TextBlock Text="{Binding Type}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/>
-														</Border>
-														<Border Classes="tag">
-															<TextBlock Text="{Binding Priority}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/>
-														</Border>
+														<Border Classes="tag"><TextBlock Text="{Binding Type}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/></Border>
+														<Border Classes="tag"><TextBlock Text="{Binding Priority}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/></Border>
 													</StackPanel>
 												</StackPanel>
 												<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Right">
-													<Button Classes="action-btn-sm warning" Content="Expire" Command="{Binding #AlertsRoot.ExpireAlertCommand}" CommandParameter="{Binding}"/>
-													<Button Classes="action-btn-sm danger" Content="Delete" Command="{Binding #AlertsRoot.DeleteAlertCommand}" CommandParameter="{Binding}"/>
+													<Button Classes="action-btn-sm warning" Content="Expire" Command="{Binding Parent.ExpireAlertCommand}" CommandParameter="{Binding}"/>
+													<Button Classes="action-btn-sm danger" Content="Delete" Command="{Binding Parent.DeleteAlertCommand}" CommandParameter="{Binding}"/>
 												</StackPanel>
 											</StackPanel>
 
@@ -465,12 +461,8 @@
 
 											<!-- Meta Information -->
 											<StackPanel Orientation="Horizontal" Spacing="16" Margin="16,0,0,0">
-												<StackPanel Orientation="Horizontal" Spacing="4">
-													<TextBlock Text="{Binding AudienceText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-												</StackPanel>
-												<StackPanel Orientation="Horizontal" Spacing="4">
-													<TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-												</StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding AudienceText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
 											</StackPanel>
 										</StackPanel>
 									</Border>

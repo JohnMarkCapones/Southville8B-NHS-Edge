@@ -8,6 +8,7 @@ using Southville8BEdgeUI.ViewModels.Admin;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System; // added for Exception
 
 namespace Southville8BEdgeUI.Views.Admin;
 
@@ -52,10 +53,16 @@ public partial class EventDashboardView : UserControl
 
         if (DataContext is EventDashboardViewModel vm && vm.DeleteEventCommand.CanExecute(eventItem))
         {
-            vm.DeleteEventCommand.Execute(eventItem);
+            try
+            {
+                vm.DeleteEventCommand.Execute(eventItem);
+                shell.Toasts.Success($"\"{eventItem.Title}\" was deleted.", title: "Event deleted");
+            }
+            catch (Exception ex)
+            {
+                shell.Toasts.Error($"Failed to delete event: {ex.Message}", title: "Delete Failed");
+            }
         }
-
-        shell.Toasts.Success($"\"{eventItem.Title}\" was deleted.", title: "Event deleted");
     }
 
     private void InitializeResponsiveElements()

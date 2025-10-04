@@ -48,6 +48,8 @@
       <!-- shadow colors -->
       <Color x:Key="ShadowLowColor">#10000000</Color>
       <Color x:Key="ShadowHighColor">#20000000</Color>
+      <!-- unified brush for component shadows -->
+      <SolidColorBrush x:Key="ShadowColorBrush" Color="#10000000"/>
     </ResourceDictionary>
 
     <!-- Dark -->
@@ -97,6 +99,8 @@
       <!-- shadow colors (dark theme tuned) -->
       <Color x:Key="ShadowLowColor">#40000000</Color>
       <Color x:Key="ShadowHighColor">#66000000</Color>
+      <!-- unified brush for component shadows -->
+      <SolidColorBrush x:Key="ShadowColorBrush" Color="#40000000"/>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

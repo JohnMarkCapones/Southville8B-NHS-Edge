@@ -29,7 +29,10 @@ public partial class NewChatViewModel : ViewModelBase
 
     public string? BasicValidationMessage => string.IsNullOrWhiteSpace(ChatName) ? "Chat name is required." : null;
     public string? ParticipantsValidationMessage => SelectedParticipants.Count == 0 ? "At least one participant is required." : null;
-    public string? ImageValidationMessage => HasImage && !File.Exists(ChatImagePath) ? "Image file not found." : null;
+
+    // Cached image validation message to avoid repeated File.Exists calls on UI thread
+    private string? _imageValidationMessage;
+    public string? ImageValidationMessage => _imageValidationMessage;
 
     // Boolean helpers for XAML IsVisible bindings
     public bool IsBasicValidationVisible => BasicValidationMessage is not null;
@@ -38,7 +41,9 @@ public partial class NewChatViewModel : ViewModelBase
 
     public bool HasSelectedAvailableUser => SelectedAvailableUser is not null;
 
-    public bool CanCreate => BasicValidationMessage is null && ParticipantsValidationMessage is null && ImageValidationMessage is null;
+    public bool CanCreate => BasicValidationMessage is null &&
+                              ParticipantsValidationMessage is null &&
+                              ImageValidationMessage is null;
 
     public NewChatViewModel()
     {
@@ -61,6 +66,7 @@ public partial class NewChatViewModel : ViewModelBase
     partial void OnParticipantSearchChanged(string value) => RefreshFiltered();
     partial void OnChatImagePathChanged(string value)
     {
+        RecalculateImageValidation();
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(ImageValidationMessage));
         OnPropertyChanged(nameof(IsImageValidationVisible));
@@ -69,6 +75,24 @@ public partial class NewChatViewModel : ViewModelBase
     partial void OnSelectedAvailableUserChanged(UserOption? value)
     {
         OnPropertyChanged(nameof(HasSelectedAvailableUser));
+    }
+
+    private void RecalculateImageValidation()
+    {
+        if (!HasImage)
+        {
+            _imageValidationMessage = null;
+            return;
+        }
+        // Perform File.Exists once per change, catch possible path format issues
+        try
+        {
+            _imageValidationMessage = File.Exists(ChatImagePath) ? null : "Image file not found.";
+        }
+        catch
+        {
+            _imageValidationMessage = "Invalid image path.";
+        }
     }
 
     private void RefreshFiltered()
@@ -118,20 +142,25 @@ public partial class NewChatViewModel : ViewModelBase
     private void BrowseImage()
     {
         // TODO: integrate with file picker service via DI; for now placeholder
-        // ChatImagePath = resultPath;
+        // ChatImagePath = resultPath; (OnChatImagePathChanged will validate)
     }
 
     [RelayCommand]
     private void RemoveImage()
     {
-        ChatImagePath = string.Empty;
+        ChatImagePath = string.Empty; // triggers validation reset
+        OnPropertyChanged(nameof(HasImage)); // explicit to ensure bindings refresh immediately
         UpdateCanCreate();
     }
 
     [RelayCommand]
     private void CreateChat()
     {
+        // Re-validate image once more before creation (in case file was deleted after selection)
+        RecalculateImageValidation();
+        UpdateCanCreate();
         if (!CanCreate) return;
+
         var result = new ChatCreationResult
         {
             Name = ChatName.Trim(),
