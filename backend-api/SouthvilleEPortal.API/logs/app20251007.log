@@ -1,0 +1,250 @@
+2025-10-07 00:01:12.010 +08:00 [INF] User profile is available. Using 'C:\Users\merly\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-10-07 00:01:13.528 +08:00 [WRN] Sensitive data logging is enabled. Log entries and exception messages may include sensitive application data; this mode should only be enabled during development.
+2025-10-07 00:01:14.589 +08:00 [INF] Start processing HTTP request GET https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/health
+2025-10-07 00:01:14.596 +08:00 [INF] Sending HTTP request GET https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/health
+2025-10-07 00:01:15.156 +08:00 [INF] Received HTTP response headers after 550.5469ms - 200
+2025-10-07 00:01:15.176 +08:00 [INF] End processing HTTP request after 591.5372ms - 200
+2025-10-07 00:01:15.437 +08:00 [INF] RefreshToken cleanup service starting (interval "06:00:00")
+2025-10-07 00:01:16.673 +08:00 [INF] Now listening on: https://localhost:7180
+2025-10-07 00:01:16.720 +08:00 [INF] Now listening on: http://localhost:5092
+2025-10-07 00:01:16.853 +08:00 [INF] Executed DbCommand (247ms) [Parameters=[@__now_0='2025-10-06T16:01:15.4535467Z' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='60']
+SELECT a."Id", a."CreatedAtUtc", a."CreatedIp", a."ExpiresAtUtc", a."LookupHash", a."PepperVersion", a."ReplacedByTokenId", a."RevokedAtUtc", a."RoleSnapshot", a."Salt", a."TokenHash", a."UserAgent", a."UserId"
+FROM auth_refresh_tokens AS a
+WHERE a."RevokedAtUtc" IS NOT NULL OR a."ExpiresAtUtc" < @__now_0
+2025-10-07 00:01:17.422 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-07 00:01:17.668 +08:00 [INF] Hosting environment: Development
+2025-10-07 00:01:17.676 +08:00 [INF] Content root path: C:\Users\merly\source\repos\SouthvilleEPortal.API\SouthvilleEPortal.API
+2025-10-07 00:01:17.690 +08:00 [INF] Request starting HTTP/2 GET https://localhost:7180/ - null null
+2025-10-07 00:01:18.083 +08:00 [INF] Executing endpoint 'HTTP: GET /'
+2025-10-07 00:01:18.105 +08:00 [INF] Setting HTTP status code 200.
+2025-10-07 00:01:18.119 +08:00 [INF] Writing value of type '<>f__AnonymousType10`2' as Json.
+2025-10-07 00:01:18.151 +08:00 [INF] Executed endpoint 'HTTP: GET /'
+2025-10-07 00:01:18.170 +08:00 [INF] GET / responded 200 in 227.4496 ms
+2025-10-07 00:01:18.229 +08:00 [INF] HTTP GET / responded 200 in 282.4657 ms
+2025-10-07 00:01:18.244 +08:00 [INF] Request finished HTTP/2 GET https://localhost:7180/ - 200 null application/json; charset=utf-8 578.3036ms
+2025-10-07 00:02:52.583 +08:00 [INF] Request starting HTTP/1.1 POST http://localhost:5092/api/v1/auth/login - application/json 76
+2025-10-07 00:02:52.644 +08:00 [INF] POST /api/v1/auth/login responded 307 in 11.6483 ms
+2025-10-07 00:02:52.802 +08:00 [INF] HTTP POST /api/v1/auth/login responded 307 in 169.8326 ms
+2025-10-07 00:02:52.819 +08:00 [INF] Request finished HTTP/1.1 POST http://localhost:5092/api/v1/auth/login - 307 0 null 236.4146ms
+2025-10-07 00:02:52.884 +08:00 [INF] Request starting HTTP/1.1 POST https://localhost:7180/api/v1/auth/login - application/json 76
+2025-10-07 00:02:52.895 +08:00 [INF] Executing endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API)'
+2025-10-07 00:02:52.949 +08:00 [INF] Route matched with {action = "Login", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Login(LoginRequest, System.Threading.CancellationToken) on controller SouthvilleEPortal.API.Modules.Auth.API.AuthController (SouthvilleEPortal.API).
+2025-10-07 00:02:53.052 +08:00 [INF] Start processing HTTP request POST https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/token?*
+2025-10-07 00:02:53.056 +08:00 [INF] Sending HTTP request POST https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/token?*
+2025-10-07 00:02:53.404 +08:00 [INF] Received HTTP response headers after 343.6583ms - 200
+2025-10-07 00:02:53.409 +08:00 [INF] End processing HTTP request after 356.7919ms - 200
+2025-10-07 00:02:54.107 +08:00 [INF] refresh_token.store_begin user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf lookupHashPrefix=3B545F2B expires=2025-10-13T16:02:53.5050924Z hashMs=418
+2025-10-07 00:02:54.116 +08:00 [INF] refresh_token.store_before_save attempt=1 user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf
+2025-10-07 00:02:54.618 +08:00 [INF] Executed DbCommand (44ms) [Parameters=[@p0='1e428654-dbda-4db2-a3d3-efbe83a7c14a', @p1='2025-10-06T16:02:53.9262700Z' (DbType = DateTime), @p2=NULL, @p3='2025-10-13T16:02:53.5050924Z' (DbType = DateTime), @p4='3B545F2BD06C3E60DE53A4D95C7BB94259E25BA33569127D0F161C5CA1AB2FEB' (Nullable = false), @p5='V2' (Nullable = false), @p6=NULL, @p7=NULL (DbType = DateTime), @p8='student' (Nullable = false), @p9='7C6688020E28418B8B8B8762' (Nullable = false), @p10='$2a$10$o91sCTfKACO/esfRzUP.FeNjlFxTxHXnuKqRTqJAH3KV1nWh7h5G6' (Nullable = false), @p11=NULL, @p12='a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf' (Nullable = false)], CommandType='"Text"', CommandTimeout='60']
+INSERT INTO auth_refresh_tokens ("Id", "CreatedAtUtc", "CreatedIp", "ExpiresAtUtc", "LookupHash", "PepperVersion", "ReplacedByTokenId", "RevokedAtUtc", "RoleSnapshot", "Salt", "TokenHash", "UserAgent", "UserId")
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2025-10-07 00:02:54.680 +08:00 [INF] refresh_token.store_after_save attempt=1 user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf saveMs=557
+2025-10-07 00:02:54.688 +08:00 [INF] refresh_token.store_success user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf elapsedMs=581
+2025-10-07 00:02:54.694 +08:00 [INF] login.success user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf role=student
+2025-10-07 00:02:54.730 +08:00 [INF] Executing OkObjectResult, writing value of type 'SouthvilleEPortal.API.Modules.Auth.API.AuthController+LoginResponse'.
+2025-10-07 00:02:54.778 +08:00 [INF] Executed action SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API) in 1814.638ms
+2025-10-07 00:02:54.789 +08:00 [INF] Executed endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API)'
+2025-10-07 00:02:54.803 +08:00 [INF] POST /api/v1/auth/login responded 200 in 1909.2463 ms
+2025-10-07 00:02:54.810 +08:00 [INF] HTTP POST /api/v1/auth/login responded 200 in 1916.6465 ms
+2025-10-07 00:02:54.830 +08:00 [INF] Request finished HTTP/1.1 POST https://localhost:7180/api/v1/auth/login - 200 null application/json; charset=utf-8 1945.8482ms
+2025-10-07 00:03:56.498 +08:00 [INF] Request starting HTTP/1.1 POST http://localhost:5092/api/v1/auth/logout - application/json 71
+2025-10-07 00:03:56.552 +08:00 [INF] POST /api/v1/auth/logout responded 307 in 0.2636 ms
+2025-10-07 00:03:56.557 +08:00 [INF] HTTP POST /api/v1/auth/logout responded 307 in 4.5265 ms
+2025-10-07 00:03:56.562 +08:00 [INF] Request finished HTTP/1.1 POST http://localhost:5092/api/v1/auth/logout - 307 0 null 64.4436ms
+2025-10-07 00:03:56.564 +08:00 [INF] Request starting HTTP/1.1 POST https://localhost:7180/api/v1/auth/logout - application/json 71
+2025-10-07 00:03:56.641 +08:00 [INF] Executing endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API)'
+2025-10-07 00:03:56.649 +08:00 [INF] Route matched with {action = "Logout", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Logout(RefreshRequest, System.Threading.CancellationToken) on controller SouthvilleEPortal.API.Modules.Auth.API.AuthController (SouthvilleEPortal.API).
+2025-10-07 00:03:56.749 +08:00 [INF] Executed DbCommand (36ms) [Parameters=[@__lookupV2_0='3B545F2BD06C3E60DE53A4D95C7BB94259E25BA33569127D0F161C5CA1AB2FEB'], CommandType='"Text"', CommandTimeout='60']
+SELECT a."Id", a."CreatedAtUtc", a."CreatedIp", a."ExpiresAtUtc", a."LookupHash", a."PepperVersion", a."ReplacedByTokenId", a."RevokedAtUtc", a."RoleSnapshot", a."Salt", a."TokenHash", a."UserAgent", a."UserId"
+FROM auth_refresh_tokens AS a
+WHERE a."LookupHash" = @__lookupV2_0 AND a."RevokedAtUtc" IS NULL
+LIMIT 1
+2025-10-07 00:26:59.168 +08:00 [INF] User profile is available. Using 'C:\Users\merly\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-10-07 00:27:01.421 +08:00 [WRN] Sensitive data logging is enabled. Log entries and exception messages may include sensitive application data; this mode should only be enabled during development.
+2025-10-07 00:27:02.668 +08:00 [INF] Start processing HTTP request GET https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/health
+2025-10-07 00:27:02.675 +08:00 [INF] Sending HTTP request GET https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/health
+2025-10-07 00:27:03.246 +08:00 [INF] Received HTTP response headers after 564.048ms - 200
+2025-10-07 00:27:03.272 +08:00 [INF] End processing HTTP request after 609.0547ms - 200
+2025-10-07 00:27:03.561 +08:00 [INF] RefreshToken cleanup service starting (interval "06:00:00")
+2025-10-07 00:27:04.376 +08:00 [INF] Now listening on: https://localhost:7180
+2025-10-07 00:27:04.383 +08:00 [INF] Now listening on: http://localhost:5092
+2025-10-07 00:27:04.664 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-07 00:27:04.805 +08:00 [INF] Executed DbCommand (260ms) [Parameters=[@__now_0='2025-10-06T16:27:03.5779001Z' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='60']
+SELECT a."Id", a."CreatedAtUtc", a."CreatedIp", a."ExpiresAtUtc", a."LookupHash", a."PepperVersion", a."ReplacedByTokenId", a."RevokedAtUtc", a."RoleSnapshot", a."Salt", a."TokenHash", a."UserAgent", a."UserId"
+FROM auth_refresh_tokens AS a
+WHERE a."RevokedAtUtc" IS NOT NULL OR a."ExpiresAtUtc" < @__now_0
+2025-10-07 00:27:04.810 +08:00 [INF] Hosting environment: Development
+2025-10-07 00:27:04.897 +08:00 [INF] Content root path: C:\Users\merly\source\repos\SouthvilleEPortal.API\SouthvilleEPortal.API
+2025-10-07 00:27:04.989 +08:00 [INF] Request starting HTTP/2 GET https://localhost:7180/ - null null
+2025-10-07 00:27:05.682 +08:00 [INF] Executing endpoint 'HTTP: GET /'
+2025-10-07 00:27:05.814 +08:00 [INF] Setting HTTP status code 200.
+2025-10-07 00:27:05.832 +08:00 [INF] Writing value of type '<>f__AnonymousType10`2' as Json.
+2025-10-07 00:27:05.865 +08:00 [INF] Executed endpoint 'HTTP: GET /'
+2025-10-07 00:27:05.876 +08:00 [INF] GET / responded 200 in 603.3455 ms
+2025-10-07 00:27:05.912 +08:00 [INF] HTTP GET / responded 200 in 639.9329 ms
+2025-10-07 00:27:05.958 +08:00 [INF] Request finished HTTP/2 GET https://localhost:7180/ - 200 null application/json; charset=utf-8 979.3106ms
+2025-10-07 00:27:06.871 +08:00 [INF] Request starting HTTP/1.1 POST http://localhost:5092/api/v1/auth/logout - application/json 71
+2025-10-07 00:27:06.910 +08:00 [INF] POST /api/v1/auth/logout responded 307 in 2.9563 ms
+2025-10-07 00:27:06.915 +08:00 [INF] HTTP POST /api/v1/auth/logout responded 307 in 8.4102 ms
+2025-10-07 00:27:06.924 +08:00 [INF] Request finished HTTP/1.1 POST http://localhost:5092/api/v1/auth/logout - 307 0 null 53.0404ms
+2025-10-07 00:27:06.942 +08:00 [INF] Request starting HTTP/1.1 POST https://localhost:7180/api/v1/auth/logout - application/json 71
+2025-10-07 00:27:07.078 +08:00 [INF] Failed to validate the token.
+Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '10/6/2025 4:17:53 PM', Current time (UTC): '10/6/2025 4:27:07 PM'.
+   at Microsoft.IdentityModel.Tokens.ValidatorUtilities.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+   at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+   at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+   at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+2025-10-07 00:27:07.118 +08:00 [INF] Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '10/6/2025 4:17:53 PM', Current time (UTC): '10/6/2025 4:27:07 PM'.
+2025-10-07 00:27:07.125 +08:00 [INF] Executing endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API)'
+2025-10-07 00:27:07.210 +08:00 [INF] Route matched with {action = "Logout", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Logout(RefreshRequest, System.Threading.CancellationToken) on controller SouthvilleEPortal.API.Modules.Auth.API.AuthController (SouthvilleEPortal.API).
+2025-10-07 00:27:07.335 +08:00 [INF] logout.begin lookup_sample=l1j4pB-e
+2025-10-07 00:27:07.814 +08:00 [INF] Executed DbCommand (44ms) [Parameters=[@__now_1='2025-10-06T16:27:07.3469024Z' (Nullable = true) (DbType = DateTime), @__lookupV2_0='3B545F2BD06C3E60DE53A4D95C7BB94259E25BA33569127D0F161C5CA1AB2FEB'], CommandType='"Text"', CommandTimeout='60']
+UPDATE auth_refresh_tokens AS a
+SET "RevokedAtUtc" = @__now_1
+WHERE a."LookupHash" = @__lookupV2_0 AND a."RevokedAtUtc" IS NULL
+2025-10-07 00:27:25.488 +08:00 [WRN] logout.timeout elapsedMs=18153
+2025-10-07 00:27:25.507 +08:00 [INF] Executing ObjectResult, writing value of type '<>f__AnonymousType3`1[[System.String, System.Private.CoreLib, Version=9.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]'.
+2025-10-07 00:27:25.530 +08:00 [INF] Executed action SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API) in 18308.2577ms
+2025-10-07 00:27:25.538 +08:00 [INF] Executed endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API)'
+2025-10-07 00:27:25.556 +08:00 [INF] POST /api/v1/auth/logout responded 504 in 18594.9386 ms
+2025-10-07 00:27:25.568 +08:00 [ERR] HTTP POST /api/v1/auth/logout responded 504 in 18606.8142 ms
+2025-10-07 00:27:25.583 +08:00 [INF] Request finished HTTP/1.1 POST https://localhost:7180/api/v1/auth/logout - 504 null application/json; charset=utf-8 18641.173ms
+2025-10-07 00:29:08.577 +08:00 [INF] Request starting HTTP/1.1 POST http://localhost:5092/api/v1/auth/login - application/json 76
+2025-10-07 00:29:08.590 +08:00 [INF] POST /api/v1/auth/login responded 307 in 0.2925 ms
+2025-10-07 00:29:08.604 +08:00 [INF] HTTP POST /api/v1/auth/login responded 307 in 14.2228 ms
+2025-10-07 00:29:08.609 +08:00 [INF] Request finished HTTP/1.1 POST http://localhost:5092/api/v1/auth/login - 307 0 null 32.9545ms
+2025-10-07 00:29:08.621 +08:00 [INF] Request starting HTTP/1.1 POST https://localhost:7180/api/v1/auth/login - application/json 76
+2025-10-07 00:29:08.638 +08:00 [INF] Executing endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API)'
+2025-10-07 00:29:08.651 +08:00 [INF] Route matched with {action = "Login", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Login(LoginRequest, System.Threading.CancellationToken) on controller SouthvilleEPortal.API.Modules.Auth.API.AuthController (SouthvilleEPortal.API).
+2025-10-07 00:29:08.683 +08:00 [INF] Start processing HTTP request POST https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/token?*
+2025-10-07 00:29:08.687 +08:00 [INF] Sending HTTP request POST https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/token?*
+2025-10-07 00:29:09.297 +08:00 [INF] Received HTTP response headers after 604.3575ms - 200
+2025-10-07 00:29:09.304 +08:00 [INF] End processing HTTP request after 621.1116ms - 200
+2025-10-07 00:29:09.721 +08:00 [INF] refresh_token.store_begin user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf lookupHashPrefix=621D9519 expires=2025-10-13T16:29:09.3378717Z hashMs=361
+2025-10-07 00:29:09.726 +08:00 [INF] refresh_token.store_before_save attempt=1 user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf
+2025-10-07 00:29:10.051 +08:00 [INF] Executed DbCommand (38ms) [Parameters=[@p0='9d2b3ee4-1d95-4342-b88d-358b1a5e5511', @p1='2025-10-06T16:29:09.7025393Z' (DbType = DateTime), @p2=NULL, @p3='2025-10-13T16:29:09.3378717Z' (DbType = DateTime), @p4='621D9519799A917DF7169159E0FC813C409F536211F11D6454FCF929D15EA1A7' (Nullable = false), @p5='V2' (Nullable = false), @p6=NULL, @p7=NULL (DbType = DateTime), @p8='student' (Nullable = false), @p9='F49A2DAC3A24422226DE8A8C' (Nullable = false), @p10='$2a$10$6y3cAG/FhCSDv.LhXnkSl.f7A/vw3mx/yBSJ/Sb9tiReLGsKss/ai' (Nullable = false), @p11=NULL, @p12='a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf' (Nullable = false)], CommandType='"Text"', CommandTimeout='60']
+INSERT INTO auth_refresh_tokens ("Id", "CreatedAtUtc", "CreatedIp", "ExpiresAtUtc", "LookupHash", "PepperVersion", "ReplacedByTokenId", "RevokedAtUtc", "RoleSnapshot", "Salt", "TokenHash", "UserAgent", "UserId")
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2025-10-07 00:29:10.099 +08:00 [INF] refresh_token.store_after_save attempt=1 user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf saveMs=369
+2025-10-07 00:29:10.104 +08:00 [INF] refresh_token.store_success user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf elapsedMs=383
+2025-10-07 00:29:10.109 +08:00 [INF] login.success user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf role=student
+2025-10-07 00:29:10.116 +08:00 [INF] Executing OkObjectResult, writing value of type 'SouthvilleEPortal.API.Modules.Auth.API.AuthController+LoginResponse'.
+2025-10-07 00:29:10.128 +08:00 [INF] Executed action SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API) in 1469.9588ms
+2025-10-07 00:29:10.138 +08:00 [INF] Executed endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API)'
+2025-10-07 00:29:10.145 +08:00 [INF] POST /api/v1/auth/login responded 200 in 1512.1383 ms
+2025-10-07 00:29:10.152 +08:00 [INF] HTTP POST /api/v1/auth/login responded 200 in 1519.7098 ms
+2025-10-07 00:29:10.165 +08:00 [INF] Request finished HTTP/1.1 POST https://localhost:7180/api/v1/auth/login - 200 null application/json; charset=utf-8 1544.5313ms
+2025-10-07 00:30:07.481 +08:00 [INF] Request starting HTTP/1.1 POST http://localhost:5092/api/v1/auth/logout - application/json 71
+2025-10-07 00:30:07.492 +08:00 [INF] POST /api/v1/auth/logout responded 307 in 0.1752 ms
+2025-10-07 00:30:07.497 +08:00 [INF] HTTP POST /api/v1/auth/logout responded 307 in 5.3507 ms
+2025-10-07 00:30:07.508 +08:00 [INF] Request finished HTTP/1.1 POST http://localhost:5092/api/v1/auth/logout - 307 0 null 26.6738ms
+2025-10-07 00:30:07.512 +08:00 [INF] Request starting HTTP/1.1 POST https://localhost:7180/api/v1/auth/logout - application/json 71
+2025-10-07 00:30:07.545 +08:00 [INF] Executing endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API)'
+2025-10-07 00:30:07.550 +08:00 [INF] Route matched with {action = "Logout", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Logout(RefreshRequest, System.Threading.CancellationToken) on controller SouthvilleEPortal.API.Modules.Auth.API.AuthController (SouthvilleEPortal.API).
+2025-10-07 00:30:07.564 +08:00 [INF] logout.begin lookup_sample=z8fpgae3
+2025-10-07 00:30:10.199 +08:00 [ERR] Failed executing DbCommand (2,622ms) [Parameters=[@__now_1='2025-10-06T16:30:07.5679667Z' (Nullable = true) (DbType = DateTime), @__lookupV2_0='621D9519799A917DF7169159E0FC813C409F536211F11D6454FCF929D15EA1A7'], CommandType='"Text"', CommandTimeout='60']
+UPDATE auth_refresh_tokens AS a
+SET "RevokedAtUtc" = @__now_1
+WHERE a."LookupHash" = @__lookupV2_0 AND a."RevokedAtUtc" IS NULL
+2025-10-07 00:30:10.218 +08:00 [INF] A transient exception occurred during execution. The operation will be retried after 0ms.
+Npgsql.NpgsqlException (0x80004005): The connection was previously broken because of the following exception
+ ---> Npgsql.NpgsqlException (0x80004005): Exception while reading from stream
+ ---> System.TimeoutException: Timeout during reading attempt
+   at Npgsql.Internal.NpgsqlReadBuffer.<Ensure>g__EnsureLong|55_0(NpgsqlReadBuffer buffer, Int32 count, Boolean async, Boolean readingNotifications)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.Internal.NpgsqlConnector.PerformKeepAlive(Object state)
+   at Npgsql.ThrowHelper.ThrowNpgsqlException(String message, Exception innerException)
+   at Npgsql.Internal.NpgsqlConnector.<StartUserAction>g__DoStartUserActionWithKeepAlive|282_1(ConnectorState newState, NpgsqlCommand command, CancellationToken cancellationToken, Boolean attemptPgCancellation)
+   at Npgsql.Internal.NpgsqlConnector.StartUserAction(ConnectorState newState, NpgsqlCommand command, CancellationToken cancellationToken, Boolean attemptPgCancellation)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteNonQuery(Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteNonQueryAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteNonQueryAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteNonQueryAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.<>c__DisplayClass30_0`2.<<ExecuteAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+Npgsql.NpgsqlException (0x80004005): The connection was previously broken because of the following exception
+ ---> Npgsql.NpgsqlException (0x80004005): Exception while reading from stream
+ ---> System.TimeoutException: Timeout during reading attempt
+   at Npgsql.Internal.NpgsqlReadBuffer.<Ensure>g__EnsureLong|55_0(NpgsqlReadBuffer buffer, Int32 count, Boolean async, Boolean readingNotifications)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.Internal.NpgsqlConnector.PerformKeepAlive(Object state)
+   at Npgsql.ThrowHelper.ThrowNpgsqlException(String message, Exception innerException)
+   at Npgsql.Internal.NpgsqlConnector.<StartUserAction>g__DoStartUserActionWithKeepAlive|282_1(ConnectorState newState, NpgsqlCommand command, CancellationToken cancellationToken, Boolean attemptPgCancellation)
+   at Npgsql.Internal.NpgsqlConnector.StartUserAction(ConnectorState newState, NpgsqlCommand command, CancellationToken cancellationToken, Boolean attemptPgCancellation)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteNonQuery(Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteNonQueryAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteNonQueryAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteNonQueryAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.<>c__DisplayClass30_0`2.<<ExecuteAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+2025-10-07 00:30:10.889 +08:00 [INF] Executed DbCommand (43ms) [Parameters=[@__now_1='2025-10-06T16:30:07.5679667Z' (Nullable = true) (DbType = DateTime), @__lookupV2_0='621D9519799A917DF7169159E0FC813C409F536211F11D6454FCF929D15EA1A7'], CommandType='"Text"', CommandTimeout='60']
+UPDATE auth_refresh_tokens AS a
+SET "RevokedAtUtc" = @__now_1
+WHERE a."LookupHash" = @__lookupV2_0 AND a."RevokedAtUtc" IS NULL
+2025-10-07 00:30:10.962 +08:00 [INF] refresh_token.revoke success pepper=V2 affected=1 ms=3394
+2025-10-07 00:30:10.967 +08:00 [INF] logout.end elapsedMs=3402
+2025-10-07 00:30:10.972 +08:00 [INF] Executing StatusCodeResult, setting HTTP status code 204
+2025-10-07 00:30:10.977 +08:00 [INF] Executed action SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API) in 3419.4333ms
+2025-10-07 00:30:10.984 +08:00 [INF] Executed endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Logout (SouthvilleEPortal.API)'
+2025-10-07 00:30:10.990 +08:00 [INF] POST /api/v1/auth/logout responded 204 in 3464.1577 ms
+2025-10-07 00:30:10.998 +08:00 [INF] HTTP POST /api/v1/auth/logout responded 204 in 3471.4922 ms
+2025-10-07 00:30:11.005 +08:00 [INF] Request finished HTTP/1.1 POST https://localhost:7180/api/v1/auth/logout - 204 null null 3493.1897ms
+2025-10-07 02:05:51.384 +08:00 [INF] User profile is available. Using 'C:\Users\merly\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-10-07 02:05:52.904 +08:00 [WRN] Sensitive data logging is enabled. Log entries and exception messages may include sensitive application data; this mode should only be enabled during development.
+2025-10-07 02:05:53.861 +08:00 [INF] Start processing HTTP request GET https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/health
+2025-10-07 02:05:53.867 +08:00 [INF] Sending HTTP request GET https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/health
+2025-10-07 02:05:54.665 +08:00 [INF] Received HTTP response headers after 793.9279ms - 200
+2025-10-07 02:05:54.682 +08:00 [INF] End processing HTTP request after 826.172ms - 200
+2025-10-07 02:05:54.963 +08:00 [INF] RefreshToken cleanup service starting (interval "06:00:00")
+2025-10-07 02:05:55.664 +08:00 [INF] Now listening on: https://localhost:7180
+2025-10-07 02:05:55.670 +08:00 [INF] Now listening on: http://localhost:5092
+2025-10-07 02:05:55.950 +08:00 [INF] Executed DbCommand (136ms) [Parameters=[@__now_0='2025-10-06T18:05:54.9816493Z' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='60']
+SELECT a."Id", a."CreatedAtUtc", a."CreatedIp", a."ExpiresAtUtc", a."LookupHash", a."PepperVersion", a."ReplacedByTokenId", a."RevokedAtUtc", a."RoleSnapshot", a."Salt", a."TokenHash", a."UserAgent", a."UserId"
+FROM auth_refresh_tokens AS a
+WHERE a."RevokedAtUtc" IS NOT NULL OR a."ExpiresAtUtc" < @__now_0
+2025-10-07 02:05:56.031 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-07 02:05:56.048 +08:00 [INF] Hosting environment: Development
+2025-10-07 02:05:56.052 +08:00 [INF] Content root path: C:\Users\merly\source\repos\SouthvilleEPortal.API\SouthvilleEPortal.API
+2025-10-07 02:05:56.638 +08:00 [INF] Request starting HTTP/2 GET https://localhost:7180/ - null null
+2025-10-07 02:05:57.040 +08:00 [INF] Executing endpoint 'HTTP: GET /'
+2025-10-07 02:05:57.066 +08:00 [INF] Setting HTTP status code 200.
+2025-10-07 02:05:57.080 +08:00 [INF] Writing value of type '<>f__AnonymousType10`2' as Json.
+2025-10-07 02:05:57.104 +08:00 [INF] Executed endpoint 'HTTP: GET /'
+2025-10-07 02:05:57.149 +08:00 [INF] GET / responded 200 in 229.3563 ms
+2025-10-07 02:05:57.159 +08:00 [INF] HTTP GET / responded 200 in 238.8707 ms
+2025-10-07 02:05:57.175 +08:00 [INF] Request finished HTTP/2 GET https://localhost:7180/ - 200 null application/json; charset=utf-8 550.0217ms
+2025-10-07 02:06:10.735 +08:00 [INF] Request starting HTTP/1.1 POST http://localhost:5092/api/v1/auth/login - application/json 76
+2025-10-07 02:06:10.777 +08:00 [INF] POST /api/v1/auth/login responded 307 in 4.5872 ms
+2025-10-07 02:06:10.781 +08:00 [INF] HTTP POST /api/v1/auth/login responded 307 in 9.1406 ms
+2025-10-07 02:06:10.790 +08:00 [INF] Request finished HTTP/1.1 POST http://localhost:5092/api/v1/auth/login - 307 0 null 54.6095ms
+2025-10-07 02:06:10.893 +08:00 [INF] Request starting HTTP/1.1 POST https://localhost:7180/api/v1/auth/login - application/json 76
+2025-10-07 02:06:10.927 +08:00 [INF] Executing endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API)'
+2025-10-07 02:06:10.973 +08:00 [INF] Route matched with {action = "Login", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Login(LoginRequest, System.Threading.CancellationToken) on controller SouthvilleEPortal.API.Modules.Auth.API.AuthController (SouthvilleEPortal.API).
+2025-10-07 02:06:11.063 +08:00 [INF] Start processing HTTP request POST https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/token?*
+2025-10-07 02:06:11.066 +08:00 [INF] Sending HTTP request POST https://udhjreeitfjvhhxcnbaf.supabase.co/auth/v1/token?*
+2025-10-07 02:06:11.706 +08:00 [INF] Received HTTP response headers after 637.2976ms - 200
+2025-10-07 02:06:11.713 +08:00 [INF] End processing HTTP request after 650.7908ms - 200
+2025-10-07 02:06:12.549 +08:00 [INF] refresh_token.store_begin user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf lookupHashPrefix=7BF1853D expires=2025-10-13T18:06:11.8281048Z hashMs=611
+2025-10-07 02:06:12.617 +08:00 [INF] refresh_token.store_before_save attempt=1 user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf
+2025-10-07 02:06:12.953 +08:00 [INF] Executed DbCommand (44ms) [Parameters=[@p0='ea67f3bc-e0fb-4bbd-ae4b-6d6d68fbc736', @p1='2025-10-06T18:06:12.4429715Z' (DbType = DateTime), @p2=NULL, @p3='2025-10-13T18:06:11.8281048Z' (DbType = DateTime), @p4='7BF1853D9FBEE24999224B5661A493D5743F88508E1465E9E4CE6F4D39C74D26' (Nullable = false), @p5='V2' (Nullable = false), @p6=NULL, @p7=NULL (DbType = DateTime), @p8='student' (Nullable = false), @p9='36AC29E5082089D6B7562DBF' (Nullable = false), @p10='$2a$10$Vh2q1MlHDbZE0RUzASIobObwPlDxmusLFlx9wjvX1hkMd7R50/cf6' (Nullable = false), @p11=NULL, @p12='a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf' (Nullable = false)], CommandType='"Text"', CommandTimeout='60']
+INSERT INTO auth_refresh_tokens ("Id", "CreatedAtUtc", "CreatedIp", "ExpiresAtUtc", "LookupHash", "PepperVersion", "ReplacedByTokenId", "RevokedAtUtc", "RoleSnapshot", "Salt", "TokenHash", "UserAgent", "UserId")
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2025-10-07 02:06:13.014 +08:00 [INF] refresh_token.store_after_save attempt=1 user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf saveMs=387
+2025-10-07 02:06:13.018 +08:00 [INF] refresh_token.store_success user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf elapsedMs=469
+2025-10-07 02:06:13.025 +08:00 [INF] login.success user=a19ab2a7-ee3e-40ba-a52b-1ecbfc42c3cf role=student
+2025-10-07 02:06:13.046 +08:00 [INF] Executing OkObjectResult, writing value of type 'SouthvilleEPortal.API.Modules.Auth.API.AuthController+LoginResponse'.
+2025-10-07 02:06:13.066 +08:00 [INF] Executed action SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API) in 2082.5239ms
+2025-10-07 02:06:13.075 +08:00 [INF] Executed endpoint 'SouthvilleEPortal.API.Modules.Auth.API.AuthController.Login (SouthvilleEPortal.API)'
+2025-10-07 02:06:13.081 +08:00 [INF] POST /api/v1/auth/login responded 200 in 2155.3696 ms
+2025-10-07 02:06:13.086 +08:00 [INF] HTTP POST /api/v1/auth/login responded 200 in 2159.9039 ms
+2025-10-07 02:06:13.099 +08:00 [INF] Request finished HTTP/1.1 POST https://localhost:7180/api/v1/auth/login - 200 null application/json; charset=utf-8 2206.2304ms
