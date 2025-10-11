@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="800"
+             x:Class="Southville8BEdgeUI.Views.Admin.ImportUsersView"
+             x:DataType="vm:ImportUsersViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+	<UserControl.Styles>
+		<Style Selector="Border.card">
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="24"/>
+			<Setter Property="Margin" Value="0,0,0,24"/>
+		</Style>
+
+		<Style Selector="TextBlock.header">
+			<Setter Property="FontSize" Value="28"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.subheader">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="Margin" Value="0,4,0,0"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.section-title">
+			<Setter Property="FontSize" Value="16"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="Margin" Value="0,0,0,12"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.label">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="Margin" Value="0,0,0,4"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<Style Selector="TextBox, ComboBox">
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="10"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="Margin" Value="0,0,0,14"/>
+		</Style>
+		<Style Selector="TextBox:focus-within, ComboBox:focus-within">
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+			<Setter Property="BorderThickness" Value="2"/>
+		</Style>
+		<Style Selector="Button.primary">
+			<Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="18,12"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Button.secondary">
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="18,12"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.validation-error">
+			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Margin" Value="0,4,0,0"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Border.sample-preview">
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="12"/>
+			<Setter Property="Margin" Value="0,0,0,10"/>
+		</Style>
+		<Style Selector="TextBlock.step-label">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+	</UserControl.Styles>
+
+	<ScrollViewer VerticalScrollBarVisibility="Auto">
+		<StackPanel Spacing="32" Margin="48,36,48,40">
+			<!-- Header with progress steps -->
+			<StackPanel>
+				<!-- Top row with Back Button and titles -->
+				<Grid ColumnDefinitions="Auto,*" Margin="0,0,0,0">
+					<Button Content="←" Width="40" Height="40" ToolTip.Tip="Back" Command="{Binding CancelCommand}"
+							Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+							CornerRadius="8" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+					<StackPanel Grid.Column="1">
+						<TextBlock Text="Import Users" Classes="header"/>
+						<TextBlock Text="Bulk-create user accounts from a CSV file" Classes="subheader"/>
+					</StackPanel>
+				</Grid>
+
+				<!-- Progress Steps -->
+				<Grid ColumnDefinitions="*,*,*" Margin="0,20,0,0" VerticalAlignment="Center">
+					<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+						<Ellipse Width="24" Height="24" Fill="{DynamicResource AccentBrush}" StrokeThickness="0" HorizontalAlignment="Center"/>
+						<TextBlock Text="1. Upload" Classes="step-label" HorizontalAlignment="Center"/>
+					</StackPanel>
+					<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1">
+						<Ellipse Width="24" Height="24" Fill="{DynamicResource WarningBrush}" StrokeThickness="0" HorizontalAlignment="Center"/>
+						<TextBlock Text="2. Map" Classes="step-label" HorizontalAlignment="Center"/>
+					</StackPanel>
+					<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="2">
+						<Ellipse Width="24" Height="24" Fill="{DynamicResource SuccessBrush}" StrokeThickness="0" HorizontalAlignment="Center"/>
+						<TextBlock Text="3. Import" Classes="step-label" HorizontalAlignment="Center"/>
+					</StackPanel>
+				</Grid>
+			</StackPanel>
+
+			<!-- Upload Section -->
+			<Border Classes="card">
+				<StackPanel>
+					<TextBlock Text="Upload CSV" Classes="section-title"/>
+					<TextBlock Text="Select a properly formatted CSV file (.csv)." Classes="label"/>
+
+					<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0" VerticalAlignment="Center">
+						<StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0" VerticalAlignment="Center">
+							<Button Content="Browse File" Classes="secondary" Command="{Binding BrowseFileCommand}" VerticalAlignment="Center"/>
+							<Button Content="Clear" Classes="secondary" Command="{Binding ClearFileCommand}" IsVisible="{Binding HasFile}" VerticalAlignment="Center"/>
+						</StackPanel>
+						<TextBlock Grid.Column="1" Text="{Binding SelectedFileName}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
+						   VerticalAlignment="Center" Margin="20,0,0,0" TextTrimming="CharacterEllipsis"/>
+					</Grid>
+
+					<TextBlock Text="{Binding FileValidationMessage}" Classes="validation-error"
+					   IsVisible="{Binding HasFileValidationError}" VerticalAlignment="Center"/>
+				</StackPanel>
+			</Border>
+
+			<!-- Mapping Section -->
+			<Border Classes="card">
+				<StackPanel>
+					<TextBlock Text="Field Mapping" Classes="section-title"/>
+					<TextBlock Text="Match CSV columns to user fields" Classes="label"/>
+
+					<Grid ColumnDefinitions="*,*,*" Margin="0,8,0,0">
+						<StackPanel Margin="0,0,24,0">
+							<TextBlock Text="Full Name Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding FullNameColumn}" VerticalAlignment="Center"/>
+							<TextBlock Text="Username Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding UsernameColumn}" VerticalAlignment="Center"/>
+							<TextBlock Text="Email Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding EmailColumn}" VerticalAlignment="Center"/>
+						</StackPanel>
+
+						<StackPanel Margin="0,0,24,0" Grid.Column="1">
+							<TextBlock Text="Role Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding RoleColumn}" VerticalAlignment="Center"/>
+							<TextBlock Text="Status Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding StatusColumn}" VerticalAlignment="Center"/>
+							<TextBlock Text="Grade Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding GradeColumn}" VerticalAlignment="Center"/>
+						</StackPanel>
+
+						<StackPanel Grid.Column="2">
+							<TextBlock Text="Phone Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding PhoneColumn}" VerticalAlignment="Center"/>
+							<TextBlock Text="Password Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding PasswordColumn}" VerticalAlignment="Center"/>
+							<TextBlock Text="Require Reset Column" Classes="label"/>
+							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding RequireResetColumn}" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Grid>
+				</StackPanel>
+			</Border>
+
+			<!-- Preview Section -->
+			<Border Classes="card">
+				<StackPanel>
+					<TextBlock Text="Preview (first 10 rows)" Classes="section-title"/>
+					<ScrollViewer MaxHeight="300" VerticalAlignment="Stretch">
+						<ItemsControl ItemsSource="{Binding PreviewRows}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<Border Classes="sample-preview">
+										<TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</ScrollViewer>
+				</StackPanel>
+			</Border>
+
+			<!-- Summary & Actions -->
+			<Border Classes="card">
+				<StackPanel>
+					<TextBlock Text="Summary" Classes="section-title"/>
+					<TextBlock Text="{Binding SummaryText}" FontSize="12" Margin="0,0,0,12"
+					   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+
+					<Grid ColumnDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Center">
+						<Button Content="Start Import" Classes="primary" Command="{Binding ImportCommand}"
+							IsEnabled="{Binding CanImport}" VerticalAlignment="Center"/>
+						<Button Grid.Column="1" Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}"
+							Margin="16,0,0,0" VerticalAlignment="Center"/>
+					</Grid>
+
+					<TextBlock Text="{Binding ImportStatusMessage}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
+					   Margin="0,16,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+				</StackPanel>
+			</Border>
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

@@ -3,10 +3,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
              x:Class="Southville8BEdgeUI.Views.Admin.AlertsView"
+             x:Name="AlertsRoot"
              x:DataType="vm:AlertsViewModel"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
-             Background="#F9FAFB">
+             Background="{DynamicResource PageBackgroundBrush}">
 
 	<UserControl.Styles>
 		<!-- RESPONSIVE TEXT STYLES -->
@@ -15,7 +17,7 @@
 		<Style Selector="TextBlock.main-header">
 			<Setter Property="FontSize" Value="18"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Foreground" Value="Black"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 		<Style Selector="TextBlock.main-header.tablet">
 			<Setter Property="FontSize" Value="16"/>
@@ -27,7 +29,7 @@
 		<!-- Subtitle Text -->
 		<Style Selector="TextBlock.subtitle">
 			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Foreground" Value="#6B7280"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
 		<Style Selector="TextBlock.subtitle.tablet">
 			<Setter Property="FontSize" Value="11"/>
@@ -40,7 +42,7 @@
 		<Style Selector="TextBlock.section-header">
 			<Setter Property="FontSize" Value="11"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Foreground" Value="#6B7280"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 			<Setter Property="Margin" Value="0,16,0,8"/>
 		</Style>
 		<Style Selector="TextBlock.section-header.tablet">
@@ -56,7 +58,7 @@
 		<Style Selector="TextBlock.card-header">
 			<Setter Property="FontSize" Value="16"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Foreground" Value="Black"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 			<Setter Property="Margin" Value="0,0,0,16"/>
 		</Style>
 		<Style Selector="TextBlock.card-header.tablet">
@@ -71,7 +73,7 @@
 		<!-- Form Label -->
 		<Style Selector="TextBlock.form-label">
 			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Foreground" Value="#6B7280"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 			<Setter Property="FontWeight" Value="Medium"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Margin" Value="0,0,0,4"/>
@@ -87,7 +89,7 @@
 		<Style Selector="TextBlock.alert-title">
 			<Setter Property="FontSize" Value="14"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Foreground" Value="Black"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 		<Style Selector="TextBlock.alert-title.tablet">
 			<Setter Property="FontSize" Value="13"/>
@@ -99,7 +101,7 @@
 		<!-- Alert Message -->
 		<Style Selector="TextBlock.alert-message">
 			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Foreground" Value="#374151"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="LineHeight" Value="16"/>
 		</Style>
 		<Style Selector="TextBlock.alert-message.tablet">
@@ -115,8 +117,8 @@
 
 		<!-- Main Card Style -->
 		<Style Selector="Border.card">
-			<Setter Property="Background" Value="White"/>
-			<Setter Property="BorderBrush" Value="#E5E7EB"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="CornerRadius" Value="12"/>
 			<Setter Property="Padding" Value="20"/>
@@ -131,8 +133,8 @@
 
 		<!-- Alert Card Styles -->
 		<Style Selector="Border.alert-card">
-			<Setter Property="Background" Value="White"/>
-			<Setter Property="BorderBrush" Value="#E5E7EB"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="16"/>
@@ -156,11 +158,14 @@
 
 		<!-- Action Button Base -->
 		<Style Selector="Button.action-btn">
-			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Padding" Value="12,8"/>
 			<Setter Property="CornerRadius" Value="6"/>
 			<Setter Property="FontWeight" Value="Medium"/>
 			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="Transitions">
 				<Transitions>
 					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
@@ -181,11 +186,14 @@
 
 		<!-- Small Action Button -->
 		<Style Selector="Button.action-btn-sm">
-			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="Padding" Value="8,4"/>
 			<Setter Property="CornerRadius" Value="4"/>
 			<Setter Property="FontWeight" Value="Medium"/>
 			<Setter Property="FontSize" Value="10"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 			<Setter Property="Transitions">
 				<Transitions>
 					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
@@ -206,39 +214,40 @@
 
 		<!-- Primary Button -->
 		<Style Selector="Button.primary">
-			<Setter Property="Background" Value="#10B981"/>
-			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
 		</Style>
 
 		<!-- Secondary Button -->
 		<Style Selector="Button.secondary">
-			<Setter Property="Background" Value="#F3F4F6"/>
-			<Setter Property="Foreground" Value="#374151"/>
-			<Setter Property="BorderBrush" Value="#E5E7EB"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 		</Style>
 
 		<!-- Danger Button -->
 		<Style Selector="Button.danger">
-			<Setter Property="Background" Value="#EF4444"/>
-			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
 		</Style>
 
 		<!-- Warning Button -->
 		<Style Selector="Button.warning">
-			<Setter Property="Background" Value="#F59E0B"/>
-			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
 		</Style>
 
 		<!-- RESPONSIVE INPUT STYLES -->
-
 		<Style Selector="TextBox, ComboBox, DatePicker, TimePicker">
 			<Setter Property="Margin" Value="0,0,0,12"/>
 			<Setter Property="Padding" Value="8"/>
-			<Setter Property="BorderBrush" Value="#E5E7EB"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="CornerRadius" Value="4"/>
 			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 		<Style Selector="TextBox.tablet, ComboBox.tablet, DatePicker.tablet, TimePicker.tablet">
 			<Setter Property="Padding" Value="6"/>
@@ -252,22 +261,23 @@
 		</Style>
 
 		<!-- RESPONSIVE LAYOUT STYLES -->
-
 		<Style Selector="Grid.main-content">
-			<Setter Property="Background" Value="#F9FAFB"/>
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
 		</Style>
 		<Style Selector="Grid.main-content-tablet">
-			<Setter Property="Background" Value="#F9FAFB"/>
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
 		</Style>
 		<Style Selector="Grid.main-content-mobile">
-			<Setter Property="Background" Value="#F9FAFB"/>
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
 		</Style>
 
 		<!-- Tag Style -->
 		<Style Selector="Border.tag">
-			<Setter Property="Background" Value="#F3F4F6"/>
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
 			<Setter Property="CornerRadius" Value="4"/>
 			<Setter Property="Padding" Value="6,3"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
 		</Style>
 		<Style Selector="Border.tag.tablet">
 			<Setter Property="Padding" Value="5,2"/>
@@ -278,9 +288,11 @@
 
 		<!-- Badge Style -->
 		<Style Selector="Border.badge">
-			<Setter Property="Background" Value="#F3F4F6"/>
+			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
 			<Setter Property="CornerRadius" Value="6"/>
 			<Setter Property="Padding" Value="12,6"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
 		</Style>
 		<Style Selector="Border.badge.tablet">
 			<Setter Property="Padding" Value="10,5"/>
@@ -293,7 +305,7 @@
 	<Grid x:Name="MainGrid" Classes="main-content" RowDefinitions="Auto,*" ColumnDefinitions="400,*">
 
 		<!-- Page Header -->
-		<Border x:Name="HeaderCard" Grid.Row="0" Grid.ColumnSpan="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="20,16">
+		<Border x:Name="HeaderCard" Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,16">
 			<StackPanel Orientation="Horizontal" Spacing="16">
 				<!-- Title and Stats -->
 				<StackPanel VerticalAlignment="Center">
@@ -304,17 +316,25 @@
 				<!-- Stats Badge -->
 				<Border Classes="badge" VerticalAlignment="Center">
 					<StackPanel Orientation="Horizontal" Spacing="4">
-						<Ellipse Fill="#10B981" Width="8" Height="8" VerticalAlignment="Center"/>
-						<TextBlock x:Name="ActiveCountText" Text="{Binding ActiveCount, StringFormat={}{0} Active}" FontSize="11" Foreground="#374151" FontWeight="Medium"/>
+						<Ellipse Fill="{DynamicResource SuccessBrush}" Width="8" Height="8" VerticalAlignment="Center"/>
+						<TextBlock x:Name="ActiveCountText" Text="{Binding ActiveCount, StringFormat={}{0} Active}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/>
 					</StackPanel>
 				</Border>
 
 				<!-- Action Buttons -->
 				<StackPanel x:Name="HeaderButtonsStack" Orientation="Horizontal" Spacing="8" Margin="20,0,0,0">
-					<Button x:Name="RefreshButton" Content="Refresh" Command="{Binding RefreshComputedCommand}"
-                            Classes="action-btn primary"/>
-					<Button x:Name="PurgeButton" Content="Purge Expired" Command="{Binding PurgeExpiredCommand}"
-                            Classes="action-btn danger"/>
+					<Button x:Name="RefreshButton" Classes="action-btn primary" Command="{Binding RefreshComputedCommand}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16"/>
+							<TextBlock Text="Refresh"/>
+						</StackPanel>
+					</Button>
+					<Button x:Name="PurgeButton" Classes="action-btn danger" Command="{Binding PurgeExpiredCommand}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<ic:FluentIcon Icon="Delete" IconSize="Size16"/>
+							<TextBlock Text="Purge Expired"/>
+						</StackPanel>
+					</Button>
 				</StackPanel>
 			</StackPanel>
 		</Border>
@@ -372,10 +392,18 @@
 
 					<!-- Action Buttons -->
 					<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,24,0,0">
-						<Button x:Name="PublishButton" Content="Publish Alert" Command="{Binding CreateAlertCommand}"
-                                Classes="action-btn primary" HorizontalAlignment="Stretch" MinWidth="120"/>
-						<Button x:Name="ClearButton" Content="Clear Form" Command="{Binding ClearFormCommand}"
-                                Classes="action-btn secondary" MinWidth="100"/>
+						<Button x:Name="PublishButton" Classes="action-btn primary" Command="{Binding CreateAlertCommand}" HorizontalAlignment="Stretch" MinWidth="120">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<ic:FluentIcon Icon="Send" IconSize="Size16"/>
+								<TextBlock Text="Publish Alert"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="ClearButton" Classes="action-btn secondary" Command="{Binding ClearFormCommand}" MinWidth="100">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<ic:FluentIcon Icon="Dismiss" IconSize="Size16"/>
+								<TextBlock Text="Clear Form"/>
+							</StackPanel>
+						</Button>
 					</StackPanel>
 				</StackPanel>
 			</ScrollViewer>
@@ -383,113 +411,89 @@
 
 		<!-- Active Alerts Panel -->
 		<Border x:Name="ActiveAlertsCard" Grid.Row="1" Grid.Column="1" Classes="card" Margin="12,20,20,20">
-			<StackPanel Spacing="0">
+			<Grid RowDefinitions="Auto,*">
 				<!-- Header -->
-				<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+				<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
 					<TextBlock x:Name="AlertsHeaderText" Text="Active Alerts" Classes="card-header" Margin="0"/>
 					<Border Classes="badge" VerticalAlignment="Center">
-						<TextBlock x:Name="ActiveCountBadgeText" Text="{Binding ActiveCount, StringFormat={}{0} alerts}" FontSize="11" Foreground="#6B7280"/>
+						<TextBlock x:Name="ActiveCountBadgeText" Text="{Binding ActiveCount, StringFormat={}{0} alerts}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
 					</Border>
 				</StackPanel>
 
-				<!-- Active Alerts List -->
-				<ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
-					<ItemsControl ItemsSource="{Binding ActiveAlerts}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate x:DataType="vm:AlertItemViewModel">
-								<Border Classes="alert-card">
-									<StackPanel Spacing="0">
+				<!-- Scrollable Content (Active + Expired) -->
+				<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+					<StackPanel Spacing="0">
+						<!-- Active Alerts List -->
+						<ItemsControl ItemsSource="{Binding ActiveAlerts}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="vm:AlertItemViewModel">
+									<Border Classes="alert-card">
+										<StackPanel Spacing="0">
+											<!-- Header Row with Priority Accent -->
+											<StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+												<Border Width="4" Height="40" Background="{Binding PriorityBrush}" CornerRadius="2" VerticalAlignment="Top"/>
+												<StackPanel Spacing="8" HorizontalAlignment="Stretch">
+													<!-- Title Row -->
+													<StackPanel Orientation="Horizontal" Spacing="8">
+														<Border Background="{Binding TypeBrush}" Width="12" Height="12" CornerRadius="2" VerticalAlignment="Center"/>
+														<TextBlock Text="{Binding Title}" Classes="alert-title" TextWrapping="Wrap" MaxWidth="350"/>
+													</StackPanel>
+													<!-- Tags Row -->
+													<StackPanel Orientation="Horizontal" Spacing="6">
+														<Border Classes="tag"><TextBlock Text="{Binding Type}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/></Border>
+														<Border Classes="tag"><TextBlock Text="{Binding Priority}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Medium"/></Border>
+													</StackPanel>
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Right">
+													<Button Classes="action-btn-sm warning" Content="Expire" Command="{Binding Parent.ExpireAlertCommand}" CommandParameter="{Binding}"/>
+													<Button Classes="action-btn-sm danger" Content="Delete" Command="{Binding Parent.DeleteAlertCommand}" CommandParameter="{Binding}"/>
+												</StackPanel>
+											</StackPanel>
 
-										<!-- Header Row with Priority Accent -->
-										<StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
-											<!-- Priority Accent Bar -->
-											<Border Width="4" Height="40" Background="{Binding PriorityColor}" CornerRadius="2" VerticalAlignment="Top"/>
+											<!-- Message -->
+											<TextBlock Text="{Binding Message}" Classes="alert-message" TextWrapping="Wrap" Margin="16,0,0,12"/>
 
-											<!-- Content Area -->
-											<StackPanel Spacing="8" HorizontalAlignment="Stretch">
-												<!-- Title Row -->
+											<!-- Link -->
+											<StackPanel Orientation="Horizontal" Spacing="6" Margin="16,0,0,12" IsVisible="{Binding ExtraLink, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+												<ic:FluentIcon Icon="Link" IconSize="Size16" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+												<TextBlock Text="{Binding ExtraLink}" Foreground="{DynamicResource SuccessBrush}" FontSize="11" TextDecorations="Underline"/>
+											</StackPanel>
+
+											<!-- Meta Information -->
+											<StackPanel Orientation="Horizontal" Spacing="16" Margin="16,0,0,0">
+												<StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding AudienceText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
+											</StackPanel>
+										</StackPanel>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<!-- Expired Alerts Section -->
+						<StackPanel Margin="0,24,0,0">
+							<TextBlock Text="RECENTLY EXPIRED" Classes="section-header"/>
+							<ItemsControl ItemsSource="{Binding Alerts}">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="vm:AlertItemViewModel">
+										<Border Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" IsVisible="{Binding IsExpired}">
+											<StackPanel Spacing="4">
 												<StackPanel Orientation="Horizontal" Spacing="8">
-													<Border Background="{Binding TypeColor}" Width="12" Height="12" CornerRadius="2" VerticalAlignment="Center"/>
-													<TextBlock Text="{Binding Title}" Classes="alert-title"
-                                                               TextWrapping="Wrap" MaxWidth="350"/>
-												</StackPanel>
-
-												<!-- Tags Row -->
-												<StackPanel Orientation="Horizontal" Spacing="6">
-													<Border Classes="tag">
-														<TextBlock Text="{Binding Type}" FontSize="10" Foreground="#374151" FontWeight="Medium"/>
-													</Border>
-													<Border Classes="tag">
-														<TextBlock Text="{Binding Priority}" FontSize="10" Foreground="#374151" FontWeight="Medium"/>
+													<TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextMutedBrush}"/>
+													<Border Background="{DynamicResource PageBackgroundBrush}" CornerRadius="3" Padding="4,2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+														<TextBlock Text="expired" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Medium"/>
 													</Border>
 												</StackPanel>
+												<TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
 											</StackPanel>
-
-											<!-- Action Buttons -->
-											<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" HorizontalAlignment="Right">
-												<Button Content="Expire"
-                                                        Command="{Binding $parent[UserControl].((vm:AlertsViewModel)DataContext).ExpireAlertCommand}"
-                                                        CommandParameter="{Binding}"
-                                                        Classes="action-btn-sm warning"/>
-												<Button Content="Delete"
-                                                        Command="{Binding $parent[UserControl].((vm:AlertsViewModel)DataContext).DeleteAlertCommand}"
-                                                        CommandParameter="{Binding}"
-                                                        Classes="action-btn-sm danger"/>
-											</StackPanel>
-										</StackPanel>
-
-										<!-- Message -->
-										<TextBlock Text="{Binding Message}" Classes="alert-message"
-                                                   TextWrapping="Wrap" Margin="16,0,0,12"/>
-
-										<!-- Link -->
-										<StackPanel Orientation="Horizontal" Spacing="6" Margin="16,0,0,12"
-                                                    IsVisible="{Binding ExtraLink, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-											<Path Data="M10 6H6a2 2 0 00-2 2v3a2 2 0 002 2h4v-2H6v-3h4V6zM14 6v2h4v3h-4v2h4a2 2 0 002-2V8a2 2 0 00-2-2h-4z"
-                                                  Fill="#10B981" Width="12" Height="12" VerticalAlignment="Center"/>
-											<TextBlock Text="{Binding ExtraLink}" Foreground="#10B981" FontSize="11"
-                                                       TextDecorations="Underline"/>
-										</StackPanel>
-
-										<!-- Meta Information -->
-										<StackPanel Orientation="Horizontal" Spacing="16" Margin="16,0,0,0">
-											<StackPanel Orientation="Horizontal" Spacing="4">
-												<TextBlock Text="{Binding AudienceText}" FontSize="10" Foreground="#6B7280"/>
-											</StackPanel>
-											<StackPanel Orientation="Horizontal" Spacing="4">
-												<TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="#9CA3AF"/>
-											</StackPanel>
-										</StackPanel>
-									</StackPanel>
-								</Border>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</StackPanel>
+					</StackPanel>
 				</ScrollViewer>
-
-				<!-- Expired Alerts Section -->
-				<StackPanel Margin="0,24,0,0">
-					<TextBlock Text="RECENTLY EXPIRED" Classes="section-header"/>
-					<ItemsControl ItemsSource="{Binding Alerts}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate x:DataType="vm:AlertItemViewModel">
-								<Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8"
-                                        Padding="12" Margin="0,0,0,8" IsVisible="{Binding IsExpired}">
-									<StackPanel Spacing="4">
-										<StackPanel Orientation="Horizontal" Spacing="8">
-											<TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium" Foreground="#6B7280"/>
-											<Border Background="#F3F4F6" CornerRadius="3" Padding="4,2">
-												<TextBlock Text="expired" FontSize="9" Foreground="#9CA3AF" FontWeight="Medium"/>
-											</Border>
-										</StackPanel>
-										<TextBlock Text="{Binding TimeFrameText}" FontSize="10" Foreground="#9CA3AF"/>
-									</StackPanel>
-								</Border>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</StackPanel>
-			</StackPanel>
+			</Grid>
 		</Border>
 	</Grid>
 </UserControl>

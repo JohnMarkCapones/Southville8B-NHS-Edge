@@ -3,6 +3,10 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Globalization;
+using Avalonia; // For Application.Current
+using Avalonia.Media; // For IBrush
+using Avalonia.Styling; // For theme variant
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -77,8 +81,12 @@ public partial class StudentInfoViewModel : ViewModelBase
     [ObservableProperty] private string _lastLogin = "2 hours ago";
     [ObservableProperty] private ObservableCollection<StudentActivityViewModel> _recentActivities = new();
 
-    public string Initials => string.Join("", FullName.Split(' ').Select(n => n.FirstOrDefault()));
-    public string AttendanceStatusColor => AttendanceStatus == "Present" ? "#10B981" : "#EF4444";
+    [ObservableProperty] private IBrush _attendanceStatusBackgroundBrush = Brushes.Transparent;
+    [ObservableProperty] private IBrush _attendanceStatusTextBrush = Brushes.Transparent;
+
+    public string Initials => string.Concat(FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                                .Where(p => p.Length > 0)
+                                                .Select(p => char.ToUpperInvariant(p[0])));
 
     public StudentInfoViewModel()
     {
@@ -87,6 +95,45 @@ public partial class StudentInfoViewModel : ViewModelBase
             new() { Activity = "Submitted Assignment #3", Timestamp = "1 hour ago" },
             new() { Activity = "Completed Quiz #2", Timestamp = "3 hours ago" }
         };
+        UpdateAttendanceBrushes();
+        // React to theme changes so badge updates appropriately
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += (_, __) => UpdateAttendanceBrushes();
+    }
+
+    partial void OnFullNameChanged(string value) => OnPropertyChanged(nameof(Initials));
+    partial void OnAttendanceStatusChanged(string value) => UpdateAttendanceBrushes();
+
+    private static IBrush ResolveBrush(string key)
+    {
+        if (Application.Current is { } app && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var val) && val is IBrush b)
+            return b;
+        return Brushes.Transparent;
+    }
+
+    private void UpdateAttendanceBrushes()
+    {
+        var success = ResolveBrush("SuccessBrush");
+        var danger = ResolveBrush("DangerBrush");
+        var successSoft = ResolveBrush("SuccessSoftBrush");
+        var dangerSoft = ResolveBrush("DangerSoftBrush");
+        var textPrimary = ResolveBrush("TextPrimaryBrush");
+
+        if (string.Equals(AttendanceStatus, "Present", StringComparison.OrdinalIgnoreCase))
+        {
+            AttendanceStatusBackgroundBrush = successSoft;
+            AttendanceStatusTextBrush = success;
+        }
+        else if (string.Equals(AttendanceStatus, "Absent", StringComparison.OrdinalIgnoreCase))
+        {
+            AttendanceStatusBackgroundBrush = dangerSoft;
+            AttendanceStatusTextBrush = danger;
+        }
+        else
+        {
+            AttendanceStatusBackgroundBrush = ResolveBrush("AccentSoftBrush");
+            AttendanceStatusTextBrush = textPrimary;
+        }
     }
 }
 

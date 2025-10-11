@@ -2,13 +2,30 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using System.Collections.Generic;
+using System.Windows.Input; // for ICommand
+using Southville8BEdgeUI.ViewModels.Admin; // to cast DataContext
+using System.ComponentModel; // for INotifyPropertyChanged
+using System.Runtime.CompilerServices; // for CallerMemberName
 
 namespace Southville8BEdgeUI.Views.Admin;
 
-public partial class AlertsView : UserControl
+public partial class AlertsView : UserControl, INotifyPropertyChanged
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
+
+    // Forwarded commands for bindings inside DataTemplates (avoid DataContext typed object issue in compiled bindings)
+    public ICommand? ExpireAlertCommand => (DataContext as AlertsViewModel)?.ExpireAlertCommand;
+    public ICommand? DeleteAlertCommand => (DataContext as AlertsViewModel)?.DeleteAlertCommand;
+
+    // Explicit INotifyPropertyChanged implementation to avoid hiding AvaloniaObject.PropertyChanged
+    private event PropertyChangedEventHandler? _propertyChanged;
+    event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+    {
+        add => _propertyChanged += value;
+        remove => _propertyChanged -= value;
+    }
+    private void OnPropertyChanged([CallerMemberName] string? name = null) => _propertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     // Responsive class name constants for consistency
     private const string MobileClass = "mobile";
@@ -33,13 +50,15 @@ public partial class AlertsView : UserControl
     public AlertsView()
     {
         InitializeComponent();
-        // DataContext is supplied by DataTemplates when navigated via AdminShellViewModel
-
-        // Store references to elements that need responsive behavior
+        // DataContext is supplied by parent shell
         InitializeResponsiveElements();
-
-        // Set up size change handler
         this.SizeChanged += OnSizeChanged;
+        DataContextChanged += (_, _) =>
+        {
+            // Notify bindings for forwarded command properties
+            OnPropertyChanged(nameof(ExpireAlertCommand));
+            OnPropertyChanged(nameof(DeleteAlertCommand));
+        };
     }
 
     private void InitializeResponsiveElements()
@@ -84,10 +103,7 @@ public partial class AlertsView : UserControl
         ]);
     }
 
-    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        UpdateResponsiveClasses(e.NewSize.Width);
-    }
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e) => UpdateResponsiveClasses(e.NewSize.Width);
 
     private void UpdateResponsiveClasses(double width)
     {
@@ -95,9 +111,7 @@ public partial class AlertsView : UserControl
         string sizeClass = GetSizeClass(width);
 
         // Performance optimization: Skip update if size class hasn't changed
-        if (sizeClass == _lastSizeClass)
-            return;
-
+        if (sizeClass == _lastSizeClass) return;
         _lastSizeClass = sizeClass;
 
         // Update all responsive elements
@@ -114,15 +128,7 @@ public partial class AlertsView : UserControl
         UpdateAlertCardElements(sizeClass);
     }
 
-    private string GetSizeClass(double width)
-    {
-        if (width < MobileBreakpoint)
-            return MobileClass;
-        else if (width < TabletBreakpoint)
-            return TabletClass;
-        else
-            return DesktopClass;
-    }
+    private string GetSizeClass(double width) => width < MobileBreakpoint ? MobileClass : width < TabletBreakpoint ? TabletClass : DesktopClass;
 
     private void UpdateMainContainerClasses(string sizeClass)
     {
@@ -155,10 +161,7 @@ public partial class AlertsView : UserControl
             element.Classes.Remove(TabletClass);
 
             // Add appropriate responsive class
-            if (sizeClass != DesktopClass)
-            {
-                element.Classes.Add(sizeClass);
-            }
+            if (sizeClass != DesktopClass) element.Classes.Add(sizeClass);
         }
     }
 
@@ -172,50 +175,45 @@ public partial class AlertsView : UserControl
         ApplyHeaderLayout(layoutConfig);
     }
 
-    private LayoutConfiguration CreateLayoutConfig(string sizeClass)
+    private LayoutConfiguration CreateLayoutConfig(string sizeClass) => sizeClass switch
     {
-        return sizeClass switch
+        MobileClass => new LayoutConfiguration
         {
-            MobileClass => new LayoutConfiguration
-            {
-                MainGridColumns = 1,
-                MainGridRows = 3,
-                CreateCardPosition = (0, 1),
-                AlertsCardPosition = (0, 2),
-                HeaderPadding = new Thickness(12),
-                CardMargin = new Thickness(12),
-                CardSpacing = 12,
-                HeaderButtonsOrientation = Orientation.Vertical,
-                HeaderButtonsSpacing = 8
-            },
-
-            TabletClass => new LayoutConfiguration
-            {
-                MainGridColumns = 1,
-                MainGridRows = 3,
-                CreateCardPosition = (0, 1),
-                AlertsCardPosition = (0, 2),
-                HeaderPadding = new Thickness(16),
-                CardMargin = new Thickness(16),
-                CardSpacing = 16,
-                HeaderButtonsOrientation = Orientation.Horizontal,
-                HeaderButtonsSpacing = 8
-            },
-
-            _ => new LayoutConfiguration // Desktop
-            {
-                MainGridColumns = 2,
-                MainGridRows = 2,
-                CreateCardPosition = (0, 1),
-                AlertsCardPosition = (1, 1),
-                HeaderPadding = new Thickness(20, 16, 20, 16),
-                CardMargin = new Thickness(20, 20, 12, 20),
-                CardSpacing = 20,
-                HeaderButtonsOrientation = Orientation.Horizontal,
-                HeaderButtonsSpacing = 8
-            }
-        };
-    }
+            MainGridColumns = 1,
+            MainGridRows = 3,
+            CreateCardPosition = (0, 1),
+            AlertsCardPosition = (0, 2),
+            HeaderPadding = new Thickness(12),
+            CardMargin = new Thickness(12),
+            CardSpacing = 12,
+            HeaderButtonsOrientation = Orientation.Vertical,
+            HeaderButtonsSpacing = 8
+        },
+        TabletClass => new LayoutConfiguration
+        {
+            MainGridColumns = 1,
+            MainGridRows = 3,
+            CreateCardPosition = (0, 1),
+            AlertsCardPosition = (0, 2),
+            HeaderPadding = new Thickness(16),
+            CardMargin = new Thickness(16),
+            CardSpacing = 16,
+            HeaderButtonsOrientation = Orientation.Horizontal,
+            HeaderButtonsSpacing = 8
+        },
+        _ => new LayoutConfiguration
+        {
+            MainGridColumns = 2,
+            MainGridRows = 2,
+            CreateCardPosition = (0, 1),
+            AlertsCardPosition = (1, 1),
+            HeaderPadding = new Thickness(20, 16, 20, 16),
+            CardMargin = new Thickness(20, 20, 12, 20),
+            CardSpacing = 20,
+            HeaderButtonsOrientation = Orientation.Horizontal,
+            HeaderButtonsSpacing = 8
+        }
+    };
 
     private void ApplyMainGridLayout(LayoutConfiguration config)
     {
@@ -225,23 +223,11 @@ public partial class AlertsView : UserControl
         // Add row definitions
         MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); // Header
 
-        for (int i = 1; i < config.MainGridRows; i++)
-        {
-            MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
-        }
+        for (int i = 1; i < config.MainGridRows; i++) MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
 
         // Add column definitions
         for (int i = 0; i < config.MainGridColumns; i++)
-        {
-            if (config.MainGridColumns == 1)
-            {
-                MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            }
-            else
-            {
-                MainGrid.ColumnDefinitions.Add(new ColumnDefinition(i == 0 ? new GridLength(400) : GridLength.Star));
-            }
-        }
+            MainGrid.ColumnDefinitions.Add(config.MainGridColumns == 1 ? new ColumnDefinition(GridLength.Star) : new ColumnDefinition(i == 0 ? new GridLength(400) : GridLength.Star));
 
         // Position cards
         Grid.SetColumn(CreateAlertCard, config.CreateCardPosition.Column);
@@ -253,72 +239,38 @@ public partial class AlertsView : UserControl
         // Update margins
         HeaderCard.Padding = config.HeaderPadding;
         CreateAlertCard.Margin = config.CardMargin;
-
-        if (config.MainGridColumns == 1)
-        {
-            ActiveAlertsCard.Margin = config.CardMargin;
-        }
-        else
-        {
-            ActiveAlertsCard.Margin = new Thickness(12, 20, 20, 20);
-        }
+        ActiveAlertsCard.Margin = config.MainGridColumns == 1 ? config.CardMargin : new Thickness(12, 20, 20, 20);
     }
 
     private void ApplyHeaderLayout(LayoutConfiguration config)
     {
         HeaderButtonsStack.Orientation = config.HeaderButtonsOrientation;
         HeaderButtonsStack.Spacing = config.HeaderButtonsSpacing;
-
-        if (config.HeaderButtonsOrientation == Orientation.Vertical)
-        {
-            HeaderButtonsStack.HorizontalAlignment = HorizontalAlignment.Stretch;
-        }
-        else
-        {
-            HeaderButtonsStack.HorizontalAlignment = HorizontalAlignment.Right;
-        }
+        HeaderButtonsStack.HorizontalAlignment = config.HeaderButtonsOrientation == Orientation.Vertical ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
     }
 
     private void UpdateAlertCardElements(string sizeClass)
     {
         // Optimized: Only update if there are actual alert cards rendered
-        if (ActiveAlertsCard?.IsVisible == true)
-        {
-            UpdateAlertCardsRecursively(ActiveAlertsCard, sizeClass);
-        }
+        if (ActiveAlertsCard?.IsVisible == true) UpdateAlertCardsRecursively(ActiveAlertsCard, sizeClass);
     }
 
     private void UpdateAlertCardsRecursively(Control control, string sizeClass)
     {
         // Improved pattern matching with null safety and performance optimization
         // Fast path for alert cards
-        if (control is Border alertCard && alertCard.Classes.Contains(AlertCardClass))
-        {
-            UpdateElementResponsiveClasses(alertCard, sizeClass);
-        }
+        if (control is Border alertCard && alertCard.Classes.Contains(AlertCardClass)) UpdateElementResponsiveClasses(alertCard, sizeClass);
         // Optimized text block check using direct string comparison
-        else if (control is TextBlock textBlock && textBlock.Name != null && textBlock.Name.EndsWith(TextElementSuffix))
-        {
-            UpdateElementResponsiveClasses(textBlock, sizeClass);
-        }
+        else if (control is TextBlock textBlock && textBlock.Name is { Length: > 0 } && textBlock.Name.EndsWith(TextElementSuffix)) UpdateElementResponsiveClasses(textBlock, sizeClass);
         // Optimized button check using direct string comparison
-        else if (control is Button button && button.Name != null && button.Name.EndsWith(ButtonElementSuffix))
-        {
-            UpdateElementResponsiveClasses(button, sizeClass);
-        }
+        else if (control is Button button && button.Name is { Length: > 0 } && button.Name.EndsWith(ButtonElementSuffix)) UpdateElementResponsiveClasses(button, sizeClass);
         // Check for input elements
-        else if (control.Name != null && control.Name.EndsWith(InputElementSuffix))
-        {
-            UpdateElementResponsiveClasses(control, sizeClass);
-        }
+        else if (control.Name is { Length: > 0 } && control.Name.EndsWith(InputElementSuffix)) UpdateElementResponsiveClasses(control, sizeClass);
 
         // Recursively update children with type-specific handling
         if (control is Panel panel)
         {
-            foreach (Control child in panel.Children)
-            {
-                UpdateAlertCardsRecursively(child, sizeClass);
-            }
+            foreach (Control child in panel.Children) UpdateAlertCardsRecursively(child, sizeClass);
         }
         else if (control is ContentControl contentControl && contentControl.Content is Control contentChild)
         {
@@ -334,10 +286,7 @@ public partial class AlertsView : UserControl
         element.Classes.Remove(TabletClass);
 
         // Add appropriate responsive class
-        if (sizeClass != DesktopClass)
-        {
-            element.Classes.Add(sizeClass);
-        }
+        if (sizeClass != DesktopClass) element.Classes.Add(sizeClass);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -345,10 +294,7 @@ public partial class AlertsView : UserControl
         base.OnAttachedToVisualTree(e);
 
         // Initial responsive setup
-        if (Bounds.Width > 0)
-        {
-            UpdateResponsiveClasses(Bounds.Width);
-        }
+        if (Bounds.Width > 0) UpdateResponsiveClasses(Bounds.Width);
     }
 
     // Configuration class for layout strategies

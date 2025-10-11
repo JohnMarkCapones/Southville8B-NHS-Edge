@@ -3,11 +3,16 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class EventDashboardViewModel : ViewModelBase
 {
+    public Action<ViewModelBase>? NavigateTo { get; set; }
+    public Action? NavigateBack { get; set; }
+
     [ObservableProperty]
     private int _totalEvents = 24;
 
@@ -21,10 +26,10 @@ public partial class EventDashboardViewModel : ViewModelBase
     private int _pastEvents = 156;
 
     [ObservableProperty]
-    private ObservableCollection<EventViewModel> _events;
+    private ObservableCollection<EventViewModel> _events = new();
 
     [ObservableProperty]
-    private ObservableCollection<EventViewModel> _filteredEvents;
+    private ObservableCollection<EventViewModel> _filteredEvents = new();
 
     [ObservableProperty]
     private string _searchText = "";
@@ -46,46 +51,45 @@ public partial class EventDashboardViewModel : ViewModelBase
 
     public EventDashboardViewModel()
     {
-        // Sample Data for Demonstration
         Events = new ObservableCollection<EventViewModel>
         {
-            new EventViewModel
+            new()
             {
                 Title = "Parent-Teacher Conference",
                 Status = "Upcoming",
                 Type = "Meeting",
-                StartDate = new DateTime(2024, 3, 15),
-                EndDate = new DateTime(2024, 3, 15),
-                StartTime = new TimeSpan(15, 0, 0), // 3:00 PM
-                EndTime = new TimeSpan(18, 0, 0), // 6:00 PM
+                StartDate = new DateTime(2024,3,15),
+                EndDate = new DateTime(2024,3,15),
+                StartTime = new TimeSpan(15,0,0),
+                EndTime = new TimeSpan(18,0,0),
                 Location = "Main Hall",
                 Description = "Annual parent-teacher conference for all grade levels",
                 Organizer = "Academic Department",
                 MaxAttendees = 200,
                 CurrentAttendees = 85
             },
-            new EventViewModel
+            new()
             {
                 Title = "Science Fair",
                 Status = "Upcoming",
                 Type = "Competition",
-                StartDate = new DateTime(2024, 3, 22),
-                EndDate = new DateTime(2024, 3, 22),
-                StartTime = new TimeSpan(9, 0, 0), // 9:00 AM
-                EndTime = new TimeSpan(16, 0, 0), // 4:00 PM
+                StartDate = new DateTime(2024,3,22),
+                EndDate = new DateTime(2024,3,22),
+                StartTime = new TimeSpan(9,0,0),
+                EndTime = new TimeSpan(16,0,0),
                 Location = "Gymnasium",
                 Description = "Annual science fair competition for grades 8-12",
                 Organizer = "Science Department",
                 MaxAttendees = 150,
                 CurrentAttendees = 67
             },
-            new EventViewModel
+            new()
             {
                 Title = "Spring Break",
                 Status = "Upcoming",
                 Type = "Holiday",
-                StartDate = new DateTime(2024, 4, 1),
-                EndDate = new DateTime(2024, 4, 5),
+                StartDate = new DateTime(2024,4,1),
+                EndDate = new DateTime(2024,4,5),
                 StartTime = TimeSpan.Zero,
                 EndTime = TimeSpan.Zero,
                 Location = "School Closed",
@@ -94,75 +98,75 @@ public partial class EventDashboardViewModel : ViewModelBase
                 MaxAttendees = 0,
                 CurrentAttendees = 0
             },
-            new EventViewModel
+            new()
             {
                 Title = "Mathematics Olympiad",
                 Status = "Ongoing",
                 Type = "Competition",
                 StartDate = DateTime.Today,
                 EndDate = DateTime.Today,
-                StartTime = new TimeSpan(10, 0, 0), // 10:00 AM
-                EndTime = new TimeSpan(15, 0, 0), // 3:00 PM
+                StartTime = new TimeSpan(10,0,0),
+                EndTime = new TimeSpan(15,0,0),
                 Location = "Auditorium",
                 Description = "Regional mathematics competition",
                 Organizer = "Math Department",
                 MaxAttendees = 100,
                 CurrentAttendees = 45
             },
-            new EventViewModel
+            new()
             {
                 Title = "Cultural Festival",
                 Status = "Completed",
                 Type = "Cultural",
-                StartDate = new DateTime(2024, 2, 14),
-                EndDate = new DateTime(2024, 2, 14),
-                StartTime = new TimeSpan(9, 0, 0), // 9:00 AM
-                EndTime = new TimeSpan(17, 0, 0), // 5:00 PM
+                StartDate = new DateTime(2024,2,14),
+                EndDate = new DateTime(2024,2,14),
+                StartTime = new TimeSpan(9,0,0),
+                EndTime = new TimeSpan(17,0,0),
                 Location = "Main Hall",
                 Description = "Annual cultural festival showcasing student talents",
                 Organizer = "Cultural Committee",
                 MaxAttendees = 300,
                 CurrentAttendees = 285
             },
-            new EventViewModel
+            new()
             {
                 Title = "Basketball Championship",
                 Status = "Completed",
                 Type = "Sports",
-                StartDate = new DateTime(2024, 2, 20),
-                EndDate = new DateTime(2024, 2, 22),
-                StartTime = new TimeSpan(14, 0, 0), // 2:00 PM
-                EndTime = new TimeSpan(18, 0, 0), // 6:00 PM
+                StartDate = new DateTime(2024,2,20),
+                EndDate = new DateTime(2024,2,22),
+                StartTime = new TimeSpan(14,0,0),
+                EndTime = new TimeSpan(18,0,0),
                 Location = "Gymnasium",
                 Description = "Inter-school basketball championship",
                 Organizer = "Sports Department",
                 MaxAttendees = 200,
                 CurrentAttendees = 180
             },
-            new EventViewModel
+            new()
             {
                 Title = "Online Workshop: Digital Literacy",
                 Status = "Upcoming",
                 Type = "Academic",
-                StartDate = new DateTime(2024, 3, 25),
-                EndDate = new DateTime(2024, 3, 25),
-                StartTime = new TimeSpan(13, 0, 0), // 1:00 PM
-                EndTime = new TimeSpan(16, 0, 0), // 4:00 PM
+                StartDate = new DateTime(2024,3,25),
+                EndDate = new DateTime(2024,3,25),
+                StartTime = new TimeSpan(13,0,0),
+                EndTime = new TimeSpan(16,0,0),
                 Location = "Online",
                 Description = "Digital literacy workshop for students and faculty",
                 Organizer = "IT Department",
                 MaxAttendees = 50,
                 CurrentAttendees = 32
             },
-            new EventViewModel
+            new()
             {
                 Title = "Grade 12 Graduation",
                 Status = "Upcoming",
                 Type = "Academic",
-                StartDate = new DateTime(2024, 5, 15),
-                EndDate = new DateTime(2024, 5, 15),
-                StartTime = new TimeSpan(10, 0, 0), // 10:00 AM
-                EndTime = new TimeSpan(12, 0, 0), // 12:00 PM
+                StartDate = new DateTime(2024,5,15),
+                EndDate = new DateTime(2024,5,15),
+                StartTime = new TimeSpan(10,0,0),
+                EndTime = new TimeSpan(12,0,0),
                 Location = "Auditorium",
                 Description = "Graduation ceremony for Grade 12 students",
                 Organizer = "Administration",
@@ -187,31 +191,24 @@ public partial class EventDashboardViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             filtered = filtered.Where(e => e.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         e.Type.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         e.Organizer.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         e.Location.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                                           e.Type.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                           e.Organizer.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                           e.Location.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedStatus) && SelectedStatus != "All Status")
-        {
             filtered = filtered.Where(e => e.Status == SelectedStatus);
-        }
 
         if (!string.IsNullOrWhiteSpace(SelectedType) && SelectedType != "All Types")
-        {
             filtered = filtered.Where(e => e.Type == SelectedType);
-        }
 
         if (!string.IsNullOrWhiteSpace(SelectedLocation) && SelectedLocation != "All Locations")
-        {
             filtered = filtered.Where(e => e.Location == SelectedLocation);
-        }
 
         FilteredEvents.Clear();
         foreach (var eventItem in filtered)
-        {
             FilteredEvents.Add(eventItem);
-        }
+
         OnPropertyChanged(nameof(HasFilteredEvents));
     }
 
@@ -225,32 +222,28 @@ public partial class EventDashboardViewModel : ViewModelBase
         PastEvents = Events.Count(e => e.Status == "Completed");
     }
 
-    [RelayCommand]
-    private void CreateEvent()
+    private void AddEvent(EventViewModel ev)
     {
-        // TODO: Open create event dialog
+        Events.Add(ev);
+        ApplyFilters();
+        UpdateStatistics();
     }
 
-    [RelayCommand]
-    private void FilterEvents()
+    [RelayCommand] private void CreateEvent()
     {
-        // TODO: Open advanced filter dialog
+        if (NavigateTo is null) return;
+        var createVm = new CreateEventViewModel
+        {
+            NavigateBack = () => NavigateTo?.Invoke(this),
+            OnSaved = ev => { AddEvent(ev); NavigateTo?.Invoke(this); }
+        };
+        NavigateTo(createVm);
     }
 
-    [RelayCommand]
-    private void ViewEventDetails(EventViewModel eventItem)
-    {
-        // TODO: Show event details dialog
-    }
-
-    [RelayCommand]
-    private void EditEvent(EventViewModel eventItem)
-    {
-        // TODO: Open edit event dialog
-    }
-
-    [RelayCommand]
-    private void DeleteEvent(EventViewModel eventItem)
+    [RelayCommand] private void FilterEvents() { }
+    [RelayCommand] private void ViewEventDetails(EventViewModel eventItem) { }
+    [RelayCommand] private void EditEvent(EventViewModel eventItem) { }
+    [RelayCommand] private void DeleteEvent(EventViewModel eventItem)
     {
         Events.Remove(eventItem);
         UpdateStatistics();
@@ -261,7 +254,7 @@ public partial class EventDashboardViewModel : ViewModelBase
 public partial class EventViewModel : ViewModelBase
 {
     [ObservableProperty] private string _title = "";
-    [ObservableProperty] private string _status = ""; // "Upcoming", "Ongoing", "Completed", "Cancelled"
+    [ObservableProperty] private string _status = ""; // Upcoming, Ongoing, Completed, Cancelled
     [ObservableProperty] private string _type = "";
     [ObservableProperty] private DateTime _startDate;
     [ObservableProperty] private DateTime _endDate;
@@ -280,13 +273,23 @@ public partial class EventViewModel : ViewModelBase
     public bool CanEdit => !IsCompleted && !IsCancelled;
     public bool CanCancel => IsUpcoming;
 
-    public string StatusColor => Status switch
+    private static IBrush Resolve(string key, string fallback)
     {
-        "Upcoming" => "#3B82F6",
-        "Ongoing" => "#10B981",
-        "Completed" => "#6B7280",
-        "Cancelled" => "#EF4444",
-        _ => "#6B7280"
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush StatusBrush => Status switch
+    {
+        "Upcoming" => Resolve("InfoBrush", "AccentBrush"),
+        "Ongoing" => Resolve("SuccessBrush", "AccentBrush"),
+        "Completed" => Resolve("TextSecondaryBrush", "TextMutedBrush"),
+        "Cancelled" => Resolve("DangerBrush", "DangerBrush"),
+        _ => Resolve("TextSecondaryBrush", "TextMutedBrush")
     };
 
     public string DateRange => StartDate.Date == EndDate.Date
@@ -311,37 +314,20 @@ public partial class EventViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsOngoing));
         OnPropertyChanged(nameof(IsCompleted));
         OnPropertyChanged(nameof(IsCancelled));
-        OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(StatusBrush));
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanCancel));
     }
 
-    partial void OnStartDateChanged(DateTime value)
-    {
-        OnPropertyChanged(nameof(DateRange));
-    }
-
-    partial void OnEndDateChanged(DateTime value)
-    {
-        OnPropertyChanged(nameof(DateRange));
-    }
-
-    partial void OnStartTimeChanged(TimeSpan value)
-    {
-        OnPropertyChanged(nameof(TimeRange));
-    }
-
-    partial void OnEndTimeChanged(TimeSpan value)
-    {
-        OnPropertyChanged(nameof(TimeRange));
-    }
-
+    partial void OnStartDateChanged(DateTime value) => OnPropertyChanged(nameof(DateRange));
+    partial void OnEndDateChanged(DateTime value) => OnPropertyChanged(nameof(DateRange));
+    partial void OnStartTimeChanged(TimeSpan value) => OnPropertyChanged(nameof(TimeRange));
+    partial void OnEndTimeChanged(TimeSpan value) => OnPropertyChanged(nameof(TimeRange));
     partial void OnCurrentAttendeesChanged(int value)
     {
         OnPropertyChanged(nameof(AttendeeInfo));
         OnPropertyChanged(nameof(AttendancePercentage));
     }
-
     partial void OnMaxAttendeesChanged(int value)
     {
         OnPropertyChanged(nameof(AttendeeInfo));

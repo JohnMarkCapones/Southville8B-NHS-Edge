@@ -73,7 +73,10 @@ public partial class MyAnnouncementsView : UserControl
     public MyAnnouncementsView()
     {
         InitializeComponent();
-        DataContext = new MyAnnouncementsViewModel();
+        if (Design.IsDesignMode)
+        {
+            DataContext = new MyAnnouncementsViewModel();
+        }
 
         _layoutManager = new ResponsiveLayoutManager();
         _throttledUpdater = new ThrottledUpdater(TimeSpan.FromMilliseconds(100));

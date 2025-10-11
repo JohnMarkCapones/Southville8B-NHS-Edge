@@ -3,31 +3,24 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
+using System.Collections.Specialized;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class ChatViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private string _title = "Chat Management";
+    public Action<ViewModelBase>? NavigateTo { get; set; }
+    public Action? NavigateBack { get; set; } // newly added for shell back navigation
 
-    [ObservableProperty]
-    private ObservableCollection<ChatConversationViewModel> _conversations;
-
-    [ObservableProperty]
-    private ObservableCollection<ChatConversationViewModel> _filteredConversations;
-
-    [ObservableProperty]
-    private ChatConversationViewModel? _selectedConversation;
-
-    [ObservableProperty]
-    private string _searchText = "";
-
-    [ObservableProperty]
-    private string _newMessage = "";
-
-    [ObservableProperty]
-    private string? _selectedUserType;
+    [ObservableProperty] private string _title = "Chat Management";
+    [ObservableProperty] private ObservableCollection<ChatConversationViewModel> _conversations = new();
+    [ObservableProperty] private ObservableCollection<ChatConversationViewModel> _filteredConversations = new();
+    [ObservableProperty] private ChatConversationViewModel? _selectedConversation;
+    [ObservableProperty] private string _searchText = "";
+    [ObservableProperty] private string _newMessage = "";
+    [ObservableProperty] private string? _selectedUserType;
 
     public ObservableCollection<string> UserTypeOptions { get; } = new() { "All Users", "Admins", "Teachers" };
 
@@ -42,7 +35,7 @@ public partial class ChatViewModel : ViewModelBase
         // Sample conversation data
         Conversations = new ObservableCollection<ChatConversationViewModel>
         {
-            new ChatConversationViewModel
+            new()
             {
                 ContactName = "Maria Rodriguez",
                 ContactRole = "Teacher",
@@ -53,37 +46,13 @@ public partial class ChatViewModel : ViewModelBase
                 UnreadCount = 0,
                 Messages = new ObservableCollection<ChatMessageViewModel>
                 {
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Maria Rodriguez",
-                        Content = "Hi, I need to book Room 201 for tomorrow's science fair preparation.",
-                        Timestamp = DateTime.Now.AddHours(-2),
-                        IsFromCurrentUser = false
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "You",
-                        Content = "Hello Maria! Let me check the availability for Room 201 tomorrow.",
-                        Timestamp = DateTime.Now.AddHours(-2).AddMinutes(5),
-                        IsFromCurrentUser = true
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "You",
-                        Content = "Room 201 is available from 8:00 AM to 5:00 PM tomorrow. I've approved your booking.",
-                        Timestamp = DateTime.Now.AddHours(-2).AddMinutes(10),
-                        IsFromCurrentUser = true
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Maria Rodriguez",
-                        Content = "Thank you for approving the room booking for tomorrow's science fair.",
-                        Timestamp = DateTime.Now.AddMinutes(-15),
-                        IsFromCurrentUser = false
-                    }
+                    new() { SenderName = "Maria Rodriguez", Content = "Hi, I need to book Room 201 for tomorrow's science fair preparation.", Timestamp = DateTime.Now.AddHours(-2), IsFromCurrentUser = false },
+                    new() { SenderName = "You", Content = "Hello Maria! Let me check the availability for Room 201 tomorrow.", Timestamp = DateTime.Now.AddHours(-2).AddMinutes(5), IsFromCurrentUser = true },
+                    new() { SenderName = "You", Content = "Room 201 is available from 8:00 AM to 5:00 PM tomorrow. I've approved your booking.", Timestamp = DateTime.Now.AddHours(-2).AddMinutes(10), IsFromCurrentUser = true },
+                    new() { SenderName = "Maria Rodriguez", Content = "Thank you for approving the room booking for tomorrow's science fair.", Timestamp = DateTime.Now.AddMinutes(-15), IsFromCurrentUser = false }
                 }
             },
-            new ChatConversationViewModel
+            new()
             {
                 ContactName = "Robert Wilson",
                 ContactRole = "Admin",
@@ -94,37 +63,13 @@ public partial class ChatViewModel : ViewModelBase
                 UnreadCount = 2,
                 Messages = new ObservableCollection<ChatMessageViewModel>
                 {
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Robert Wilson",
-                        Content = "Hey, I've finished implementing the new user management features.",
-                        Timestamp = DateTime.Now.AddHours(-3),
-                        IsFromCurrentUser = false
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "You",
-                        Content = "Great work! When can we schedule the testing phase?",
-                        Timestamp = DateTime.Now.AddHours(-2).AddMinutes(-30),
-                        IsFromCurrentUser = true
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Robert Wilson",
-                        Content = "The new user management system is ready for testing.",
-                        Timestamp = DateTime.Now.AddHours(-1),
-                        IsFromCurrentUser = false
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Robert Wilson",
-                        Content = "We can start testing this afternoon if you're available.",
-                        Timestamp = DateTime.Now.AddMinutes(-50),
-                        IsFromCurrentUser = false
-                    }
+                    new() { SenderName = "Robert Wilson", Content = "Hey, I've finished implementing the new user management features.", Timestamp = DateTime.Now.AddHours(-3), IsFromCurrentUser = false },
+                    new() { SenderName = "You", Content = "Great work! When can we schedule the testing phase?", Timestamp = DateTime.Now.AddHours(-2).AddMinutes(-30), IsFromCurrentUser = true },
+                    new() { SenderName = "Robert Wilson", Content = "The new user management system is ready for testing.", Timestamp = DateTime.Now.AddHours(-1), IsFromCurrentUser = false },
+                    new() { SenderName = "Robert Wilson", Content = "We can start testing this afternoon if you're available.", Timestamp = DateTime.Now.AddMinutes(-50), IsFromCurrentUser = false }
                 }
             },
-            new ChatConversationViewModel
+            new()
             {
                 ContactName = "Dr. Michael Brown",
                 ContactRole = "Teacher",
@@ -135,30 +80,12 @@ public partial class ChatViewModel : ViewModelBase
                 UnreadCount = 1,
                 Messages = new ObservableCollection<ChatMessageViewModel>
                 {
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Dr. Michael Brown",
-                        Content = "Hi, one of my students forgot their password and can't access the portal.",
-                        Timestamp = DateTime.Now.AddHours(-4),
-                        IsFromCurrentUser = false
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "You",
-                        Content = "I can help with that. What's the student's ID number?",
-                        Timestamp = DateTime.Now.AddHours(-3).AddMinutes(-45),
-                        IsFromCurrentUser = true
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Dr. Michael Brown",
-                        Content = "Could you help me reset a student's password?",
-                        Timestamp = DateTime.Now.AddHours(-3),
-                        IsFromCurrentUser = false
-                    }
+                    new() { SenderName = "Dr. Michael Brown", Content = "Hi, one of my students forgot their password and can't access the portal.", Timestamp = DateTime.Now.AddHours(-4), IsFromCurrentUser = false },
+                    new() { SenderName = "You", Content = "I can help with that. What's the student's ID number?", Timestamp = DateTime.Now.AddHours(-3).AddMinutes(-45), IsFromCurrentUser = true },
+                    new() { SenderName = "Dr. Michael Brown", Content = "Could you help me reset a student's password?", Timestamp = DateTime.Now.AddHours(-3), IsFromCurrentUser = false }
                 }
             },
-            new ChatConversationViewModel
+            new()
             {
                 ContactName = "Jennifer Taylor",
                 ContactRole = "Teacher",
@@ -169,30 +96,12 @@ public partial class ChatViewModel : ViewModelBase
                 UnreadCount = 0,
                 Messages = new ObservableCollection<ChatMessageViewModel>
                 {
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Jennifer Taylor",
-                        Content = "I need to schedule a parent-teacher conference for next week.",
-                        Timestamp = DateTime.Now.AddDays(-1).AddHours(-2),
-                        IsFromCurrentUser = false
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "You",
-                        Content = "Sure! What date and time works best for you?",
-                        Timestamp = DateTime.Now.AddDays(-1).AddHours(-1),
-                        IsFromCurrentUser = true
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Jennifer Taylor",
-                        Content = "The new event has been scheduled successfully.",
-                        Timestamp = DateTime.Now.AddDays(-1),
-                        IsFromCurrentUser = false
-                    }
+                    new() { SenderName = "Jennifer Taylor", Content = "I need to schedule a parent-teacher conference for next week.", Timestamp = DateTime.Now.AddDays(-1).AddHours(-2), IsFromCurrentUser = false },
+                    new() { SenderName = "You", Content = "Sure! What date and time works best for you?", Timestamp = DateTime.Now.AddDays(-1).AddHours(-1), IsFromCurrentUser = true },
+                    new() { SenderName = "Jennifer Taylor", Content = "The new event has been scheduled successfully.", Timestamp = DateTime.Now.AddDays(-1), IsFromCurrentUser = false }
                 }
             },
-            new ChatConversationViewModel
+            new()
             {
                 ContactName = "Catherine Martinez",
                 ContactRole = "Admin",
@@ -203,26 +112,39 @@ public partial class ChatViewModel : ViewModelBase
                 UnreadCount = 0,
                 Messages = new ObservableCollection<ChatMessageViewModel>
                 {
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "You",
-                        Content = "Catherine, can you run the weekly system backup?",
-                        Timestamp = DateTime.Now.AddDays(-2).AddHours(-1),
-                        IsFromCurrentUser = true
-                    },
-                    new ChatMessageViewModel
-                    {
-                        SenderName = "Catherine Martinez",
-                        Content = "System backup completed successfully.",
-                        Timestamp = DateTime.Now.AddDays(-2),
-                        IsFromCurrentUser = false
-                    }
+                    new() { SenderName = "You", Content = "Catherine, can you run the weekly system backup?", Timestamp = DateTime.Now.AddDays(-2).AddHours(-1), IsFromCurrentUser = true },
+                    new() { SenderName = "Catherine Martinez", Content = "System backup completed successfully.", Timestamp = DateTime.Now.AddDays(-2), IsFromCurrentUser = false }
                 }
             }
         };
 
+        Conversations.CollectionChanged += Conversations_CollectionChanged;
+
         FilteredConversations = new ObservableCollection<ChatConversationViewModel>(Conversations);
         SelectedConversation = FilteredConversations.FirstOrDefault();
+
+        // Listen for theme changes to refresh dynamic brushes
+        if (Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged += (_, __) => RefreshAllThemeDependentBrushes();
+        }
+    }
+
+    private void Conversations_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (ChatConversationViewModel c in e.NewItems)
+                c.RefreshTheme();
+        }
+    }
+
+    private void RefreshAllThemeDependentBrushes()
+    {
+        foreach (var c in Conversations)
+            c.RefreshTheme();
+        if (SelectedConversation != null)
+            SelectedConversation.RefreshTheme();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
@@ -235,7 +157,7 @@ public partial class ChatViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             filtered = filtered.Where(c => c.ContactName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                         c.LastMessage.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                                           c.LastMessage.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedUserType) && SelectedUserType != "All Users")
@@ -246,78 +168,79 @@ public partial class ChatViewModel : ViewModelBase
 
         FilteredConversations.Clear();
         foreach (var conversation in filtered)
-        {
             FilteredConversations.Add(conversation);
-        }
+
         OnPropertyChanged(nameof(HasConversations));
 
-        // Maintain selection if possible
         if (SelectedConversation != null && !FilteredConversations.Contains(SelectedConversation))
-        {
             SelectedConversation = FilteredConversations.FirstOrDefault();
-        }
     }
 
     [RelayCommand]
     private void SelectConversation(ChatConversationViewModel conversation)
     {
-        // For mobile navigation: always trigger the navigation, even for the same conversation
-        var wasSameConversation = SelectedConversation == conversation;
-
+        var wasSame = SelectedConversation == conversation;
         SelectedConversation = conversation;
-        conversation.UnreadCount = 0; // Mark as read
-
-        // Notify the view about conversation selection for mobile navigation
+        conversation.UnreadCount = 0;
         ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(conversation, ConversationNavigationType.OpenChat));
-
-        // Force property change notification for mobile navigation if it's the same conversation
-        if (wasSameConversation)
-        {
-            OnPropertyChanged(nameof(SelectedConversation));
-        }
+        if (wasSame) OnPropertyChanged(nameof(SelectedConversation));
     }
 
     [RelayCommand]
     private void SendMessage()
     {
-        if (SelectedConversation == null || string.IsNullOrWhiteSpace(NewMessage))
-            return;
+        if (SelectedConversation == null || string.IsNullOrWhiteSpace(NewMessage)) return;
 
-        var message = new ChatMessageViewModel
+        var text = NewMessage.Trim();
+        var msg = new ChatMessageViewModel
         {
             SenderName = "You",
-            Content = NewMessage.Trim(),
+            Content = text,
             Timestamp = DateTime.Now,
             IsFromCurrentUser = true
         };
-
-        // Add the message immediately
-        SelectedConversation.Messages.Add(message);
-
-        // Update conversation info immediately
-        SelectedConversation.LastMessage = NewMessage.Trim();
+        SelectedConversation.Messages.Add(msg);
+        SelectedConversation.LastMessage = text;
         SelectedConversation.LastMessageTime = DateTime.Now;
-
-        // Clear the input immediately
         NewMessage = "";
+    }
+
+    private void AddConversationFromResult(NewChatViewModel.ChatCreationResult result)
+    {
+        var initials = string.Concat(result.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => char.ToUpperInvariant(s[0])));
+        var convo = new ChatConversationViewModel
+        {
+            ContactName = result.Name,
+            ContactRole = result.IsPublic ? "Public" : "Private",
+            ContactInitials = string.IsNullOrWhiteSpace(initials) ? "NC" : initials,
+            LastMessage = "Conversation created",
+            LastMessageTime = DateTime.Now,
+            IsOnline = false,
+            UnreadCount = 0,
+            Messages = new ObservableCollection<ChatMessageViewModel>()
+        };
+        Conversations.Insert(0, convo);
+        ApplyFilters();
+        SelectedConversation = convo;
     }
 
     [RelayCommand]
     private void StartNewChat()
     {
-        // TODO: Open new chat dialog
+        if (NavigateTo is null) return;
+        var newVm = new NewChatViewModel
+        {
+            NavigateBack = () => NavigateTo?.Invoke(this),
+            OnCreated = res => { AddConversationFromResult(res); NavigateTo?.Invoke(this); }
+        };
+        NavigateTo(newVm);
     }
 
     // Method to request navigation back to conversations (for mobile back button)
-    public void RequestNavigateToConversations()
-    {
+    public void RequestNavigateToConversations() =>
         ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(null, ConversationNavigationType.BackToConversations));
-    }
 
-    partial void OnSelectedConversationChanged(ChatConversationViewModel? value)
-    {
-        OnPropertyChanged(nameof(HasSelectedConversation));
-    }
+    partial void OnSelectedConversationChanged(ChatConversationViewModel? value) => OnPropertyChanged(nameof(HasSelectedConversation));
 }
 
 // Event args for conversation navigation
@@ -327,18 +250,11 @@ public class ConversationNavigationEventArgs : EventArgs
     public ConversationNavigationType NavigationType { get; }
 
     public ConversationNavigationEventArgs(ChatConversationViewModel? conversation, ConversationNavigationType navigationType)
-    {
-        Conversation = conversation;
-        NavigationType = navigationType;
-    }
+    { Conversation = conversation; NavigationType = navigationType; }
 }
 
 // Enum for navigation types
-public enum ConversationNavigationType
-{
-    OpenChat,
-    BackToConversations
-}
+public enum ConversationNavigationType { OpenChat, BackToConversations }
 
 public partial class ChatConversationViewModel : ViewModelBase
 {
@@ -351,27 +267,48 @@ public partial class ChatConversationViewModel : ViewModelBase
     [ObservableProperty] private int _unreadCount;
     [ObservableProperty] private ObservableCollection<ChatMessageViewModel> _messages = new();
 
-    public string LastMessageTimeText => LastMessageTime.Date == DateTime.Today
-        ? LastMessageTime.ToString("HH:mm")
-        : LastMessageTime.ToString("MMM dd");
-
-    public string RoleColor => ContactRole switch
-    {
-        "Admin" => "#EF4444",
-        "Teacher" => "#8B5CF6",
-        _ => "#6B7280"
-    };
-
+    public string LastMessageTimeText => LastMessageTime.Date == DateTime.Today ? LastMessageTime.ToString("HH:mm") : LastMessageTime.ToString("MMM dd");
     public bool HasUnreadMessages => UnreadCount > 0;
 
-    partial void OnLastMessageTimeChanged(DateTime value)
+    private static IBrush Resolve(string key, string fallback)
     {
-        OnPropertyChanged(nameof(LastMessageTimeText));
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
     }
 
-    partial void OnUnreadCountChanged(int value)
+    public IBrush RoleBrush => ContactRole switch
     {
-        OnPropertyChanged(nameof(HasUnreadMessages));
+        "Admin" => Resolve("DangerBrush", "AccentBrush"),
+        "Teacher" => Resolve("PurpleBrush", "AccentBrush"),
+        "Public" => Resolve("SuccessBrush", "AccentBrush"),
+        "Private" => Resolve("IndigoBrush", "AccentBrush"),
+        _ => Resolve("TextSecondaryBrush", "TextMutedBrush")
+    };
+
+    public IBrush RoleTextBrush => ContactRole switch
+    {
+        "Admin" or "Teacher" or "Public" or "Private" => Resolve("AccentTextOnAccentBrush", "TextPrimaryBrush"),
+        _ => Resolve("TextPrimaryBrush", "TextPrimaryBrush")
+    };
+
+    public void RefreshTheme()
+    {
+        OnPropertyChanged(nameof(RoleBrush));
+        OnPropertyChanged(nameof(RoleTextBrush));
+        foreach (var m in Messages)
+            m.RefreshTheme();
+    }
+
+    partial void OnLastMessageTimeChanged(DateTime value) => OnPropertyChanged(nameof(LastMessageTimeText));
+    partial void OnUnreadCountChanged(int value) => OnPropertyChanged(nameof(HasUnreadMessages));
+    partial void OnContactRoleChanged(string value)
+    {
+        OnPropertyChanged(nameof(RoleBrush));
+        OnPropertyChanged(nameof(RoleTextBrush));
     }
 }
 
@@ -384,11 +321,36 @@ public partial class ChatMessageViewModel : ViewModelBase
 
     public string TimestampText => Timestamp.ToString("HH:mm");
     public string MessageAlignment => IsFromCurrentUser ? "Right" : "Left";
-    public string MessageBackground => IsFromCurrentUser ? "#4F46E5" : "#F3F4F6";
-    public string MessageTextColor => IsFromCurrentUser ? "White" : "#111827";
 
-    partial void OnTimestampChanged(DateTime value)
+    private static IBrush Resolve(string key, string fallback)
     {
-        OnPropertyChanged(nameof(TimestampText));
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush MessageBackgroundBrush => IsFromCurrentUser
+        ? Resolve("IndigoBrush", "AccentBrush")
+        : Resolve("CardBackgroundBrush", "PageBackgroundBrush");
+
+    public IBrush MessageTextBrush => IsFromCurrentUser
+        ? Resolve("AccentTextOnAccentBrush", "TextPrimaryBrush")
+        : Resolve("TextPrimaryBrush", "TextPrimaryBrush");
+
+    public void RefreshTheme()
+    {
+        OnPropertyChanged(nameof(MessageBackgroundBrush));
+        OnPropertyChanged(nameof(MessageTextBrush));
+    }
+
+    partial void OnTimestampChanged(DateTime value) => OnPropertyChanged(nameof(TimestampText));
+    partial void OnIsFromCurrentUserChanged(bool value)
+    {
+        OnPropertyChanged(nameof(MessageBackgroundBrush));
+        OnPropertyChanged(nameof(MessageTextBrush));
+        OnPropertyChanged(nameof(MessageAlignment));
     }
 }

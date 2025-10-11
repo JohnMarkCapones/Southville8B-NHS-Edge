@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
+             mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="900"
+             x:Class="Southville8BEdgeUI.Views.Admin.NewChatView"
+             x:Name="Root"
+             x:DataType="vm:NewChatViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+  <UserControl.Resources>
+    <converters:InverseBoolConverter x:Key="InvertBool"/>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <!-- Card -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="32"/>
+      <Setter Property="Margin" Value="0,0,0,32"/>
+    </Style>
+    <!-- Section header -->
+    <Style Selector="TextBlock.section-title">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,8,0,16"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <!-- Field label -->
+    <Style Selector="TextBlock.field-label">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,16,0,4"/>
+    </Style>
+    <!-- Inputs -->
+    <Style Selector="TextBox, ComboBox, ListBox">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="10"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBox:focus-within, ComboBox:focus-within, ListBox:focus-within">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <!-- Multiline description -->
+    <Style Selector="TextBox.description">
+      <Setter Property="AcceptsReturn" Value="True"/>
+      <Setter Property="MinHeight" Value="120"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <!-- Primary button -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <!-- Header title -->
+    <Style Selector="TextBlock.page-title">
+      <Setter Property="FontSize" Value="28"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.page-subtitle">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,4,0,28"/>
+    </Style>
+    <Style Selector="TextBlock.validation">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+      <Setter Property="Margin" Value="4,4,0,0"/>
+    </Style>
+    <Style Selector="Border.avatar-preview">
+      <Setter Property="Width" Value="72"/>
+      <Setter Property="Height" Value="72"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.participant-chip">
+      <Setter Property="Background" Value="{DynamicResource InfoSoftBrush}"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="10,4"/>
+      <Setter Property="Margin" Value="0,4,4,0"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource InfoBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="48" Spacing="32">
+      <!-- Header -->
+      <StackPanel>
+        <TextBlock Text="New Chat" Classes="page-title"/>
+        <TextBlock Text="Create a new conversation and add participants" Classes="page-subtitle"/>
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel>
+          <TextBlock Text="Basic Information" Classes="section-title"/>
+          <TextBlock Text="Chat Name" Classes="field-label"/>
+          <TextBox Text="{Binding ChatName}" Watermark="e.g. Faculty Coordination"/>
+          <TextBlock Text="Description" Classes="field-label"/>
+          <TextBox Text="{Binding Description}" Classes="description" Watermark="Optional: purpose or guidelines"/>
+          <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,16,0,0">
+            <StackPanel>
+              <TextBlock Text="Visibility" Classes="field-label" Margin="0,0,0,6"/>
+              <StackPanel Spacing="8">
+                <RadioButton Content="Public" IsChecked="{Binding IsPublic}"/>
+                <RadioButton Content="Private" IsChecked="{Binding IsPublic, Converter={StaticResource InvertBool}}"/>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Text="Permissions" Classes="field-label" Margin="0,0,0,6"/>
+              <CheckBox Content="Allow member invitations" IsChecked="{Binding AllowInvites}"/>
+            </StackPanel>
+          </StackPanel>
+          <!-- Image -->
+          <TextBlock Text="Chat Image" Classes="field-label"/>
+          <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+            <Border Classes="avatar-preview" IsVisible="{Binding HasImage}">
+              <Image Source="{Binding ChatImagePath}" Stretch="UniformToFill"/>
+            </Border>
+            <StackPanel Spacing="8" VerticalAlignment="Center">
+              <Button Content="Browse Image" Classes="secondary" Command="{Binding BrowseImageCommand}"/>
+              <Button Content="Remove" Classes="secondary" Command="{Binding RemoveImageCommand}" IsVisible="{Binding HasImage}"/>
+            </StackPanel>
+          </StackPanel>
+          <TextBlock Text="{Binding ImageValidationMessage}" Classes="validation" IsVisible="{Binding IsImageValidationVisible}"/>
+          <TextBlock Text="{Binding BasicValidationMessage}" Classes="validation" IsVisible="{Binding IsBasicValidationVisible}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel>
+          <TextBlock Text="Participants" Classes="section-title"/>
+          <TextBlock Text="Add Participant" Classes="field-label"/>
+          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+            <TextBox Grid.Column="0" Grid.Row="0" Text="{Binding ParticipantSearch}" Watermark="Search users..."/>
+            <Button Grid.Column="1" Grid.Row="0" Content="Add" Classes="primary" Command="{Binding AddSelectedParticipantCommand}" IsEnabled="{Binding HasSelectedAvailableUser}" Margin="12,0,0,0"/>
+            <ListBox Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Height="140" ItemsSource="{Binding FilteredAvailableUsers}" SelectedItem="{Binding SelectedAvailableUser}"/>
+          </Grid>
+          <TextBlock Text="Selected Participants" Classes="field-label"/>
+          <ItemsControl ItemsSource="{Binding SelectedParticipants}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="participant-chip">
+                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontSize="12"/>
+                    <Button Content="Remove" Padding="4,0"
+                            Command="{Binding $parent[UserControl].((vm:NewChatViewModel)DataContext).RemoveParticipantCommand}"
+                            CommandParameter="{Binding .}" FontSize="12"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding ParticipantsValidationMessage}" Classes="validation" IsVisible="{Binding IsParticipantsValidationVisible}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Actions -->
+      <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right" Margin="0,0,0,16">
+        <Button Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}"/>
+        <Button Content="Create Chat" Classes="primary" Command="{Binding CreateChatCommand}" IsEnabled="{Binding CanCreate}"/>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

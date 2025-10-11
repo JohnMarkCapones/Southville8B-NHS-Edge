@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -44,7 +46,7 @@ public partial class AlertsViewModel : ViewModelBase
 
     private void InitializeMockAlerts()
     {
-        Alerts.Add(new AlertItemViewModel
+        var a1 = new AlertItemViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Type = "Weather",
@@ -54,10 +56,12 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now.AddMinutes(-25),
             ExpiresAt = DateTime.Today.AddHours(23).AddMinutes(59),
             Priority = "High",
-            TargetAudience = "all_school"
-        });
+            TargetAudience = "all_school",
+            Parent = this
+        };
+        Alerts.Add(a1);
 
-        Alerts.Add(new AlertItemViewModel
+        var a2 = new AlertItemViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Type = "Class Suspension",
@@ -67,10 +71,12 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now.AddHours(-2),
             ExpiresAt = DateTime.Today.AddHours(12),
             Priority = "Medium",
-            TargetAudience = "grade_8"
-        });
+            TargetAudience = "grade_8",
+            Parent = this
+        };
+        Alerts.Add(a2);
 
-        Alerts.Add(new AlertItemViewModel
+        var a3 = new AlertItemViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Type = "Emergency",
@@ -80,8 +86,10 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now.AddHours(-3),
             ExpiresAt = DateTime.Now.AddMinutes(-10), // expired
             Priority = "Low",
-            TargetAudience = "all_school"
-        });
+            TargetAudience = "all_school",
+            Parent = this
+        };
+        Alerts.Add(a3);
     }
 
     private static string ToTargetAudience(string scope, string grade, string section)
@@ -126,7 +134,8 @@ public partial class AlertsViewModel : ViewModelBase
             CreatedAt = DateTime.Now,
             ExpiresAt = expiresAt,
             Priority = string.IsNullOrWhiteSpace(NewPriority) ? "Low" : NewPriority.Trim(),
-            TargetAudience = ToTargetAudience(NewTargetScope, NewGradeLevel, NewSection)
+            TargetAudience = ToTargetAudience(NewTargetScope, NewGradeLevel, NewSection),
+            Parent = this
         };
 
         // Basic validation
@@ -200,24 +209,37 @@ public partial class AlertItemViewModel : ViewModelBase
     [ObservableProperty] private string _priority = "Low";
     [ObservableProperty] private string _targetAudience = "all_school";
 
+    // Back reference to parent view model for command binding convenience
+    [ObservableProperty] private AlertsViewModel? _parent;
+
     public bool IsActive => DateTime.Now < ExpiresAt;
     public bool IsExpired => !IsActive;
 
-    public string PriorityColor => Priority switch
+    private static IBrush Resolve(string key, string fallback)
     {
-        "High" => "#EF4444",
-        "Medium" => "#F59E0B",
-        _ => "#10B981"
+        if (Application.Current is { } app)
+        {
+            if (app.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (app.TryGetResource(fallback, app.ActualThemeVariant, out var f) && f is IBrush fb) return fb;
+        }
+        return Brushes.Transparent;
+    }
+
+    public IBrush PriorityBrush => Priority switch
+    {
+        "High" => Resolve("DangerBrush", "DangerBrush"),
+        "Medium" => Resolve("WarningBrush", "WarningBrush"),
+        _ => Resolve("SuccessBrush", "SuccessBrush")
     };
 
-    public string TypeColor => Type switch
+    public IBrush TypeBrush => Type switch
     {
-        "Weather" => "#3B82F6",
-        "Class Suspension" => "#8B5CF6",
-        "Emergency" => "#EF4444",
-        "System" => "#6B7280",
-        "Announcement" => "#10B981",
-        _ => "#6B7280"
+        "Weather" => Resolve("InfoBrush", "AccentBrush"),
+        "Class Suspension" => Resolve("PurpleBrush", "InfoBrush"),
+        "Emergency" => Resolve("DangerBrush", "DangerBrush"),
+        "System" => Resolve("TextSecondaryBrush", "TextMutedBrush"),
+        "Announcement" => Resolve("SuccessBrush", "SuccessBrush"),
+        _ => Resolve("TextSecondaryBrush", "TextMutedBrush")
     };
 
     public string AudienceText => TargetAudience switch
@@ -229,4 +251,21 @@ public partial class AlertItemViewModel : ViewModelBase
     };
 
     public string TimeFrameText => $"{CreatedAt:MMM dd, hh:mm tt} → {ExpiresAt:MMM dd, hh:mm tt}";
+
+    partial void OnPriorityChanged(string value)
+    {
+        OnPropertyChanged(nameof(PriorityBrush));
+    }
+
+    partial void OnTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(TypeBrush));
+    }
+
+    partial void OnExpiresAtChanged(DateTime value)
+    {
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(IsExpired));
+        OnPropertyChanged(nameof(TimeFrameText));
+    }
 }

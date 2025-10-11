@@ -1,0 +1,221 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             xmlns:ic="using:FluentIcons.Avalonia"
+             x:Class="Southville8BEdgeUI.Views.Teacher.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+    <UserControl.Styles>
+        <!-- CARD -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+        </Style>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <!-- SECTION HEADER -->
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.tablet">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="TextBlock.section-header.mobile">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- LABELS & TEXT -->
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- INPUTS -->
+        <Style Selector="TextBox, ComboBox, RadioButton, CheckBox, ToggleSwitch">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBox, ComboBox">
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBox:focus, ComboBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+
+        <!-- BUTTONS -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,6"/>
+        </Style>
+        <Style Selector="Button.outline:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+        </Style>
+
+        <!-- ACCENT COLOR SELECTORS -->
+        <Style Selector="Button.accent-swatch">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid>
+        <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="MainStackPanel" Spacing="16" Margin="16">
+                <!-- Page Header -->
+                <Border Classes="card">
+                    <Grid x:Name="HeaderGrid" ColumnDefinitions="Auto,*,Auto">
+                        <Border Width="36" Height="36" Background="{DynamicResource SuccessBrush}" CornerRadius="8" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Settings" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock Text="Settings" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Manage appearance, notifications, and privacy preferences" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <Button x:Name="SaveButton" Content="Save" Classes="primary"/>
+                            <Button x:Name="ResetButton" Content="Reset" Classes="outline"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Content Grid -->
+                <Grid x:Name="ContentGrid" ColumnDefinitions="*,*">
+                    <!-- Left Column -->
+                    <StackPanel x:Name="LeftPanel" Grid.Column="0" Spacing="12">
+                        <!-- Appearance -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Appearance" Classes="section-header"/>
+                                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Theme" Classes="muted" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="12,0,0,0">
+                                        <RadioButton Content="System" IsChecked="True"/>
+                                        <RadioButton Content="Light"/>
+                                        <RadioButton Content="Dark"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Accent Color" Classes="muted" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+                                        <Button Classes="accent-swatch" Background="{DynamicResource SuccessBrush}"/>
+                                        <Button Classes="accent-swatch" Background="{DynamicResource InfoBrush}"/>
+                                        <Button Classes="accent-swatch" Background="{DynamicResource DangerBrush}"/>
+                                        <Button Classes="accent-swatch" Background="{DynamicResource WarningBrush}"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Font Size" Classes="muted" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="1" Margin="12,0,0,0">
+                                        <ComboBoxItem Content="Small"/>
+                                        <ComboBoxItem Content="Medium"/>
+                                        <ComboBoxItem Content="Large"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Notifications -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Notifications" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <CheckBox Content="Email notifications"/>
+                                    <CheckBox Content="In-app alerts"/>
+                                    <CheckBox Content="Sound on new message"/>
+                                    <CheckBox Content="Assignment reminders"/>
+                                    <CheckBox Content="Schedule change alerts"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Right Column -->
+                    <StackPanel x:Name="RightPanel" Grid.Column="1" Spacing="12" Margin="12,0,0,0">
+                        <!-- Privacy & Security -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Privacy and Security" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <ToggleSwitch Content="Show profile to students" IsChecked="{Binding ShowProfileToStudents}"/>
+                                    <ToggleSwitch Content="Allow messages from parents" IsChecked="{Binding AllowParentMessages}"/>
+                                    <ToggleSwitch Content="Re-authenticate on sensitive actions" IsChecked="{Binding RequireReauthentication}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Data & Storage -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Data and Storage" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="App cache"/>
+                                        <Button Grid.Column="1" Content="Clear" Classes="outline"/>
+                                    </Grid>
+                                    <StackPanel>
+                                        <TextBlock Text="Storage usage" Classes="secondary"/>
+                                        <ProgressBar Minimum="0" Maximum="100" Value="35" Height="6" CornerRadius="3"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Advanced -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Advanced" Classes="section-header"/>
+                                <StackPanel Spacing="8">
+                                    <Button Content="Export Data" Classes="outline" HorizontalAlignment="Left"/>
+                                    <Button Content="Reset Settings" Classes="danger" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

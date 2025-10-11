@@ -1,14 +1,45 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+        xmlns:views="using:Southville8BEdgeUI.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
         x:Class="Southville8BEdgeUI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="avares://Southville8BEdgeUI/Assets/avalonia-logo.ico"
         Title="School Management System"
+		ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="32"
+		SystemDecorations="None"
+		CanResize="True"
 		WindowState="Maximized">
+
+    <Window.Styles>
+        <!-- Opacity transitions (still keep fade when minimize if used) -->
+        <Style Selector="Window">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="SineEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Window[WindowState=Minimized]">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+        <Style Selector="Window[WindowState=Normal], Window[WindowState=Maximized]">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <!-- Root host margin to compensate for invisible resize frame when maximized -->
+        <Style Selector="#RootHost" x:SetterTargetType="Grid">
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        <!-- Add margin around content when maximized to avoid title bar visual shift -->
+        <Style Selector="Window[WindowState=Maximized] #RootHost" x:SetterTargetType="Grid">
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+    </Window.Styles>
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -16,7 +47,15 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <!-- The ContentControl will display the view that corresponds to the CurrentViewModel -->
-    <ContentControl Content="{Binding CurrentViewModel}"/>
+    <!-- Root host wrapper so we can safely adjust margin/padding on maximize without shifting title bar up -->
+    <Grid x:Name="RootHost" RowDefinitions="Auto,*">
+        <views:TitleBarView Grid.Row="0">
+            <views:TitleBarView.DataContext>
+                <vm:TitleBarViewModel/>
+            </views:TitleBarView.DataContext>
+        </views:TitleBarView>
+        <!-- The ContentControl will display the view that corresponds to the CurrentViewModel -->
+        <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}"/>
+    </Grid>
 
 </Window>

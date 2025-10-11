@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             x:Class="Southville8BEdgeUI.Views.Admin.BookRoomView"
+             x:DataType="vm:BookRoomViewModel"
+             mc:Ignorable="d"
+             Background="{DynamicResource PageBackgroundBrush}">
+  <UserControl.Styles>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="Padding" Value="24"/>
+      <Setter Property="Margin" Value="0,0,0,24"/>
+    </Style>
+    <Style Selector="TextBlock.header">
+      <Setter Property="FontSize" Value="26"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBox, ComboBox, DatePicker">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="10"/>
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="16,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="16,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+  </UserControl.Styles>
+  <ScrollViewer>
+    <StackPanel Margin="40" Spacing="24">
+      <Grid ColumnDefinitions="Auto,*">
+        <!-- Updated back button content for clarity -->
+        <Button Content="?" Width="40" Height="40" Command="{Binding BackCommand}" ToolTip.Tip="Back"
+                Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8"/>
+        <TextBlock Grid.Column="1" Text="Book a Room" Classes="header" Margin="12,0,0,0" VerticalAlignment="Center"/>
+      </Grid>
+
+      <Border Classes="card">
+        <StackPanel>
+          <TextBlock Text="Select Room" Classes="label"/>
+          <ComboBox ItemsSource="{Binding Rooms}" SelectedItem="{Binding SelectedRoom}" ItemTemplate="{StaticResource _RoomTemplate}"/>
+          <TextBlock Text="Date" Classes="label"/>
+          <DatePicker SelectedDate="{Binding SelectedDateOffset}"/>
+          <TextBlock Text="Time Slot" Classes="label"/>
+          <ComboBox ItemsSource="{Binding TimeSlots}" SelectedItem="{Binding SelectedSlot}"/>
+          <TextBlock Text="Purpose" Classes="label"/>
+          <TextBox Text="{Binding Purpose}" Watermark="e.g. Review Session"/>
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button Content="Book Room" Classes="primary" IsEnabled="{Binding CanBook}" Command="{Binding BookCommand}"/>
+            <Button Content="Cancel" Classes="secondary" Command="{Binding BackCommand}"/>
+          </StackPanel>
+          <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="{DynamicResource InfoBrush}" Margin="0,12,0,0"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+  <UserControl.Resources>
+    <DataTemplate x:Key="_RoomTemplate" DataType="vm:RoomViewModel">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="{Binding Name}"/>
+        <TextBlock Text="{Binding Type}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+        <!-- Use dynamic StatusBrush from RoomViewModel -->
+        <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontSize="11"/>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+</UserControl>
