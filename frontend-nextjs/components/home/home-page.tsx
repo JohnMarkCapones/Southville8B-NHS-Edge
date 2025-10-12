@@ -1,21 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import dynamic from "next/dynamic"
+import Image from "next/image"
 import { HeroSection } from "@/components/ui/hero-section"
 import { FeatureCard } from "@/components/ui/feature-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { AnimatedCard } from "@/components/ui/animated-card"
-import { EventSystem } from "@/components/ui/event-system"
-import { StudentRankings } from "@/components/student-rankings"
-import { CelebrationOverlay } from "@/components/celebration-overlay"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import Link from "next/link"
-import { AcademicCalendar } from "@/components/ui/academic-calendar"
-import { CampusGallery } from "@/components/ui/campus-gallery"
 import { AnnouncementsSection } from "@/components/homepage/announcements-section"
 import {
   BookOpen,
@@ -45,6 +42,32 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { AnnouncementBanner } from "@/components/ui/announcement-banner"
+
+// Defer heavy, below-the-fold widgets to reduce initial JS
+const StudentRankings = dynamic(
+  () => import("@/components/student-rankings").then((m) => ({ default: m.StudentRankings })),
+  { loading: () => <div aria-busy="true" className="h-24" /> }
+)
+
+const CampusGallery = dynamic(
+  () => import("@/components/ui/campus-gallery").then((m) => ({ default: m.CampusGallery })),
+  { loading: () => <div aria-busy="true" className="h-64" /> }
+)
+
+const AcademicCalendar = dynamic(
+  () => import("@/components/ui/academic-calendar").then((m) => ({ default: m.AcademicCalendar })),
+  { loading: () => <div aria-busy="true" className="h-32" /> }
+)
+
+const EventSystem = dynamic(
+  () => import("@/components/ui/event-system").then((m) => ({ default: m.EventSystem })),
+  { loading: () => <div aria-busy="true" className="h-40" /> }
+)
+
+const CelebrationOverlay = dynamic(
+  () => import("@/components/celebration-overlay").then((m) => ({ default: m.CelebrationOverlay })),
+  { ssr: false }
+)
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("academic")
@@ -467,10 +490,13 @@ export default function HomePage() {
               >
                 <Link href={article.id === 1 ? "/guess/news/science-fair-champions" : "/guess/news"}>
                   <div className="aspect-video relative overflow-hidden mb-4">
-                    <img
+                    <Image
                       src={article.image || "/placeholder.svg"}
                       alt={article.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      priority={index === 0}
                     />
                     <div className="absolute top-2 xs:top-4 right-2 xs:right-4">
                       <Badge
@@ -720,10 +746,13 @@ export default function HomePage() {
               >
                 <div className="p-6">
                   <div className="flex items-center mb-4">
-                    <img
+                    <Image
                       src={testimonial.image || "/placeholder.svg"}
                       alt={testimonial.name}
-                      className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform"
+                      width={48}
+                      height={48}
+                      className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform object-cover"
+                      loading="lazy"
                     />
                     <div>
                       <h3 className="font-bold group-hover:text-primary transition-colors">{testimonial.name}</h3>

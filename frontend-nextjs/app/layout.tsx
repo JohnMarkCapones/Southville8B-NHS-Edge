@@ -8,8 +8,14 @@ import { BackToTop } from "@/components/ui/back-to-top"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { ConditionalLayout } from "@/components/conditional-layout"
 import { SITE_URL } from "@/lib/seo"
+import { Analytics } from "@vercel/analytics/react"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -24,7 +30,7 @@ export const metadata: Metadata = {
   creator: "Southville 8B NHS",
   applicationName: "Southville 8B NHS",
   alternates: {
-    canonical: "/",
+    canonical: "/", 
   },
   icons: {
     icon: "/favicon.ico",
@@ -33,7 +39,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_PH",
     url: "https://southville8bnhs.com/",
     title: "Southville 8B National High School",
     description: "Excellence in education with comprehensive academics and vibrant student life.",
@@ -67,11 +73,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-black px-3 py-2 rounded">
+          Skip to content
+        </a>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange>
           <ScrollToTop />
-          <ConditionalLayout>{children}</ConditionalLayout>
+          <main id="main-content">
+            <ConditionalLayout>{children}</ConditionalLayout>
+          </main>
           <Toaster />
           <BackToTop />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

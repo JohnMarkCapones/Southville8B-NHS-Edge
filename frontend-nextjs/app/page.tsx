@@ -36,8 +36,22 @@ export default function Page() {
     name: SITE_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/images/design-mode/image.png`,
+    address: {
+      addressLocality: "Rodriguez",
+      addressRegion: "Rizal",
+      addressCountry: "PH",
+    },
+    alternateName: [
+      "Southville 8B National High School",
+      "Southville 8B NHS",
+      "Southville NHS Rizal",
+    ],
   })
-  const website = buildWebSiteSchema({ url: SITE_URL, name: SITE_NAME })
+  const website = buildWebSiteSchema({
+    url: SITE_URL,
+    name: SITE_NAME,
+    searchTarget: `${SITE_URL}/search?q={search_term_string}`,
+  })
 
   return (
     <>
@@ -47,3 +61,6 @@ export default function Page() {
     </>
   )
 }
+
+// Revalidate the homepage every hour
+export const revalidate = 3600

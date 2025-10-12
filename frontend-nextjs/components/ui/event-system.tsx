@@ -5,6 +5,7 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import Image from "next/image"
 import {
   CalendarIcon,
   MapPin,
@@ -198,8 +199,15 @@ export function EventSystem() {
           <div className="grid md:grid-cols-2 gap-6">
             {featuredEvents.map((event) => (
               <AnimatedCard key={event.id} variant="lift" className="overflow-hidden">
-                <div className="relative">
-                  <img src={event.image || "/placeholder.svg"} alt={event.title} className="w-full h-48 object-cover" />
+                <div className="relative w-full h-48">
+                  <Image
+                    src={event.image || "/placeholder.svg"}
+                    alt={event.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
+                    priority={Boolean(event.featured)}
+                  />
                   <div className="absolute top-4 left-4">
                     <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">Featured</Badge>
                   </div>
@@ -242,7 +250,7 @@ export function EventSystem() {
                       {event.isRegistered ? "Registered" : "Register"}
                     </AnimatedButton>
                     <Link
-                      href={`/event/${event.title
+                      href={`/guess/event/${event.title
                         .toLowerCase()
                         .replace(/[^a-z0-9]+/g, "-")
                         .replace(/(^-|-$)/g, "")}`}
@@ -268,7 +276,7 @@ export function EventSystem() {
             variant={selectedCategory === category ? "gradient" : "outline"}
             size="sm"
             onClick={() => setSelectedCategory(category)}
-            animation="lift"
+            animation="subtle"
           >
             {category !== "All" && categoryIcons[category as keyof typeof categoryIcons]}
             <span className={category !== "All" ? "ml-2" : ""}>{category}</span>
@@ -285,8 +293,15 @@ export function EventSystem() {
             className="overflow-hidden animate-slideInUp"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
-            <div className="relative">
-              <img src={event.image || "/placeholder.svg"} alt={event.title} className="w-full h-40 object-cover" />
+            <div className="relative w-full h-40">
+              <Image
+                src={event.image || "/placeholder.svg"}
+                alt={event.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                priority={false}
+              />
               <div className="absolute top-3 left-3">
                 <Badge variant="outline" className="bg-white/90 text-gray-900 border-white/50">
                   {event.category}
@@ -322,7 +337,7 @@ export function EventSystem() {
               </div>
               <div className="flex gap-2">
                 <Link
-                  href={`/event/${event.title
+                  href={`/guess/event/${event.title
                     .toLowerCase()
                     .replace(/[^a-z0-9]+/g, "-")
                     .replace(/(^-|-$)/g, "")}`}
@@ -344,10 +359,12 @@ export function EventSystem() {
 
       {/* View All Events */}
       <div className="text-center">
-        <AnimatedButton variant="gradient" size="lg" animation="glow">
-          <CalendarIcon className="w-5 h-5 mr-2" />
-          View All Events
-        </AnimatedButton>
+        <Link href="/guess/event">
+          <AnimatedButton variant="gradient" size="lg" animation="glow">
+            <CalendarIcon className="w-5 h-5 mr-2" />
+            View All Events
+          </AnimatedButton>
+        </Link>
       </div>
     </div>
   )

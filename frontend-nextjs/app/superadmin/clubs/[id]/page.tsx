@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Image from "next/image"
 import {
   Dialog,
   DialogContent,
@@ -420,7 +421,13 @@ export default function ClubDetailPage() {
 
           <div className="flex items-end gap-6">
             <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center shadow-2xl border-4 border-white/20">
-              <img src={clubData.logo || "/placeholder.svg"} alt={clubData.name} className="w-20 h-20 rounded-2xl" />
+              <Image
+                src={clubData.logo || "/placeholder.svg"}
+                alt={clubData.name}
+                width={80}
+                height={80}
+                className="w-20 h-20 rounded-2xl"
+              />
             </div>
 
             <div className="text-white flex-1">

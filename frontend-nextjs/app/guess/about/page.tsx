@@ -6,12 +6,12 @@ import { DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo"
 export const metadata: Metadata = {
   title: "About Us",
   description:
-    "Learn about Southville 8B National High School — our history, mission, achievements, and the teachers who lead our learners.",
+    "Learn about Southville 8B National High School in Rodriguez, Rizal — our history, mission, achievements, and the teachers who lead our learners.",
   alternates: { canonical: "/guess/about" },
   openGraph: {
     title: "About Us",
     description:
-      "Learn about Southville 8B National High School — our history, mission, achievements, and the teachers who lead our learners.",
+      "Learn about Southville 8B National High School in Rodriguez, Rizal — our history, mission, achievements, and the teachers who lead our learners.",
     url: "/guess/about",
     type: "website",
     images: [{ url: DEFAULT_OG_IMAGE }],
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "About Us",
     description:
-      "Learn about Southville 8B National High School — our history, mission, achievements, and the teachers who lead our learners.",
+      "Learn about Southville 8B National High School in Rodriguez, Rizal — our history, mission, achievements, and the teachers who lead our learners.",
     images: [DEFAULT_OG_IMAGE],
   },
 }

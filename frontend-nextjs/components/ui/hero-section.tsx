@@ -134,7 +134,7 @@ export function HeroSection() {
           muted
           playsInline
           preload="metadata"
-          poster="/videos/hero-blue-campus.mp4"
+          poster="/placeholder.jpg"
           onLoadedMetadata={onLoaded}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
