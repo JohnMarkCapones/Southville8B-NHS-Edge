@@ -150,3 +150,5 @@ export default function SuperAdminLayout({
     </DashboardLayout>
   )
 }
+
+// Robots noindex is enforced at robots.txt level; optional per-page noindex can be added if needed

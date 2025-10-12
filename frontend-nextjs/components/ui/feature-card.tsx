@@ -17,6 +17,7 @@ interface FeatureCardProps {
   className?: string
   href?: string
   variant?: "default" | "featured" | "compact"
+  style?: React.CSSProperties
 }
 
 export function FeatureCard({
@@ -29,6 +30,7 @@ export function FeatureCard({
   className,
   href,
   variant = "default",
+  style,
 }: FeatureCardProps) {
   const [isHovered, setIsHovered] = React.useState(false)
 
@@ -36,6 +38,7 @@ export function FeatureCard({
     <AnimatedCard
       variant="lift"
       animation="glow"
+      style={style}
       className={cn(
         "group cursor-pointer overflow-hidden transition-all duration-500",
         variant === "featured" && "lg:col-span-2 bg-gradient-to-br from-vibrant-purple/10 to-vibrant-pink/10",

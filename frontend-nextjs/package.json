@@ -56,7 +56,7 @@
     "immer": "latest",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "14.2.16",
+    "next": "^15.5.4",
     "next-themes": "latest",
     "react": "^18",
     "react-day-picker": "9.8.0",
@@ -69,7 +69,6 @@
     "tailwindcss-animate": "^1.0.7",
     "use-sync-external-store": "latest",
     "vaul": "^0.9.6",
-    "your-icon-library": "latest",
     "zod": "^3.24.1",
     "zustand": "latest"
   },

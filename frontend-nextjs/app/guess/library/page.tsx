@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { DEFAULT_OG_IMAGE } from "@/lib/seo"
 import Link from "next/link"
 import { ArrowLeft, BookOpen, Search, Users, Clock, Wifi, Computer, Calendar, Bell, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,6 +11,22 @@ export const metadata: Metadata = {
   title: "Library - Coming Soon | Southville 8B NHS",
   description:
     "Digital library platform coming soon to Southville 8B NHS. Access books, research materials, and study resources online.",
+  alternates: { canonical: "/guess/library" },
+  openGraph: {
+    title: "Library - Coming Soon | Southville 8B NHS",
+    description:
+      "Digital library platform coming soon to Southville 8B NHS. Access books, research materials, and study resources online.",
+    url: "/guess/library",
+    type: "website",
+    images: [{ url: DEFAULT_OG_IMAGE }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Library - Coming Soon | Southville 8B NHS",
+    description:
+      "Digital library platform coming soon to Southville 8B NHS. Access books, research materials, and study resources online.",
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 export default function LibraryPage() {
