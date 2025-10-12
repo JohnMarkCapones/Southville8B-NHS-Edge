@@ -1,3 +1,5 @@
+export const dynamic = "force-static"
+export const revalidate = 86400 // Revalidate once per day
 import type { Metadata } from "next"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo"

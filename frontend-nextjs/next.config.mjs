@@ -1,3 +1,4 @@
+import bundleAnalyzer from "@next/bundle-analyzer"
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -6,6 +7,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  optimizePackageImports: ["lucide-react"],
   images: {
     unoptimized: true,
     // Allow local placeholder SVG with query params (required from Next.js 16)
@@ -30,4 +32,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default bundleAnalyzer({ enabled: process.env.ANALYZE === "true" })(nextConfig)

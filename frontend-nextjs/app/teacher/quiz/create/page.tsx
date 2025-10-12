@@ -145,7 +145,8 @@ export default function CreateQuiz() {
     "Silver",
   ]
 
-  const [expandedSections, setExpandedSections] = useState({
+  type ExpandableSection = "securedQuiz" | "questionPool"
+  const [expandedSections, setExpandedSections] = useState<Record<ExpandableSection, boolean>>({
     securedQuiz: false,
     questionPool: false,
   })
@@ -236,7 +237,7 @@ export default function CreateQuiz() {
     router.push("/teacher/quiz/builder")
   }
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: ExpandableSection) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -288,7 +289,7 @@ export default function CreateQuiz() {
       "Force the quiz into full-screen mode and hide browser navigation, taskbar, and other UI elements that could be distracting or helpful for cheating.",
   }
 
-  const QuestionTooltip = ({ content, children }: { content: string; children: React.ReactNode }) => (
+  const QuestionTooltip = ({ content, children }: { content: string; children?: React.ReactNode }) => (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>

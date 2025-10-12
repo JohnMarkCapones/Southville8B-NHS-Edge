@@ -1,3 +1,5 @@
+export const dynamic = "force-static"
+export const revalidate = 3600 // rankings can update more often
 import type { Metadata } from "next"
 import { StudentRankings } from "@/components/student-rankings"
 import { DEFAULT_OG_IMAGE } from "@/lib/seo"

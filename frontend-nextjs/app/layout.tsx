@@ -2,11 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { BackToTop } from "@/components/ui/back-to-top"
-import { ScrollToTop } from "@/components/scroll-to-top"
-import { ConditionalLayout } from "@/components/conditional-layout"
+import { Providers } from "@/components/providers"
 import { SITE_URL } from "@/lib/seo"
 import { Analytics } from "@vercel/analytics/react"
 
@@ -76,15 +72,7 @@ export default function RootLayout({
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-black px-3 py-2 rounded">
           Skip to content
         </a>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange>
-          <ScrollToTop />
-          <main id="main-content">
-            <ConditionalLayout>{children}</ConditionalLayout>
-          </main>
-          <Toaster />
-          <BackToTop />
-          <Analytics />
-        </ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

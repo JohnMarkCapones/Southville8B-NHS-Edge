@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { absoluteUrl } from "@/lib/seo"
-import { findEventBySlug } from "./data"
+import { findEventBySlug, EVENTS } from "./data"
 import ClientPage from "./ui-client"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
@@ -96,3 +96,9 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
 // Revalidate event detail pages hourly
 export const revalidate = 3600
+
+// Prefer static generation for known events with ISR
+export const dynamic = "force-static"
+export function generateStaticParams() {
+  return EVENTS.map((e) => ({ slug: e.slug }))
+}

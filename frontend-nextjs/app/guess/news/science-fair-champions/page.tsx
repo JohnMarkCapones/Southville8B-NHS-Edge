@@ -68,3 +68,7 @@ export default function ScienceFairChampionsPage() {
     </>
   )
 }
+
+// Prefer static generation with daily ISR for this static article route
+export const dynamic = "force-static"
+export const revalidate = 86400

@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import GalleryClient from "./gallery-client"
 import { DEFAULT_OG_IMAGE } from "@/lib/seo"
 
+export const dynamic = "force-static"
+export const revalidate = 86400 // 24 hours
+
 export const metadata: Metadata = {
   title: "Gallery",
   description:

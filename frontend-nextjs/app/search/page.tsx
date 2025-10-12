@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/search" },
 }
 
+// This page depends on searchParams and should not be cached per-path.
+// Serve close to users for lower latency.
+export const dynamic = "force-dynamic"
+export const runtime = "edge"
+
 export default function SearchPage({ searchParams }: { searchParams?: { q?: string } }) {
   const q = searchParams?.q?.toString() ?? ""
 
@@ -80,4 +85,3 @@ export default function SearchPage({ searchParams }: { searchParams?: { q?: stri
   )
 }
 
-export const revalidate = 60

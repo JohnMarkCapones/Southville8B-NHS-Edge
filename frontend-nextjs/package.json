@@ -5,6 +5,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "analyze": "set ANALYZE=true&& next build",
+    "analyze:dev": "set ANALYZE=true&& next dev",
     "lint": "next lint",
     "start": "next start"
   },
@@ -56,7 +58,8 @@
     "immer": "latest",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "^15.5.4",
+  "next": "^15.5.4",
+  "@next/bundle-analyzer": "^14.2.18",
     "next-themes": "latest",
     "react": "^18",
     "react-day-picker": "9.8.0",
