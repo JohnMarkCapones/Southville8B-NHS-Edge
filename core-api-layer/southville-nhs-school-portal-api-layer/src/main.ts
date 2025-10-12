@@ -43,7 +43,8 @@ async function bootstrap() {
     }),
   );
 
-  // Enable API versioning
+  // Enable API versioning with global prefix
+  app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',

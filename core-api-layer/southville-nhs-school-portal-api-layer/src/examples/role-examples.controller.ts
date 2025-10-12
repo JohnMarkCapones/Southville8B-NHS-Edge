@@ -13,7 +13,7 @@ import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 
 @ApiTags('Role Examples')
 @ApiBearerAuth('JWT-auth')
-@Controller('api/examples')
+@Controller('examples')
 export class RoleExamplesController {
   // Admin only endpoint
   @Get('admin-only')
@@ -64,7 +64,7 @@ export class RoleExamplesController {
     return {
       message: 'Student access granted',
       user: user.email,
-      role: 'Student',
+      role: user.user_metadata?.role || user.role || 'unknown', // ✅ Actual role
       data: 'Student-specific data',
     };
   }

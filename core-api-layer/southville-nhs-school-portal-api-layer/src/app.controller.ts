@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { SupabaseService } from './supabase/supabase.service';
 
 @ApiTags('Health & Info')
-@Controller('api/v1')
+@Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
