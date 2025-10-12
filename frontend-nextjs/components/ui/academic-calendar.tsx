@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -461,6 +461,24 @@ export function AcademicCalendar() {
   const [personalEvents, setPersonalEvents] = useState<string[]>([])
   const { toast } = useToast()
 
+  // Custom hook to handle window width safely for SSR
+  const [isSmallScreen, setIsSmallScreen] = useState(false)
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 640)
+    }
+
+    // Check on mount
+    checkScreenSize()
+
+    // Add event listener
+    window.addEventListener('resize', checkScreenSize)
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
   const monthNames = [
     "January",
     "February",
@@ -603,7 +621,7 @@ export function AcademicCalendar() {
             {hasHighPriorityEvent && <Star className="w-2 h-2 sm:w-3 sm:h-3 text-red-500 fill-current" />}
           </div>
           <div className="space-y-0.5 sm:space-y-1 overflow-hidden">
-            {events.slice(0, window.innerWidth < 640 ? 2 : 3).map((event, index) => (
+            {events.slice(0, isSmallScreen ? 2 : 3).map((event, index) => (
               <div
                 key={event.id}
                 className={cn(
@@ -613,9 +631,9 @@ export function AcademicCalendar() {
                 title={event.title}
               />
             ))}
-            {events.length > (window.innerWidth < 640 ? 2 : 3) && (
+            {events.length > (isSmallScreen ? 2 : 3) && (
               <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 rounded px-0.5 sm:px-1 py-0.5 text-center">
-                +{events.length - (window.innerWidth < 640 ? 2 : 3)}
+                +{events.length - (isSmallScreen ? 2 : 3)}
               </div>
             )}
           </div>

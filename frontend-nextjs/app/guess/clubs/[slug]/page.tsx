@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState, useMemo, use } from "react"
+import Image from "next/image"
+import ServerSeo from "./server-page"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -706,6 +708,8 @@ export default function ClubDetailPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="min-h-screen">
+      {/* Server-rendered metadata and JSON-LD */}
+      <ServerSeo params={{ slug }} />
       {/* Hero Section */}
       <section
         ref={heroRef}
@@ -749,7 +753,7 @@ export default function ClubDetailPage({ params }: { params: Promise<{ slug: str
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
               <AnimatedButton
-                size="xl"
+                size="lg"
                 className="group font-bold text-lg px-8 py-4 rounded-full shadow-2xl hover:shadow-3xl w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 hover:from-yellow-300 hover:to-orange-400 hover:scale-105 transition-all duration-300"
                 onClick={() => document.getElementById("registration")?.scrollIntoView({ behavior: "smooth" })}
               >
@@ -760,7 +764,7 @@ export default function ClubDetailPage({ params }: { params: Promise<{ slug: str
 
               <AnimatedButton
                 variant="outline"
-                size="xl"
+                size="lg"
                 className="group font-bold text-lg px-8 py-4 rounded-full w-full sm:w-auto bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20 hover:border-white/50 hover:scale-105 transition-all duration-300"
                 onClick={() => document.getElementById("events")?.scrollIntoView({ behavior: "smooth" })}
               >
@@ -816,11 +820,13 @@ export default function ClubDetailPage({ params }: { params: Promise<{ slug: str
               </div>
 
               <div className="relative">
-                <img
+                <Image
                   src={`/placeholder.svg?height=400&width=500&text=${club.name}+Mission`}
                   alt={`${club.name} Mission`}
+                  width={500}
+                  height={400}
                   className="w-full rounded-2xl shadow-lg"
-                  loading="lazy"
+                  sizes="(min-width: 768px) 500px, 90vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent rounded-2xl" />
               </div>
@@ -855,11 +861,13 @@ export default function ClubDetailPage({ params }: { params: Promise<{ slug: str
               >
                 <div className="p-6">
                   <div className="relative mb-6">
-                    <img
+                    <Image
                       src={officer.image || "/placeholder.svg"}
                       alt={officer.name}
+                      width={96}
+                      height={96}
                       className="w-24 h-24 rounded-full mx-auto mb-4 group-hover:scale-110 transition-transform"
-                      loading="lazy"
+                      sizes="96px"
                     />
                     <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-2 rounded-full shadow-lg">
                       {officer.icon}
@@ -906,11 +914,13 @@ export default function ClubDetailPage({ params }: { params: Promise<{ slug: str
                 <div className="grid md:grid-cols-3 gap-6 items-center">
                   <div className="text-center">
                     <div className="relative">
-                      <img
+                      <Image
                         src={club.adviser.image || "/placeholder.svg"}
                         alt={club.adviser.name}
+                        width={128}
+                        height={128}
                         className="w-32 h-32 rounded-2xl mx-auto shadow-lg group-hover:scale-105 transition-transform"
-                        loading="lazy"
+                        sizes="128px"
                       />
                       <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-2 rounded-full shadow-lg">
                         <GraduationCap className="w-5 h-5" />

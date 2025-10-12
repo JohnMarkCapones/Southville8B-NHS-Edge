@@ -121,12 +121,11 @@ export function HeroSection() {
       className={cn(
         "relative overflow-hidden",
         "min-h-[80vh] sm:min-h-[86vh] md:min-h-screen",
-        "bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50",
-        "dark:from-slate-950 dark:via-slate-900 dark:to-slate-900",
+        // Removed background gradient for testing
       )}
     >
       {/* Video background */}
-      <div className="absolute inset-0 -z-10">
+      <div className="absolute inset-0 z-0">
         <video
           ref={videoRef}
           className="h-full w-full object-cover"
@@ -135,24 +134,25 @@ export function HeroSection() {
           muted
           playsInline
           preload="metadata"
-          poster="/videos/hero-poster.png"
+          poster="/placeholder.jpg"
           onLoadedMetadata={onLoaded}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           aria-hidden="true"
         >
-          <source src="/videos/hero-blue-campus.webm" type="video/webm" />
           <source src="/videos/hero-blue-campus.mp4" type="video/mp4" />
           {"Your browser does not support the video tag."}
         </video>
-
-        {/* Theme-aware overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/85 via-white/60 to-white/35 dark:from-black/80 dark:via-black/60 dark:to-black/45" />
-        {/* Blue brand glaze */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(75%_60%_at_10%_10%,rgba(37,99,235,0.16),transparent),radial-gradient(60%_55%_at_90%_20%,rgba(14,165,233,0.14),transparent)]" />
-        {/* Subtle grid (hidden on small) */}
-        <div className="pointer-events-none absolute inset-0 hidden sm:block bg-[linear-gradient(to_right,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.04)_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)]" />
       </div>
+
+  {/* Theme-aware overlays – lighter for light mode */}
+  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 via-white/50 to-white/20 backdrop-blur-[2px] dark:from-black/80 dark:via-black/60 dark:to-black/40" />
+  {/* Blue tint glaze (soft light blend in light mode) */}
+  <div className="pointer-events-none absolute inset-0 mix-blend-soft-light bg-[radial-gradient(75%_60%_at_10%_10%,rgba(59,130,246,0.12),transparent),radial-gradient(60%_55%_at_90%_20%,rgba(14,165,233,0.08),transparent)] dark:mix-blend-normal dark:bg-[radial-gradient(75%_60%_at_10%_10%,rgba(37,99,235,0.18),transparent),radial-gradient(60%_55%_at_90%_20%,rgba(14,165,233,0.12),transparent)]" />
+  {/* Subtle grid (hidden on small) */}
+  <div className="pointer-events-none absolute inset-0 hidden sm:block bg-[linear-gradient(to_right,rgba(0,0,0,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.025)_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)]" />
+  {/* Soft vignette to improve legibility */}
+  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_60%,transparent_62%,rgba(0,0,0,0.06)_100%)] dark:bg-[radial-gradient(120%_90%_at_50%_60%,transparent_55%,rgba(0,0,0,0.30)_100%)]" />
 
       {/* Brand chip (logo + name) */}
       <div className="relative z-10">
@@ -240,7 +240,7 @@ export function HeroSection() {
 
             {/* Right: Premium Quick Links grid (revamped) */}
             <div className="lg:justify-self-end w-full">
-              <div className="rounded-2xl p-5 sm:p-6 md:p-7 w-full max-w-md ml-auto bg-white/85 border border-white/60 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:border-slate-700/60">
+              <div className="rounded-2xl p-5 sm:p-6 md:p-7 w-full max-w-md ml-auto bg-white/80 border border-white/60 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:border-slate-700/60">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-blue-600" />
