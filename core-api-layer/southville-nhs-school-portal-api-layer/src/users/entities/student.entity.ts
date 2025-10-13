@@ -50,12 +50,4 @@ export class Student {
     name: string;
     grade_level: string;
   };
-
-  @ApiProperty({ description: 'User data', required: false })
-  user?: {
-    id: string;
-    email: string;
-    full_name: string;
-    status: string;
-  };
 }
