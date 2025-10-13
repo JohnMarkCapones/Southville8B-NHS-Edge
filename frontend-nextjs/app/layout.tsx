@@ -69,7 +69,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en-PH" suppressHydrationWarning>
       <head>
         {/* Preconnect to optimize external resource loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -78,10 +78,21 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
       <body className={inter.className}>
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-black px-3 py-2 rounded">
-          Skip to content
+        {/* Enhanced Skip Links for Keyboard Navigation - WCAG 2.1 AAA */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-xl focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:focus:ring-blue-400 focus:outline-none transition-all"
+        >
+          Skip to main content
+        </a>
+        <a
+          href="#navigation"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-xl focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:focus:ring-blue-400 focus:outline-none transition-all"
+        >
+          Skip to navigation
         </a>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   )
