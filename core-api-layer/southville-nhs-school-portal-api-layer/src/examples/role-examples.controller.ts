@@ -10,11 +10,13 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { AuthUser } from '../auth/auth-user.decorator';
 import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
+import { AuthService } from '../auth/auth.service';
 
 @ApiTags('Role Examples')
 @ApiBearerAuth('JWT-auth')
 @Controller('examples')
 export class RoleExamplesController {
+  constructor(private readonly authService: AuthService) {}
   // Admin only endpoint
   @Get('admin-only')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -22,12 +24,17 @@ export class RoleExamplesController {
   @ApiOperation({ summary: 'Admin only endpoint' })
   @ApiResponse({ status: 200, description: 'Admin access granted' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
-  adminOnly(@AuthUser() user: SupabaseUser) {
+  async adminOnly(@AuthUser() user: SupabaseUser) {
+    const actualRole = await this.authService.getUserRoleFromDatabase(user.id);
     return {
       message: 'Admin access granted',
       user: user.email,
-      role: 'Admin',
+      role: actualRole || 'Unknown',
       data: 'Sensitive admin data',
+      hierarchyNote:
+        actualRole !== 'Admin'
+          ? `Access granted via role hierarchy (${actualRole} → Admin)`
+          : undefined,
     };
   }
 
@@ -41,12 +48,17 @@ export class RoleExamplesController {
     status: 403,
     description: 'Forbidden - Teacher role required',
   })
-  teacherOnly(@AuthUser() user: SupabaseUser) {
+  async teacherOnly(@AuthUser() user: SupabaseUser) {
+    const actualRole = await this.authService.getUserRoleFromDatabase(user.id);
     return {
       message: 'Teacher access granted',
       user: user.email,
-      role: 'Teacher',
+      role: actualRole || 'Unknown',
       data: 'Teacher-specific data',
+      hierarchyNote:
+        actualRole !== 'Teacher'
+          ? `Access granted via role hierarchy (${actualRole} → Teacher)`
+          : undefined,
     };
   }
 
@@ -60,12 +72,17 @@ export class RoleExamplesController {
     status: 403,
     description: 'Forbidden - Student role required',
   })
-  studentOnly(@AuthUser() user: SupabaseUser) {
+  async studentOnly(@AuthUser() user: SupabaseUser) {
+    const actualRole = await this.authService.getUserRoleFromDatabase(user.id);
     return {
       message: 'Student access granted',
       user: user.email,
-      role: user.user_metadata?.role || user.role || 'unknown', // ✅ Actual role
+      role: actualRole || 'Unknown',
       data: 'Student-specific data',
+      hierarchyNote:
+        actualRole !== 'Student'
+          ? `Access granted via role hierarchy (${actualRole} → Student)`
+          : undefined,
     };
   }
 
@@ -79,12 +96,17 @@ export class RoleExamplesController {
     status: 403,
     description: 'Forbidden - Admin or Teacher role required',
   })
-  adminTeacher(@AuthUser() user: SupabaseUser) {
+  async adminTeacher(@AuthUser() user: SupabaseUser) {
+    const actualRole = await this.authService.getUserRoleFromDatabase(user.id);
     return {
       message: 'Admin or Teacher access granted',
       user: user.email,
-      role: 'Admin or Teacher',
+      role: actualRole || 'Unknown',
       data: 'Staff-level data',
+      hierarchyNote:
+        actualRole !== 'Admin' && actualRole !== 'Teacher'
+          ? `Access granted via role hierarchy (${actualRole} → Admin/Teacher)`
+          : undefined,
     };
   }
 
@@ -95,11 +117,12 @@ export class RoleExamplesController {
   @ApiOperation({ summary: 'All roles endpoint' })
   @ApiResponse({ status: 200, description: 'Access granted' })
   @ApiResponse({ status: 403, description: 'Forbidden - Valid role required' })
-  allRoles(@AuthUser() user: SupabaseUser) {
+  async allRoles(@AuthUser() user: SupabaseUser) {
+    const actualRole = await this.authService.getUserRoleFromDatabase(user.id);
     return {
       message: 'Access granted to all roles',
       user: user.email,
-      role: 'Any valid role',
+      role: actualRole || 'Unknown',
       data: 'General data for all users',
     };
   }
@@ -110,11 +133,12 @@ export class RoleExamplesController {
   @ApiOperation({ summary: 'Authenticated users only' })
   @ApiResponse({ status: 200, description: 'Access granted' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  authenticatedOnly(@AuthUser() user: SupabaseUser) {
+  async authenticatedOnly(@AuthUser() user: SupabaseUser) {
+    const actualRole = await this.authService.getUserRoleFromDatabase(user.id);
     return {
       message: 'Access granted to any authenticated user',
       user: user.email,
-      role: 'Any authenticated user',
+      role: actualRole || 'Unknown',
       data: 'General authenticated data',
     };
   }

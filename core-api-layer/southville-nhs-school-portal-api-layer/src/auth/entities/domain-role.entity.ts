@@ -11,11 +11,11 @@ import { Domain } from './domain.entity';
 
 @Entity('domain_roles')
 export class DomainRole {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ type: 'int', nullable: false })
-  domain_id: number;
+  @Column({ type: 'uuid', nullable: false })
+  domain_id: string;
 
   @Column({ type: 'text', nullable: false })
   name: string; // e.g., 'Treasurer', 'Secretary', 'President'

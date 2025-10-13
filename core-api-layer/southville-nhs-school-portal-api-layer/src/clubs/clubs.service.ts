@@ -169,6 +169,25 @@ export class ClubsService {
       // Verify club exists
       const existingClub = await this.findOne(id);
 
+      // Validate domain_id if provided
+      if (updateClubDto.domain_id) {
+        const { data: domain, error: domainError } = await supabase
+          .from('domains')
+          .select('id, type')
+          .eq('id', updateClubDto.domain_id)
+          .single();
+
+        if (domainError || !domain) {
+          throw new BadRequestException('Invalid domain_id: domain not found');
+        }
+
+        if (domain.type !== 'club') {
+          throw new BadRequestException(
+            `Invalid domain_id: domain type must be 'club', got '${domain.type}'`,
+          );
+        }
+      }
+
       // Update club
       const { data, error } = await supabase
         .from('clubs')

@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
@@ -9,6 +14,7 @@ import { JwtVerificationService } from './jwt-verification.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private supabase: SupabaseClient | null = null;
   private authClient: SupabaseClient | null = null;
 
@@ -153,24 +159,23 @@ export class AuthService {
 
       // Get role ID based on user metadata
       const roleName = authUser.user_metadata?.role || 'Student';
-      console.log('🔍 Looking for role:', roleName);
-
       const { data: role, error: roleError } = await supabase
         .from('roles')
         .select('id')
         .eq('name', roleName)
         .single();
 
-      if (roleError) {
-        console.error('❌ Error finding role:', roleError);
-        console.log(
-          '🔄 Using default role_id: 129922d5-b2c3-4ac9-89d7-0f1bb9946551 (Student)',
+      if (roleError || !role) {
+        this.logger.error(
+          `❌ Role '${roleName}' not found in database`,
+          roleError,
         );
-      } else {
-        console.log('✅ Found role:', role);
+        throw new InternalServerErrorException(
+          `Role '${roleName}' not found. Please ensure roles table is properly seeded.`,
+        );
       }
 
-      const roleId = role?.id || '129922d5-b2c3-4ac9-89d7-0f1bb9946551'; // Student role ID
+      const roleId: string = role.id;
 
       if (checkError && checkError.code !== 'PGRST116') {
         // PGRST116 = no rows returned
@@ -186,7 +191,7 @@ export class AuthService {
           id: authUser.id,
           email: authUser.email,
           full_name: authUser.user_metadata?.full_name || authUser.email,
-          role_id: roleId,
+          ...(roleId ? { role_id: roleId } : {}),
           status: 'Active',
         };
 
@@ -208,7 +213,8 @@ export class AuthService {
 
         // Check if user needs updating (wrong email or missing role_id)
         const needsUpdate =
-          existingUser.email !== authUser.email || !existingUser.role_id;
+          existingUser.email !== authUser.email ||
+          (!existingUser.role_id && !!roleId);
 
         if (needsUpdate) {
           console.log('🔄 Updating user information...');
@@ -219,7 +225,7 @@ export class AuthService {
             updateData.full_name =
               authUser.user_metadata?.full_name || authUser.email;
           }
-          if (!existingUser.role_id) {
+          if (!existingUser.role_id && roleId) {
             updateData.role_id = roleId;
           }
 

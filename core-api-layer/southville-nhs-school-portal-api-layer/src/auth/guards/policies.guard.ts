@@ -103,7 +103,7 @@ export class PoliciesGuard implements CanActivate {
         sanitizedDomainParam,
         sanitizedEntityId,
       );
-      if (!domainId) {
+      if (domainId === null || domainId === undefined) {
         this.logger.warn(
           `Could not resolve domain ID for ${sanitizedDomainParam}:${sanitizedEntityId}`,
         );

@@ -8,14 +8,14 @@ import {
 
 @Entity('permissions')
 export class Permission {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'text', unique: true, nullable: false })
   key: string; // e.g., 'club.manage_finances', 'event.edit_details'
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description: string | null;
 
   @CreateDateColumn()
   created_at: Date;

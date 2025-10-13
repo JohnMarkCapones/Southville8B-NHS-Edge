@@ -12,14 +12,14 @@ import { Permission } from './permission.entity';
 
 @Entity('domain_role_permissions')
 export class DomainRolePermission {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ type: 'int', nullable: false })
-  domain_role_id: number;
+  @Column({ type: 'uuid', nullable: false })
+  domain_role_id: string;
 
-  @Column({ type: 'int', nullable: false })
-  permission_id: number;
+  @Column({ type: 'uuid', nullable: false })
+  permission_id: string;
 
   @Column({ type: 'boolean', default: true })
   allowed: boolean;

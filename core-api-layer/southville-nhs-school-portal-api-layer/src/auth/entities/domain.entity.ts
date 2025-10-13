@@ -8,8 +8,8 @@ import {
 
 @Entity('domains')
 export class Domain {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'text', nullable: false })
   type: string; // e.g., 'club', 'event', 'project'

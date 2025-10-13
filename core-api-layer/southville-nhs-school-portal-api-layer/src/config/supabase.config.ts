@@ -12,11 +12,6 @@ export default registerAs('supabase', () => ({
       persistSession: true,
       autoRefreshToken: true,
     },
-    global: {
-      headers: {
-        'x-my-custom-header': 'my-value',
-      },
-    },
   },
 
   // Pool settings (if using connection pooling)

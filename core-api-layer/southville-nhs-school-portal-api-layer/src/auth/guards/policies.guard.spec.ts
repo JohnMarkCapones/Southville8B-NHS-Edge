@@ -96,7 +96,7 @@ describe('PoliciesGuard', () => {
       const params = { clubId: 'club-123' };
       const context = mockExecutionContext(user, policyConfig, params);
 
-      domainMappingService.resolveDomainId.mockResolvedValue(1);
+      domainMappingService.resolveDomainId.mockResolvedValue('domain-123');
       policyEngineService.evaluatePermission.mockResolvedValue(true);
 
       const result = await guard.canActivate(context);
@@ -122,7 +122,7 @@ describe('PoliciesGuard', () => {
       const params = { clubId: 'club-123' };
       const context = mockExecutionContext(user, policyConfig, params);
 
-      domainMappingService.resolveDomainId.mockResolvedValue(1);
+      domainMappingService.resolveDomainId.mockResolvedValue('domain-123');
       policyEngineService.evaluatePermission.mockResolvedValue(false);
 
       await expect(guard.canActivate(context)).rejects.toThrow(
@@ -171,7 +171,7 @@ describe('PoliciesGuard', () => {
       const params = { clubId: 'club-123<script>' };
       const context = mockExecutionContext(user, policyConfig, params);
 
-      domainMappingService.resolveDomainId.mockResolvedValue(1);
+      domainMappingService.resolveDomainId.mockResolvedValue('domain-123');
       policyEngineService.evaluatePermission.mockResolvedValue(true);
 
       const result = await guard.canActivate(context);

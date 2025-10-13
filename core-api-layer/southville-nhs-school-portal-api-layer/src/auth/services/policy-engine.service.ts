@@ -1,4 +1,9 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ForbiddenException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 interface CachedPermission {
@@ -27,7 +32,7 @@ export class PolicyEngineService {
    */
   async evaluatePermission(
     userId: string,
-    domainId: number,
+    domainId: string,
     permissionKey: string,
   ): Promise<boolean> {
     try {
@@ -75,10 +80,12 @@ export class PolicyEngineService {
 
       if (error) {
         this.logger.error(
-          `Error evaluating permission for user ${userId}`,
+          `Database error evaluating permission for user ${userId}`,
           error,
         );
-        throw new ForbiddenException('Failed to evaluate permissions');
+        throw new InternalServerErrorException(
+          'Failed to evaluate permissions',
+        );
       }
 
       if (!data || data.length === 0) {
@@ -110,10 +117,10 @@ export class PolicyEngineService {
         throw error;
       }
       this.logger.error(
-        `Unexpected error evaluating permission for user ${userId}`,
+        `System error evaluating permission for user ${userId}`,
         error,
       );
-      throw new ForbiddenException('Failed to evaluate permissions');
+      throw new InternalServerErrorException('Permission evaluation failed');
     }
   }
 
@@ -125,7 +132,7 @@ export class PolicyEngineService {
    */
   async getUserDomainPermissions(
     userId: string,
-    domainId: number,
+    domainId: string,
   ): Promise<Array<{ permissionKey: string; allowed: boolean }>> {
     try {
       const supabase = this.supabaseService.getServiceClient();
@@ -152,10 +159,12 @@ export class PolicyEngineService {
 
       if (error) {
         this.logger.error(
-          `Error getting user domain permissions for user ${userId}`,
+          `Database error getting user domain permissions for user ${userId}`,
           error,
         );
-        throw new ForbiddenException('Failed to get user permissions');
+        throw new InternalServerErrorException(
+          'Failed to get user permissions',
+        );
       }
 
       if (!data || data.length === 0) {
@@ -189,10 +198,10 @@ export class PolicyEngineService {
         throw error;
       }
       this.logger.error(
-        `Unexpected error getting user domain permissions for user ${userId}`,
+        `System error getting user domain permissions for user ${userId}`,
         error,
       );
-      throw new ForbiddenException('Failed to get user permissions');
+      throw new InternalServerErrorException('Failed to get user permissions');
     }
   }
 
@@ -202,7 +211,7 @@ export class PolicyEngineService {
    * @param domainId - The domain ID
    * @returns Promise<boolean> - Whether the user has any role in the domain
    */
-  async hasAnyDomainRole(userId: string, domainId: number): Promise<boolean> {
+  async hasAnyDomainRole(userId: string, domainId: string): Promise<boolean> {
     try {
       const supabase = this.supabaseService.getServiceClient();
 

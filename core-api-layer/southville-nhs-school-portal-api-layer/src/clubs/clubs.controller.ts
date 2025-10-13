@@ -27,7 +27,7 @@ import { UpdateClubDto } from './dto/update-club.dto';
 
 @ApiTags('clubs')
 @Controller('clubs')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class ClubsController {
   constructor(private readonly clubsService: ClubsService) {}

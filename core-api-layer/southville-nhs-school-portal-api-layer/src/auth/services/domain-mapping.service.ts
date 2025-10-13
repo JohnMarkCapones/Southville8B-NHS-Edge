@@ -59,15 +59,16 @@ export class DomainMappingService {
    * Resolves domain ID from entity ID and parameter name
    * @param paramName - The route parameter name (e.g., 'clubId', 'eventId')
    * @param entityId - The entity ID value
-   * @returns Promise<number | null> - The domain ID or null if not found
+   * @returns Promise<string | null> - The domain ID or null if not found
    */
   async resolveDomainId(
     paramName: string,
     entityId: string,
-  ): Promise<number | null> {
+  ): Promise<string | null> {
     try {
-      // Extract entity type from parameter name (e.g., 'clubId' -> 'club')
-      const entityType = this.extractEntityTypeFromParam(paramName);
+      // Normalize parameter name
+      const normalizedParam = paramName.trim().toLowerCase();
+      const entityType = this.extractEntityTypeFromParam(normalizedParam);
 
       if (!entityType) {
         this.logger.warn(
@@ -90,32 +91,23 @@ export class DomainMappingService {
         .from(mapping.tableName)
         .select(mapping.domainIdColumn)
         .eq('id', entityId)
-        .single();
+        .maybeSingle(); // Changed from .single() to handle missing rows gracefully
 
-      if (error) {
-        this.logger.error(
-          `Error resolving domain ID for ${entityType}:${entityId}`,
-          error,
+      if (error || !data) {
+        this.logger.warn(
+          `Domain not found for ${entityType} with id ${entityId}`,
         );
         return null;
       }
 
-      if (!data) {
-        this.logger.warn(`Entity not found: ${entityType}:${entityId}`);
-        return null;
-      }
-
-      const domainId = data[mapping.domainIdColumn];
+      const domainId = data[mapping.domainIdColumn] as string;
       this.logger.debug(
         `Resolved domain ID ${domainId} for ${entityType}:${entityId}`,
       );
 
       return domainId;
     } catch (error) {
-      this.logger.error(
-        `Failed to resolve domain ID for ${paramName}:${entityId}`,
-        error,
-      );
+      this.logger.error(`Error resolving domain ID: ${error.message}`);
       return null;
     }
   }

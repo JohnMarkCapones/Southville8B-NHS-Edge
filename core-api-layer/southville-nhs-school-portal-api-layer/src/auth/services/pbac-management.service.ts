@@ -240,10 +240,10 @@ export class PbacManagementService {
 
   /**
    * Gets all permissions
-   * @returns Promise<Array<{id: number, key: string, description: string}>>
+   * @returns Promise<Array<{id: string, key: string, description: string | null}>>
    */
   async getAllPermissions(): Promise<
-    Array<{ id: number; key: string; description: string }>
+    Array<{ id: string; key: string; description: string | null }>
   > {
     try {
       const supabase = this.supabaseService.getServiceClient();

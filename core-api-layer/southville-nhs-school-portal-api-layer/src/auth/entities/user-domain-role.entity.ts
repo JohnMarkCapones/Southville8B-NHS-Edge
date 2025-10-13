@@ -11,14 +11,14 @@ import { DomainRole } from './domain-role.entity';
 
 @Entity('user_domain_roles')
 export class UserDomainRole {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'uuid', nullable: false })
   user_id: string;
 
-  @Column({ type: 'int', nullable: false })
-  domain_role_id: number;
+  @Column({ type: 'uuid', nullable: false })
+  domain_role_id: string;
 
   @CreateDateColumn()
   created_at: Date;
