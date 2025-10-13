@@ -8,10 +8,12 @@ import {
   MaxLength,
   Min,
   Max,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { CreateUserDto, UserRole, UserType } from './create-user.dto';
 
-export class CreateStudentDto {
+export class CreateTeacherDto extends CreateUserDto {
   @IsString()
   @MinLength(2)
   @MaxLength(50)
@@ -47,80 +49,25 @@ export class CreateStudentDto {
   })
   middleName?: string;
 
-  @IsString()
-  @MinLength(5)
-  @MaxLength(20)
-  @ApiProperty({
-    example: 'STU-2024-001',
-    description: 'Student ID',
-    minLength: 5,
-    maxLength: 20,
-  })
-  studentId: string;
-
-  @IsString()
-  @MinLength(10)
-  @MaxLength(15)
-  @ApiProperty({
-    example: '123456789012',
-    description: 'LRN ID (used as email: lrn_id@student.local)',
-    minLength: 10,
-    maxLength: 15,
-  })
-  lrnId: string;
-
   @IsDateString()
   @ApiProperty({
-    example: '2008-05-15',
+    example: '1985-05-15',
     description: 'Birthday (used for password generation)',
     type: 'string',
     format: 'date',
   })
   birthday: string;
 
-  @IsString()
-  @MinLength(2)
-  @MaxLength(20)
-  @ApiProperty({
-    example: 'Grade 10',
-    description: 'Grade level',
-    minLength: 2,
-    maxLength: 20,
-  })
-  gradeLevel: string;
-
-  @IsNumber()
-  @Min(2000)
-  @Max(2030)
-  @ApiProperty({
-    example: 2024,
-    description: 'Enrollment year',
-    minimum: 2000,
-    maximum: 2030,
-  })
-  enrollmentYear: number;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  @ApiProperty({
-    example: 'Honor Student',
-    description: 'Honor status',
-    required: false,
-    maxLength: 50,
-  })
-  honorStatus?: string;
-
   @IsOptional()
   @IsNumber()
-  @Min(5)
-  @Max(25)
+  @Min(18)
+  @Max(80)
   @ApiProperty({
-    example: 16,
+    example: 35,
     description: 'Age',
     required: false,
-    minimum: 5,
-    maximum: 25,
+    minimum: 18,
+    maximum: 80,
   })
   age?: number;
 
@@ -128,7 +75,38 @@ export class CreateStudentDto {
   @IsUUID()
   @ApiProperty({
     required: false,
-    description: 'Section ID from sections table',
+    description: 'Subject specialization ID from subjects table',
   })
-  sectionId?: string;
+  subjectSpecializationId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  @ApiProperty({
+    required: false,
+    description: 'Department ID from departments table',
+  })
+  departmentId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(10)
+  @MaxLength(15)
+  @Matches(/^\+?[1-9]\d{1,14}$/, {
+    message: 'Phone number must be a valid international format',
+  })
+  @ApiProperty({
+    example: '+1234567890',
+    description: 'Phone number in international format',
+    required: false,
+    minLength: 10,
+    maxLength: 15,
+  })
+  phoneNumber?: string;
+
+  // Set default values for base class
+  constructor() {
+    super();
+    this.role = UserRole.TEACHER;
+    this.userType = UserType.TEACHER;
+  }
 }

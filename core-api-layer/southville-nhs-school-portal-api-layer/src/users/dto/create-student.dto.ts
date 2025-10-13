@@ -72,7 +72,7 @@ export class CreateStudentDto {
   @IsDateString()
   @ApiProperty({
     example: '2008-05-15',
-    description: 'Birthday (used for password generation)',
+    description: 'Birthday',
     type: 'string',
     format: 'date',
   })
@@ -129,6 +129,7 @@ export class CreateStudentDto {
   @ApiProperty({
     required: false,
     description: 'Section ID from sections table',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   sectionId?: string;
 }
