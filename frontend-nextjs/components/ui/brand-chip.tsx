@@ -21,9 +21,10 @@ export function BrandChip({ className }: BrandChipProps) {
     >
       <span className="relative h-8 w-8 md:h-9 md:w-9 rounded-full overflow-hidden ring-1 ring-slate-200 dark:ring-slate-700 bg-white">
         <Image
-          src="/logo.png"
+          src="/logo-48.webp"
           alt="School logo"
-          fill
+          width={48}
+          height={48}
           className="object-contain p-0.5"
           sizes="(max-width: 768px) 32px, 36px"
           priority
