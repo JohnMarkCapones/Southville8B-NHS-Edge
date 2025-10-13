@@ -1,0 +1,214 @@
+---
+description: Supabase Postgres Schema
+globs: ["src/**/*.ts"]
+alwaysApply: true
+---
+public schema 
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.admins (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  role_description text,
+  name character varying,
+  email character varying NOT NULL UNIQUE,
+  phone_number character varying,
+  CONSTRAINT admins_pkey PRIMARY KEY (id),
+  CONSTRAINT admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.clubs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  description text,
+  president_id uuid,
+  vp_id uuid,
+  secretary_id uuid,
+  advisor_id uuid,
+  domain_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clubs_pkey PRIMARY KEY (id),
+  CONSTRAINT clubs_president_id_fkey FOREIGN KEY (president_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_vp_id_fkey FOREIGN KEY (vp_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_secretary_id_fkey FOREIGN KEY (secretary_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_advisor_id_fkey FOREIGN KEY (advisor_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_domain_id_fkey FOREIGN KEY (domain_id) REFERENCES public.domains(id)
+);
+CREATE TABLE public.departments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  department_name character varying NOT NULL UNIQUE,
+  description text,
+  head_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  is_active boolean NOT NULL DEFAULT true,
+  CONSTRAINT departments_pkey PRIMARY KEY (id),
+  CONSTRAINT departments_head_id_fkey FOREIGN KEY (head_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.domain_role_permissions (
+  id numeric NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  domain_role_id uuid,
+  permission_id uuid,
+  allowed boolean,
+  CONSTRAINT domain_role_permissions_pkey PRIMARY KEY (id),
+  CONSTRAINT domain_role_permissions_domain_role_id_fkey FOREIGN KEY (domain_role_id) REFERENCES public.domain_roles(id),
+  CONSTRAINT domain_role_permissions_permission_id_fkey FOREIGN KEY (permission_id) REFERENCES public.permissions(id)
+);
+CREATE TABLE public.domain_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  domain_id uuid,
+  name text,
+  CONSTRAINT domain_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT domain_roles_domain_id_fkey FOREIGN KEY (domain_id) REFERENCES public.domains(id)
+);
+CREATE TABLE public.domains (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type text,
+  name text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_by uuid,
+  CONSTRAINT domains_pkey PRIMARY KEY (id),
+  CONSTRAINT domains_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  key text NOT NULL UNIQUE,
+  description text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT permissions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.positions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_id uuid,
+  name character varying NOT NULL,
+  description character varying,
+  key character varying NOT NULL UNIQUE,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT positions_pkey PRIMARY KEY (id),
+  CONSTRAINT positions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  avatar character varying,
+  address character varying,
+  bio text,
+  phone_number character varying,
+  social_media_links json,
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT roles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  grade_level character varying,
+  teacher_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  room_id uuid,
+  building_id uuid,
+  CONSTRAINT sections_pkey PRIMARY KEY (id),
+  CONSTRAINT sections_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.students (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  middle_name text,
+  student_id text NOT NULL,
+  lrn_id text NOT NULL,
+  grade_level text,
+  enrollment_year integer,
+  honor_status text,
+  rank integer,
+  section_id uuid,
+  age integer,
+  birthday date,
+  CONSTRAINT students_pkey PRIMARY KEY (id),
+  CONSTRAINT students_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT students_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.sections(id)
+);
+CREATE TABLE public.subjects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subject_name character varying NOT NULL,
+  description text,
+  grade_level integer,
+  department_id uuid,
+  color_hex character varying,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT subjects_pkey PRIMARY KEY (id),
+  CONSTRAINT subjects_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id)
+);
+CREATE TABLE public.teachers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  middle_name character varying,
+  age integer,
+  subject_specialization_id uuid,
+  department_id uuid,
+  advisory_section_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT teachers_pkey PRIMARY KEY (id),
+  CONSTRAINT teachers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT teachers_subject_specialization_id_fkey FOREIGN KEY (subject_specialization_id) REFERENCES public.subjects(id),
+  CONSTRAINT teachers_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id),
+  CONSTRAINT teachers_advisory_section_id_fkey FOREIGN KEY (advisory_section_id) REFERENCES public.sections(id)
+);
+CREATE TABLE public.user_domain_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  user_id uuid,
+  domain_role_id uuid,
+  CONSTRAINT user_domain_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_domain_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_domain_roles_domain_role_id_fkey FOREIGN KEY (domain_role_id) REFERENCES public.domain_roles(id)
+);
+CREATE TABLE public.user_positions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  position_id uuid NOT NULL,
+  assigned_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_positions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_positions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_positions_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions(id)
+);
+CREATE TABLE public.user_preferences (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  web_theme character varying NOT NULL DEFAULT 'light'::character varying,
+  desktop_theme character varying NOT NULL DEFAULT 'light'::character varying,
+  language character varying NOT NULL DEFAULT 'en'::character varying,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  deleted_at timestamp without time zone,
+  CONSTRAINT user_preferences_pkey PRIMARY KEY (id),
+  CONSTRAINT user_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  full_name character varying,
+  email character varying NOT NULL UNIQUE,
+  password_hash character varying,
+  role_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  status character varying NOT NULL DEFAULT 'Active'::character varying,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);

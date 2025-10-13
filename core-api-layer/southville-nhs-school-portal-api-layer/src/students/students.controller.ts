@@ -25,7 +25,7 @@ import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 
 @ApiTags('Students')
 @ApiBearerAuth('JWT-auth')
-@Controller('api/students')
+@Controller('students')
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 

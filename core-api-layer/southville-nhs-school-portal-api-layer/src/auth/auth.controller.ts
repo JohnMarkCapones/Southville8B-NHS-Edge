@@ -1,15 +1,17 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SupabaseUser } from './interfaces/supabase-user.interface';
 import { LoginDto, TokenVerifyDto } from './dto/login.dto';
 
 @ApiTags('Authentication')
-@Controller('api/auth')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Authenticate user with email and password',
@@ -93,6 +95,7 @@ export class AuthController {
   }
 
   @Post('verify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify JWT token',
