@@ -1,12 +1,13 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getAnnouncementBySlug } from "@/lib/announcements-data"
+import { getAnnouncementBySlug, announcementsData } from "@/lib/announcements-data"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { absoluteUrl } from "@/lib/seo"
 import AnnouncementDetailClient from "./client-page"
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const announcement = getAnnouncementBySlug(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const announcement = getAnnouncementBySlug(slug)
   if (!announcement) {
     return {
       title: "Announcement Not Found | Southville 8B NHS",
@@ -45,8 +46,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 // Server component: no client-only UI or icon config here
 
-export default function AnnouncementDetailPage({ params }: { params: { slug: string } }) {
-  const announcement = getAnnouncementBySlug(params.slug)
+export default async function AnnouncementDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const announcement = getAnnouncementBySlug(slug)
   if (!announcement) {
     notFound()
   }
@@ -60,7 +62,15 @@ export default function AnnouncementDetailPage({ params }: { params: { slug: str
           { name: announcement.title, url: absoluteUrl(`/guess/announcements/${announcement.slug}`) },
         ])}
       />
-      <AnnouncementDetailClient params={params} />
+      <AnnouncementDetailClient params={{ slug }} />
     </>
   )
+}
+
+// Enable full static generation with ISR for announcement details
+export const dynamic = "force-static"
+export const revalidate = 86400 // revalidate daily
+
+export function generateStaticParams() {
+  return announcementsData.map((a) => ({ slug: a.slug }))
 }

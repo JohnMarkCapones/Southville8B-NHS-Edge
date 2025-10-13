@@ -1,3 +1,5 @@
+export const dynamic = "force-static"
+export const revalidate = 86400
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +38,7 @@ export default function AlumniPage() {
             {MOCK_ALUMNI.map((alumni, index) => (
               <AnimatedCard
                 key={alumni.id}
-                animation="lift"
+                animation="glow"
                 variant="gradient" // Changed from boolean gradient prop to variant="gradient"
                 className="overflow-hidden animate-fadeIn"
                 style={{ animationDelay: `${index * 0.2}s` }}
@@ -92,7 +94,7 @@ export default function AlumniPage() {
             ].map((stat, index) => (
               <AnimatedCard
                 key={index}
-                animation="float"
+                animation="glow"
                 className="text-center p-6 animate-fadeIn"
                 style={{ animationDelay: `${index * 0.3}s` }}
               >
@@ -113,12 +115,12 @@ export default function AlumniPage() {
             Stay connected with your alma mater and fellow graduates. Share your success story!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <AnimatedButton
-              variant="outline"
-              size="lg"
-              animation="lift"
-              className="text-white border-white hover:bg-white/10"
-            >
+              <AnimatedButton
+                variant="outline"
+                size="lg"
+                animation="glow"
+                className="text-white border-white hover:bg-white/10"
+              >
               Register as Alumni
             </AnimatedButton>
             <AnimatedButton

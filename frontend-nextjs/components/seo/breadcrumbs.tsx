@@ -1,5 +1,3 @@
-"use client"
-
 import Link from "next/link"
 
 export type Crumb = { name: string; href: string }

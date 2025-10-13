@@ -133,13 +133,16 @@ export function HeroSection() {
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="none"
           poster="/placeholder.jpg"
           onLoadedMetadata={onLoaded}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           aria-hidden="true"
+          loading="lazy"
         >
+          {/* Add WebM format when available - better compression */}
+          {/* <source src="/videos/hero-blue-campus.webm" type="video/webm" /> */}
           <source src="/videos/hero-blue-campus.mp4" type="video/mp4" />
           {"Your browser does not support the video tag."}
         </video>
@@ -160,9 +163,10 @@ export function HeroSection() {
           <div className="inline-flex items-center gap-3 rounded-full border bg-white text-slate-900 border-slate-200/70 shadow-sm px-2.5 pr-3 py-1.5 dark:bg-slate-800/80 dark:text-slate-100 dark:border-slate-700/60 backdrop-blur">
             <div className="relative h-8 w-8 md:h-9 md:w-9 rounded-full overflow-hidden ring-1 ring-slate-200 dark:ring-slate-700 bg-white">
               <Image
-                src="/logo.png"
+                src="/logo-48.webp"
                 alt="School logo"
-                fill
+                width={48}
+                height={48}
                 sizes="(max-width: 768px) 32px, 36px"
                 className="object-contain p-0.5"
                 priority
