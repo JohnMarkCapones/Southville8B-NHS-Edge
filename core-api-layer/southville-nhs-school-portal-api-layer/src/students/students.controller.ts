@@ -8,6 +8,9 @@ import {
   Delete,
   UseGuards,
   Query,
+  ForbiddenException,
+  ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,6 +35,7 @@ import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 @Controller('students')
 @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
 export class StudentsController {
+  private readonly logger = new Logger(StudentsController.name);
   constructor(private readonly studentsService: StudentsService) {}
 
   @Post()
@@ -78,15 +82,15 @@ export class StudentsController {
   })
   async findAll(
     @AuthUser() user: SupabaseUser,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
     @Query('search') search?: string,
     @Query('gradeLevel') gradeLevel?: string,
     @Query('sectionId') sectionId?: string,
     @Query('sortBy') sortBy: string = 'created_at',
     @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
   ) {
-    console.log(`Fetching students for user: ${user.email} (${user.id})`);
+    this.logger.log('Fetching students');
     return this.studentsService.findAll({
       page,
       limit,
@@ -114,11 +118,11 @@ export class StudentsController {
     if (user.role === 'Student') {
       const student = await this.studentsService.findOne(id);
       if (student.user_id !== user.id) {
-        throw new Error('Students can only view their own data');
+        throw new ForbiddenException('Students can only view their own data');
       }
     }
 
-    console.log(`Fetching student ${id} for user: ${user.email} (${user.id})`);
+    this.logger.log(`Fetching student ${id}`);
     return this.studentsService.findOne(id);
   }
 

@@ -8,6 +8,9 @@ import {
   Delete,
   Query,
   UseGuards,
+  ForbiddenException,
+  ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,6 +37,7 @@ import { UserRole } from '../users/dto/create-user.dto';
 @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class SectionsController {
+  private readonly logger = new Logger(SectionsController.name);
   constructor(private readonly sectionsService: SectionsService) {}
 
   @Post()
@@ -50,7 +54,7 @@ export class SectionsController {
     @Body() createSectionDto: CreateSectionDto,
     @AuthUser() user: SupabaseUser,
   ) {
-    console.log(`Creating section for user: ${user.email} (${user.id})`);
+    this.logger.log('Creating section for admin user');
     return this.sectionsService.create(createSectionDto);
   }
 
@@ -76,8 +80,8 @@ export class SectionsController {
   })
   async findAll(
     @AuthUser() user: SupabaseUser,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
     @Query('search') search?: string,
     @Query('gradeLevel') gradeLevel?: string,
     @Query('teacherId') teacherId?: string,
@@ -110,7 +114,9 @@ export class SectionsController {
   ) {
     // Teachers can only view their own sections
     if (user.role === 'Teacher' && user.id !== teacherId) {
-      throw new Error('Forbidden - Can only view your own sections');
+      throw new ForbiddenException(
+        'Forbidden - Can only view your own sections',
+      );
     }
 
     return this.sectionsService.getSectionsByTeacher(teacherId);

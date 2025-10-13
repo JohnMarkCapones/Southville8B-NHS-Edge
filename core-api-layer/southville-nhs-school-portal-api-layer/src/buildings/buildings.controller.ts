@@ -8,6 +8,8 @@ import {
   Delete,
   Query,
   UseGuards,
+  ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,6 +36,7 @@ import { UserRole } from '../users/dto/create-user.dto';
 @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class BuildingsController {
+  private readonly logger = new Logger(BuildingsController.name);
   constructor(private readonly buildingsService: BuildingsService) {}
 
   @Post()
@@ -53,7 +56,7 @@ export class BuildingsController {
     @Body() createBuildingDto: CreateBuildingDto,
     @AuthUser() user: SupabaseUser,
   ) {
-    console.log(`Creating building for user: ${user.email} (${user.id})`);
+    this.logger.log('Creating building for admin user');
     return this.buildingsService.create(createBuildingDto);
   }
 
@@ -77,8 +80,8 @@ export class BuildingsController {
   })
   async findAll(
     @AuthUser() user: SupabaseUser,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
     @Query('search') search?: string,
     @Query('sortBy') sortBy: string = 'created_at',
     @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',

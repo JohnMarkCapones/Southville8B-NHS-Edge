@@ -136,8 +136,8 @@ export class StudentsService {
 
       if (publicError) {
         this.logger.error('Error creating public user:', publicError);
-        // Rollback: Delete auth user
-        await supabase.auth.admin.deleteUser(email);
+        // Rollback: Delete auth user by ID
+        await supabase.auth.admin.deleteUser(authUser.user.id);
         throw new InternalServerErrorException(
           `Failed to create user record: ${publicError.message}`,
         );
@@ -166,8 +166,10 @@ export class StudentsService {
       if (studentError) {
         this.logger.error('Error creating student record:', studentError);
         // Rollback: Delete auth user and public user
-        await supabase.auth.admin.deleteUser(email);
-        await supabase.from('users').delete().eq('id', authUser.user.id);
+        if (authUser?.user?.id) {
+          await supabase.auth.admin.deleteUser(authUser.user.id);
+          await supabase.from('users').delete().eq('id', authUser.user.id);
+        }
         throw new InternalServerErrorException(
           `Failed to create student record: ${studentError.message}`,
         );
@@ -210,11 +212,14 @@ export class StudentsService {
       sortOrder = 'desc',
     } = filters;
 
-    let query = supabase.from('students').select(`
+    let query = supabase.from('students').select(
+      `
         *,
         user:users(email, full_name, status, created_at),
         section:sections(name, grade_level)
-      `);
+      `,
+      { count: 'exact' },
+    );
 
     // Apply filters
     if (search) {

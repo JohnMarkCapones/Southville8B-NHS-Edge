@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Teacher } from './teacher.entity';
 import { Admin } from './admin.entity';
-import { Student } from './student.entity';
+import { Student } from '../../students/entities/student.entity';
 
 export class User {
   @ApiProperty({ description: 'User ID (UUID)' })

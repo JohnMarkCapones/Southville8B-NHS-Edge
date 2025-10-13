@@ -22,8 +22,8 @@ import {
 import { User } from './entities/user.entity';
 import { Teacher } from './entities/teacher.entity';
 import { Admin } from './entities/admin.entity';
-import { Student } from './entities/student.entity';
-import * as csv from 'csv-parser';
+import { Student } from '../students/entities/student.entity';
+import csv from 'csv-parser';
 import { Parser } from 'json2csv';
 
 @Injectable()
@@ -50,14 +50,16 @@ export class UsersService {
   }
 
   /**
-   * Generate password from birthday (YYYYMMDD format)
+   * Generate cryptographically secure random password
    */
-  private generatePasswordFromBirthday(birthday: string): string {
-    const date = new Date(birthday);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}${month}${day}`;
+  private generateSecurePassword(): string {
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   }
 
   /**
@@ -207,7 +209,7 @@ export class UsersService {
       .insert({
         user_id: userId,
         role_description: adminData.roleDescription,
-        name: adminData.name,
+        name: adminData.fullName,
         email: adminData.email,
         phone_number: adminData.phoneNumber,
       })
@@ -266,6 +268,9 @@ export class UsersService {
    * Main user creation method
    */
   async createUser(userData: CreateUserDto, createdBy: string): Promise<any> {
+    let authUserId: string | null = null;
+    let publicUserId: string | null = null;
+
     try {
       // Validate email uniqueness
       await this.validateEmailUniqueness(userData.email);
@@ -276,13 +281,12 @@ export class UsersService {
         throw new BadRequestException(`Role '${userData.role}' does not exist`);
       }
 
-      // Generate password from birthday
-      const password = this.generatePasswordFromBirthday(
-        (userData as any).birthday,
-      );
+      // Generate secure password
+      const password = this.generateSecurePassword();
 
       // Step 1: Create user in Supabase Auth
       const authUser = await this.createAuthUser(userData, password);
+      authUserId = authUser.id;
 
       // Step 2: Create user in public.users table
       const publicUser = await this.createPublicUser(
@@ -290,6 +294,7 @@ export class UsersService {
         userData,
         roleId,
       );
+      publicUserId = publicUser.id;
 
       // Step 3: Create specific user type record
       let specificRecord: any = null;
@@ -329,17 +334,25 @@ export class UsersService {
         message: `${userData.userType} created successfully`,
       };
     } catch (error) {
-      // Rollback: Delete auth user if it was created
-      if (
-        error.message.includes('Failed to create user record') ||
-        (error.message.includes('Failed to create') &&
-          error.message.includes('record'))
-      ) {
+      // Rollback: Clean up created records
+      const supabase = this.getSupabaseClient();
+
+      if (authUserId) {
         try {
-          const supabase = this.getSupabaseClient();
-          await supabase.auth.admin.deleteUser(userData.email);
+          await supabase.auth.admin.deleteUser(authUserId);
         } catch (rollbackError) {
-          this.logger.error('Error during rollback:', rollbackError);
+          this.logger.error('Error during auth user rollback:', rollbackError);
+        }
+      }
+
+      if (publicUserId) {
+        try {
+          await supabase.from('users').delete().eq('id', publicUserId);
+        } catch (rollbackError) {
+          this.logger.error(
+            'Error during public user rollback:',
+            rollbackError,
+          );
         }
       }
 
@@ -453,17 +466,20 @@ export class UsersService {
       sortOrder = 'desc',
     } = filters;
 
-    let query = supabase.from('users').select(`
+    let query = supabase.from('users').select(
+      `
         *,
         role:roles(name),
         teacher:teachers(*),
         admin:admins(*),
         student:students(*)
-      `);
+      `,
+      { count: 'exact' },
+    );
 
     // Apply filters
     if (role) {
-      query = query.eq('role.name', role);
+      query = query.filter('roles.name', 'eq', role);
     }
     if (status) {
       query = query.eq('status', status);
@@ -529,14 +545,24 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     const supabase = this.getSupabaseClient();
 
+    const updateData: any = {
+      email: dto.email,
+      full_name: dto.fullName,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Handle role update with validation
+    if (dto.role) {
+      const roleId = await this.getRoleIdByName(dto.role);
+      if (!roleId) {
+        throw new NotFoundException(`Role '${dto.role}' not found`);
+      }
+      updateData.role_id = roleId;
+    }
+
     const { data: user, error } = await supabase
       .from('users')
-      .update({
-        email: dto.email,
-        full_name: dto.fullName,
-        role_id: dto.role ? await this.getRoleIdByName(dto.role) : undefined,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

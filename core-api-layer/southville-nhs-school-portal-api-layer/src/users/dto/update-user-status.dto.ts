@@ -6,8 +6,27 @@ import {
   IsDateString,
   Min,
   Max,
+  ValidateIf,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+@ValidatorConstraint({ name: 'atLeastOneSuspensionField', async: false })
+class AtLeastOneSuspensionFieldConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: any, args: ValidationArguments) {
+    const object = args.object as any;
+    return !!(object.duration || object.suspendedUntil);
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'Either duration or suspendedUntil must be provided';
+  }
+}
 
 export enum UserStatus {
   ACTIVE = 'Active',
@@ -41,7 +60,7 @@ export class SuspendUserDto {
   })
   reason: string;
 
-  @IsOptional()
+  @ValidateIf((o) => !o.suspendedUntil)
   @IsNumber()
   @Min(1)
   @Max(365)
@@ -54,7 +73,7 @@ export class SuspendUserDto {
   })
   duration?: number;
 
-  @IsOptional()
+  @ValidateIf((o) => !o.duration)
   @IsDateString()
   @ApiProperty({
     required: false,
@@ -62,4 +81,7 @@ export class SuspendUserDto {
     example: '2024-12-31',
   })
   suspendedUntil?: string;
+
+  @Validate(AtLeastOneSuspensionFieldConstraint)
+  _validateSuspensionFields?: any;
 }

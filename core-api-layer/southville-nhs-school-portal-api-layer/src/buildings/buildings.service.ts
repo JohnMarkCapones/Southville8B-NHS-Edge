@@ -93,11 +93,14 @@ export class BuildingsService {
       sortOrder = 'desc',
     } = filters;
 
-    let query = supabase.from('buildings').select(`
+    let query = supabase.from('buildings').select(
+      `
       *,
       floors(id, name, number),
       floors_count:floors(count)
-    `);
+    `,
+      { count: 'exact' },
+    );
 
     // Apply filters
     if (search) {
@@ -246,13 +249,17 @@ export class BuildingsService {
       .eq('building_id', id);
 
     // Get rooms count and total capacity
+    const { data: floors } = await supabase
+      .from('floors')
+      .select('id')
+      .eq('building_id', id);
+
+    const floorIds = floors?.map((f) => f.id) || [];
+
     const { data: roomsData } = await supabase
       .from('rooms')
       .select('capacity')
-      .eq(
-        'floor_id',
-        supabase.from('floors').select('id').eq('building_id', id),
-      );
+      .in('floor_id', floorIds);
 
     const roomsCount = roomsData?.length || 0;
     const totalRoomsCapacity =

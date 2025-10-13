@@ -72,7 +72,7 @@ export class CreateStudentDto {
   @IsDateString()
   @ApiProperty({
     example: '2008-05-15',
-    description: 'Birthday (used for password generation)',
+    description: 'Birthday',
     type: 'string',
     format: 'date',
   })

@@ -10,6 +10,8 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,7 +23,8 @@ import {
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PoliciesGuard } from '../auth/guards/policies.guard';
-import { Roles, UserRole } from '../auth/decorators/roles.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from './dto/create-user.dto';
 import { Policies } from '../auth/decorators/policies.decorator';
 import { AuthUser } from '../auth/auth-user.decorator';
 import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
@@ -126,8 +129,8 @@ export class UsersController {
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   async findAll(
     @AuthUser() user: SupabaseUser,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
@@ -145,6 +148,23 @@ export class UsersController {
     });
   }
 
+  @Get('export')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Export users to CSV (Admin only)' })
+  @ApiQuery({ name: 'format', required: false, enum: ['csv'] })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    enum: ['Admin', 'Teacher', 'Student'],
+  })
+  async exportUsers(
+    @AuthUser() user: SupabaseUser,
+    @Query('format') format: 'csv' = 'csv',
+    @Query('role') role?: string,
+  ) {
+    return this.usersService.exportUsers(format, { role });
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get a specific user' })
@@ -153,7 +173,7 @@ export class UsersController {
   async findOne(@Param('id') id: string, @AuthUser() user: SupabaseUser) {
     // Students can only view their own data
     if (user.role === 'Student' && user.id !== id) {
-      throw new Error('Students can only view their own data');
+      throw new ForbiddenException('Students can only view their own data');
     }
     return this.usersService.findOne(id);
   }
@@ -178,23 +198,6 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(@Param('id') id: string, @AuthUser() user: SupabaseUser) {
     return this.usersService.remove(id);
-  }
-
-  @Get('export')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Export users to CSV (Admin only)' })
-  @ApiQuery({ name: 'format', required: false, enum: ['csv'] })
-  @ApiQuery({
-    name: 'role',
-    required: false,
-    enum: ['Admin', 'Teacher', 'Student'],
-  })
-  async exportUsers(
-    @AuthUser() user: SupabaseUser,
-    @Query('format') format: 'csv' = 'csv',
-    @Query('role') role?: string,
-  ) {
-    return this.usersService.exportUsers(format, { role });
   }
 
   @Patch(':id/status')
@@ -231,7 +234,7 @@ export class UsersController {
   ) {
     // Students can only view their own profile
     if (user.role === 'Student' && user.id !== id) {
-      throw new Error('Students can only view their own profile');
+      throw new ForbiddenException('Students can only view their own profile');
     }
     return this.usersService.findOne(id);
   }

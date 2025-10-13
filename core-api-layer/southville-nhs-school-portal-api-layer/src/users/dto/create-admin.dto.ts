@@ -10,21 +10,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { CreateUserDto, UserRole, UserType } from './create-user.dto';
 
 export class CreateAdminDto extends CreateUserDto {
-  @IsString()
-  @MinLength(2)
-  @MaxLength(100)
-  @ApiProperty({
-    example: 'John Doe',
-    description: 'Full name',
-    minLength: 2,
-    maxLength: 100,
-  })
-  name: string;
-
   @IsDateString()
   @ApiProperty({
     example: '1980-03-20',
-    description: 'Birthday (used for password generation)',
+    description: 'Birthday',
     type: 'string',
     format: 'date',
   })

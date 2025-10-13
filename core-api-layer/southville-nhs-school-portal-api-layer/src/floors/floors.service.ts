@@ -111,11 +111,14 @@ export class FloorsService {
       sortOrder = 'desc',
     } = filters;
 
-    let query = supabase.from('floors').select(`
+    let query = supabase.from('floors').select(
+      `
       *,
       building:buildings(id, building_name, code),
       rooms(id, room_number, name, capacity, status)
-    `);
+    `,
+      { count: 'exact' },
+    );
 
     // Apply filters
     if (search) {
@@ -206,17 +209,22 @@ export class FloorsService {
   async update(id: string, updateFloorDto: UpdateFloorDto): Promise<Floor> {
     const supabase = this.getSupabaseClient();
 
+    // Get existing floor to determine effective buildingId
+    const existingFloor = await this.findOne(id);
+    const effectiveBuildingId =
+      updateFloorDto.buildingId ?? existingFloor.buildingId;
+
     // Check if floor number already exists in this building (if updating number)
     if (updateFloorDto.number) {
-      const { data: existingFloor } = await supabase
+      const { data: duplicateFloor } = await supabase
         .from('floors')
         .select('id')
-        .eq('building_id', updateFloorDto.buildingId || '')
+        .eq('building_id', effectiveBuildingId)
         .eq('number', updateFloorDto.number)
         .neq('id', id)
         .single();
 
-      if (existingFloor) {
+      if (duplicateFloor) {
         throw new ConflictException(
           `Floor number ${updateFloorDto.number} already exists in this building`,
         );

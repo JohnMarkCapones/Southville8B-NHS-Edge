@@ -106,11 +106,14 @@ export class SectionsService {
       sortOrder = 'desc',
     } = filters;
 
-    let query = supabase.from('sections').select(`
+    let query = supabase.from('sections').select(
+      `
       *,
       teacher:users(id, full_name, email),
       students:students(id, first_name, last_name, student_id)
-    `);
+    `,
+      { count: 'exact' },
+    );
 
     // Apply filters
     if (search) {
