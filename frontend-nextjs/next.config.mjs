@@ -1,3 +1,4 @@
+import bundleAnalyzer from "@next/bundle-analyzer"
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -7,10 +8,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-<<<<<<< Updated upstream
     unoptimized: true,
     // Allow local placeholder SVG with query params (required from Next.js 16)
-=======
     // Enable Next.js automatic image optimization
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -18,7 +17,6 @@ const nextConfig = {
     // Cache optimized images for 1 year
     minimumCacheTTL: 31536000,
     // Allow local images (required from Next.js 16)
->>>>>>> Stashed changes
     localPatterns: [
       {
         pathname: "/placeholder.svg",
@@ -43,8 +41,6 @@ const nextConfig = {
     // We intentionally use SVG placeholders
     dangerouslyAllowSVG: true,
   },
-<<<<<<< Updated upstream
-=======
   // Optimize CSS and JavaScript output
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
@@ -58,7 +54,6 @@ const nextConfig = {
   },
   // Output standalone for better production performance
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
->>>>>>> Stashed changes
   async redirects() {
     return [
       {
@@ -70,4 +65,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default bundleAnalyzer({ enabled: process.env.ANALYZE === "true" })(nextConfig)

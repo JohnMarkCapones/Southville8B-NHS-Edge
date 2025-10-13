@@ -7,6 +7,7 @@ import { BackToTop } from "@/components/ui/back-to-top"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { ConditionalLayout } from "@/components/conditional-layout"
 import { Analytics } from "@vercel/analytics/react"
+
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { SWRConfig } from "swr"
 

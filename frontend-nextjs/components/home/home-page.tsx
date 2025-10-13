@@ -497,6 +497,7 @@ export default function HomePage() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover group-hover:scale-110 transition-transform duration-500"
                       priority={index === 0}
+                      loading={index === 0 ? undefined : "lazy"}
                     />
                     <div className="absolute top-2 xs:top-4 right-2 xs:right-4">
                       <Badge

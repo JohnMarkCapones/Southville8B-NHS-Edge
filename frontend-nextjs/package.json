@@ -5,12 +5,15 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "analyze": "set ANALYZE=true&& next build",
+    "analyze:dev": "set ANALYZE=true&& next dev",
     "lint": "next lint",
     "start": "next start"
   },
   "dependencies": {
     "@hello-pangea/dnd": "latest",
     "@hookform/resolvers": "^3.9.1",
+    "@next/bundle-analyzer": "^14.2.18",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -78,8 +81,23 @@
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "critters": "^0.0.23",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "last 2 versions",
+      "not dead",
+      "not ie 11",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

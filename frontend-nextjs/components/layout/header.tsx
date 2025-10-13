@@ -161,8 +161,10 @@ export function Header() {
               <div className="relative flex-shrink-0">
                 <div className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 xl:w-11 xl:h-11 rounded-lg xs:rounded-xl overflow-hidden transition-all duration-300 shadow-md xs:shadow-lg group-hover:scale-105">
                   <img
-                    src="/logo.png"
+                    src="/logo-48.webp"
                     alt="Southville 8B NHS Logo"
+                    width="48"
+                    height="48"
                     className="w-full h-full object-cover transition-transform duration-300"
                   />
                 </div>

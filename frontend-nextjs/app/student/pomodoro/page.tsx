@@ -242,7 +242,7 @@ export default function PomodoroPage() {
     if (settings.notifications && "Notification" in window && Notification.permission === "granted") {
       new Notification(`${getTimerTitle()} completed!`, {
         body: timerState === "focus" ? "Time for a break!" : "Ready to focus again?",
-        icon: "/logo.png",
+        icon: "/logo-48.webp",
       })
     }
 

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Working Directory
 
-**All development work happens in: ``**
+**All development work happens in: `frontend-nextjs/`**
 
 ## Development Commands
 
