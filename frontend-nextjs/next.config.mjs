@@ -7,18 +7,58 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+<<<<<<< Updated upstream
     unoptimized: true,
     // Allow local placeholder SVG with query params (required from Next.js 16)
+=======
+    // Enable Next.js automatic image optimization
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Cache optimized images for 1 year
+    minimumCacheTTL: 31536000,
+    // Allow local images (required from Next.js 16)
+>>>>>>> Stashed changes
     localPatterns: [
       {
         pathname: "/placeholder.svg",
-        // Match any combination of these query params
+        // Match any query parameters for placeholder SVG
+        search: "*",
+      },
+      {
+        pathname: "/placeholder.svg",
+        // Match specific query parameters that are commonly used
         search: "height=*&width=*&text=*",
+      },
+      {
+        pathname: "/logo-48.webp",
+      },
+      {
+        pathname: "/logo-48.png",
+      },
+      {
+        pathname: "/logo.png",
       },
     ],
     // We intentionally use SVG placeholders
     dangerouslyAllowSVG: true,
   },
+<<<<<<< Updated upstream
+=======
+  // Optimize CSS and JavaScript output
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  // Enable experimental optimizations for better performance
+  experimental: {
+    optimizeCss: true, // Enable CSS optimization
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    // Improve bundling performance (PPR disabled - requires Next.js canary)
+    optimizeServerReact: true,
+  },
+  // Output standalone for better production performance
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+>>>>>>> Stashed changes
   async redirects() {
     return [
       {
