@@ -167,7 +167,7 @@ export class SectionsController {
     return this.sectionsService.update(id, updateSectionDto);
   }
 
-  @Delete(':id')   
+  @Delete(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete section by ID (Admin only)' })
   @ApiResponse({ status: 200, description: 'Section deleted successfully' })
