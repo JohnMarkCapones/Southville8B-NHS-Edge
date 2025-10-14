@@ -72,9 +72,12 @@ const CelebrationOverlay = dynamic(
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("academic")
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme } = useTheme()
-  const isGamingTheme = theme === "gaming"
-  const isDarkMode = theme === "dark" || theme === "gaming"
+
+  // Calculate theme values safely after mounting to avoid hydration mismatch
+  const isGamingTheme = mounted ? theme === "gaming" : false
+  const isDarkMode = mounted ? (theme === "dark" || theme === "gaming") : false
 
   // Generate background circles only on client to avoid hydration mismatch
   const [backgroundCircles, setBackgroundCircles] = useState<Array<{
@@ -85,6 +88,8 @@ export default function HomePage() {
   }>>([])
 
   useEffect(() => {
+    setMounted(true)
+
     // Generate random positions only on client side
     setBackgroundCircles(
       Array.from({ length: 6 }, () => ({
@@ -331,7 +336,7 @@ export default function HomePage() {
   ]
 
   return (
-    <div className={cn("min-h-screen", isDarkMode && "dark")}>      
+    <div className={cn("min-h-screen", isDarkMode && "dark")} suppressHydrationWarning>
       <section ref={heroRef}>
         <HeroSection />
       </section>

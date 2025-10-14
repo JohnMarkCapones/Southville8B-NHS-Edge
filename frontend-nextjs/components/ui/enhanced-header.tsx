@@ -125,8 +125,7 @@ export function EnhancedHeader() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  if (!mounted) return null
-
+  // Don't return null - causes hydration mismatch
   return (
     <header
       className={cn(
@@ -249,12 +248,13 @@ export function EnhancedHeader() {
                   size="icon"
                   animation="glow"
                   className="hover:bg-accent/50 hover:scale-110 transition-all duration-300"
+                  suppressHydrationWarning
                 >
-                  {theme === "light" ? (
+                  {mounted && theme === "light" ? (
                     <Sun className="h-4 w-4 text-yellow-500" />
-                  ) : theme === "dark" ? (
+                  ) : mounted && theme === "dark" ? (
                     <Moon className="h-4 w-4 text-blue-400" />
-                  ) : theme === "theme-colorblind" ? (
+                  ) : mounted && theme === "theme-colorblind" ? (
                     <Accessibility className="h-4 w-4 text-green-500" />
                   ) : (
                     <Palette className="h-4 w-4" />
