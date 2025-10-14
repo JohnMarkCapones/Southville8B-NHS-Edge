@@ -78,7 +78,7 @@ export class AlertsController {
     name: 'type',
     required: false,
     description: 'Filter by alert type',
-    enum: ['info', 'warning', 'success', 'error'],
+    enum: ['info', 'warning', 'success', 'error', 'system'],
   })
   @ApiQuery({
     name: 'includeExpired',
@@ -131,14 +131,19 @@ export class AlertsController {
     status: 401,
     description: 'Unauthorized',
   })
-  async findAll(@Query() queryDto: QueryAlertDto): Promise<{
+  async findAll(
+    @Query() queryDto: QueryAlertDto,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<{
     data: Alert[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }> {
-    return this.alertsService.findAll(queryDto);
+    // Convert string role to UserRole enum
+    const userRole = (user.role as UserRole) || UserRole.STUDENT;
+    return this.alertsService.findAll(queryDto, user.id, userRole);
   }
 
   @Get(':id')
@@ -165,8 +170,13 @@ export class AlertsController {
     status: 401,
     description: 'Unauthorized',
   })
-  async findOne(@Param('id') id: string): Promise<Alert> {
-    return this.alertsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<Alert> {
+    // Convert string role to UserRole enum
+    const userRole = (user.role as UserRole) || UserRole.STUDENT;
+    return this.alertsService.findOne(id, user.id, userRole);
   }
 
   @Patch(':id')

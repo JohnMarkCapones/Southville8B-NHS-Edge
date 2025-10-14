@@ -7,7 +7,7 @@ import {
   Max,
   IsIn,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { AlertType } from '../entities/alert.entity';
 
@@ -24,7 +24,9 @@ export class QueryAlertDto {
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(
+    ({ value }) => value === true || String(value).toLowerCase() === 'true',
+  )
   @ApiProperty({
     description: 'Include expired alerts in results',
     required: false,
@@ -74,6 +76,7 @@ export class QueryAlertDto {
 
   @IsOptional()
   @IsIn(['ASC', 'DESC'])
+  @Transform(({ value }) => String(value || 'DESC').toUpperCase())
   @ApiProperty({
     description: 'Sort order',
     required: false,

@@ -11,6 +11,7 @@ import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
 import { QueryAlertDto } from './dto/query-alert.dto';
 import { Alert } from './entities/alert.entity';
+import { UserRole } from '../auth/decorators/roles.decorator';
 
 @Injectable()
 export class AlertsService {
@@ -48,16 +49,7 @@ export class AlertsService {
           ...createAlertDto,
           created_by: userId,
         })
-        .select(
-          `
-          *,
-          created_by_user:created_by(
-            id,
-            email,
-            user_metadata
-          )
-        `,
-        )
+        .select('*')
         .single();
 
       if (error) {
@@ -84,7 +76,11 @@ export class AlertsService {
   /**
    * Get all alerts with filtering and pagination
    */
-  async findAll(queryDto: QueryAlertDto): Promise<{
+  async findAll(
+    queryDto: QueryAlertDto,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<{
     data: Alert[];
     total: number;
     page: number;
@@ -102,17 +98,15 @@ export class AlertsService {
         sortOrder = 'DESC',
       } = queryDto;
 
-      let query = supabase.from('alerts').select(
-        `
-          *,
-          created_by_user:created_by(
-            id,
-            email,
-            user_metadata
-          )
-        `,
-        { count: 'exact' },
-      );
+      let query = supabase.from('alerts').select('*', { count: 'exact' });
+
+      // Apply authorization filter
+      if (userRole !== UserRole.ADMIN) {
+        // Non-admins only see:
+        // 1. Global alerts (recipient_id is null)
+        // 2. Alerts targeted to them (recipient_id = userId)
+        query = query.or(`recipient_id.is.null,recipient_id.eq.${userId}`);
+      }
 
       // Filter by type if provided
       if (type) {
@@ -161,24 +155,25 @@ export class AlertsService {
   /**
    * Get a single alert by ID
    */
-  async findOne(id: string): Promise<Alert> {
+  async findOne(
+    id: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<Alert> {
     try {
       const supabase = this.getSupabaseClient();
 
-      const { data: alert, error } = await supabase
-        .from('alerts')
-        .select(
-          `
-          *,
-          created_by_user:created_by(
-            id,
-            email,
-            user_metadata
-          )
-        `,
-        )
-        .eq('id', id)
-        .single();
+      let query = supabase.from('alerts').select('*').eq('id', id);
+
+      // Apply authorization filter
+      if (userRole !== UserRole.ADMIN) {
+        // Non-admins only see:
+        // 1. Global alerts (recipient_id is null)
+        // 2. Alerts targeted to them (recipient_id = userId)
+        query = query.or(`recipient_id.is.null,recipient_id.eq.${userId}`);
+      }
+
+      const { data: alert, error } = await query.single();
 
       if (error) {
         this.logger.error(`Error fetching alert ${id}:`, error);
@@ -207,25 +202,15 @@ export class AlertsService {
       const supabase = this.getSupabaseClient();
 
       // Check if alert exists
-      await this.findOne(id);
+      await this.findOne(id, userId, UserRole.ADMIN); // Use admin role to bypass auth check
 
       const { data: alert, error } = await supabase
         .from('alerts')
         .update({
           ...updateAlertDto,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select(
-          `
-          *,
-          created_by_user:created_by(
-            id,
-            email,
-            user_metadata
-          )
-        `,
-        )
+        .select('*')
         .single();
 
       if (error) {
@@ -257,7 +242,7 @@ export class AlertsService {
       const supabase = this.getSupabaseClient();
 
       // Check if alert exists
-      await this.findOne(id);
+      await this.findOne(id, userId, UserRole.ADMIN); // Use admin role to bypass auth check
 
       const { error } = await supabase.from('alerts').delete().eq('id', id);
 

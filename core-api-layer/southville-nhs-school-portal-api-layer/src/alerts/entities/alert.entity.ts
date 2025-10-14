@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
@@ -12,6 +13,7 @@ export enum AlertType {
   WARNING = 'warning',
   SUCCESS = 'success',
   ERROR = 'error',
+  SYSTEM = 'system',
 }
 
 @Entity('alerts')
@@ -47,6 +49,19 @@ export class Alert {
   created_by: string;
 
   @Column({
+    type: 'uuid',
+    nullable: true, // NULL = global alert
+  })
+  recipient_id: string | null;
+
+  @Column({
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  is_read: boolean;
+
+  @Column({
     type: 'timestamp with time zone',
     nullable: false,
     default: () => "NOW() + INTERVAL '1 day'",
@@ -57,6 +72,11 @@ export class Alert {
     type: 'timestamp with time zone',
   })
   created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp with time zone',
+  })
+  updated_at: Date;
 
   // Relations
   @ManyToOne(() => Object, { nullable: true }) // Replace Object with actual User entity when available

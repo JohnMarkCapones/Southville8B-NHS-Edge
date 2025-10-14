@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsDateString,
   MaxLength,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AlertType } from '../entities/alert.entity';
@@ -44,4 +45,12 @@ export class CreateAlertDto {
   @IsOptional()
   @IsDateString()
   expires_at?: string;
+
+  @ApiPropertyOptional({
+    description: 'Target recipient user ID (null = global alert)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID()
+  recipient_id?: string;
 }
