@@ -5,6 +5,7 @@ import {
   IsArray,
   ValidateNested,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -28,16 +29,22 @@ export class FormAnswerDto {
     description: 'Answer text',
     example: 'I want to join because I love science',
   })
-  @IsOptional()
+  @ValidateIf((o) => !o.answer_value)
   @IsString()
+  @IsNotEmpty({
+    message: 'Either answer_text or answer_value must be provided',
+  })
   answer_text?: string;
 
   @ApiPropertyOptional({
     description: 'Answer value (for dropdown/radio/checkbox)',
     example: 'grade_7',
   })
-  @IsOptional()
+  @ValidateIf((o) => !o.answer_text)
   @IsString()
+  @IsNotEmpty({
+    message: 'Either answer_text or answer_value must be provided',
+  })
   answer_value?: string;
 }
 

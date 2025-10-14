@@ -12,6 +12,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateGwaDto } from './dto/create-gwa.dto';
 import { UpdateGwaDto } from './dto/update-gwa.dto';
 import { QueryGwaDto } from './dto/query-gwa.dto';
+import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 import { Gwa, HonorStatus } from './entities/gwa.entity';
 
 @Injectable()
@@ -123,20 +124,49 @@ export class GwaService {
     try {
       const supabase = this.getSupabaseClient();
 
-      // Get teacher ID from user ID first
-      const { data: teacher, error: teacherError } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('user_id', recordedBy)
-        .single();
-
-      if (teacherError || !teacher) {
-        throw new ForbiddenException('Teacher record not found for this user');
-      }
-
-      // Check if user is admin or teacher with proper access
+      // Check if user is admin first
       const isUserAdmin = await this.isAdmin(recordedBy);
-      if (!isUserAdmin) {
+      let teacherId: string;
+
+      if (isUserAdmin) {
+        // Admin: fetch advisory teacher by student's section_id
+        const { data: student, error: studentError } = await supabase
+          .from('students')
+          .select('section_id')
+          .eq('id', createGwaDto.studentId)
+          .single();
+
+        if (studentError || !student) {
+          throw new NotFoundException('Student not found');
+        }
+
+        const { data: advisoryTeacher, error: teacherError } = await supabase
+          .from('teachers')
+          .select('id')
+          .eq('advisory_section_id', student.section_id)
+          .single();
+
+        if (teacherError || !advisoryTeacher) {
+          throw new InternalServerErrorException(
+            'No advisory teacher found for student section',
+          );
+        }
+
+        teacherId = advisoryTeacher.id;
+      } else {
+        // Teacher: validate access and use their own ID
+        const { data: teacher, error: teacherError } = await supabase
+          .from('teachers')
+          .select('id')
+          .eq('user_id', recordedBy)
+          .single();
+
+        if (teacherError || !teacher) {
+          throw new ForbiddenException(
+            'Teacher record not found for this user',
+          );
+        }
+
         const hasAccess = await this.validateTeacherAccess(
           teacher.id,
           createGwaDto.studentId,
@@ -146,6 +176,8 @@ export class GwaService {
             'You can only create GWA records for students in your advisory section',
           );
         }
+
+        teacherId = teacher.id;
       }
 
       // Check if student exists
@@ -189,7 +221,7 @@ export class GwaService {
           school_year: createGwaDto.schoolYear,
           remarks: remarks,
           honor_status: honorStatus,
-          recorded_by: teacher.id,
+          recorded_by: teacherId,
         })
         .select(
           `
@@ -225,6 +257,12 @@ export class GwaService {
 
       if (gwaError) {
         this.logger.error('Error creating GWA record:', gwaError);
+        // 23505 = unique_violation (Postgres) — Supabase exposes in error.code
+        if ((gwaError as any).code === '23505') {
+          throw new ConflictException(
+            `GWA record already exists for student in ${createGwaDto.gradingPeriod} ${createGwaDto.schoolYear}`,
+          );
+        }
         throw new InternalServerErrorException('Failed to create GWA record');
       }
 
@@ -304,7 +342,7 @@ export class GwaService {
     }
 
     // Apply sorting
-    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+    query = query.order(sortBy, { ascending: sortOrder === 'ASC' });
 
     // Apply pagination
     const from = (page - 1) * limit;
@@ -392,18 +430,7 @@ export class GwaService {
     try {
       const supabase = this.getSupabaseClient();
 
-      // Get teacher ID from user ID first
-      const { data: teacher, error: teacherError } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('user_id', updatedBy)
-        .single();
-
-      if (teacherError || !teacher) {
-        throw new ForbiddenException('Teacher record not found for this user');
-      }
-
-      // Get existing GWA record
+      // Get existing GWA record first
       const { data: existingGwa, error: fetchError } = await supabase
         .from('students_gwa')
         .select('student_id, recorded_by, grading_period, school_year')
@@ -414,9 +441,22 @@ export class GwaService {
         throw new NotFoundException('GWA record not found');
       }
 
-      // Check if user is admin or teacher with proper access
+      // Check if user is admin first
       const isUserAdmin = await this.isAdmin(updatedBy);
       if (!isUserAdmin) {
+        // Only fetch teacher record for non-admin users
+        const { data: teacher, error: teacherError } = await supabase
+          .from('teachers')
+          .select('id')
+          .eq('user_id', updatedBy)
+          .single();
+
+        if (teacherError || !teacher) {
+          throw new ForbiddenException(
+            'Teacher record not found for this user',
+          );
+        }
+
         const hasAccess = await this.validateTeacherAccess(
           teacher.id,
           existingGwa.student_id,
@@ -586,8 +626,34 @@ export class GwaService {
   /**
    * Get GWA history for a specific student
    */
-  async findByStudent(studentId: string): Promise<Gwa[]> {
+  async findByStudent(
+    studentId: string,
+    requester: SupabaseUser,
+  ): Promise<Gwa[]> {
     const supabase = this.getSupabaseClient();
+
+    // AuthZ: admins and teachers can view any; students can view only their own
+    const isUserAdmin = await this.isAdmin(requester.id);
+    if (!isUserAdmin) {
+      const { data: teacher, error: teacherError } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('user_id', requester.id)
+        .single();
+      const isTeacher = !teacherError && !!teacher;
+      if (!isTeacher) {
+        const { data: studentProfile, error: studentErr } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', requester.id)
+          .single();
+        if (studentErr || !studentProfile || studentProfile.id !== studentId) {
+          throw new ForbiddenException(
+            'You can only view your own GWA history',
+          );
+        }
+      }
+    }
 
     const { data: gwaRecords, error } = await supabase
       .from('students_gwa')

@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptionsRequiredForType } from './validators/is-options-required-for-type.validator';
 
 export enum QuestionType {
   TEXT = 'text',
@@ -97,5 +98,6 @@ export class CreateFormQuestionDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionOptionDto)
+  @IsOptionsRequiredForType()
   options?: CreateQuestionOptionDto[];
 }

@@ -158,8 +158,15 @@ export class GwaController {
     status: 404,
     description: 'Student not found',
   })
-  async findByStudent(@Param('studentId') studentId: string): Promise<Gwa[]> {
-    return this.gwaService.findByStudent(studentId);
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Students can only access their own records',
+  })
+  async findByStudent(
+    @Param('studentId') studentId: string,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<Gwa[]> {
+    return this.gwaService.findByStudent(studentId, user);
   }
 
   @Get(':id')

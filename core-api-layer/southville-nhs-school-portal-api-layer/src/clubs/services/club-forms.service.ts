@@ -305,22 +305,19 @@ export class ClubFormsService {
       await this.verifyClubAccess(clubId, userId);
       await this.findOneForm(clubId, formId);
 
+      // Destructure options out of createQuestionDto before insert
+      const { options, ...questionData } = createQuestionDto;
+
       // Start transaction for question and options
       const { data: question, error: questionError } = await supabase
         .from('club_form_questions')
         .insert({
-          ...createQuestionDto,
+          ...questionData,
           form_id: formId,
         })
         .select(
           `
-          *,
-          options:club_form_question_options(
-            id,
-            option_text,
-            option_value,
-            order_index
-          )
+          *
         `,
         )
         .single();
@@ -333,8 +330,8 @@ export class ClubFormsService {
       }
 
       // Add options if provided
-      if (createQuestionDto.options && createQuestionDto.options.length > 0) {
-        const optionsData = createQuestionDto.options.map((option) => ({
+      if (options && options.length > 0) {
+        const optionsData = options.map((option) => ({
           ...option,
           question_id: question.id,
         }));
@@ -345,6 +342,11 @@ export class ClubFormsService {
 
         if (optionsError) {
           this.logger.error('Error creating question options:', optionsError);
+          // Rollback question to avoid partial writes
+          await supabase
+            .from('club_form_questions')
+            .delete()
+            .eq('id', question.id);
           throw new BadRequestException(
             `Failed to create question options: ${optionsError.message}`,
           );
@@ -410,24 +412,21 @@ export class ClubFormsService {
       await this.verifyClubAccess(clubId, userId);
       await this.findOneForm(clubId, formId);
 
+      // Destructure options out of updateQuestionDto
+      const { options, ...questionData } = updateQuestionDto as any;
+
       // Update question
       const { data, error } = await supabase
         .from('club_form_questions')
         .update({
-          ...updateQuestionDto,
+          ...questionData,
           updated_at: new Date().toISOString(),
         })
         .eq('id', questionId)
         .eq('form_id', formId)
         .select(
           `
-          *,
-          options:club_form_question_options(
-            id,
-            option_text,
-            option_value,
-            order_index
-          )
+          *
         `,
         )
         .single();

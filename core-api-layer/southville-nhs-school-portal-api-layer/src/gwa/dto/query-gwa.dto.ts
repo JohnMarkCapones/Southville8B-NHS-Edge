@@ -7,6 +7,7 @@ import {
   Min,
   Max,
   Matches,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
@@ -75,21 +76,28 @@ export class QueryGwaDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(['created_at', 'updated_at', 'gwa', 'grading_period', 'school_year'])
   @ApiProperty({
     description: 'Sort by field',
     required: false,
     example: 'created_at',
     enum: ['created_at', 'updated_at', 'gwa', 'grading_period', 'school_year'],
   })
-  sortBy?: string = 'created_at';
+  sortBy?:
+    | 'created_at'
+    | 'updated_at'
+    | 'gwa'
+    | 'grading_period'
+    | 'school_year' = 'created_at';
 
   @IsOptional()
   @IsString()
+  @IsIn(['ASC', 'DESC'])
   @ApiProperty({
     description: 'Sort order',
     required: false,
     example: 'desc',
     enum: ['asc', 'desc'],
   })
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

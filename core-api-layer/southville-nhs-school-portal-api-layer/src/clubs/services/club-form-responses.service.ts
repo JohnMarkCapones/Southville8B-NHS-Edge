@@ -72,6 +72,12 @@ export class ClubFormResponsesService {
 
       if (responseError) {
         this.logger.error('Error creating form response:', responseError);
+        // 23505 = unique_violation (Postgres) — Supabase exposes in error.code
+        if ((responseError as any).code === '23505') {
+          throw new ConflictException(
+            'You have already submitted a response to this form',
+          );
+        }
         throw new BadRequestException(
           `Failed to submit response: ${responseError.message}`,
         );
@@ -442,6 +448,15 @@ export class ClubFormResponsesService {
   private async validateAnswers(formId: string, answers: any[]): Promise<void> {
     const supabase = this.supabaseService.getServiceClient();
 
+    // Check for duplicate question_id values (fail fast)
+    const questionIds = answers.map((a) => a.question_id);
+    const uniqueQuestionIds = new Set(questionIds);
+    if (questionIds.length !== uniqueQuestionIds.size) {
+      throw new BadRequestException(
+        'Duplicate question_id found in answers. Each question can only be answered once.',
+      );
+    }
+
     // Get form questions
     const { data: questions, error } = await supabase
       .from('club_form_questions')
@@ -453,6 +468,7 @@ export class ClubFormResponsesService {
         required,
         options:club_form_question_options(
           id,
+          option_text,
           option_value
         )
       `,
@@ -476,7 +492,7 @@ export class ClubFormResponsesService {
       }
     }
 
-    // Validate answer values for dropdown/radio/checkbox questions
+    // Validate each answer based on question type
     for (const answer of answers) {
       const question = questions.find((q) => q.id === answer.question_id);
       if (!question) {
@@ -485,13 +501,80 @@ export class ClubFormResponsesService {
         );
       }
 
-      if (['dropdown', 'radio', 'checkbox'].includes(question.question_type)) {
-        const validValues = question.options.map((opt) => opt.option_value);
-        if (answer.answer_value && !validValues.includes(answer.answer_value)) {
-          throw new BadRequestException(
-            `Invalid answer value for question "${question.question_text}"`,
+      // Validate based on question type
+      switch (question.question_type) {
+        case 'dropdown':
+        case 'radio':
+          // Single-select: require answer_value, validate against options
+          if (!answer.answer_value) {
+            throw new BadRequestException(
+              `Answer value is required for ${question.question_type} question "${question.question_text}"`,
+            );
+          }
+          const validValues = question.options.map((opt) => opt.option_value);
+          if (!validValues.includes(answer.answer_value)) {
+            throw new BadRequestException(
+              `Invalid answer value "${answer.answer_value}" for question "${question.question_text}". Valid options: ${validValues.join(', ')}`,
+            );
+          }
+          break;
+
+        case 'checkbox':
+          // Multi-select: parse answer_value as array, validate all values
+          if (!answer.answer_value) {
+            throw new BadRequestException(
+              `Answer value is required for checkbox question "${question.question_text}"`,
+            );
+          }
+          let selectedValues: string[];
+          try {
+            // Try to parse as JSON array first, then as comma-separated string
+            selectedValues = JSON.parse(answer.answer_value);
+            if (!Array.isArray(selectedValues)) {
+              selectedValues = answer.answer_value
+                .split(',')
+                .map((v) => v.trim());
+            }
+          } catch {
+            selectedValues = answer.answer_value
+              .split(',')
+              .map((v) => v.trim());
+          }
+
+          const validCheckboxValues = question.options.map(
+            (opt) => opt.option_value,
           );
-        }
+          for (const value of selectedValues) {
+            if (!validCheckboxValues.includes(value)) {
+              throw new BadRequestException(
+                `Invalid checkbox value "${value}" for question "${question.question_text}". Valid options: ${validCheckboxValues.join(', ')}`,
+              );
+            }
+          }
+          break;
+
+        case 'text':
+        case 'textarea':
+        case 'number':
+        case 'email':
+        case 'date':
+          // Text-based: require non-empty answer_text or answer_value
+          const hasTextAnswer =
+            answer.answer_text && answer.answer_text.trim().length > 0;
+          const hasValueAnswer =
+            answer.answer_value && answer.answer_value.trim().length > 0;
+
+          if (!hasTextAnswer && !hasValueAnswer) {
+            throw new BadRequestException(
+              `Answer is required for ${question.question_type} question "${question.question_text}"`,
+            );
+          }
+          break;
+
+        default:
+          throw new BadRequestException(
+            `Unknown question type: ${question.question_type}`,
+          );
       }
     }
   }
