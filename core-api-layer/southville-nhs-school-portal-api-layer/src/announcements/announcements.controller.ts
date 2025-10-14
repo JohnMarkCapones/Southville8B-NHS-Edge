@@ -10,6 +10,8 @@ import {
   UseGuards,
   UseInterceptors,
   ParseIntPipe,
+  DefaultValuePipe,
+  ParseBoolPipe,
   Logger,
 } from '@nestjs/common';
 import {
@@ -61,9 +63,7 @@ export class AnnouncementsController {
     @Body() createAnnouncementDto: CreateAnnouncementDto,
     @AuthUser() user: any,
   ): Promise<Announcement> {
-    this.logger.log(
-      `Creating announcement for user: ${user.email} (${user.id})`,
-    );
+    this.logger.log(`Creating announcement for user: ${user.id}`);
     return this.announcementsService.create(createAnnouncementDto, user.id);
   }
 
@@ -114,12 +114,13 @@ export class AnnouncementsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll(
-    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('visibility') visibility?: string,
     @Query('type') type?: string,
     @Query('roleId') roleId?: string,
-    @Query('includeExpired') includeExpired?: boolean,
+    @Query('includeExpired', new DefaultValuePipe(false), ParseBoolPipe)
+    includeExpired?: boolean,
   ): Promise<{ data: Announcement[]; pagination: any }> {
     const filters = {
       page,
@@ -127,7 +128,7 @@ export class AnnouncementsController {
       visibility,
       type,
       roleId,
-      includeExpired: includeExpired === true,
+      includeExpired,
     };
     return this.announcementsService.findAll(filters);
   }
@@ -162,14 +163,15 @@ export class AnnouncementsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMyAnnouncements(
     @AuthUser() user: any,
-    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
-    @Query('includeExpired') includeExpired?: boolean,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('includeExpired', new DefaultValuePipe(false), ParseBoolPipe)
+    includeExpired?: boolean,
   ): Promise<{ data: Announcement[]; pagination: any }> {
     const filters = {
       page,
       limit,
-      includeExpired: includeExpired === true,
+      includeExpired,
     };
     return this.announcementsService.getAnnouncementsForUser(
       user.id,
@@ -212,9 +214,7 @@ export class AnnouncementsController {
     @Body() updateAnnouncementDto: UpdateAnnouncementDto,
     @AuthUser() user: any,
   ): Promise<Announcement> {
-    this.logger.log(
-      `Updating announcement ${id} for user: ${user.email} (${user.id})`,
-    );
+    this.logger.log(`Updating announcement ${id} for user: ${user.id}`);
     return this.announcementsService.update(
       id,
       updateAnnouncementDto,

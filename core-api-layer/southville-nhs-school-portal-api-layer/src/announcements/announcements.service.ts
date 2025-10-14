@@ -195,7 +195,8 @@ export class AnnouncementsService {
     }
 
     if (!includeExpired) {
-      query = query.or('expires_at.is.null,expires_at.gt.now()');
+      const now = new Date().toISOString();
+      query = query.or(`expires_at.is.null,expires_at.gt.${now}`);
     }
 
     if (roleId) {
@@ -330,7 +331,7 @@ export class AnnouncementsService {
       // Security: Check ownership or admin privilege
       const existing = await this.findOne(id);
 
-      if (existing.userId !== userId && userRole !== 'Admin') {
+      if (existing.userId !== userId && userRole?.toLowerCase() !== 'admin') {
         this.logger.warn(
           `Unauthorized update attempt on announcement ${id} by user ${userId}`,
         );
@@ -506,7 +507,8 @@ export class AnnouncementsService {
     query = query.eq('visibility', 'public');
 
     if (!includeExpired) {
-      query = query.or('expires_at.is.null,expires_at.gt.now()');
+      const now = new Date().toISOString();
+      query = query.or(`expires_at.is.null,expires_at.gt.${now}`);
     }
 
     // Apply pagination

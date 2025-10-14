@@ -71,7 +71,7 @@ export class EventsController {
     @Body() createEventDto: CreateEventDto,
     @AuthUser() user: any,
   ): Promise<Event> {
-    this.logger.log(`Creating event for user: ${user.email} (${user.id})`);
+    this.logger.log(`Creating event for user: ${user.id}`);
     return this.eventsService.create(createEventDto, user.id);
   }
 
@@ -239,9 +239,7 @@ export class EventsController {
     @Body() updateEventDto: UpdateEventDto,
     @AuthUser() user: any,
   ): Promise<Event> {
-    this.logger.log(
-      `Updating event ${id} for user: ${user.email} (${user.id})`,
-    );
+    this.logger.log(`Updating event ${id} for user: ${user.id}`);
     return this.eventsService.update(id, updateEventDto, user.id, user.role);
   }
 

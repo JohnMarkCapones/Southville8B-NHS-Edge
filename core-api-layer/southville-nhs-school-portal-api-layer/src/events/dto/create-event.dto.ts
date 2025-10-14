@@ -15,10 +15,14 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
   ValidationArguments,
+  ValidateNested,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import * as sanitizeHtml from 'sanitize-html';
+import sanitizeHtml from 'sanitize-html';
 
 export enum EventStatus {
   DRAFT = 'draft',
@@ -95,9 +99,9 @@ export class CreateEventAdditionalInfoDto {
   content: string;
 
   @IsOptional()
-  @IsArray()
-  @ArrayMinSize(0)
-  @ArrayMaxSize(100)
+  @IsInt()
+  @Min(0)
+  @Max(100)
   @ApiProperty({
     required: false,
     description: 'Display order index',
@@ -149,9 +153,9 @@ export class CreateEventHighlightDto {
   imageUrl?: string;
 
   @IsOptional()
-  @IsArray()
-  @ArrayMinSize(0)
-  @ArrayMaxSize(100)
+  @IsInt()
+  @Min(0)
+  @Max(100)
   @ApiProperty({
     required: false,
     description: 'Display order index',
@@ -188,9 +192,9 @@ export class CreateEventScheduleDto {
   activityDescription: string;
 
   @IsOptional()
-  @IsArray()
-  @ArrayMinSize(0)
-  @ArrayMaxSize(100)
+  @IsInt()
+  @Min(0)
+  @Max(100)
   @ApiProperty({
     required: false,
     description: 'Display order index',
@@ -357,6 +361,8 @@ export class CreateEventDto {
   @IsArray()
   @ArrayMinSize(0)
   @ArrayMaxSize(20, { message: 'Maximum 20 additional info sections allowed' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateEventAdditionalInfoDto)
   @ApiProperty({
     required: false,
     type: [CreateEventAdditionalInfoDto],
@@ -369,6 +375,8 @@ export class CreateEventDto {
   @IsArray()
   @ArrayMinSize(0)
   @ArrayMaxSize(10, { message: 'Maximum 10 highlights allowed' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateEventHighlightDto)
   @ApiProperty({
     required: false,
     type: [CreateEventHighlightDto],
@@ -381,6 +389,8 @@ export class CreateEventDto {
   @IsArray()
   @ArrayMinSize(0)
   @ArrayMaxSize(50, { message: 'Maximum 50 schedule items allowed' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateEventScheduleDto)
   @ApiProperty({
     required: false,
     type: [CreateEventScheduleDto],
@@ -393,6 +403,8 @@ export class CreateEventDto {
   @IsArray()
   @ArrayMinSize(0)
   @ArrayMaxSize(20, { message: 'Maximum 20 FAQ items allowed' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateEventFaqDto)
   @ApiProperty({
     required: false,
     type: [CreateEventFaqDto],

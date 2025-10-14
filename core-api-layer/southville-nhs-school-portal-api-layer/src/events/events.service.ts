@@ -300,6 +300,36 @@ export class EventsService {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
+    if (tagId) {
+      // Get event IDs that have this tag
+      const { data: eventTags, error: tagError } = await supabase
+        .from('event_tags')
+        .select('event_id')
+        .eq('tag_id', tagId);
+
+      if (tagError) {
+        this.logger.error('Error fetching events by tag:', tagError);
+        throw new InternalServerErrorException('Failed to fetch events by tag');
+      }
+
+      const eventIds = eventTags?.map((et) => et.event_id) || [];
+
+      if (eventIds.length > 0) {
+        query = query.in('id', eventIds);
+      } else {
+        // No events have this tag, return empty result
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            page,
+            limit,
+            pages: 0,
+          },
+        };
+      }
+    }
+
     // Apply pagination
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -353,7 +383,7 @@ export class EventsService {
     };
 
     // Cache the result
-    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL * 1000);
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
 
     return result;
   }
@@ -415,11 +445,7 @@ export class EventsService {
     };
 
     // Cache the result
-    await this.cacheManager.set(
-      cacheKey,
-      transformedEvent,
-      this.CACHE_TTL * 1000,
-    );
+    await this.cacheManager.set(cacheKey, transformedEvent, this.CACHE_TTL);
 
     return transformedEvent;
   }
@@ -441,11 +467,7 @@ export class EventsService {
     });
 
     // Cache the result
-    await this.cacheManager.set(
-      cacheKey,
-      result,
-      this.UPCOMING_CACHE_TTL * 1000,
-    );
+    await this.cacheManager.set(cacheKey, result, this.UPCOMING_CACHE_TTL);
 
     return result;
   }
@@ -469,7 +491,10 @@ export class EventsService {
       // Security: Check ownership or admin privilege
       const existing = await this.findOne(id);
 
-      if (existing.organizerId !== userId && userRole !== 'Admin') {
+      if (
+        existing.organizerId !== userId &&
+        userRole?.toLowerCase() !== 'admin'
+      ) {
         this.logger.warn(
           `Unauthorized update attempt on event ${id} by user ${userId}`,
         );

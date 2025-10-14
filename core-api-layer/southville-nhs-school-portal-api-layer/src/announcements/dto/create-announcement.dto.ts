@@ -17,7 +17,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import * as sanitizeHtml from 'sanitize-html';
+import sanitizeHtml from 'sanitize-html';
 
 export enum AnnouncementVisibility {
   PUBLIC = 'public',
@@ -58,12 +58,15 @@ export class CreateAnnouncementDto {
   @IsNotEmpty()
   @MinLength(10)
   @MaxLength(10000) // Prevent extremely large content
-  @Transform(({ value }) =>
-    sanitizeHtml(value, {
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return value || '';
+    }
+    return sanitizeHtml(value, {
       allowedTags: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'a'],
       allowedAttributes: { a: ['href'] },
-    }),
-  )
+    });
+  })
   @ApiProperty({
     example: 'There will be a school assembly...',
     description: 'Announcement content (HTML sanitized)',
@@ -99,7 +102,7 @@ export class CreateAnnouncementDto {
     default: AnnouncementVisibility.PUBLIC,
     description: 'Visibility setting',
   })
-  visibility: AnnouncementVisibility;
+  visibility: AnnouncementVisibility = AnnouncementVisibility.PUBLIC;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'At least one target role is required' })
