@@ -29,7 +29,8 @@ import {
 } from "lucide-react"
 
 export function Footer() {
-  const currentYear = new Date().getFullYear()
+  // Use hardcoded year or calculate client-side to avoid hydration mismatch
+  const currentYear = typeof window !== 'undefined' ? new Date().getFullYear() : 2025
 
   const [accordionState, setAccordionState] = useState({
     quickLinks: false,

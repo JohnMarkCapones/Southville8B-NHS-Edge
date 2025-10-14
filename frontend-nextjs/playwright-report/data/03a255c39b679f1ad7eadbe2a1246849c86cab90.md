@@ -1,0 +1,1594 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - status [ref=e5]:
+        - generic [ref=e6]:
+          - paragraph [ref=e7]: "Weather Alert: No class due to bad weather⚠️ Weather Alert: Early dismissal at 2:00 PM due to heavy rain. Stay safe and dry!"
+          - button "Dismiss notification" [ref=e8]:
+            - img [ref=e9]
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - img [ref=e17]
+            - text: (02) 8123-4567
+          - generic [ref=e19]:
+            - img [ref=e20]
+            - text: info@southville8bnhs.edu
+          - generic [ref=e23]:
+            - img [ref=e24]
+            - text: Southville 8B, Brgy. San Isidro, Rodriguez, Rizal, Philippines
+        - generic [ref=e28]:
+          - img [ref=e29]
+          - text: (02) 8123-4567
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - img [ref=e33]
+            - text: "Office Hours: 7:00 AM - 5:00 PM"
+          - generic [ref=e36]:
+            - link "Admissions" [ref=e37] [cursor=pointer]:
+              - /url: /guess/admissions
+            - text: •
+            - link "Contact" [ref=e38] [cursor=pointer]:
+              - /url: /guess/contact
+      - main [ref=e39]:
+        - generic [ref=e40]:
+          - region "Southville 8B National High School hero" [ref=e42]:
+            - generic [ref=e44]: Your browser does not support the video tag.
+            - generic [ref=e47]:
+              - img "School logo" [ref=e49]
+              - generic [ref=e50]:
+                - img [ref=e51]
+                - text: Southville 8B National High School
+            - generic [ref=e56]:
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - heading "Aspire Higher, Lead with Excellence" [level=1] [ref=e59]:
+                    - text: Aspire Higher,
+                    - text: Lead with Excellence
+                  - paragraph [ref=e60]: A future‑ready education in a caring community. Discover rigorous academics, vibrant student life, and a culture of excellence that empowers every learner.
+                  - generic [ref=e61]:
+                    - link "Explore Academics" [ref=e62] [cursor=pointer]:
+                      - /url: /guess/academics
+                      - button "Explore Academics" [ref=e63]:
+                        - img [ref=e64]
+                        - text: Explore Academics
+                        - img [ref=e66]
+                    - link "Virtual Tour" [ref=e68] [cursor=pointer]:
+                      - /url: /guess/virtual-tour
+                      - button "Virtual Tour" [ref=e69]:
+                        - img [ref=e70]
+                        - text: Virtual Tour
+                  - generic [ref=e72]:
+                    - generic [ref=e73]:
+                      - generic [ref=e74]: 1,200+
+                      - generic [ref=e75]: Students
+                    - generic [ref=e76]:
+                      - generic [ref=e77]: 85+
+                      - generic [ref=e78]: Faculty
+                    - generic [ref=e79]:
+                      - generic [ref=e80]: 25+
+                      - generic [ref=e81]: Programs
+                - generic [ref=e83]:
+                  - generic [ref=e84]:
+                    - generic [ref=e85]:
+                      - img [ref=e86]
+                      - heading "Quick Links" [level=3] [ref=e88]
+                    - generic [ref=e89]: Start Here
+                  - generic [ref=e90]:
+                    - link "Academics Courses" [ref=e91] [cursor=pointer]:
+                      - /url: /guess/academics
+                      - generic [ref=e92]:
+                        - img [ref=e94]
+                        - generic [ref=e96]:
+                          - generic [ref=e97]: Academics
+                          - generic [ref=e98]: Courses
+                    - link "Student Life Clubs" [ref=e99] [cursor=pointer]:
+                      - /url: /guess/student-life
+                      - generic [ref=e100]:
+                        - img [ref=e102]
+                        - generic [ref=e107]:
+                          - generic [ref=e108]: Student Life
+                          - generic [ref=e109]: Clubs
+                    - link "Athletics Schedules" [ref=e110] [cursor=pointer]:
+                      - /url: /guess/athletics
+                      - generic [ref=e111]:
+                        - img [ref=e113]
+                        - generic [ref=e119]:
+                          - generic [ref=e120]: Athletics
+                          - generic [ref=e121]: Schedules
+                    - link "Admissions Apply" [ref=e122] [cursor=pointer]:
+                      - /url: /guess/contact
+                      - generic [ref=e123]:
+                        - img [ref=e125]
+                        - generic [ref=e129]:
+                          - generic [ref=e130]: Admissions
+                          - generic [ref=e131]: Apply
+                    - link "Calendar Events" [ref=e132] [cursor=pointer]:
+                      - /url: /guess/news-events
+                      - generic [ref=e133]:
+                        - img [ref=e135]
+                        - generic [ref=e137]:
+                          - generic [ref=e138]: Calendar
+                          - generic [ref=e139]: Events
+                    - link "Library Resources" [ref=e140] [cursor=pointer]:
+                      - /url: /guess/library
+                      - generic [ref=e141]:
+                        - img [ref=e143]
+                        - generic [ref=e145]:
+                          - generic [ref=e146]: Library
+                          - generic [ref=e147]: Resources
+                  - generic [ref=e148]:
+                    - generic [ref=e149]:
+                      - img [ref=e150]
+                      - text: Excellence
+                    - generic [ref=e153]:
+                      - img [ref=e154]
+                      - text: Awards
+                    - generic [ref=e160]:
+                      - img [ref=e161]
+                      - text: Learning
+              - generic [ref=e163]:
+                - button "Pause background video" [ref=e164]:
+                  - img [ref=e165]
+                  - text: Pause
+                - button "Unmute background video" [ref=e168]:
+                  - img [ref=e169]
+                  - text: Unmute
+          - region [ref=e175]:
+            - generic [ref=e178]:
+              - generic [ref=e179]:
+                - img [ref=e181]
+                - paragraph [ref=e183]: "Early Application Deadline: December 15th for priority consideration"
+              - link "Apply Now" [ref=e184] [cursor=pointer]:
+                - /url: /guess/contact
+          - generic [ref=e194]:
+            - generic [ref=e196]:
+              - img [ref=e197]
+              - text: Welcome to Our Amazing Community
+              - img [ref=e199]
+            - heading "Where Excellence Meets Opportunity" [level=2] [ref=e201]
+            - paragraph [ref=e202]: 🌟 At Southville 8B National High School, we believe every student has the potential to achieve greatness. Our dedicated faculty, state-of-the-art facilities, and comprehensive programs create an environment where students can explore their passions, develop their talents, and prepare for a successful future. ✨
+            - generic [ref=e203]:
+              - link "🚀 Explore Academics" [ref=e204] [cursor=pointer]:
+                - /url: /guess/academics
+                - button "🚀 Explore Academics" [ref=e205]:
+                  - img [ref=e206]
+                  - text: 🚀 Explore Academics
+                  - img [ref=e208]
+              - link "🤝 Join Our Community" [ref=e210] [cursor=pointer]:
+                - /url: /guess/student-life
+                - button "🤝 Join Our Community" [ref=e211]:
+                  - img [ref=e212]
+                  - text: 🤝 Join Our Community
+              - button "🎉 School Celebrations" [ref=e218]:
+                - img [ref=e219]
+                - text: 🎉 School Celebrations
+                - img [ref=e225]
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - img [ref=e231]
+                - text: Latest Updates
+              - heading "School Announcements" [level=2] [ref=e234]
+              - paragraph [ref=e235]: Stay informed about important updates, achievements, and upcoming events from Southville 8B NHS
+            - generic [ref=e236]:
+              - button "All Announcements" [ref=e237]
+              - button "Urgent" [ref=e238]:
+                - img [ref=e239]
+                - text: Urgent
+              - button "Academic" [ref=e241]:
+                - img [ref=e242]
+                - text: Academic
+              - button "Event" [ref=e244]:
+                - img [ref=e245]
+                - text: Event
+              - button "General" [ref=e251]:
+                - img [ref=e252]
+                - text: General
+            - generic [ref=e257]:
+              - link "Mar 15, 2024 Early Application Deadline Extended - Apply by March 31st for Priority Consideration Urgent Admissions Office We've extended our early application deadline to give prospective students more time to submit their applications." [ref=e258] [cursor=pointer]:
+                - /url: /guess/announcements/early-application-extended
+                - generic [ref=e260]:
+                  - generic [ref=e262]:
+                    - img [ref=e263]
+                    - time [ref=e265]: Mar 15, 2024
+                  - generic [ref=e267]:
+                    - img [ref=e269]
+                    - generic [ref=e271]:
+                      - heading "Early Application Deadline Extended - Apply by March 31st for Priority Consideration" [level=3] [ref=e272]
+                      - generic [ref=e273]:
+                        - generic [ref=e274]: Urgent
+                        - text: Admissions Office
+                      - paragraph [ref=e275]: We've extended our early application deadline to give prospective students more time to submit their applications.
+                  - img [ref=e278]
+              - link "Mar 12, 2024 Science Olympiad Team Wins State Championship for Third Consecutive Year Academic Academic Affairs Our talented Science Olympiad team has once again proven their excellence by securing the state championship title." [ref=e280] [cursor=pointer]:
+                - /url: /guess/announcements/science-olympiad-championship
+                - generic [ref=e282]:
+                  - generic [ref=e284]:
+                    - img [ref=e285]
+                    - time [ref=e287]: Mar 12, 2024
+                  - generic [ref=e289]:
+                    - img [ref=e291]
+                    - generic [ref=e293]:
+                      - heading "Science Olympiad Team Wins State Championship for Third Consecutive Year" [level=3] [ref=e294]
+                      - generic [ref=e295]:
+                        - generic [ref=e296]: Academic
+                        - text: Academic Affairs
+                      - paragraph [ref=e297]: Our talented Science Olympiad team has once again proven their excellence by securing the state championship title.
+                  - img [ref=e300]
+              - link "Mar 10, 2024 Spring Musical 'Hamilton' Tickets Now Available - Shows Begin April 20th Event Drama Department Don't miss our spectacular production of Hamilton! Tickets are selling fast for all three weekend performances." [ref=e302] [cursor=pointer]:
+                - /url: /guess/announcements/hamilton-musical-tickets
+                - generic [ref=e304]:
+                  - generic [ref=e306]:
+                    - img [ref=e307]
+                    - time [ref=e309]: Mar 10, 2024
+                  - generic [ref=e311]:
+                    - img [ref=e313]
+                    - generic [ref=e319]:
+                      - heading "Spring Musical 'Hamilton' Tickets Now Available - Shows Begin April 20th" [level=3] [ref=e320]
+                      - generic [ref=e321]:
+                        - generic [ref=e322]: Event
+                        - text: Drama Department
+                      - paragraph [ref=e323]: Don't miss our spectacular production of Hamilton! Tickets are selling fast for all three weekend performances.
+                  - img [ref=e326]
+              - link "Mar 8, 2024 New STEM Lab Opening Ceremony Scheduled for March 25th General Facilities Management Join us for the grand opening of our state-of-the-art STEM laboratory featuring cutting-edge equipment and technology." [ref=e328] [cursor=pointer]:
+                - /url: /guess/announcements/stem-lab-opening
+                - generic [ref=e330]:
+                  - generic [ref=e332]:
+                    - img [ref=e333]
+                    - time [ref=e335]: Mar 8, 2024
+                  - generic [ref=e337]:
+                    - img [ref=e339]
+                    - generic [ref=e344]:
+                      - heading "New STEM Lab Opening Ceremony Scheduled for March 25th" [level=3] [ref=e345]
+                      - generic [ref=e346]:
+                        - generic [ref=e347]: General
+                        - text: Facilities Management
+                      - paragraph [ref=e348]: Join us for the grand opening of our state-of-the-art STEM laboratory featuring cutting-edge equipment and technology.
+                  - img [ref=e351]
+            - link "View All Announcements" [ref=e354] [cursor=pointer]:
+              - /url: /guess/announcements
+              - button "View All Announcements" [ref=e355]:
+                - text: View All Announcements
+                - img [ref=e356]
+          - generic [ref=e360]:
+            - generic [ref=e361]:
+              - generic [ref=e362]:
+                - img [ref=e363]
+                - textbox "Search student" [ref=e366]:
+                  - /placeholder: Search student...
+              - tablist [ref=e369]:
+                - tab "All" [selected] [ref=e370]
+                - tab "Grade 7" [ref=e371]
+                - tab "Grade 8" [ref=e372]
+                - tab "Grade 9" [ref=e373]
+                - tab "Grade 10" [ref=e374]
+              - button "Export Top 10" [ref=e376]:
+                - img [ref=e377]
+                - text: Export Top 10
+            - generic [ref=e380]:
+              - heading "Top 10 — Overall" [level=2] [ref=e381]
+              - paragraph [ref=e382]: Showing 10 of Top 10
+            - region "Top 3 podium" [ref=e383]:
+              - generic [ref=e384]:
+                - generic [ref=e387]:
+                  - generic [ref=e388]:
+                    - img [ref=e390]
+                    - generic [ref=e396]:
+                      - generic [ref=e397]: "Rank #2"
+                      - generic [ref=e398]: Isla Mendoza
+                      - generic [ref=e399]: Grade 10 • Section B
+                    - generic [ref=e400]:
+                      - generic [ref=e401]: "98.0"
+                      - generic "Trend +0.4" [ref=e402]:
+                        - img [ref=e403]
+                        - text: "+0.4"
+                  - generic [ref=e406]:
+                    - generic [ref=e407]: IM
+                    - generic [ref=e408]: Outstanding academic performance and consistent excellence.
+                - generic [ref=e412]:
+                  - generic [ref=e413]:
+                    - img [ref=e415]
+                    - generic [ref=e417]:
+                      - generic [ref=e418]: "Rank #1"
+                      - generic [ref=e419]: Hudson Garcia
+                      - generic [ref=e420]: Grade 10 • Section A
+                    - generic [ref=e421]:
+                      - generic [ref=e422]: "98.3"
+                      - generic "Trend -0.3" [ref=e423]:
+                        - img [ref=e424]
+                        - text: "-0.3"
+                  - generic [ref=e427]:
+                    - generic [ref=e428]: HG
+                    - generic [ref=e429]: Outstanding academic performance and consistent excellence.
+                - generic [ref=e432]:
+                  - generic [ref=e433]:
+                    - img [ref=e435]
+                    - generic [ref=e441]:
+                      - generic [ref=e442]: "Rank #3"
+                      - generic [ref=e443]: Xavier Gomez
+                      - generic [ref=e444]: Grade 9 • Section A
+                    - generic [ref=e445]:
+                      - generic [ref=e446]: "97.9"
+                      - generic "Trend -0.3" [ref=e447]:
+                        - img [ref=e448]
+                        - text: "-0.3"
+                  - generic [ref=e451]:
+                    - generic [ref=e452]: XG
+                    - generic [ref=e453]: Outstanding academic performance and consistent excellence.
+            - region "Leaderboard" [ref=e454]:
+              - table [ref=e458]:
+                - rowgroup [ref=e459]:
+                  - row "Rank Student Grade Section GWA Trend" [ref=e460]:
+                    - cell "Rank" [ref=e461]
+                    - cell "Student" [ref=e462]
+                    - cell "Grade" [ref=e463]
+                    - cell "Section" [ref=e464]
+                    - cell "GWA" [ref=e465]
+                    - cell "Trend" [ref=e466]
+                - rowgroup [ref=e467]:
+                  - row "#1 HG Hudson Garcia G10 • Sec A G10 A 98.3 Trend -0.3" [ref=e468]:
+                    - cell "#1" [ref=e469]
+                    - cell "HG Hudson Garcia G10 • Sec A" [ref=e470]:
+                      - generic [ref=e471]:
+                        - generic [ref=e472]: HG
+                        - generic [ref=e473]:
+                          - generic [ref=e474]: Hudson Garcia
+                          - generic [ref=e475]: G10 • Sec A
+                    - cell "G10" [ref=e476]
+                    - cell "A" [ref=e477]
+                    - cell "98.3" [ref=e478]
+                    - cell "Trend -0.3" [ref=e479]:
+                      - generic "Trend -0.3" [ref=e480]:
+                        - img [ref=e481]
+                        - text: "-0.3"
+                  - row "#2 IM Isla Mendoza G10 • Sec B G10 B 98.0 Trend +0.4" [ref=e484]:
+                    - cell "#2" [ref=e485]
+                    - cell "IM Isla Mendoza G10 • Sec B" [ref=e486]:
+                      - generic [ref=e487]:
+                        - generic [ref=e488]: IM
+                        - generic [ref=e489]:
+                          - generic [ref=e490]: Isla Mendoza
+                          - generic [ref=e491]: G10 • Sec B
+                    - cell "G10" [ref=e492]
+                    - cell "B" [ref=e493]
+                    - cell "98.0" [ref=e494]
+                    - cell "Trend +0.4" [ref=e495]:
+                      - generic "Trend +0.4" [ref=e496]:
+                        - img [ref=e497]
+                        - text: "+0.4"
+                  - row "#3 XG Xavier Gomez G9 • Sec A G9 A 97.9 Trend -0.3" [ref=e500]:
+                    - cell "#3" [ref=e501]
+                    - cell "XG Xavier Gomez G9 • Sec A" [ref=e502]:
+                      - generic [ref=e503]:
+                        - generic [ref=e504]: XG
+                        - generic [ref=e505]:
+                          - generic [ref=e506]: Xavier Gomez
+                          - generic [ref=e507]: G9 • Sec A
+                    - cell "G9" [ref=e508]
+                    - cell "A" [ref=e509]
+                    - cell "97.9" [ref=e510]
+                    - cell "Trend -0.3" [ref=e511]:
+                      - generic "Trend -0.3" [ref=e512]:
+                        - img [ref=e513]
+                        - text: "-0.3"
+                  - row "#4 YF Yara Fernandez G9 • Sec B G9 B 97.6 Trend +0.4" [ref=e516]:
+                    - cell "#4" [ref=e517]
+                    - cell "YF Yara Fernandez G9 • Sec B" [ref=e518]:
+                      - generic [ref=e519]:
+                        - generic [ref=e520]: YF
+                        - generic [ref=e521]:
+                          - generic [ref=e522]: Yara Fernandez
+                          - generic [ref=e523]: G9 • Sec B
+                    - cell "G9" [ref=e524]
+                    - cell "B" [ref=e525]
+                    - cell "97.6" [ref=e526]
+                    - cell "Trend +0.4" [ref=e527]:
+                      - generic "Trend +0.4" [ref=e528]:
+                        - img [ref=e529]
+                        - text: "+0.4"
+                  - row "#5 JC Jasper Cruz G10 • Sec C G10 C 97.6 Trend -0.5" [ref=e532]:
+                    - cell "#5" [ref=e533]
+                    - cell "JC Jasper Cruz G10 • Sec C" [ref=e534]:
+                      - generic [ref=e535]:
+                        - generic [ref=e536]: JC
+                        - generic [ref=e537]:
+                          - generic [ref=e538]: Jasper Cruz
+                          - generic [ref=e539]: G10 • Sec C
+                    - cell "G10" [ref=e540]
+                    - cell "C" [ref=e541]
+                    - cell "97.6" [ref=e542]
+                    - cell "Trend -0.5" [ref=e543]:
+                      - generic "Trend -0.5" [ref=e544]:
+                        - img [ref=e545]
+                        - text: "-0.5"
+                  - row "#6 NG Noah Garcia G8 • Sec A G8 A 97.4 Trend -0.3" [ref=e548]:
+                    - cell "#6" [ref=e549]
+                    - cell "NG Noah Garcia G8 • Sec A" [ref=e550]:
+                      - generic [ref=e551]:
+                        - generic [ref=e552]: NG
+                        - generic [ref=e553]:
+                          - generic [ref=e554]: Noah Garcia
+                          - generic [ref=e555]: G8 • Sec A
+                    - cell "G8" [ref=e556]
+                    - cell "A" [ref=e557]
+                    - cell "97.4" [ref=e558]
+                    - cell "Trend -0.3" [ref=e559]:
+                      - generic "Trend -0.3" [ref=e560]:
+                        - img [ref=e561]
+                        - text: "-0.3"
+                  - row "#7 KR Kendall Reyes G10 • Sec D G10 D 97.3 Trend +0.7" [ref=e564]:
+                    - cell "#7" [ref=e565]
+                    - cell "KR Kendall Reyes G10 • Sec D" [ref=e566]:
+                      - generic [ref=e567]:
+                        - generic [ref=e568]: KR
+                        - generic [ref=e569]:
+                          - generic [ref=e570]: Kendall Reyes
+                          - generic [ref=e571]: G10 • Sec D
+                    - cell "G10" [ref=e572]
+                    - cell "D" [ref=e573]
+                    - cell "97.3" [ref=e574]
+                    - cell "Trend +0.7" [ref=e575]:
+                      - generic "Trend +0.7" [ref=e576]:
+                        - img [ref=e577]
+                        - text: "+0.7"
+                  - row "#8 ZM Zane Morales G9 • Sec C G9 C 97.2 Trend -0.5" [ref=e580]:
+                    - cell "#8" [ref=e581]
+                    - cell "ZM Zane Morales G9 • Sec C" [ref=e582]:
+                      - generic [ref=e583]:
+                        - generic [ref=e584]: ZM
+                        - generic [ref=e585]:
+                          - generic [ref=e586]: Zane Morales
+                          - generic [ref=e587]: G9 • Sec C
+                    - cell "G9" [ref=e588]
+                    - cell "C" [ref=e589]
+                    - cell "97.2" [ref=e590]
+                    - cell "Trend -0.5" [ref=e591]:
+                      - generic "Trend -0.5" [ref=e592]:
+                        - img [ref=e593]
+                        - text: "-0.5"
+                  - row "#9 OR Olivia Reyes G8 • Sec B G8 B 97.1 Trend +0.4" [ref=e596]:
+                    - cell "#9" [ref=e597]
+                    - cell "OR Olivia Reyes G8 • Sec B" [ref=e598]:
+                      - generic [ref=e599]:
+                        - generic [ref=e600]: OR
+                        - generic [ref=e601]:
+                          - generic [ref=e602]: Olivia Reyes
+                          - generic [ref=e603]: G8 • Sec B
+                    - cell "G8" [ref=e604]
+                    - cell "B" [ref=e605]
+                    - cell "97.1" [ref=e606]
+                    - cell "Trend +0.4" [ref=e607]:
+                      - generic "Trend +0.4" [ref=e608]:
+                        - img [ref=e609]
+                        - text: "+0.4"
+                  - row "#10 AB Aiden Bautista G9 • Sec D G9 D 96.9 Trend +0.7" [ref=e612]:
+                    - cell "#10" [ref=e613]
+                    - cell "AB Aiden Bautista G9 • Sec D" [ref=e614]:
+                      - generic [ref=e615]:
+                        - generic [ref=e616]: AB
+                        - generic [ref=e617]:
+                          - generic [ref=e618]: Aiden Bautista
+                          - generic [ref=e619]: G9 • Sec D
+                    - cell "G9" [ref=e620]
+                    - cell "D" [ref=e621]
+                    - cell "96.9" [ref=e622]
+                    - cell "Trend +0.7" [ref=e623]:
+                      - generic "Trend +0.7" [ref=e624]:
+                        - img [ref=e625]
+                        - text: "+0.7"
+          - generic [ref=e629]:
+            - generic [ref=e630]:
+              - generic [ref=e631]:
+                - img [ref=e632]
+                - text: School Life Gallery
+              - heading "Explore Our Campus" [level=2] [ref=e635]
+              - paragraph [ref=e636]: Take a visual journey through our vibrant school community. From academic achievements to athletic victories, discover the moments that make our school special.
+            - generic [ref=e638]:
+              - generic [ref=e639]:
+                - button "All" [ref=e640]:
+                  - img [ref=e641]
+                  - text: All
+                - button "Academic" [ref=e646]:
+                  - img [ref=e647]
+                  - text: Academic
+                - button "Sports" [ref=e650]:
+                  - img [ref=e651]
+                  - text: Sports
+                - button "Arts" [ref=e657]:
+                  - img [ref=e658]
+                  - text: Arts
+                - button "Events" [ref=e664]:
+                  - img [ref=e665]
+                  - text: Events
+                - button "Campus Life" [ref=e669]:
+                  - img [ref=e670]
+                  - text: Campus Life
+              - generic [ref=e676]:
+                - img "Science Fair 2024 Winners" [ref=e677]
+                - generic [ref=e678]:
+                  - button [ref=e679]
+                  - button [ref=e680]
+                  - button [ref=e681]
+                  - button [ref=e682]
+                  - button [ref=e683]
+                  - button [ref=e684]
+                  - button [ref=e685]
+                  - button [ref=e686]
+                - button [ref=e687]:
+                  - img [ref=e688]
+                - button [ref=e690]:
+                  - img [ref=e691]
+                - generic [ref=e693]:
+                  - generic [ref=e694]:
+                    - img [ref=e695]
+                    - text: Academic
+                  - heading "Science Fair 2024 Winners" [level=3] [ref=e701]
+                  - paragraph [ref=e702]: Students showcased innovative projects in STEM fields
+              - generic [ref=e703]:
+                - generic [ref=e705]:
+                  - img "Basketball Championship" [ref=e706]
+                  - generic [ref=e708]: Sports
+                  - generic [ref=e709]:
+                    - heading "Basketball Championship" [level=4] [ref=e710]
+                    - paragraph [ref=e711]: Eagles win state championship
+                - generic [ref=e713]:
+                  - img "Art Exhibition" [ref=e714]
+                  - generic [ref=e716]: Arts
+                  - generic [ref=e717]:
+                    - heading "Art Exhibition" [level=4] [ref=e718]
+                    - paragraph [ref=e719]: Student artwork displayed in gallery
+                - generic [ref=e721]:
+                  - img "Drama Performance" [ref=e722]
+                  - generic [ref=e724]: Arts
+                  - generic [ref=e725]:
+                    - heading "Drama Performance" [level=4] [ref=e726]
+                    - paragraph [ref=e727]: Annual spring musical production
+                - generic [ref=e729]:
+                  - img "Community Service" [ref=e730]
+                  - generic [ref=e732]: Events
+                  - generic [ref=e733]:
+                    - heading "Community Service" [level=4] [ref=e734]
+                    - paragraph [ref=e735]: Students volunteering in local community
+                - generic [ref=e737]:
+                  - img "Math Olympiad" [ref=e738]
+                  - generic [ref=e740]: Academic
+                  - generic [ref=e741]:
+                    - heading "Math Olympiad" [level=4] [ref=e742]
+                    - paragraph [ref=e743]: Students compete in mathematics competition
+                - generic [ref=e745]:
+                  - img "Soccer Tournament" [ref=e746]
+                  - generic [ref=e748]: Sports
+                  - generic [ref=e749]:
+                    - heading "Soccer Tournament" [level=4] [ref=e750]
+                    - paragraph [ref=e751]: Annual inter-school soccer championship
+                - generic [ref=e753]:
+                  - img "Campus Festival" [ref=e754]
+                  - generic [ref=e756]: Campus Life
+                  - generic [ref=e757]:
+                    - heading "Campus Festival" [level=4] [ref=e758]
+                    - paragraph [ref=e759]: Annual campus celebration with food and activities
+              - link "View All Gallery Items" [ref=e761] [cursor=pointer]:
+                - /url: /guess/gallery
+                - button "View All Gallery Items" [ref=e762]:
+                  - img [ref=e763]
+                  - text: View All Gallery Items
+          - generic [ref=e767]:
+            - generic [ref=e768]:
+              - generic [ref=e769]:
+                - generic [ref=e770]:
+                  - img [ref=e771]
+                  - text: Latest Updates
+                - heading "Featured News" [level=2] [ref=e774]
+                - paragraph [ref=e775]: Stay informed with the latest happenings in our school community.
+              - link "View All News" [ref=e776] [cursor=pointer]:
+                - /url: /guess/news-events
+                - text: View All News
+                - img [ref=e777]
+            - generic [ref=e779]:
+              - link "Science Fair Champions Advance to Nationals Academic 15 Feb Feb 15 Science Fair Champions Advance to Nationals Our students' innovative projects earn recognition at state level competition. Dr.Sarah Chen 3 min read Read more" [ref=e781] [cursor=pointer]:
+                - /url: /guess/news/science-fair-champions
+                - generic [ref=e782]:
+                  - img "Science Fair Champions Advance to Nationals" [ref=e783]
+                  - generic [ref=e785]: Academic
+                - generic [ref=e787]:
+                  - generic [ref=e788]: "15"
+                  - generic [ref=e789]: Feb
+                - generic [ref=e791]: Feb 15
+                - generic [ref=e792]:
+                  - heading "Science Fair Champions Advance to Nationals" [level=3] [ref=e793]
+                  - paragraph [ref=e794]: Our students' innovative projects earn recognition at state level competition.
+                  - generic [ref=e795]:
+                    - generic [ref=e796]:
+                      - img [ref=e798]
+                      - text: Dr.Sarah Chen
+                    - generic [ref=e801]:
+                      - img [ref=e802]
+                      - text: 3 min read
+                  - generic [ref=e806]:
+                    - text: Read more
+                    - img [ref=e807]
+              - link "New STEM Laboratory Opens Facilities 10 Feb Feb 10 New STEM Laboratory Opens State-of-the-art facilities now available for advanced research and learning. Principal Martinez 2 min read Read more" [ref=e810] [cursor=pointer]:
+                - /url: /guess/news
+                - generic [ref=e811]:
+                  - img "New STEM Laboratory Opens" [ref=e812]
+                  - generic [ref=e814]: Facilities
+                - generic [ref=e816]:
+                  - generic [ref=e817]: "10"
+                  - generic [ref=e818]: Feb
+                - generic [ref=e820]: Feb 10
+                - generic [ref=e821]:
+                  - heading "New STEM Laboratory Opens" [level=3] [ref=e822]
+                  - paragraph [ref=e823]: State-of-the-art facilities now available for advanced research and learning.
+                  - generic [ref=e824]:
+                    - generic [ref=e825]:
+                      - img [ref=e827]
+                      - text: Principal Martinez
+                    - generic [ref=e830]:
+                      - img [ref=e831]
+                      - text: 2 min read
+                  - generic [ref=e835]:
+                    - text: Read more
+                    - img [ref=e836]
+              - link "Basketball Team Reaches State Finals Athletics 8 Feb Feb 8 Basketball Team Reaches State Finals Eagles continue undefeated season with championship game ahead. Coach Johnson 4 min read Read more" [ref=e839] [cursor=pointer]:
+                - /url: /guess/news
+                - generic [ref=e840]:
+                  - img "Basketball Team Reaches State Finals" [ref=e841]
+                  - generic [ref=e843]: Athletics
+                - generic [ref=e845]:
+                  - generic [ref=e846]: "8"
+                  - generic [ref=e847]: Feb
+                - generic [ref=e849]: Feb 8
+                - generic [ref=e850]:
+                  - heading "Basketball Team Reaches State Finals" [level=3] [ref=e851]
+                  - paragraph [ref=e852]: Eagles continue undefeated season with championship game ahead.
+                  - generic [ref=e853]:
+                    - generic [ref=e854]:
+                      - img [ref=e856]
+                      - text: Coach Johnson
+                    - generic [ref=e859]:
+                      - img [ref=e860]
+                      - text: 4 min read
+                  - generic [ref=e864]:
+                    - text: Read more
+                    - img [ref=e865]
+          - generic [ref=e868]:
+            - generic [ref=e869]:
+              - generic [ref=e870]:
+                - img [ref=e871]
+                - text: Our Programs
+              - heading "Discover Your Potential" [level=2] [ref=e875]
+              - paragraph [ref=e876]: From rigorous academics to vibrant extracurriculars, we offer comprehensive programs designed to help every student succeed and thrive.
+            - generic [ref=e877]:
+              - generic [ref=e878]:
+                - generic [ref=e879]:
+                  - generic [ref=e880]:
+                    - img [ref=e882]
+                    - generic [ref=e884]:
+                      - heading "Academic Excellence" [level=3] [ref=e885]
+                      - generic [ref=e886]: 98% College Acceptance
+                  - img [ref=e888]
+                - img "Academic Excellence" [ref=e891]
+                - paragraph [ref=e892]: Comprehensive curriculum with AP courses, STEM programs, and college preparation that prepares students for success.
+                - generic [ref=e893]:
+                  - generic [ref=e894]:
+                    - generic [ref=e895]: 25+
+                    - generic [ref=e896]: AP Courses
+                  - generic [ref=e897]:
+                    - generic [ref=e898]: "3.8"
+                    - generic [ref=e899]: Average GPA
+                - button "Learn More" [ref=e900]:
+                  - text: Learn More
+                  - img [ref=e901]
+              - generic [ref=e905]:
+                - generic [ref=e906]:
+                  - generic [ref=e907]:
+                    - img [ref=e909]
+                    - generic [ref=e914]:
+                      - heading "Student Life" [level=3] [ref=e915]
+                      - generic [ref=e916]: 30+ Clubs
+                  - img [ref=e918]
+                - img "Student Life" [ref=e921]
+                - paragraph [ref=e922]: Vibrant campus community with diverse clubs, organizations, and activities for every interest.
+                - generic [ref=e923]:
+                  - generic [ref=e924]:
+                    - generic [ref=e925]: 30+
+                    - generic [ref=e926]: Active Clubs
+                  - generic [ref=e927]:
+                    - generic [ref=e928]: 85%
+                    - generic [ref=e929]: Participation
+                - button "Learn More" [ref=e930]:
+                  - text: Learn More
+                  - img [ref=e931]
+              - generic [ref=e935]:
+                - generic [ref=e936]:
+                  - generic [ref=e937]:
+                    - img [ref=e939]
+                    - generic [ref=e945]:
+                      - heading "Athletics" [level=3] [ref=e946]
+                      - generic [ref=e947]: State Champions
+                  - img [ref=e949]
+                - img "Athletics" [ref=e952]
+                - paragraph [ref=e953]: Championship sports programs that build character, teamwork, and school pride.
+                - generic [ref=e954]:
+                  - generic [ref=e955]:
+                    - generic [ref=e956]: 15+
+                    - generic [ref=e957]: Sports Teams
+                  - generic [ref=e958]:
+                    - generic [ref=e959]: "12"
+                    - generic [ref=e960]: Championships
+                - button "Learn More" [ref=e961]:
+                  - text: Learn More
+                  - img [ref=e962]
+              - generic [ref=e966]:
+                - generic [ref=e967]:
+                  - generic [ref=e968]:
+                    - img [ref=e970]
+                    - generic [ref=e972]:
+                      - heading "Events & Activities" [level=3] [ref=e973]
+                      - generic [ref=e974]: 100+ Events/Year
+                  - img [ref=e976]
+                - paragraph [ref=e978]: Year-round events, performances, and celebrations that bring our community together.
+                - button "Learn More" [ref=e979]:
+                  - text: Learn More
+                  - img [ref=e980]
+              - generic [ref=e984]:
+                - generic [ref=e985]:
+                  - generic [ref=e986]:
+                    - img [ref=e988]
+                    - generic [ref=e991]:
+                      - heading "Awards & Recognition" [level=3] [ref=e992]
+                      - generic [ref=e993]: 50+ Awards
+                  - img [ref=e995]
+                - paragraph [ref=e997]: Celebrating student achievements and academic excellence at local, state, and national levels.
+                - button "Learn More" [ref=e998]:
+                  - text: Learn More
+                  - img [ref=e999]
+              - generic [ref=e1003]:
+                - generic [ref=e1004]:
+                  - generic [ref=e1005]:
+                    - img [ref=e1007]
+                    - generic [ref=e1010]:
+                      - heading "College Preparation" [level=3] [ref=e1011]
+                      - generic [ref=e1012]: 95% College Bound
+                  - img [ref=e1014]
+                - paragraph [ref=e1016]: Comprehensive guidance and support to help students achieve their higher education goals.
+                - button "Learn More" [ref=e1017]:
+                  - text: Learn More
+                  - img [ref=e1018]
+          - generic [ref=e1023]:
+            - generic [ref=e1024]:
+              - generic [ref=e1025]:
+                - img [ref=e1026]
+                - text: 🎯 Extracurricular
+              - heading "Beyond the Classroom" [level=2] [ref=e1028]
+              - paragraph [ref=e1029]: Discover opportunities to grow, lead, and make lasting connections through our diverse range of clubs and activities.
+            - generic [ref=e1030]:
+              - tablist [ref=e1032]:
+                - tab "Academic Excellence" [selected] [ref=e1033]:
+                  - img [ref=e1034]
+                  - text: Academic Excellence
+                - tab "Arts & Culture" [ref=e1037]:
+                  - img [ref=e1038]
+                  - text: Arts & Culture
+                - tab "Special Interest" [ref=e1044]:
+                  - img [ref=e1045]
+                  - text: Special Interest
+              - tabpanel "Academic Excellence" [ref=e1047]:
+                - generic [ref=e1048]:
+                  - heading "🎓 Academic Excellence Clubs" [level=3] [ref=e1049]
+                  - paragraph [ref=e1050]: Enhance your learning through academic competitions, research projects, and scholarly pursuits.
+                - generic [ref=e1051]:
+                  - generic [ref=e1053]:
+                    - generic [ref=e1054]:
+                      - img [ref=e1056]
+                      - generic [ref=e1059]: "85"
+                    - heading "National Honor Society" [level=3] [ref=e1060]
+                    - generic [ref=e1061]:
+                      - img [ref=e1062]
+                      - generic [ref=e1067]: 85 active members
+                    - link "Join Club" [ref=e1068] [cursor=pointer]:
+                      - /url: /guess/extracurricular
+                      - button "Join Club" [ref=e1069]:
+                        - text: Join Club
+                        - img [ref=e1070]
+                  - generic [ref=e1073]:
+                    - generic [ref=e1074]:
+                      - img [ref=e1076]
+                      - generic [ref=e1078]: "42"
+                    - heading "Math Club" [level=3] [ref=e1079]
+                    - generic [ref=e1080]:
+                      - img [ref=e1081]
+                      - generic [ref=e1086]: 42 active members
+                    - link "Join Club" [ref=e1087] [cursor=pointer]:
+                      - /url: /guess/math-club
+                      - button "Join Club" [ref=e1088]:
+                        - text: Join Club
+                        - img [ref=e1089]
+                  - generic [ref=e1092]:
+                    - generic [ref=e1093]:
+                      - img [ref=e1095]
+                      - generic [ref=e1099]: "38"
+                    - heading "Science Olympiad" [level=3] [ref=e1100]
+                    - generic [ref=e1101]:
+                      - img [ref=e1102]
+                      - generic [ref=e1107]: 38 active members
+                    - link "Join Club" [ref=e1108] [cursor=pointer]:
+                      - /url: /guess/extracurricular
+                      - button "Join Club" [ref=e1109]:
+                        - text: Join Club
+                        - img [ref=e1110]
+                  - generic [ref=e1113]:
+                    - generic [ref=e1114]:
+                      - img [ref=e1116]
+                      - generic [ref=e1121]: "28"
+                    - heading "Debate Team" [level=3] [ref=e1122]
+                    - generic [ref=e1123]:
+                      - img [ref=e1124]
+                      - generic [ref=e1129]: 28 active members
+                    - link "Join Club" [ref=e1130] [cursor=pointer]:
+                      - /url: /guess/extracurricular
+                      - button "Join Club" [ref=e1131]:
+                        - text: Join Club
+                        - img [ref=e1132]
+          - generic [ref=e1135]:
+            - generic [ref=e1136]:
+              - generic [ref=e1137]:
+                - img [ref=e1138]
+                - text: Community Voices
+              - heading "What Our Community Says" [level=2] [ref=e1140]
+              - paragraph [ref=e1141]: Hear from students, parents, and alumni about their experiences at Southville 8B National High School.
+            - generic [ref=e1142]:
+              - generic [ref=e1144]:
+                - generic [ref=e1145]:
+                  - img "Sarah Johnson" [ref=e1146]
+                  - generic [ref=e1147]:
+                    - heading "Sarah Johnson" [level=3] [ref=e1148]
+                    - paragraph [ref=e1149]: Class of 2023
+                - paragraph [ref=e1150]: "\"Southville 8B NHS provided me with the foundation I needed to succeed in college. The teachers truly care about each student's success.\""
+                - generic [ref=e1151]:
+                  - img [ref=e1152]
+                  - img [ref=e1154]
+                  - img [ref=e1156]
+                  - img [ref=e1158]
+                  - img [ref=e1160]
+              - generic [ref=e1163]:
+                - generic [ref=e1164]:
+                  - img "Michael Chen" [ref=e1165]
+                  - generic [ref=e1166]:
+                    - heading "Michael Chen" [level=3] [ref=e1167]
+                    - paragraph [ref=e1168]: Current Student
+                - paragraph [ref=e1169]: "\"The variety of clubs and activities here is amazing. I've been able to explore my interests and develop leadership skills.\""
+                - generic [ref=e1170]:
+                  - img [ref=e1171]
+                  - img [ref=e1173]
+                  - img [ref=e1175]
+                  - img [ref=e1177]
+                  - img [ref=e1179]
+              - generic [ref=e1182]:
+                - generic [ref=e1183]:
+                  - img "Dr. Emily Rodriguez" [ref=e1184]
+                  - generic [ref=e1185]:
+                    - heading "Dr. Emily Rodriguez" [level=3] [ref=e1186]
+                    - paragraph [ref=e1187]: Parent
+                - paragraph [ref=e1188]: "\"As a parent, I'm impressed by the school's commitment to academic excellence and character development. My daughter thrives here.\""
+                - generic [ref=e1189]:
+                  - img [ref=e1190]
+                  - img [ref=e1192]
+                  - img [ref=e1194]
+                  - img [ref=e1196]
+                  - img [ref=e1198]
+          - generic [ref=e1202]:
+            - generic [ref=e1203]:
+              - generic [ref=e1205]:
+                - img [ref=e1206]
+                - text: Academic Year 2025-2026
+                - img [ref=e1208]
+              - heading "Academic Calendar" [level=2] [ref=e1210]
+              - paragraph [ref=e1211]: Stay organized with important dates, deadlines, and exciting events throughout the school year
+            - generic [ref=e1212]:
+              - generic [ref=e1213]:
+                - generic [ref=e1214]:
+                  - img [ref=e1215]
+                  - textbox "Search events..." [ref=e1218]
+                - combobox [ref=e1219]:
+                  - img [ref=e1220]
+                  - img [ref=e1222]
+                - combobox [ref=e1224]
+              - generic [ref=e1225]:
+                - button "Export Calendar" [ref=e1226]:
+                  - img [ref=e1227]
+                  - text: Export Calendar
+                - button "Notifications" [ref=e1230]:
+                  - img [ref=e1231]
+                  - text: Notifications
+            - generic [ref=e1234]:
+              - generic [ref=e1236]:
+                - generic [ref=e1237]:
+                  - generic [ref=e1238]:
+                    - button [ref=e1239]:
+                      - img [ref=e1240]
+                    - heading "August 2025" [level=3] [ref=e1242]
+                    - button [ref=e1243]:
+                      - img [ref=e1244]
+                  - generic [ref=e1246]:
+                    - button "August Events" [ref=e1247]:
+                      - img [ref=e1248]
+                      - text: August Events
+                    - button "Today" [ref=e1250]:
+                      - img [ref=e1251]
+                      - text: Today
+                - generic [ref=e1253]:
+                  - generic [ref=e1254]:
+                    - generic [ref=e1255]: SunS
+                    - generic [ref=e1256]: MonM
+                    - generic [ref=e1257]: TueT
+                    - generic [ref=e1258]: WedW
+                    - generic [ref=e1259]: ThuT
+                    - generic [ref=e1260]: FriF
+                    - generic [ref=e1261]: SatS
+                  - generic [ref=e1262]:
+                    - generic [ref=e1263]:
+                      - generic [ref=e1264]:
+                        - text: "1"
+                        - img [ref=e1265]
+                      - generic:
+                        - generic "Summer School Final Exams Begin"
+                      - generic [ref=e1268]:
+                        - generic [ref=e1269]: 1 event
+                        - generic [ref=e1270]: • Summer School Final Exams Begin
+                    - generic [ref=e1271]:
+                      - generic [ref=e1272]: "2"
+                      - generic:
+                        - generic "Teacher Professional Development"
+                      - generic [ref=e1274]:
+                        - generic [ref=e1275]: 1 event
+                        - generic [ref=e1276]: • Teacher Professional Development
+                    - generic [ref=e1277]:
+                      - generic [ref=e1278]: "3"
+                      - generic:
+                        - generic "School Supply Drive"
+                      - generic [ref=e1280]:
+                        - generic [ref=e1281]: 1 event
+                        - generic [ref=e1282]: • School Supply Drive
+                    - generic [ref=e1283]:
+                      - generic [ref=e1284]: "4"
+                      - generic:
+                        - generic "Summer Reading Program Finale"
+                      - generic [ref=e1286]:
+                        - generic [ref=e1287]: 1 event
+                        - generic [ref=e1288]: • Summer Reading Program Finale
+                    - generic [ref=e1289]:
+                      - generic [ref=e1290]: "5"
+                      - generic:
+                        - generic "Facility Maintenance Day"
+                      - generic [ref=e1292]:
+                        - generic [ref=e1293]: 1 event
+                        - generic [ref=e1294]: • Facility Maintenance Day
+                    - generic [ref=e1295]:
+                      - generic [ref=e1296]:
+                        - text: "6"
+                        - img [ref=e1297]
+                      - generic:
+                        - generic "New Student Registration Opens"
+                      - generic [ref=e1300]:
+                        - generic [ref=e1301]: 1 event
+                        - generic [ref=e1302]: • New Student Registration Opens
+                    - generic [ref=e1303]:
+                      - generic [ref=e1304]: "7"
+                      - generic:
+                        - generic "Parent Information Session"
+                      - generic [ref=e1306]:
+                        - generic [ref=e1307]: 1 event
+                        - generic [ref=e1308]: • Parent Information Session
+                    - generic [ref=e1309]:
+                      - generic [ref=e1310]: "8"
+                      - generic:
+                        - generic "Technology Setup Workshop"
+                      - generic [ref=e1312]:
+                        - generic [ref=e1313]: 1 event
+                        - generic [ref=e1314]: • Technology Setup Workshop
+                    - generic [ref=e1315]:
+                      - generic [ref=e1316]: "9"
+                      - generic:
+                        - generic "Yearbook Photo Retakes"
+                      - generic [ref=e1318]:
+                        - generic [ref=e1319]: 1 event
+                        - generic [ref=e1320]: • Yearbook Photo Retakes
+                    - generic [ref=e1321]:
+                      - generic [ref=e1322]: "10"
+                      - generic:
+                        - generic "Drama Club Auditions"
+                      - generic [ref=e1324]:
+                        - generic [ref=e1325]: 1 event
+                        - generic [ref=e1326]: • Drama Club Auditions
+                    - generic [ref=e1327]:
+                      - generic [ref=e1328]: "11"
+                      - generic:
+                        - generic "Band Camp Begins"
+                      - generic [ref=e1330]:
+                        - generic [ref=e1331]: 1 event
+                        - generic [ref=e1332]: • Band Camp Begins
+                    - generic [ref=e1333]:
+                      - generic [ref=e1334]:
+                        - text: "12"
+                        - img [ref=e1335]
+                      - generic:
+                        - generic "Counselor Meet & Greet"
+                      - generic [ref=e1338]:
+                        - generic [ref=e1339]: 1 event
+                        - generic [ref=e1340]: • Counselor Meet & Greet
+                    - generic [ref=e1341]:
+                      - generic [ref=e1342]:
+                        - text: "13"
+                        - img [ref=e1343]
+                      - generic:
+                        - generic "Textbook Distribution"
+                      - generic [ref=e1346]:
+                        - generic [ref=e1347]: 1 event
+                        - generic [ref=e1348]: • Textbook Distribution
+                    - generic [ref=e1349]:
+                      - generic [ref=e1350]: "14"
+                      - generic:
+                        - generic "Senior Portrait Day"
+                      - generic [ref=e1352]:
+                        - generic [ref=e1353]: 1 event
+                        - generic [ref=e1354]: • Senior Portrait Day
+                    - generic [ref=e1355]:
+                      - generic [ref=e1356]:
+                        - text: "15"
+                        - img [ref=e1357]
+                      - generic:
+                        - generic "Athletic Physical Day"
+                      - generic [ref=e1360]:
+                        - generic [ref=e1361]: 1 event
+                        - generic [ref=e1362]: • Athletic Physical Day
+                    - generic [ref=e1363]:
+                      - generic [ref=e1364]:
+                        - text: "16"
+                        - img [ref=e1365]
+                      - generic:
+                        - generic "Freshman Orientation Day"
+                      - generic [ref=e1368]:
+                        - generic [ref=e1369]: 1 event
+                        - generic [ref=e1370]: • Freshman Orientation Day
+                    - generic [ref=e1371]:
+                      - generic [ref=e1372]: "17"
+                      - generic:
+                        - generic "Club Fair & Activities Expo"
+                      - generic [ref=e1374]:
+                        - generic [ref=e1375]: 1 event
+                        - generic [ref=e1376]: • Club Fair & Activities Expo
+                    - generic [ref=e1377]:
+                      - generic [ref=e1378]:
+                        - text: "18"
+                        - img [ref=e1379]
+                      - generic:
+                        - generic "Schedule Pick-up Day"
+                      - generic [ref=e1382]:
+                        - generic [ref=e1383]: 1 event
+                        - generic [ref=e1384]: • Schedule Pick-up Day
+                    - generic [ref=e1385]:
+                      - generic [ref=e1386]: "19"
+                      - generic:
+                        - generic "Fall Sports Tryouts Begin"
+                      - generic [ref=e1388]:
+                        - generic [ref=e1389]: 1 event
+                        - generic [ref=e1390]: • Fall Sports Tryouts Begin
+                    - generic [ref=e1391]:
+                      - generic [ref=e1392]: "20"
+                      - generic:
+                        - generic "New Teacher Welcome Lunch"
+                      - generic [ref=e1394]:
+                        - generic [ref=e1395]: 1 event
+                        - generic [ref=e1396]: • New Teacher Welcome Lunch
+                    - generic [ref=e1397]:
+                      - generic [ref=e1398]: "21"
+                      - generic:
+                        - generic "Library Orientation"
+                      - generic [ref=e1400]:
+                        - generic [ref=e1401]: 1 event
+                        - generic [ref=e1402]: • Library Orientation
+                    - generic [ref=e1403]:
+                      - generic [ref=e1404]:
+                        - text: "22"
+                        - img [ref=e1405]
+                      - generic:
+                        - generic "Student ID Photo Day"
+                      - generic [ref=e1408]:
+                        - generic [ref=e1409]: 1 event
+                        - generic [ref=e1410]: • Student ID Photo Day
+                    - generic [ref=e1411]:
+                      - generic [ref=e1412]: "23"
+                      - generic:
+                        - generic "Parking Permit Registration"
+                      - generic [ref=e1414]:
+                        - generic [ref=e1415]: 1 event
+                        - generic [ref=e1416]: • Parking Permit Registration
+                    - generic [ref=e1417]:
+                      - generic [ref=e1418]: "24"
+                      - generic:
+                        - generic "Back-to-School BBQ"
+                      - generic [ref=e1420]:
+                        - generic [ref=e1421]: 1 event
+                        - generic [ref=e1422]: • Back-to-School BBQ
+                    - generic [ref=e1423]:
+                      - generic [ref=e1424]: "25"
+                      - generic:
+                        - generic "Final Preparation Day"
+                      - generic [ref=e1426]:
+                        - generic [ref=e1427]: 1 event
+                        - generic [ref=e1428]: • Final Preparation Day
+                    - generic [ref=e1429]:
+                      - generic [ref=e1430]:
+                        - text: "26"
+                        - img [ref=e1431]
+                      - generic:
+                        - generic "FIRST DAY OF SCHOOL!"
+                      - generic [ref=e1434]:
+                        - generic [ref=e1435]: 1 event
+                        - generic [ref=e1436]: • FIRST DAY OF SCHOOL!
+                    - generic [ref=e1437]:
+                      - generic [ref=e1438]: "27"
+                      - generic:
+                        - generic "Schedule Adjustment Day"
+                      - generic [ref=e1440]:
+                        - generic [ref=e1441]: 1 event
+                        - generic [ref=e1442]: • Schedule Adjustment Day
+                    - generic [ref=e1443]:
+                      - generic [ref=e1444]: "28"
+                      - generic:
+                        - generic "Parent Portal Training"
+                      - generic [ref=e1446]:
+                        - generic [ref=e1447]: 1 event
+                        - generic [ref=e1448]: • Parent Portal Training
+                    - generic [ref=e1449]:
+                      - generic [ref=e1450]: "29"
+                      - generic:
+                        - generic "Student Government Elections"
+                      - generic [ref=e1452]:
+                        - generic [ref=e1453]: 1 event
+                        - generic [ref=e1454]: • Student Government Elections
+                    - generic [ref=e1455]:
+                      - generic [ref=e1456]: "30"
+                      - generic:
+                        - generic "First Week Celebration"
+                      - generic [ref=e1458]:
+                        - generic [ref=e1459]: 1 event
+                        - generic [ref=e1460]: • First Week Celebration
+                    - generic [ref=e1461]:
+                      - generic [ref=e1462]: "31"
+                      - generic:
+                        - generic "Monthly Assessment Day"
+                      - generic [ref=e1464]:
+                        - generic [ref=e1465]: 1 event
+                        - generic [ref=e1466]: • Monthly Assessment Day
+              - generic [ref=e1467]:
+                - generic [ref=e1470]:
+                  - img [ref=e1471]
+                  - text: Upcoming Events
+                  - generic [ref=e1473]: "0"
+                - generic [ref=e1474]:
+                  - generic [ref=e1476]:
+                    - img [ref=e1477]
+                    - text: Quick Actions
+                  - generic [ref=e1479]:
+                    - button "Export Calendar" [ref=e1480]:
+                      - img [ref=e1481]
+                      - text: Export Calendar
+                    - button "Event Reminders" [ref=e1484]:
+                      - img [ref=e1485]
+                      - text: Event Reminders
+                    - button "School Schedule" [ref=e1488]:
+                      - img [ref=e1489]
+                      - text: School Schedule
+                    - button "Event Calendar" [ref=e1492]:
+                      - img [ref=e1493]
+                      - text: Event Calendar
+          - generic [ref=e1499]:
+            - generic [ref=e1500]:
+              - heading "School Events" [level=2] [ref=e1501]
+              - paragraph [ref=e1502]: Discover and participate in exciting events happening throughout our school community
+            - generic [ref=e1503]:
+              - generic [ref=e1504]:
+                - generic [ref=e1505]: "2"
+                - generic [ref=e1506]: Interests Tracked
+              - generic [ref=e1507]:
+                - generic [ref=e1508]: "2"
+                - generic [ref=e1509]: Events Viewed
+              - generic [ref=e1510]:
+                - generic [ref=e1511]: "1"
+                - generic [ref=e1512]: Events Registered
+            - generic [ref=e1513]:
+              - heading "Featured Events" [level=3] [ref=e1514]:
+                - img [ref=e1515]
+                - text: Featured Events
+              - generic [ref=e1517]:
+                - generic [ref=e1518]:
+                  - generic [ref=e1519]:
+                    - 'img "Spring Musical: Hamilton" [ref=e1520]'
+                    - generic [ref=e1522]: Featured
+                    - generic [ref=e1523]:
+                      - button [ref=e1524]:
+                        - img [ref=e1525]
+                      - button [ref=e1527]:
+                        - img [ref=e1528]
+                  - generic [ref=e1534]:
+                    - generic [ref=e1536]:
+                      - img [ref=e1537]
+                      - text: Arts & Culture
+                    - 'heading "Spring Musical: Hamilton" [level=4] [ref=e1543]'
+                    - paragraph [ref=e1544]: Drama department with professional-level production
+                    - generic [ref=e1545]:
+                      - generic [ref=e1546]:
+                        - img [ref=e1547]
+                        - text: 4/20/2024 at 7:00 PM
+                      - generic [ref=e1549]:
+                        - img [ref=e1550]
+                        - text: Main Auditorium
+                      - generic [ref=e1553]:
+                        - img [ref=e1554]
+                        - text: 342 registered / 500
+                    - generic [ref=e1559]:
+                      - button "Register" [ref=e1560]
+                      - link "View Details" [ref=e1561] [cursor=pointer]:
+                        - /url: /guess/event/spring-musical-hamilton
+                        - button "View Details" [ref=e1562]:
+                          - text: View Details
+                          - img [ref=e1563]
+                - generic [ref=e1565]:
+                  - generic [ref=e1566]:
+                    - img "Graduation Ceremony 2024" [ref=e1567]
+                    - generic [ref=e1569]: Featured
+                    - generic [ref=e1570]:
+                      - button [ref=e1571]:
+                        - img [ref=e1572]
+                      - button [ref=e1574]:
+                        - img [ref=e1575]
+                  - generic [ref=e1581]:
+                    - generic [ref=e1583]:
+                      - img [ref=e1584]
+                      - text: Special Event
+                    - heading "Graduation Ceremony 2024" [level=4] [ref=e1587]
+                    - paragraph [ref=e1588]: Celebrating the graduating class of 2024
+                    - generic [ref=e1589]:
+                      - generic [ref=e1590]:
+                        - img [ref=e1591]
+                        - text: 6/15/2024 at 10:00 AM
+                      - generic [ref=e1593]:
+                        - img [ref=e1594]
+                        - text: Football Stadium
+                      - generic [ref=e1597]:
+                        - img [ref=e1598]
+                        - text: 560 registered / 600
+                    - generic [ref=e1603]:
+                      - button "Register" [ref=e1604]
+                      - link "View Details" [ref=e1605] [cursor=pointer]:
+                        - /url: /guess/event/graduation-ceremony-2024
+                        - button "View Details" [ref=e1606]:
+                          - text: View Details
+                          - img [ref=e1607]
+            - generic [ref=e1609]:
+              - button "All" [ref=e1610]
+              - button "Arts & Culture" [ref=e1611]:
+                - img [ref=e1612]
+                - text: Arts & Culture
+              - button "Sports" [ref=e1618]:
+                - img [ref=e1619]
+                - text: Sports
+              - button "Academic" [ref=e1625]:
+                - img [ref=e1626]
+                - text: Academic
+              - button "Special Event" [ref=e1630]:
+                - img [ref=e1631]
+                - text: Special Event
+              - button "Social" [ref=e1634]:
+                - img [ref=e1635]
+                - text: Social
+            - generic [ref=e1640]:
+              - generic [ref=e1641]:
+                - generic [ref=e1642]:
+                  - 'img "Spring Musical: Hamilton" [ref=e1643]'
+                  - generic [ref=e1645]: Arts & Culture
+                  - button [ref=e1647]:
+                    - img [ref=e1648]
+                - generic [ref=e1650]:
+                  - 'heading "Spring Musical: Hamilton" [level=4] [ref=e1651]'
+                  - paragraph [ref=e1652]: Drama department with professional-level production
+                  - generic [ref=e1653]:
+                    - generic [ref=e1654]:
+                      - img [ref=e1655]
+                      - text: 4/20/2024 at 7:00 PM
+                    - generic [ref=e1657]:
+                      - img [ref=e1658]
+                      - text: Main Auditorium
+                    - generic [ref=e1661]:
+                      - img [ref=e1662]
+                      - text: 342 registered
+                  - link "View Details" [ref=e1668] [cursor=pointer]:
+                    - /url: /guess/event/spring-musical-hamilton
+                    - button "View Details" [ref=e1669]
+              - generic [ref=e1670]:
+                - generic [ref=e1671]:
+                  - img "State Basketball Championship" [ref=e1672]
+                  - generic [ref=e1674]: Sports
+                  - button [ref=e1676]:
+                    - img [ref=e1677]
+                  - generic [ref=e1680]: Registered
+                - generic [ref=e1681]:
+                  - heading "State Basketball Championship" [level=4] [ref=e1682]
+                  - paragraph [ref=e1683]: Eagles compete for state championship
+                  - generic [ref=e1684]:
+                    - generic [ref=e1685]:
+                      - img [ref=e1686]
+                      - text: 3/15/2024 at 8:00 PM
+                    - generic [ref=e1688]:
+                      - img [ref=e1689]
+                      - text: State Arena, Downtown
+                    - generic [ref=e1692]:
+                      - img [ref=e1693]
+                      - text: 150 registered
+                  - link "View Details" [ref=e1699] [cursor=pointer]:
+                    - /url: /guess/event/state-basketball-championship
+                    - button "View Details" [ref=e1700]
+              - generic [ref=e1701]:
+                - generic [ref=e1702]:
+                  - img "Science Fair 2024" [ref=e1703]
+                  - generic [ref=e1705]: Academic
+                  - button [ref=e1707]:
+                    - img [ref=e1708]
+                  - generic [ref=e1711]: Registered
+                - generic [ref=e1712]:
+                  - heading "Science Fair 2024" [level=4] [ref=e1713]
+                  - paragraph [ref=e1714]: Annual showcase of student STEM projects with university judges
+                  - generic [ref=e1715]:
+                    - generic [ref=e1716]:
+                      - img [ref=e1717]
+                      - text: 5/10/2024 at 9:00 AM
+                    - generic [ref=e1719]:
+                      - img [ref=e1720]
+                      - text: Gymnasium
+                    - generic [ref=e1723]:
+                      - img [ref=e1724]
+                      - text: 89 registered
+                  - link "View Details" [ref=e1730] [cursor=pointer]:
+                    - /url: /guess/event/science-fair-2024
+                    - button "View Details" [ref=e1731]
+              - generic [ref=e1732]:
+                - generic [ref=e1733]:
+                  - img "Graduation Ceremony 2024" [ref=e1734]
+                  - generic [ref=e1736]: Special Event
+                  - button [ref=e1738]:
+                    - img [ref=e1739]
+                - generic [ref=e1741]:
+                  - heading "Graduation Ceremony 2024" [level=4] [ref=e1742]
+                  - paragraph [ref=e1743]: Celebrating the graduating class of 2024
+                  - generic [ref=e1744]:
+                    - generic [ref=e1745]:
+                      - img [ref=e1746]
+                      - text: 6/15/2024 at 10:00 AM
+                    - generic [ref=e1748]:
+                      - img [ref=e1749]
+                      - text: Football Stadium
+                    - generic [ref=e1752]:
+                      - img [ref=e1753]
+                      - text: 560 registered
+                  - link "View Details" [ref=e1759] [cursor=pointer]:
+                    - /url: /guess/event/graduation-ceremony-2024
+                    - button "View Details" [ref=e1760]
+              - generic [ref=e1761]:
+                - generic [ref=e1762]:
+                  - img "Senior Prom 2024" [ref=e1763]
+                  - generic [ref=e1765]: Social
+                  - button [ref=e1767]:
+                    - img [ref=e1768]
+                - generic [ref=e1770]:
+                  - heading "Senior Prom 2024" [level=4] [ref=e1771]
+                  - paragraph [ref=e1772]: Elegant senior prom with 'Enchanted Garden' theme
+                  - generic [ref=e1773]:
+                    - generic [ref=e1774]:
+                      - img [ref=e1775]
+                      - text: 5/18/2024 at 7:00 PM
+                    - generic [ref=e1777]:
+                      - img [ref=e1778]
+                      - text: Grand Ballroom Hotel
+                    - generic [ref=e1781]:
+                      - img [ref=e1782]
+                      - text: 287 registered
+                  - link "View Details" [ref=e1788] [cursor=pointer]:
+                    - /url: /guess/event/senior-prom-2024
+                    - button "View Details" [ref=e1789]
+              - generic [ref=e1790]:
+                - generic [ref=e1791]:
+                  - img "Robotics Competition" [ref=e1792]
+                  - generic [ref=e1794]: Academic
+                  - button [ref=e1796]:
+                    - img [ref=e1797]
+                  - generic [ref=e1800]: Registered
+                - generic [ref=e1801]:
+                  - heading "Robotics Competition" [level=4] [ref=e1802]
+                  - paragraph [ref=e1803]: Regional robotics competition featuring innovative student robots
+                  - generic [ref=e1804]:
+                    - generic [ref=e1805]:
+                      - img [ref=e1806]
+                      - text: 4/12/2024 at 8:00 AM
+                    - generic [ref=e1808]:
+                      - img [ref=e1809]
+                      - text: Engineering Lab
+                    - generic [ref=e1812]:
+                      - img [ref=e1813]
+                      - text: 78 registered
+                  - link "View Details" [ref=e1819] [cursor=pointer]:
+                    - /url: /guess/event/robotics-competition
+                    - button "View Details" [ref=e1820]
+            - link "View All Events" [ref=e1822] [cursor=pointer]:
+              - /url: /guess/event
+              - button "View All Events" [ref=e1823]:
+                - img [ref=e1824]
+                - text: View All Events
+      - generic [ref=e1826]:
+        - generic [ref=e1829]:
+          - generic [ref=e1830]:
+            - img [ref=e1832]
+            - generic [ref=e1834]:
+              - heading "Get the Southville 8B NHS Edge App" [level=3] [ref=e1835]
+              - paragraph [ref=e1836]: Access grades, notifications, and school updates anywhere, anytime!
+          - generic [ref=e1837]:
+            - link "App Store" [ref=e1838] [cursor=pointer]:
+              - /url: /guess/mobile-app
+              - button "App Store" [ref=e1839]:
+                - img [ref=e1840]
+                - text: App Store
+            - link "Google Play" [ref=e1843] [cursor=pointer]:
+              - /url: /guess/mobile-app
+              - button "Google Play" [ref=e1844]:
+                - img [ref=e1845]
+                - text: Google Play
+        - generic [ref=e1848]:
+          - generic [ref=e1849]:
+            - generic [ref=e1850]:
+              - img [ref=e1852]
+              - generic [ref=e1855]:
+                - heading "Southville 8B NHS" [level=3] [ref=e1856]
+                - paragraph [ref=e1857]: Excellence in Education
+            - paragraph [ref=e1858]: Empowering students to achieve their dreams through quality education, innovative programs, and a supportive community that fosters growth and success.
+            - generic [ref=e1859]:
+              - generic [ref=e1860]:
+                - img [ref=e1861]
+                - text: Rodriguez, Rizal, Philippines
+              - generic [ref=e1864]:
+                - img [ref=e1865]
+                - text: (+63) 123-456-7890
+              - generic [ref=e1867]:
+                - img [ref=e1868]
+                - text: info@southville8bnhs.edu.ph
+            - generic [ref=e1871]:
+              - link "Facebook" [ref=e1872] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e1873]
+              - link "Twitter" [ref=e1875] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e1876]
+              - link "Instagram" [ref=e1878] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e1879]
+              - link "YouTube" [ref=e1882] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e1883]
+          - generic [ref=e1886]:
+            - button "Quick Links" [ref=e1887]:
+              - heading "Quick Links" [level=4] [ref=e1888]:
+                - img [ref=e1889]
+                - text: Quick Links
+              - img [ref=e1892]
+            - list [ref=e1895]:
+              - listitem [ref=e1896]:
+                - link "About Us" [ref=e1897] [cursor=pointer]:
+                  - /url: /guess/about
+                  - text: About Us
+              - listitem [ref=e1898]:
+                - link "Academics" [ref=e1899] [cursor=pointer]:
+                  - /url: /guess/academics
+                  - text: Academics
+              - listitem [ref=e1900]:
+                - link "Admissions" [ref=e1901] [cursor=pointer]:
+                  - /url: /guess/admissions
+                  - text: Admissions
+              - listitem [ref=e1902]:
+                - link "Student Life" [ref=e1903] [cursor=pointer]:
+                  - /url: /guess/student-life
+                  - text: Student Life
+              - listitem [ref=e1904]:
+                - link "Athletics" [ref=e1905] [cursor=pointer]:
+                  - /url: /guess/athletics
+                  - text: Athletics
+              - listitem [ref=e1906]:
+                - link "News & Events" [ref=e1907] [cursor=pointer]:
+                  - /url: /guess/news-events
+                  - text: News & Events
+          - generic [ref=e1908]:
+            - button "Resources" [ref=e1909]:
+              - heading "Resources" [level=4] [ref=e1910]:
+                - img [ref=e1911]
+                - text: Resources
+              - img [ref=e1917]
+            - list [ref=e1920]:
+              - listitem [ref=e1921]:
+                - link "Student Portal" [ref=e1922] [cursor=pointer]:
+                  - /url: /guess/login
+                  - text: Student Portal
+              - listitem [ref=e1923]:
+                - link "Parent Portal" [ref=e1924] [cursor=pointer]:
+                  - /url: /guess/parent-portal
+                  - text: Parent Portal
+              - listitem [ref=e1925]:
+                - link "Staff Directory" [ref=e1926] [cursor=pointer]:
+                  - /url: /guess/staff
+                  - text: Staff Directory
+              - listitem [ref=e1927]:
+                - link "School Calendar" [ref=e1928] [cursor=pointer]:
+                  - /url: /guess/calendar
+                  - text: School Calendar
+              - listitem [ref=e1929]:
+                - link "Library" [ref=e1930] [cursor=pointer]:
+                  - /url: /teacher/resources
+                  - text: Library
+              - listitem [ref=e1931]:
+                - link "Career Services" [ref=e1932] [cursor=pointer]:
+                  - /url: /guess/careers
+                  - text: Career Services
+          - generic [ref=e1933]:
+            - generic [ref=e1934]:
+              - button "Our Achievements" [ref=e1935]:
+                - heading "Our Achievements" [level=4] [ref=e1936]:
+                  - img [ref=e1937]
+                  - text: Our Achievements
+                - img [ref=e1944]
+              - generic [ref=e1947]:
+                - generic [ref=e1948]:
+                  - img [ref=e1950]
+                  - text: Municipal Champions 2024
+                - generic [ref=e1953]:
+                  - img [ref=e1955]
+                  - text: A+ School Rating
+                - generic [ref=e1957]:
+                  - img [ref=e1959]
+                  - text: Academic Excellence
+                - generic [ref=e1965]:
+                  - img [ref=e1967]
+                  - text: 98% Student Satisfaction
+            - generic [ref=e1969]:
+              - heading "Stay Updated" [level=5] [ref=e1970]:
+                - img [ref=e1971]
+                - text: Stay Updated
+              - paragraph [ref=e1974]: Get the latest news and updates from our school community.
+              - generic [ref=e1975]:
+                - textbox "Enter your email" [ref=e1976]
+                - button "Subscribe" [ref=e1977]:
+                  - img [ref=e1978]
+                  - text: Subscribe
+        - generic [ref=e1983]:
+          - generic [ref=e1984]:
+            - paragraph [ref=e1985]: © 2025 Southville 8B National High School. All rights reserved.
+            - generic [ref=e1986]:
+              - link "Privacy Policy" [ref=e1987] [cursor=pointer]:
+                - /url: /privacy
+              - link "Terms of Service" [ref=e1988] [cursor=pointer]:
+                - /url: /terms
+              - link "Accessibility" [ref=e1989] [cursor=pointer]:
+                - /url: /accessibility
+          - generic [ref=e1990]:
+            - generic [ref=e1991]:
+              - img [ref=e1992]
+              - text: Est. 2009
+            - generic [ref=e1994]:
+              - img [ref=e1995]
+              - text: Serving Community
+  - region "Notifications (F8)":
+    - list
+```

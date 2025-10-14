@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { HeroSection } from "@/components/ui/hero-section"
@@ -75,6 +75,26 @@ export default function HomePage() {
   const { theme } = useTheme()
   const isGamingTheme = theme === "gaming"
   const isDarkMode = theme === "dark" || theme === "gaming"
+
+  // Generate background circles only on client to avoid hydration mismatch
+  const [backgroundCircles, setBackgroundCircles] = useState<Array<{
+    left: string
+    top: string
+    width: string
+    height: string
+  }>>([])
+
+  useEffect(() => {
+    // Generate random positions only on client side
+    setBackgroundCircles(
+      Array.from({ length: 6 }, () => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        width: `${Math.random() * 200 + 100}px`,
+        height: `${Math.random() * 200 + 100}px`,
+      }))
+    )
+  }, [])
 
   const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 })
   const [welcomeRef, welcomeInView] = useIntersectionObserver({ threshold: 0.1 })
@@ -331,7 +351,7 @@ export default function HomePage() {
       >
         {/* Background decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
+          {backgroundCircles.map((circle, i) => (
             <div
               key={i}
               className={cn(
@@ -339,10 +359,10 @@ export default function HomePage() {
                 isDarkMode ? "bg-blue-400" : "bg-gradient-to-r from-blue-400 to-purple-400",
               )}
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                width: `${Math.random() * 200 + 100}px`,
-                height: `${Math.random() * 200 + 100}px`,
+                left: circle.left,
+                top: circle.top,
+                width: circle.width,
+                height: circle.height,
               }}
             />
           ))}

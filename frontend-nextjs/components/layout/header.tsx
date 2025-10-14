@@ -133,9 +133,9 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  if (!mounted) return null
-
-  const isDarkMode = theme === "dark"
+  // Don't return null - this causes hydration mismatch
+  // Instead, render the same structure but handle theme safely
+  const isDarkMode = mounted ? theme === "dark" : false
 
   const mainNavigation = navigation.slice(0, 3) // Home, Academics, Student Life
   const moreNavigation = navigation.slice(3) // Athletics, News & Events
@@ -412,13 +412,14 @@ export function Header() {
                   "hover:bg-accent/50 transition-all duration-300 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10",
                   isDarkMode && "hover:bg-accent",
                 )}
-                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+                onClick={() => setTheme(mounted && theme === "light" ? "dark" : "light")}
+                aria-label={`Switch to ${mounted && theme === "light" ? "dark" : "light"} mode`}
+                suppressHydrationWarning
               >
-                {theme === "light" ? (
-                  <Sun className="h-3 w-3 xs:h-4 xs:w-4 sm:h-4 sm:w-4 text-yellow-500 transition-transform duration-300" />
-                ) : (
+                {mounted && theme === "dark" ? (
                   <Moon className="h-3 w-3 xs:h-4 xs:w-4 sm:h-4 sm:w-4 text-blue-400 transition-transform duration-300" />
+                ) : (
+                  <Sun className="h-3 w-3 xs:h-4 xs:w-4 sm:h-4 sm:w-4 text-yellow-500 transition-transform duration-300" />
                 )}
               </AnimatedButton>
 
