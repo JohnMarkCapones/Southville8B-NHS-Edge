@@ -1,7 +1,7 @@
 ---
 description: Supabase Postgres Schema
 globs: ['src/**/*.ts']
-alwaysApply: true
+alwaysApply: false
 ---
 
 public schema

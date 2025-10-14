@@ -44,7 +44,7 @@ import { UserRole } from '../users/dto/create-user.dto';
 import { AuditInterceptor } from './audit.interceptor';
 
 @ApiTags('Events')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('events')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @UseInterceptors(AuditInterceptor)

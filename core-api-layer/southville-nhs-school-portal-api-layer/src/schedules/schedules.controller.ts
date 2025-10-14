@@ -39,7 +39,7 @@ import { UserRole } from '../users/dto/create-user.dto';
 import { AuditInterceptor } from './audit.interceptor';
 
 @ApiTags('Schedules')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('schedules')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @UseInterceptors(AuditInterceptor)
