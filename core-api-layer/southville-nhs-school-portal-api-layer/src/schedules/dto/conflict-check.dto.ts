@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsUUID,
   IsEnum,
+  IsInt,
   IsTimeZone,
   Validate,
   ValidatorConstraint,
@@ -125,4 +126,23 @@ export class ConflictCheckDto {
     example: '09:00:00',
   })
   endTime?: string;
+
+  @IsInt()
+  @IsOptional()
+  @ApiProperty({
+    description: 'School year to check conflicts for',
+    required: false,
+    example: 2024,
+  })
+  schoolYear?: number;
+
+  @IsEnum(Semester)
+  @IsOptional()
+  @ApiProperty({
+    description: 'Semester to check conflicts for',
+    enum: Semester,
+    required: false,
+    example: Semester.FIRST,
+  })
+  semester?: Semester;
 }

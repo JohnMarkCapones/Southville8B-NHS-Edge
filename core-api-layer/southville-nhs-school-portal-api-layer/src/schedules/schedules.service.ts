@@ -992,36 +992,35 @@ export class SchedulesService {
 
     if (error) {
       this.logger.error('Error checking conflicts:', error);
-      return false; // Assume no conflicts if function fails
+      throw new InternalServerErrorException(
+        `Failed to validate schedule conflicts: ${error.message}`,
+      );
     }
 
     return data === true;
   }
 
   private async invalidateRelatedCaches(dto: CreateScheduleDto): Promise<void> {
-    const patterns = [
-      'schedules:all:*',
+    // Clear specific cache keys that we know exist
+    const keysToDelete = [
+      `schedules:all:${dto.sectionId}`,
       `schedules:section:${dto.sectionId}`,
       `schedules:teacher:${dto.teacherId}`,
-      `schedules:student:*`,
     ];
 
-    await Promise.all(
-      patterns.map((pattern) => this.cacheManager.del(pattern)),
-    );
+    await Promise.all(keysToDelete.map((key) => this.cacheManager.del(key)));
   }
 
   private async invalidateAllCaches(): Promise<void> {
-    const patterns = [
-      'schedules:all:*',
-      'schedules:section:*',
-      'schedules:teacher:*',
-      'schedules:student:*',
-      'schedule:*',
+    // Clear common cache keys - this is a simplified approach
+    // In production, you might want to implement a more sophisticated cache key tracking system
+    const commonKeys = [
+      'schedules:all',
+      'schedules:section',
+      'schedules:teacher',
+      'schedules:student',
     ];
 
-    await Promise.all(
-      patterns.map((pattern) => this.cacheManager.del(pattern)),
-    );
+    await Promise.all(commonKeys.map((key) => this.cacheManager.del(key)));
   }
 }
