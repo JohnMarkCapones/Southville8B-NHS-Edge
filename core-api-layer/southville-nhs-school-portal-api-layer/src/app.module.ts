@@ -18,6 +18,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { EventsModule } from './events/events.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { GwaModule } from './gwa/gwa.module';
+import { AlertsModule } from './alerts/alerts.module';
 import supabaseConfig from './config/supabase.config';
 
 @Module({
@@ -47,6 +48,7 @@ import supabaseConfig from './config/supabase.config';
     EventsModule,
     SchedulesModule,
     GwaModule,
+    AlertsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
