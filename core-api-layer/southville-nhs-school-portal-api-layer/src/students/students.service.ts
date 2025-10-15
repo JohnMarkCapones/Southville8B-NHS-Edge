@@ -83,6 +83,28 @@ export class StudentsService {
     return data?.id;
   }
 
+  /**
+   * Get student ID from user ID
+   * @param userId - The user ID
+   * @returns The student ID
+   */
+  private async getStudentIdByUserId(userId: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: student, error } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !student) {
+      this.logger.error(`Student not found for user ${userId}:`, error);
+      throw new NotFoundException('Student record not found');
+    }
+
+    return student.id;
+  }
+
   async create(createStudentDto: CreateStudentDto): Promise<any> {
     try {
       // Set email for student (lrn_id@student.local)
@@ -181,7 +203,7 @@ export class StudentsService {
       // Step 4: Create emergency contacts if provided
       if (createStudentDto.emergencyContacts?.length) {
         await this.createEmergencyContacts(
-          authUser.user.id,
+          student.id,
           createStudentDto.emergencyContacts,
         );
       }
@@ -380,7 +402,7 @@ export class StudentsService {
 
   // Create emergency contacts for a student
   private async createEmergencyContacts(
-    studentUserId: string,
+    studentId: string,
     contacts: CreateEmergencyContactDto[],
   ): Promise<void> {
     if (!contacts || contacts.length === 0) return;
@@ -390,17 +412,23 @@ export class StudentsService {
     // Ensure only one primary contact
     let hasPrimary = false;
     const contactsToInsert = contacts.map((contact, index) => {
-      const isPrimary = contact.isPrimary && !hasPrimary;
-      if (isPrimary) hasPrimary = true;
+      let isPrimary = false;
+      if (contact.isPrimary && !hasPrimary) {
+        isPrimary = true;
+        hasPrimary = true;
+      } else if (!hasPrimary && index === 0) {
+        isPrimary = true;
+        hasPrimary = true;
+      }
 
       return {
-        student_id: studentUserId,
+        student_id: studentId,
         guardian_name: contact.guardianName,
         relationship: contact.relationship,
         phone_number: contact.phoneNumber,
         email: contact.email,
         address: contact.address,
-        is_primary: isPrimary || (index === 0 && !hasPrimary), // First contact is primary if none specified
+        is_primary: isPrimary,
       };
     });
 
@@ -422,10 +450,13 @@ export class StudentsService {
   ): Promise<EmergencyContact[]> {
     const supabase = this.getSupabaseClient();
 
+    // First resolve students.id from users.id
+    const studentId = await this.getStudentIdByUserId(studentUserId);
+
     const { data: contacts, error } = await supabase
       .from('emergency_contacts')
       .select('*')
-      .eq('student_id', studentUserId)
+      .eq('student_id', studentId)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true });
 
@@ -446,18 +477,21 @@ export class StudentsService {
   ): Promise<EmergencyContact> {
     const supabase = this.getSupabaseClient();
 
+    // First resolve students.id from users.id
+    const studentId = await this.getStudentIdByUserId(studentUserId);
+
     // If setting as primary, unset other primary contacts
     if (contactDto.isPrimary) {
       await supabase
         .from('emergency_contacts')
         .update({ is_primary: false })
-        .eq('student_id', studentUserId);
+        .eq('student_id', studentId);
     }
 
     const { data: contact, error } = await supabase
       .from('emergency_contacts')
       .insert({
-        student_id: studentUserId,
+        student_id: studentId,
         guardian_name: contactDto.guardianName,
         relationship: contactDto.relationship,
         phone_number: contactDto.phoneNumber,
@@ -471,6 +505,25 @@ export class StudentsService {
     if (error) {
       this.logger.error('Error adding emergency contact:', error);
       throw new InternalServerErrorException('Failed to add emergency contact');
+    }
+
+    // Optionally ensure at least one primary contact exists
+    if (!contactDto.isPrimary) {
+      const { data: primaryCheck } = await supabase
+        .from('emergency_contacts')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      // If no primary contact exists, make this one primary
+      if (!primaryCheck && contact) {
+        await supabase
+          .from('emergency_contacts')
+          .update({ is_primary: true })
+          .eq('id', contact.id);
+        contact.is_primary = true;
+      }
     }
 
     return this.mapEmergencyContactDbToDto(contact);
