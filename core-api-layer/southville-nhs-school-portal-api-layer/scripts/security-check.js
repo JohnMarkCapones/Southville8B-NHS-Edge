@@ -48,6 +48,20 @@ function getInstalledVersion(packageName) {
   }
 }
 
+function compareSemver(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const num1 = parts1[i] || 0;
+    const num2 = parts2[i] || 0;
+
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
 function checkSecurityAudit() {
   try {
     log('\n🔍 Running security audit...', 'blue');
@@ -63,11 +77,28 @@ function checkSecurityAudit() {
         for (const [pkg, vuln] of Object.entries(audit.vulnerabilities)) {
           if (
             pkg.includes('validator') ||
-            vuln.via?.some((v) => v.includes('validator'))
+            vuln.via?.some((v) =>
+              typeof v === 'string'
+                ? v.includes('validator')
+                : v.name?.includes('validator') ||
+                  v.source?.toString()?.includes('validator') ||
+                  v.dependency?.includes('validator'),
+            )
           ) {
             log(`🚨 CVE-2025-56200 still present in ${pkg}`, 'red');
             log(`   Severity: ${vuln.severity}`, 'red');
-            log(`   Path: ${vuln.via?.join(' -> ') || 'direct'}`, 'red');
+            log(
+              `   Path: ${
+                vuln.via
+                  ?.map((v) =>
+                    typeof v === 'string'
+                      ? v
+                      : v.name || v.title || String(v.source),
+                  )
+                  .join(' -> ') || 'direct'
+              }`,
+              'red',
+            );
           }
         }
       } else {
@@ -94,7 +125,7 @@ function main() {
 
     if (validatorInstalled !== validatorLatest) {
       log(`   ⚠️  Update available!`, 'yellow');
-      if (validatorLatest > validatorInstalled) {
+      if (compareSemver(validatorLatest, validatorInstalled) > 0) {
         log(`   🎉 This might fix CVE-2025-56200!`, 'green');
       }
     } else {
@@ -140,7 +171,9 @@ function main() {
       log(`   ✅ All packages up to date`, 'green');
     }
   } catch (error) {
-    log(`   ✅ All packages up to date`, 'green');
+    log(`   ❌ Failed to check outdated packages: ${error.message}`, 'red');
+    // Note: npm outdated exits with code 1 when outdated packages exist,
+    // so we only log real errors (non-JSON output or other failures)
   }
 
   // Run security audit
