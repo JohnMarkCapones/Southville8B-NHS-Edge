@@ -10,7 +10,6 @@ import {
   MinLength,
   ArrayMinSize,
   ArrayMaxSize,
-  IsUrl,
   Validate,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -23,6 +22,7 @@ import {
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import sanitizeHtml from 'sanitize-html';
+import { IsSafeUrl } from '../../common';
 
 export enum EventStatus {
   DRAFT = 'draft',
@@ -142,7 +142,7 @@ export class CreateEventHighlightDto {
   content: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsSafeUrl()
   @MaxLength(500)
   @ApiProperty({
     required: false,
@@ -317,7 +317,7 @@ export class CreateEventDto {
   organizerId: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsSafeUrl()
   @MaxLength(500)
   @ApiProperty({
     required: false,
