@@ -25,6 +25,9 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
 import { EmergencyContact } from './entities/emergency-contact.entity';
+import { CreateStudentRankingDto } from './dto/create-student-ranking.dto';
+import { UpdateStudentRankingDto } from './dto/update-student-ranking.dto';
+import { StudentRanking } from './entities/student-ranking.entity';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PoliciesGuard } from '../auth/guards/policies.guard';
@@ -241,5 +244,219 @@ export class StudentsController {
   async deleteEmergencyContact(@Param('contactId') contactId: string) {
     await this.studentsService.deleteEmergencyContact(contactId);
     return { message: 'Emergency contact deleted successfully' };
+  }
+
+  // ==================== STUDENT RANKINGS ENDPOINTS ====================
+
+  @Post('rankings')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Policies('id', 'student:create')
+  @ApiOperation({ summary: 'Create a new student ranking' })
+  @ApiResponse({
+    status: 201,
+    description: 'Student ranking created successfully',
+    type: StudentRanking,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - Student already has ranking for this period',
+  })
+  async createRanking(
+    @Body() createDto: CreateStudentRankingDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    this.logger.log(
+      `Creating student ranking for user: ${user.email} (${user.id})`,
+    );
+    return this.studentsService.createRanking(createDto);
+  }
+
+  @Get('rankings')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Policies('id', 'student:read')
+  @ApiOperation({
+    summary: 'Get all student rankings with pagination and filtering',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
+  @ApiQuery({
+    name: 'gradeLevel',
+    required: false,
+    type: String,
+    description: 'Filter by grade level',
+  })
+  @ApiQuery({
+    name: 'quarter',
+    required: false,
+    type: String,
+    description: 'Filter by quarter',
+  })
+  @ApiQuery({
+    name: 'schoolYear',
+    required: false,
+    type: String,
+    description: 'Filter by school year',
+  })
+  @ApiQuery({
+    name: 'topN',
+    required: false,
+    type: Number,
+    description: 'Get top N students (default: 100)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Student rankings retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async findAllRankings(
+    @AuthUser() user: SupabaseUser,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('gradeLevel') gradeLevel?: string,
+    @Query('quarter') quarter?: string,
+    @Query('schoolYear') schoolYear?: string,
+    @Query('topN', new ParseIntPipe({ optional: true })) topN: number = 100,
+  ) {
+    this.logger.log('Fetching student rankings');
+    return this.studentsService.findAllRankings({
+      page,
+      limit,
+      gradeLevel,
+      quarter,
+      schoolYear,
+      topN,
+    });
+  }
+
+  @Get('rankings/:id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Policies('id', 'student:read')
+  @ApiOperation({ summary: 'Get a student ranking by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Student ranking retrieved successfully',
+    type: StudentRanking,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Student ranking not found' })
+  async findRankingById(
+    @Param('id') id: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    // Students can only view their own rankings
+    if (user.role === 'Student') {
+      const ranking = await this.studentsService.findRankingById(id);
+      if (ranking.student_id !== user.id) {
+        throw new ForbiddenException(
+          'Students can only view their own rankings',
+        );
+      }
+    }
+
+    this.logger.log(`Fetching student ranking ${id}`);
+    return this.studentsService.findRankingById(id);
+  }
+
+  @Get(':studentId/rankings')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Policies('id', 'student:read')
+  @ApiOperation({ summary: 'Get all rankings for a specific student' })
+  @ApiResponse({
+    status: 200,
+    description: 'Student rankings retrieved successfully',
+    type: [StudentRanking],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Student not found' })
+  async findRankingsByStudent(
+    @Param('studentId') studentId: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    // Students can only view their own rankings
+    if (user.role === 'Student' && user.id !== studentId) {
+      throw new ForbiddenException('Students can only view their own rankings');
+    }
+
+    this.logger.log(`Fetching rankings for student ${studentId}`);
+    return this.studentsService.findRankingsByStudent(studentId);
+  }
+
+  @Patch('rankings/:id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Policies('id', 'student:update')
+  @ApiOperation({ summary: 'Update a student ranking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Student ranking updated successfully',
+    type: StudentRanking,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Student ranking not found' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - Duplicate ranking for this period',
+  })
+  async updateRanking(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateStudentRankingDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    this.logger.log(
+      `Updating student ranking ${id} for user: ${user.email} (${user.id})`,
+    );
+    return this.studentsService.updateRanking(id, updateDto);
+  }
+
+  @Delete('rankings/:id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Policies('id', 'student:delete')
+  @ApiOperation({ summary: 'Delete a student ranking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Student ranking deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Student ranking not found' })
+  async deleteRanking(@Param('id') id: string, @AuthUser() user: SupabaseUser) {
+    this.logger.log(
+      `Deleting student ranking ${id} for user: ${user.email} (${user.id})`,
+    );
+    await this.studentsService.deleteRanking(id);
+    return { message: 'Student ranking deleted successfully' };
   }
 }

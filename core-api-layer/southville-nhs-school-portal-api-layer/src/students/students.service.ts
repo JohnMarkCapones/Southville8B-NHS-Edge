@@ -13,6 +13,9 @@ import { Student } from './entities/student.entity';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
 import { EmergencyContact } from './entities/emergency-contact.entity';
+import { CreateStudentRankingDto } from './dto/create-student-ranking.dto';
+import { UpdateStudentRankingDto } from './dto/update-student-ranking.dto';
+import { StudentRanking } from './entities/student-ranking.entity';
 
 @Injectable()
 export class StudentsService {
@@ -588,6 +591,409 @@ export class StudentsService {
       this.logger.error('Error deleting emergency contact:', error);
       throw new InternalServerErrorException(
         'Failed to delete emergency contact',
+      );
+    }
+  }
+
+  // ==================== STUDENT RANKINGS METHODS ====================
+
+  /**
+   * Create a new student ranking
+   */
+  async createRanking(
+    createDto: CreateStudentRankingDto,
+  ): Promise<StudentRanking> {
+    const supabase = this.getSupabaseClient();
+
+    // Verify student exists and get their current grade level
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id, grade_level')
+      .eq('id', createDto.studentId)
+      .single();
+
+    if (studentError || !student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    // Validate grade level matches student's current grade
+    if (student.grade_level !== createDto.gradeLevel) {
+      throw new ConflictException(
+        `Student's current grade level (${student.grade_level}) does not match provided grade level (${createDto.gradeLevel})`,
+      );
+    }
+
+    // Check for duplicate ranking
+    const { data: existing } = await supabase
+      .from('student_rankings')
+      .select('id')
+      .eq('student_id', createDto.studentId)
+      .eq('grade_level', createDto.gradeLevel)
+      .eq('quarter', createDto.quarter)
+      .eq('school_year', createDto.schoolYear)
+      .single();
+
+    if (existing) {
+      throw new ConflictException(
+        'Student already has a ranking for this grade level, quarter, and school year',
+      );
+    }
+
+    // Create the ranking
+    const { data, error } = await supabase
+      .from('student_rankings')
+      .insert({
+        student_id: createDto.studentId,
+        grade_level: createDto.gradeLevel,
+        rank: createDto.rank,
+        honor_status: createDto.honorStatus,
+        quarter: createDto.quarter,
+        school_year: createDto.schoolYear,
+      })
+      .select(
+        `
+        *,
+        student:students(id, first_name, last_name, student_id, grade_level)
+      `,
+      )
+      .single();
+
+    if (error) {
+      this.logger.error('Error creating student ranking:', error);
+      throw new InternalServerErrorException(
+        'Failed to create student ranking',
+      );
+    }
+
+    // Auto-sync with students table if this is the latest quarter
+    await this.syncStudentRankToMainTable(createDto.studentId);
+
+    this.logger.log(
+      `Created ranking for student ${createDto.studentId} - Rank ${createDto.rank}`,
+    );
+    return data;
+  }
+
+  /**
+   * Get all student rankings with filters
+   */
+  async findAllRankings(
+    filters: {
+      page?: number;
+      limit?: number;
+      gradeLevel?: string;
+      quarter?: string;
+      schoolYear?: string;
+      topN?: number;
+    } = {},
+  ): Promise<{
+    data: StudentRanking[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const supabase = this.getSupabaseClient();
+    const {
+      page = 1,
+      limit = 10,
+      gradeLevel,
+      quarter,
+      schoolYear,
+      topN = 100,
+    } = filters;
+
+    let query = supabase.from('student_rankings').select(
+      `
+        *,
+        student:students(id, first_name, last_name, student_id, grade_level)
+      `,
+      { count: 'exact' },
+    );
+
+    // Apply filters
+    if (gradeLevel) {
+      query = query.eq('grade_level', gradeLevel);
+    }
+    if (quarter) {
+      query = query.eq('quarter', quarter);
+    }
+    if (schoolYear) {
+      query = query.eq('school_year', schoolYear);
+    }
+
+    // Apply top N limit and ordering
+    query = query
+      .lte('rank', topN)
+      .order('rank', { ascending: true })
+      .range((page - 1) * limit, page * limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      this.logger.error('Error fetching student rankings:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch student rankings',
+      );
+    }
+
+    const totalPages = Math.ceil((count || 0) / limit);
+
+    return {
+      data: data || [],
+      total: count || 0,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * Get a single ranking by ID
+   */
+  async findRankingById(id: string): Promise<StudentRanking> {
+    const supabase = this.getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from('student_rankings')
+      .select(
+        `
+        *,
+        student:students(id, first_name, last_name, student_id, grade_level)
+      `,
+      )
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('Student ranking not found');
+    }
+
+    return data;
+  }
+
+  /**
+   * Get all rankings for a specific student
+   */
+  async findRankingsByStudent(studentId: string): Promise<StudentRanking[]> {
+    const supabase = this.getSupabaseClient();
+
+    // Verify student exists
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id')
+      .eq('id', studentId)
+      .single();
+
+    if (studentError || !student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const { data, error } = await supabase
+      .from('student_rankings')
+      .select(
+        `
+        *,
+        student:students(id, first_name, last_name, student_id, grade_level)
+      `,
+      )
+      .eq('student_id', studentId)
+      .order('school_year', { ascending: false })
+      .order('quarter', { ascending: false });
+
+    if (error) {
+      this.logger.error('Error fetching student rankings:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch student rankings',
+      );
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Update a student ranking
+   */
+  async updateRanking(
+    id: string,
+    updateDto: UpdateStudentRankingDto,
+  ): Promise<StudentRanking> {
+    const supabase = this.getSupabaseClient();
+
+    // Get current ranking to check if we need to sync
+    const { data: currentRanking, error: currentError } = await supabase
+      .from('student_rankings')
+      .select('student_id, grade_level, quarter, school_year')
+      .eq('id', id)
+      .single();
+
+    if (currentError || !currentRanking) {
+      throw new NotFoundException('Student ranking not found');
+    }
+
+    // If updating student_id, verify the new student exists
+    if (updateDto.studentId) {
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id, grade_level')
+        .eq('id', updateDto.studentId)
+        .single();
+
+      if (studentError || !student) {
+        throw new NotFoundException('Student not found');
+      }
+
+      // Validate grade level if provided
+      if (
+        updateDto.gradeLevel &&
+        student.grade_level !== updateDto.gradeLevel
+      ) {
+        throw new ConflictException(
+          `Student's current grade level (${student.grade_level}) does not match provided grade level (${updateDto.gradeLevel})`,
+        );
+      }
+    }
+
+    // Check for duplicate if updating key fields
+    if (
+      updateDto.studentId ||
+      updateDto.gradeLevel ||
+      updateDto.quarter ||
+      updateDto.schoolYear
+    ) {
+      const studentId = updateDto.studentId || currentRanking.student_id;
+      const gradeLevel = updateDto.gradeLevel || currentRanking.grade_level;
+      const quarter = updateDto.quarter || currentRanking.quarter;
+      const schoolYear = updateDto.schoolYear || currentRanking.school_year;
+
+      const { data: existing } = await supabase
+        .from('student_rankings')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('grade_level', gradeLevel)
+        .eq('quarter', quarter)
+        .eq('school_year', schoolYear)
+        .neq('id', id)
+        .single();
+
+      if (existing) {
+        throw new ConflictException(
+          'Student already has a ranking for this grade level, quarter, and school year',
+        );
+      }
+    }
+
+    // Update the ranking
+    const { data, error } = await supabase
+      .from('student_rankings')
+      .update({
+        ...(updateDto.studentId && { student_id: updateDto.studentId }),
+        ...(updateDto.gradeLevel && { grade_level: updateDto.gradeLevel }),
+        ...(updateDto.rank && { rank: updateDto.rank }),
+        ...(updateDto.honorStatus !== undefined && {
+          honor_status: updateDto.honorStatus,
+        }),
+        ...(updateDto.quarter && { quarter: updateDto.quarter }),
+        ...(updateDto.schoolYear && { school_year: updateDto.schoolYear }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select(
+        `
+        *,
+        student:students(id, first_name, last_name, student_id, grade_level)
+      `,
+      )
+      .single();
+
+    if (error) {
+      this.logger.error('Error updating student ranking:', error);
+      throw new InternalServerErrorException(
+        'Failed to update student ranking',
+      );
+    }
+
+    // Auto-sync with students table if this is the latest quarter
+    await this.syncStudentRankToMainTable(data.student_id);
+
+    this.logger.log(`Updated ranking ${id} for student ${data.student_id}`);
+    return data;
+  }
+
+  /**
+   * Delete a student ranking
+   */
+  async deleteRanking(id: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Get ranking info before deletion for logging
+    const { data: ranking } = await supabase
+      .from('student_rankings')
+      .select('student_id, rank')
+      .eq('id', id)
+      .single();
+
+    const { error } = await supabase
+      .from('student_rankings')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      this.logger.error('Error deleting student ranking:', error);
+      throw new InternalServerErrorException(
+        'Failed to delete student ranking',
+      );
+    }
+
+    // Re-sync the student's main table if this was their latest ranking
+    if (ranking) {
+      await this.syncStudentRankToMainTable(ranking.student_id);
+    }
+
+    this.logger.log(`Deleted ranking ${id}`);
+  }
+
+  /**
+   * Sync student's latest ranking to the main students table
+   */
+  private async syncStudentRankToMainTable(studentId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Get the latest ranking for this student
+    const { data: latestRanking, error } = await supabase
+      .from('student_rankings')
+      .select('rank, honor_status, quarter, school_year')
+      .eq('student_id', studentId)
+      .order('school_year', { ascending: false })
+      .order('quarter', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !latestRanking) {
+      // No rankings found, clear the fields
+      await supabase
+        .from('students')
+        .update({
+          rank: null,
+          honor_status: null,
+        })
+        .eq('id', studentId);
+      return;
+    }
+
+    // Update the students table with the latest ranking
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({
+        rank: latestRanking.rank,
+        honor_status: latestRanking.honor_status,
+      })
+      .eq('id', studentId);
+
+    if (updateError) {
+      this.logger.warn(
+        `Failed to sync ranking to students table for student ${studentId}:`,
+        updateError,
       );
     }
   }
