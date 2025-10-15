@@ -20,10 +20,11 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { PoliciesGuard } from '../../auth/guards/policies.guard';
 import { AuthUser } from '../../auth/auth-user.decorator';
+import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { ClubMembershipsService } from '../services/club-memberships.service';
 import { CreateClubMembershipDto } from '../dto/create-club-membership.dto';
 import { UpdateClubMembershipDto } from '../dto/update-club-membership.dto';
-import { ClubMembership } from '../entities/club-membership.entity';
+import { ClubMembership } from '../models/club-membership.model';
 
 @ApiTags('club-memberships')
 @Controller('club-memberships')
@@ -33,6 +34,7 @@ export class ClubMembershipsController {
   constructor(private readonly service: ClubMembershipsService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Create club membership' })
   @ApiResponse({ status: 201, type: ClubMembership })
   async create(
@@ -43,6 +45,7 @@ export class ClubMembershipsController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all club memberships' })
   @ApiQuery({ name: 'clubId', required: false })
   @ApiResponse({ status: 200, type: [ClubMembership] })
@@ -51,6 +54,7 @@ export class ClubMembershipsController {
   }
 
   @Get('student/:studentId')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get memberships by student' })
   @ApiResponse({ status: 200, type: [ClubMembership] })
   async findByStudent(
@@ -60,6 +64,7 @@ export class ClubMembershipsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get membership by ID' })
   @ApiResponse({ status: 200, type: ClubMembership })
   async findOne(@Param('id') id: string): Promise<ClubMembership> {
@@ -67,6 +72,7 @@ export class ClubMembershipsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Update membership' })
   @ApiResponse({ status: 200, type: ClubMembership })
   async update(
@@ -78,6 +84,7 @@ export class ClubMembershipsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Delete membership' })
   @ApiResponse({ status: 204 })
   async remove(

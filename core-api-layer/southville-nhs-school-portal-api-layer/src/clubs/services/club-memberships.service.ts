@@ -4,11 +4,12 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { CreateClubMembershipDto } from '../dto/create-club-membership.dto';
 import { UpdateClubMembershipDto } from '../dto/update-club-membership.dto';
-import { ClubMembership } from '../entities/club-membership.entity';
+import { ClubMembership } from '../models/club-membership.model';
 
 @Injectable()
 export class ClubMembershipsService {
@@ -47,11 +48,13 @@ export class ClubMembershipsService {
     // Check if user is Admin
     const { data: user } = await supabase
       .from('users')
-      .select('role_id, roles!inner(name)')
+      .select('role_id, roles(name)') // Remove !inner for left join
       .eq('id', userId)
       .single();
 
-    if (user?.roles?.[0]?.name === 'Admin') return true;
+    // Handle both object and array shapes safely
+    const roleName = user?.roles?.[0]?.name;
+    if (roleName === 'Admin') return true;
 
     // Check if user is adviser, co-adviser, or president
     const { data: club } = await supabase
@@ -83,17 +86,29 @@ export class ClubMembershipsService {
       );
     }
 
-    // Check if membership already exists
+    // Verify position exists (positions are not club-specific, they're global)
+    const { data: position, error: posError } = await supabase
+      .from('club_positions')
+      .select('id, name')
+      .eq('id', createDto.positionId)
+      .single();
+
+    if (posError || !position) {
+      throw new BadRequestException('Invalid position ID');
+    }
+
+    // Check if membership already exists with limit(1)
     const { data: existing } = await supabase
       .from('student_club_memberships')
       .select('id')
       .eq('student_id', createDto.studentId)
       .eq('club_id', createDto.clubId)
       .eq('is_active', true)
+      .limit(1)
       .maybeSingle();
 
     if (existing) {
-      throw new BadRequestException('Student is already a member of this club');
+      throw new ConflictException('Student is already a member of this club');
     }
 
     const { data, error } = await supabase
@@ -108,7 +123,7 @@ export class ClubMembershipsService {
       .select(
         `
         *,
-        student:students(id, first_name, last_name, lrn_id),
+        student:students(id, first_name, last_name),
         club:clubs(id, name),
         position:club_positions(id, name, level)
       `,
@@ -116,7 +131,17 @@ export class ClubMembershipsService {
       .single();
 
     if (error) {
-      this.logger.error('Error creating membership:', error);
+      this.logger.error('Error creating membership:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      });
+
+      // Handle unique constraint violation (race condition)
+      if (error.code === '23505' || error.message?.includes('duplicate')) {
+        throw new ConflictException('Membership already exists');
+      }
+
       throw new BadRequestException(
         `Failed to create membership: ${error.message}`,
       );
@@ -133,7 +158,7 @@ export class ClubMembershipsService {
       .select(
         `
         *,
-        student:students(id, first_name, last_name, lrn_id, grade_level),
+        student:students(id, first_name, last_name, grade_level),
         club:clubs(id, name),
         position:club_positions(id, name, level)
       `,
@@ -162,7 +187,7 @@ export class ClubMembershipsService {
       .select(
         `
         *,
-        student:students(id, first_name, last_name, lrn_id, grade_level),
+        student:students(id, first_name, last_name, grade_level),
         club:clubs(id, name),
         position:club_positions(id, name, level)
       `,
@@ -195,19 +220,61 @@ export class ClubMembershipsService {
       );
     }
 
+    // Build update payload only with present fields
+    const updatePayload: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Validate position if provided
+    if (updateDto.positionId) {
+      const { data: position, error: posError } = await supabase
+        .from('club_positions')
+        .select('id')
+        .eq('id', updateDto.positionId)
+        .single();
+
+      if (posError || !position) {
+        throw new BadRequestException('Invalid position ID');
+      }
+
+      updatePayload.position_id = updateDto.positionId;
+    }
+
+    // Check for duplicate active membership if activating
+    if (updateDto.isActive === true && !existing.isActive) {
+      const { data: duplicates } = await supabase
+        .from('student_club_memberships')
+        .select('id')
+        .eq('student_id', existing.studentId)
+        .eq('club_id', existing.clubId)
+        .eq('is_active', true)
+        .neq('id', id)
+        .limit(1);
+
+      if (duplicates && duplicates.length > 0) {
+        throw new ConflictException(
+          'Student already has an active membership in this club',
+        );
+      }
+    }
+
+    if (updateDto.joinedAt !== undefined) {
+      updatePayload.joined_at = updateDto.joinedAt;
+    }
+
+    if (updateDto.isActive !== undefined) {
+      updatePayload.is_active = updateDto.isActive;
+    }
+
+    // Perform update
     const { data, error } = await supabase
       .from('student_club_memberships')
-      .update({
-        position_id: updateDto.positionId,
-        joined_at: updateDto.joinedAt,
-        is_active: updateDto.isActive,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select(
         `
         *,
-        student:students(id, first_name, last_name, lrn_id),
+        student:students(id, first_name, last_name, grade_level),
         club:clubs(id, name),
         position:club_positions(id, name, level)
       `,
