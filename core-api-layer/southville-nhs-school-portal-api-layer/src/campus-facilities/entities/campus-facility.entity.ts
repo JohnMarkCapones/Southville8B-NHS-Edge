@@ -1,4 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  FacilityType,
+  FacilityStatus,
+} from '../dto/create-campus-facility.dto';
 
 export class CampusFacility {
   @ApiProperty({
@@ -27,6 +31,52 @@ export class CampusFacility {
     required: false,
   })
   description?: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Building ID where the facility is located',
+  })
+  buildingId: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Floor ID where the facility is located',
+  })
+  floorId: string;
+
+  @ApiProperty({
+    example: 50,
+    description: 'Facility capacity (number of people)',
+    required: false,
+  })
+  capacity?: number;
+
+  @ApiProperty({
+    enum: FacilityType,
+    example: FacilityType.LIBRARY,
+    description: 'Type of campus facility',
+  })
+  type: FacilityType;
+
+  @ApiProperty({
+    enum: FacilityStatus,
+    example: FacilityStatus.AVAILABLE,
+    description: 'Current status of the facility',
+    required: false,
+  })
+  status?: FacilityStatus;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Domain ID for scoping the facility',
+  })
+  domainId: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'User ID of the creator',
+  })
+  createdBy: string;
 
   @ApiProperty({
     example: '2024-01-15T10:30:00Z',

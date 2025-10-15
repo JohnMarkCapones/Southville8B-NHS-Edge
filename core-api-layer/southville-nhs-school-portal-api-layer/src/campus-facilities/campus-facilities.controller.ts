@@ -25,7 +25,11 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CampusFacilitiesService } from './campus-facilities.service';
-import { CreateCampusFacilityDto } from './dto/create-campus-facility.dto';
+import {
+  CreateCampusFacilityDto,
+  FacilityType,
+  FacilityStatus,
+} from './dto/create-campus-facility.dto';
 import { UpdateCampusFacilityDto } from './dto/update-campus-facility.dto';
 import { CampusFacility } from './entities/campus-facility.entity';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -111,9 +115,14 @@ export class CampusFacilitiesController {
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    enum: ['created_at', 'name', 'updated_at'],
+    enum: ['created_at', 'name', 'updated_at', 'type', 'status'],
   })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({ name: 'buildingId', required: false, type: String })
+  @ApiQuery({ name: 'floorId', required: false, type: String })
+  @ApiQuery({ name: 'type', required: false, enum: FacilityType })
+  @ApiQuery({ name: 'status', required: false, enum: FacilityStatus })
+  @ApiQuery({ name: 'domainId', required: false, type: String })
   @ApiResponse({
     status: 200,
     description: 'Campus facilities retrieved successfully',
@@ -130,6 +139,11 @@ export class CampusFacilitiesController {
     @Query('search') search?: string,
     @Query('sortBy') sortBy: string = 'created_at',
     @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
+    @Query('buildingId') buildingId?: string,
+    @Query('floorId') floorId?: string,
+    @Query('type') type?: FacilityType,
+    @Query('status') status?: FacilityStatus,
+    @Query('domainId') domainId?: string,
   ) {
     return this.campusFacilitiesService.findAll({
       page,
@@ -137,6 +151,11 @@ export class CampusFacilitiesController {
       search,
       sortBy,
       sortOrder,
+      buildingId,
+      floorId,
+      type,
+      status,
+      domainId,
     });
   }
 

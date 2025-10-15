@@ -3,6 +3,7 @@ import {
   Logger,
   InternalServerErrorException,
   NotFoundException,
+  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -42,6 +43,20 @@ export class CampusFacilitiesService {
       const supabase = this.getSupabaseClient();
       let imageUrl: string | undefined;
 
+      // Check for duplicate name within domain
+      const { data: existingFacility } = await supabase
+        .from('campus_facilities')
+        .select('id')
+        .eq('name', createCampusFacilityDto.name)
+        .eq('domain_id', createCampusFacilityDto.domainId)
+        .single();
+
+      if (existingFacility) {
+        throw new ConflictException(
+          'A facility with this name already exists in this domain',
+        );
+      }
+
       // Handle image upload if provided
       if (imageFile) {
         imageUrl = await this.uploadImage(imageFile);
@@ -53,6 +68,13 @@ export class CampusFacilitiesService {
           name: createCampusFacilityDto.name,
           description: createCampusFacilityDto.description,
           image_url: imageUrl,
+          building_id: createCampusFacilityDto.buildingId,
+          floor_id: createCampusFacilityDto.floorId,
+          capacity: createCampusFacilityDto.capacity,
+          type: createCampusFacilityDto.type,
+          status: createCampusFacilityDto.status || 'Available',
+          domain_id: createCampusFacilityDto.domainId,
+          created_by: createCampusFacilityDto.createdBy,
         })
         .select()
         .single();
@@ -65,9 +87,12 @@ export class CampusFacilitiesService {
       }
 
       this.logger.log(`Campus facility created successfully: ${facility.name}`);
-      return facility;
+      return this.mapDbToDto(facility);
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       this.logger.error('Error creating campus facility:', error);
@@ -85,6 +110,11 @@ export class CampusFacilitiesService {
       search,
       sortBy = 'created_at',
       sortOrder = 'desc',
+      buildingId,
+      floorId,
+      type,
+      status,
+      domainId,
     } = filters;
 
     let query = supabase.from('campus_facilities').select('*', {
@@ -94,6 +124,28 @@ export class CampusFacilitiesService {
     // Apply filters
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+
+    if (buildingId) {
+      query = query.eq('building_id', buildingId.trim());
+    }
+
+    if (floorId) {
+      query = query.eq('floor_id', floorId.trim());
+    }
+
+    if (type) {
+      const types = Array.isArray(type) ? type : [type];
+      query = query.in('type', types);
+    }
+
+    if (status) {
+      const statuses = Array.isArray(status) ? status : [status];
+      query = query.in('status', statuses);
+    }
+
+    if (domainId) {
+      query = query.eq('domain_id', domainId.trim());
     }
 
     // Apply sorting
@@ -116,7 +168,7 @@ export class CampusFacilitiesService {
     const totalPages = Math.ceil((count || 0) / limit);
 
     return {
-      data: facilities,
+      data: facilities.map((f) => this.mapDbToDto(f)),
       pagination: {
         page,
         limit,
@@ -137,12 +189,12 @@ export class CampusFacilitiesService {
       .eq('id', id)
       .single();
 
-    if (error) {
-      this.logger.error('Error fetching campus facility:', error);
+    if (error || !facility) {
+      this.logger.error(`Facility not found or error fetching: ${id}`, error);
       throw new NotFoundException('Campus facility not found');
     }
 
-    return facility;
+    return this.mapDbToDto(facility);
   }
 
   async update(
@@ -153,18 +205,27 @@ export class CampusFacilitiesService {
     const supabase = this.getSupabaseClient();
 
     // Get existing facility to check for old image
-    const { data: existingFacility } = await supabase
+    const { data: existingFacility, error: fetchError } = await supabase
       .from('campus_facilities')
       .select('image_url')
       .eq('id', id)
       .single();
 
-    let imageUrl = existingFacility?.image_url;
+    // Check for errors or missing facility
+    if (fetchError || !existingFacility) {
+      this.logger.error(
+        `Facility not found or error fetching: ${id}`,
+        fetchError,
+      );
+      throw new NotFoundException('Campus facility not found');
+    }
+
+    let imageUrl = existingFacility.image_url;
 
     // Handle new image upload if provided
     if (imageFile) {
       // Delete old image if exists
-      if (existingFacility?.image_url) {
+      if (existingFacility.image_url) {
         await this.deleteImage(existingFacility.image_url);
       }
       imageUrl = await this.uploadImage(imageFile);
@@ -199,21 +260,30 @@ export class CampusFacilitiesService {
     }
 
     this.logger.log(`Campus facility updated successfully: ${facility.name}`);
-    return facility;
+    return this.mapDbToDto(facility);
   }
 
   async remove(id: string): Promise<void> {
     const supabase = this.getSupabaseClient();
 
     // Get facility to check for image
-    const { data: facility } = await supabase
+    const { data: facility, error: fetchError } = await supabase
       .from('campus_facilities')
       .select('image_url')
       .eq('id', id)
       .single();
 
+    // Check for errors or missing facility
+    if (fetchError || !facility) {
+      this.logger.error(
+        `Facility not found or error fetching: ${id}`,
+        fetchError,
+      );
+      throw new NotFoundException('Campus facility not found');
+    }
+
     // Delete associated image if exists
-    if (facility?.image_url) {
+    if (facility.image_url) {
       await this.deleteImage(facility.image_url);
     }
 
@@ -278,6 +348,24 @@ export class CampusFacilitiesService {
       .getPublicUrl(data.path);
 
     return urlData.publicUrl;
+  }
+
+  private mapDbToDto(dbRecord: any): CampusFacility {
+    return {
+      id: dbRecord.id,
+      name: dbRecord.name,
+      imageUrl: dbRecord.image_url,
+      description: dbRecord.description,
+      buildingId: dbRecord.building_id,
+      floorId: dbRecord.floor_id,
+      capacity: dbRecord.capacity,
+      type: dbRecord.type,
+      status: dbRecord.status,
+      domainId: dbRecord.domain_id,
+      createdBy: dbRecord.created_by,
+      createdAt: dbRecord.created_at,
+      updatedAt: dbRecord.updated_at,
+    };
   }
 
   private async deleteImage(imageUrl: string): Promise<void> {
