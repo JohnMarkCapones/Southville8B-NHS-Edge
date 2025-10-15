@@ -297,6 +297,6 @@ export class LocationsController {
     @Param('id') id: string,
     @Param('imagePath') imagePath: string,
   ): Promise<void> {
-    return this.locationsService.deleteImage(imagePath);
+    return this.locationsService.deleteImage(imagePath, id);
   }
 }

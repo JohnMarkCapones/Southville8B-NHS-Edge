@@ -304,7 +304,7 @@ export class LocationsService {
     };
   }
 
-  async deleteImage(imagePath: string): Promise<void> {
+  async deleteImage(imagePath: string, locationId: string): Promise<void> {
     const supabase = this.getSupabaseClient();
 
     const { error } = await supabase.storage
@@ -314,6 +314,45 @@ export class LocationsService {
     if (error) {
       this.logger.error('Error deleting image:', error);
       throw new InternalServerErrorException('Failed to delete image');
+    }
+
+    // Update location record to remove reference to deleted image
+    const { data: location } = await supabase
+      .from('locations')
+      .select('image_url, preview_image_url')
+      .eq('id', locationId)
+      .single();
+
+    if (location) {
+      const updateData: any = {};
+
+      // Check which field contains the deleted image path and null it out
+      if (location.image_url && location.image_url.includes(imagePath)) {
+        updateData.image_url = null;
+      }
+      if (
+        location.preview_image_url &&
+        location.preview_image_url.includes(imagePath)
+      ) {
+        updateData.preview_image_url = null;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update(updateData)
+          .eq('id', locationId);
+
+        if (updateError) {
+          this.logger.error(
+            'Error updating location after image deletion:',
+            updateError,
+          );
+          throw new InternalServerErrorException(
+            'Failed to update location record',
+          );
+        }
+      }
     }
 
     this.logger.log(`Deleted image: ${imagePath}`);

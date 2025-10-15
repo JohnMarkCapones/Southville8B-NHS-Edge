@@ -65,8 +65,8 @@ export class CreateDepartmentsInformationDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(10)
-  @MaxLength(50)
+  @MinLength(7)
+  @MaxLength(16)
   @Matches(/^\+?[1-9]\d{1,14}$/, {
     message: 'Contact number must be a valid international format',
   })
@@ -74,8 +74,8 @@ export class CreateDepartmentsInformationDto {
     description: 'Contact phone number in international format',
     example: '+1234567890',
     required: false,
-    minLength: 10,
-    maxLength: 50,
+    minLength: 7,
+    maxLength: 16,
   })
   contactNumber?: string;
 }

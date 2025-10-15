@@ -229,7 +229,7 @@ export class HotspotsService {
       throw new BadRequestException('Circular reference detected in tour path');
     }
 
-    visited.add(startLocationId);
+    visited.add(targetLocationId);
 
     // Query hotspots from targetLocationId and recursively check
     const supabase = this.getSupabaseClient();
