@@ -32,6 +32,9 @@ export class Club {
   advisor_id: string;
 
   @Column({ type: 'uuid', nullable: true })
+  co_advisor_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
   domain_id: string;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
@@ -45,5 +48,6 @@ export class Club {
   vp?: any;
   secretary?: any;
   advisor?: any;
+  co_advisor?: any;
   domain?: any;
 }
