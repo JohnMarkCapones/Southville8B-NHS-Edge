@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { EmergencyContact } from './emergency-contact.entity';
 
 export class Student {
   @ApiProperty({ description: 'Student ID (UUID)' })
@@ -58,4 +59,11 @@ export class Student {
     full_name: string;
     status: string;
   };
+
+  @ApiProperty({
+    description: 'Emergency contacts',
+    type: [EmergencyContact],
+    required: false,
+  })
+  emergencyContacts?: EmergencyContact[];
 }
