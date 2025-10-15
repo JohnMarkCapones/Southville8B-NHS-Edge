@@ -695,7 +695,10 @@ export function AcademicCalendar() {
             />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectTrigger 
+              className="w-full sm:w-48 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+              aria-label="Filter events by category"
+            >
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -744,6 +747,7 @@ export function AcademicCalendar() {
                   size="sm"
                   onClick={() => navigateMonth("prev")}
                   className="hover:scale-110 transition-transform bg-white/80 dark:bg-gray-800/80 flex-shrink-0"
+                  aria-label="Previous month"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -755,6 +759,7 @@ export function AcademicCalendar() {
                   size="sm"
                   onClick={() => navigateMonth("next")}
                   className="hover:scale-110 transition-transform bg-white/80 dark:bg-gray-800/80 flex-shrink-0"
+                  aria-label="Next month"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

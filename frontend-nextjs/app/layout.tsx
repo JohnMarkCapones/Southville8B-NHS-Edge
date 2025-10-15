@@ -77,7 +77,7 @@ export default function RootLayout({
         {/* DNS prefetch for faster external requests */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         {/* Enhanced Skip Links for Keyboard Navigation - WCAG 2.1 AAA */}
         <a
           href="#main-content"

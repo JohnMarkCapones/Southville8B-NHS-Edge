@@ -337,9 +337,10 @@ export default function HomePage() {
 
   return (
     <div className={cn("min-h-screen", isDarkMode && "dark")} suppressHydrationWarning>
-      <section ref={heroRef}>
-        <HeroSection />
-      </section>
+      <div id="main-content">
+        <section ref={heroRef} aria-label="Hero section">
+          <HeroSection />
+        </section>
       <div className="relative z-[30] -mt-3 sm:-mt-4">
         <AnnouncementBanner items={announcementItems} fullBleed />
       </div>
@@ -642,21 +643,21 @@ export default function HomePage() {
               <TabsList className="grid grid-cols-3 bg-gray-100 dark:bg-gray-800 rounded-full p-1 shadow-sm">
                 <TabsTrigger
                   value="academic"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
+                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-gray-800 dark:data-[state=inactive]:text-gray-300 transition-all duration-200"
                 >
                   <GraduationCap className="w-4 h-4 mr-2" />
                   Academic Excellence
                 </TabsTrigger>
                 <TabsTrigger
                   value="arts"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
+                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-gray-800 dark:data-[state=inactive]:text-gray-300 transition-all duration-200"
                 >
                   <Palette className="w-4 h-4 mr-2" />
                   Arts & Culture
                 </TabsTrigger>
                 <TabsTrigger
                   value="special"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
+                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-gray-800 dark:data-[state=inactive]:text-gray-300 transition-all duration-200"
                 >
                   <Heart className="w-4 h-4 mr-2" />
                   Special Interest
@@ -832,6 +833,7 @@ export default function HomePage() {
 
       {/* Celebration Overlay */}
       <CelebrationOverlay isOpen={isCelebrationOpen} onClose={() => setIsCelebrationOpen(false)} />
+      </div>
     </div>
   )
 }

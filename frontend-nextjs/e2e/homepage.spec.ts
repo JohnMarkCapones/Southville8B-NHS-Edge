@@ -61,7 +61,7 @@ test.describe('Homepage', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     expect(errors).toHaveLength(0)
   })

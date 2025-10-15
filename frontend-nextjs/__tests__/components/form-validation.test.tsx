@@ -22,20 +22,23 @@ function TestLoginForm({ onSubmit }: { onSubmit: (data: LoginFormData) => void }
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: 'onSubmit', // Trigger validation on submit
+    reValidateMode: 'onChange', // Re-validate on change after first submit
   })
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div>
         <label htmlFor="email">Email</label>
         <input
           id="email"
-          type="email"
+          type="text"
           {...register('email')}
           aria-invalid={errors.email ? 'true' : 'false'}
+          aria-describedby={errors.email ? 'email-error' : undefined}
         />
         {errors.email && (
-          <span role="alert" className="error">
+          <span id="email-error" role="alert" className="error">
             {errors.email.message}
           </span>
         )}
@@ -48,9 +51,10 @@ function TestLoginForm({ onSubmit }: { onSubmit: (data: LoginFormData) => void }
           type="password"
           {...register('password')}
           aria-invalid={errors.password ? 'true' : 'false'}
+          aria-describedby={errors.password ? 'password-error' : undefined}
         />
         {errors.password && (
-          <span role="alert" className="error">
+          <span id="password-error" role="alert" className="error">
             {errors.password.message}
           </span>
         )}
@@ -75,10 +79,18 @@ describe('Form Validation with React Hook Form + Zod', () => {
       await user.type(emailInput, 'invalid-email')
       await user.click(submitButton)
 
+      // Wait for the error message to appear
       await waitFor(() => {
-        expect(screen.getByText(/invalid email address/i)).toBeInTheDocument()
-      })
+        const errorMessage = screen.getByText(/invalid email address/i)
+        expect(errorMessage).toBeInTheDocument()
+        expect(errorMessage).toHaveAttribute('role', 'alert')
+      }, { timeout: 3000 })
 
+      // Verify email input has aria-invalid
+      expect(emailInput).toHaveAttribute('aria-invalid', 'true')
+      expect(emailInput).toHaveAttribute('aria-describedby', 'email-error')
+      
+      // Verify form was not submitted
       expect(handleSubmit).not.toHaveBeenCalled()
     })
 
@@ -163,11 +175,13 @@ describe('Form Validation with React Hook Form + Zod', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
+        const alerts = screen.getAllByRole('alert')
+        expect(alerts).toHaveLength(2)
         expect(screen.getByText(/invalid email address/i)).toBeInTheDocument()
         expect(
           screen.getByText(/password must be at least 6 characters/i)
         ).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('clears errors when valid input is provided', async () => {
@@ -177,22 +191,32 @@ describe('Form Validation with React Hook Form + Zod', () => {
       render(<TestLoginForm onSubmit={handleSubmit} />)
 
       const emailInput = screen.getByLabelText(/email/i)
+      const passwordInput = screen.getByLabelText(/password/i)
       const submitButton = screen.getByRole('button', { name: /login/i })
 
       // Trigger error
       await user.click(submitButton)
       await waitFor(() => {
         expect(screen.getByText(/invalid email address/i)).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
 
-      // Fix error
+      // Fix error - clear and type new values
+      await user.clear(emailInput)
       await user.type(emailInput, 'valid@example.com')
-      await user.type(screen.getByLabelText(/password/i), 'password123')
+      await user.clear(passwordInput)
+      await user.type(passwordInput, 'password123')
       await user.click(submitButton)
 
       await waitFor(() => {
         expect(screen.queryByText(/invalid email address/i)).not.toBeInTheDocument()
-      })
+        expect(handleSubmit).toHaveBeenCalledWith(
+          {
+            email: 'valid@example.com',
+            password: 'password123',
+          },
+          expect.anything()
+        )
+      }, { timeout: 3000 })
     })
   })
 })

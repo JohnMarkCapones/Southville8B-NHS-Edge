@@ -38,6 +38,7 @@ export function TooltipButton({
         disabled={disabled}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
+        aria-label={label}
         className={`transition-all duration-200 hover:scale-105 ${
           isActive
             ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"

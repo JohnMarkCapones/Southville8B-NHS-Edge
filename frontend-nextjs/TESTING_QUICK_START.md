@@ -22,6 +22,7 @@ npm run playwright:install
 | `npm run test:coverage` | Generate coverage report |
 | `npm run test -- --run` | Run once (CI mode) |
 
+
 ### E2E Tests (Playwright)
 
 | Command | Description |

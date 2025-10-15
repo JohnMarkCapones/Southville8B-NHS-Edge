@@ -34,6 +34,9 @@ test.describe('Hydration Error Detection', () => {
   let consoleErrors: Array<{ page: string; message: string; type: string }> = []
 
   test.beforeEach(async ({ page }) => {
+    // Clear errors for each test
+    consoleErrors = []
+    
     // Listen for console errors
     page.on('console', (msg) => {
       if (msg.type() === 'error' || msg.type() === 'warning') {

@@ -44,9 +44,7 @@ export function Providers({ children }: ProvidersProps) {
     >
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <ScrollToTop />
-        <main id="main-content">
-          <ConditionalLayout>{children}</ConditionalLayout>
-        </main>
+        <ConditionalLayout>{children}</ConditionalLayout>
         <Toaster />
         <BackToTop />
         <Analytics />

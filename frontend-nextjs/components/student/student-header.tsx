@@ -139,6 +139,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 variant="ghost"
                 size="sm"
                 onClick={onToggleSidebar}
+                aria-label="Toggle sidebar"
                 className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
               >
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
