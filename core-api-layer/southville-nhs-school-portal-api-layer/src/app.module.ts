@@ -22,6 +22,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
 import { CampusFacilitiesModule } from './campus-facilities/campus-facilities.module';
 import { FaqModule } from './faq/faq.module';
+import { CommonModule } from './common/common.module';
 import supabaseConfig from './config/supabase.config';
 
 @Module({
@@ -55,6 +56,7 @@ import supabaseConfig from './config/supabase.config';
     AcademicCalendarModule,
     CampusFacilitiesModule,
     FaqModule,
+    CommonModule,
   ],
   controllers: [AppController],
   providers: [AppService],
