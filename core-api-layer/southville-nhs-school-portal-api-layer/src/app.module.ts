@@ -20,6 +20,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { GwaModule } from './gwa/gwa.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
+import { CampusFacilitiesModule } from './campus-facilities/campus-facilities.module';
 import supabaseConfig from './config/supabase.config';
 
 @Module({
@@ -51,6 +52,7 @@ import supabaseConfig from './config/supabase.config';
     GwaModule,
     AlertsModule,
     AcademicCalendarModule,
+    CampusFacilitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
