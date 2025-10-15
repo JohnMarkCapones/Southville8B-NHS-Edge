@@ -58,6 +58,14 @@ export class CreateClubDto {
   @IsUUID()
   advisor_id?: string;
 
+  @ApiPropertyOptional({
+    description: 'Co-Advisor user ID',
+    example: 'e1caec49-f61d-4158-bac7-1dd456e9976b',
+  })
+  @IsOptional()
+  @IsUUID()
+  co_advisor_id?: string;
+
   @ApiProperty({
     description: 'Domain ID that this club belongs to',
     example: 'b9a9b3e4-5c5f-47b7-8ad5-89f09f0e1234',

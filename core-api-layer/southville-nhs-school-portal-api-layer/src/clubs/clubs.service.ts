@@ -53,6 +53,7 @@ export class ClubsService {
           vp:vp_id(id, full_name, email),
           secretary:secretary_id(id, full_name, email),
           advisor:advisor_id(id, full_name, email),
+          co_advisor:co_advisor_id(id, full_name, email),
           domain:domain_id(id, type, name)
         `,
         )
@@ -96,6 +97,7 @@ export class ClubsService {
           vp:vp_id(id, full_name, email),
           secretary:secretary_id(id, full_name, email),
           advisor:advisor_id(id, full_name, email),
+          co_advisor:co_advisor_id(id, full_name, email),
           domain:domain_id(id, type, name)
         `,
         )
@@ -136,6 +138,7 @@ export class ClubsService {
           vp:vp_id(id, full_name, email),
           secretary:secretary_id(id, full_name, email),
           advisor:advisor_id(id, full_name, email),
+          co_advisor:co_advisor_id(id, full_name, email),
           domain:domain_id(id, type, name)
         `,
         )
