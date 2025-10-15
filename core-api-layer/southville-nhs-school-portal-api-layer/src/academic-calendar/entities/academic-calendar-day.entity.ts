@@ -6,11 +6,13 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  Unique,
 } from 'typeorm';
 import { AcademicCalendar } from './academic-calendar.entity';
 import { AcademicCalendarMarker } from './academic-calendar-marker.entity';
 
 @Entity('academic_calendar_days')
+@Unique(['academic_calendar_id', 'date'])
 export class AcademicCalendarDay {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -18,7 +20,7 @@ export class AcademicCalendarDay {
   @Column({ type: 'uuid' })
   academic_calendar_id: string;
 
-  @Column({ type: 'date', unique: true })
+  @Column({ type: 'date' })
   date: Date;
 
   @Column({ type: 'varchar', length: 10 })

@@ -17,7 +17,7 @@ export class AcademicCalendarMarker {
   @Column({ type: 'uuid' })
   academic_calendar_id: string;
 
-  @Column({ type: 'bigint', nullable: true })
+  @Column({ type: 'int', nullable: true })
   academic_calendar_day_id: number;
 
   @Column({ type: 'varchar', length: 20 })

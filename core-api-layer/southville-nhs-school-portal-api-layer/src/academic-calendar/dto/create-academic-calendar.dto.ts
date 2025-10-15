@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsBoolean,
   MaxLength,
+  Validate,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDateRangeValidConstraint } from './validators/is-date-range-valid.validator';
 
 export class CreateAcademicCalendarDto {
   @ApiProperty({
@@ -69,4 +71,7 @@ export class CreateAcademicCalendarDto {
   @IsOptional()
   @IsBoolean()
   auto_generate_days?: boolean = true;
+
+  @Validate(IsDateRangeValidConstraint)
+  private _dateRangeValidation?: any;
 }

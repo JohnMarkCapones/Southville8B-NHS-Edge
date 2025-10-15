@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
   Logger,
+  ParseIntPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -476,16 +478,20 @@ export class AcademicCalendarController {
     description: 'Forbidden - Admin access required',
   })
   async addDayMarker(
-    @Param('dayId') dayId: string,
+    @Param('dayId', ParseIntPipe) dayId: number,
     @Body() createMarkerDto: CreateMarkerDto,
   ): Promise<AcademicCalendarMarker> {
-    // We need to get the calendar ID from the day
-    // For now, we'll assume the calendar ID is passed in the request body
-    // In a real implementation, you might want to fetch it from the day record
+    // Fetch the day record to get the calendar ID
+    const day = await this.academicCalendarService.findDayById(dayId);
+
+    if (!day) {
+      throw new NotFoundException(`Calendar day with ID ${dayId} not found`);
+    }
+
     return this.academicCalendarService.addMarker(
       createMarkerDto,
-      '',
-      parseInt(dayId),
+      day.academic_calendar_id,
+      dayId,
     );
   }
 

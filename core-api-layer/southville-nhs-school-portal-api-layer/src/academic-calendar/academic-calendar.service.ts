@@ -380,15 +380,46 @@ export class AcademicCalendarService {
     try {
       const supabase = this.getSupabaseClient();
 
-      // Check if calendar exists
-      await this.findOne(id);
+      // Get existing calendar to check current values
+      const existingCalendar = await this.findOne(id);
+
+      // Resolve effective start_date and end_date
+      const effectiveStartDate = dto.start_date || existingCalendar.start_date;
+      const effectiveEndDate = dto.end_date || existingCalendar.end_date;
+
+      // Validate date range
+      const startDate = new Date(effectiveStartDate);
+      const endDate = new Date(effectiveEndDate);
+
+      if (startDate >= endDate) {
+        throw new BadRequestException('Start date must be before end date');
+      }
+
+      // Recompute total_days based on effective range
+      const totalDays =
+        Math.ceil(
+          (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+        ) + 1;
+
+      // Prepare update data
+      const updateData: any = {
+        ...dto,
+        total_days: totalDays,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Check if dates changed from existing record
+      const datesChanged =
+        (dto.start_date &&
+          dto.start_date !==
+            existingCalendar.start_date.toISOString().split('T')[0]) ||
+        (dto.end_date &&
+          dto.end_date !==
+            existingCalendar.end_date.toISOString().split('T')[0]);
 
       const { data: calendar, error } = await supabase
         .from('academic_calendar')
-        .update({
-          ...dto,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', id)
         .select('*')
         .single();
@@ -398,6 +429,12 @@ export class AcademicCalendarService {
         throw new BadRequestException(
           `Failed to update calendar: ${error.message}`,
         );
+      }
+
+      // Regenerate days if dates changed
+      if (datesChanged) {
+        await this.generateDays(id);
+        this.logger.log(`Calendar days regenerated for calendar ${id}`);
       }
 
       this.logger.log(
@@ -563,6 +600,33 @@ export class AcademicCalendarService {
       }
       this.logger.error('Unexpected error updating current day:', error);
       throw new InternalServerErrorException('Failed to update current day');
+    }
+  }
+
+  /**
+   * Find a calendar day by ID
+   */
+  async findDayById(dayId: number): Promise<AcademicCalendarDay> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      const { data: day, error } = await supabase
+        .from('academic_calendar_days')
+        .select('*')
+        .eq('id', dayId)
+        .single();
+
+      if (error || !day) {
+        throw new NotFoundException(`Calendar day with ID ${dayId} not found`);
+      }
+
+      return day;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Error fetching calendar day ${dayId}:`, error);
+      throw new InternalServerErrorException('Failed to fetch calendar day');
     }
   }
 
