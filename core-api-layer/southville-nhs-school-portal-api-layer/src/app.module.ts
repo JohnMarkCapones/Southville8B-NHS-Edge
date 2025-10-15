@@ -23,6 +23,9 @@ import { AcademicCalendarModule } from './academic-calendar/academic-calendar.mo
 import { CampusFacilitiesModule } from './campus-facilities/campus-facilities.module';
 import { FaqModule } from './faq/faq.module';
 import { CommonModule } from './common/common.module';
+import { LocationsModule } from './locations/locations.module';
+import { HotspotsModule } from './hotspots/hotspots.module';
+import { DepartmentsInformationModule } from './departments-information/departments-information.module';
 import supabaseConfig from './config/supabase.config';
 
 @Module({
@@ -57,6 +60,9 @@ import supabaseConfig from './config/supabase.config';
     CampusFacilitiesModule,
     FaqModule,
     CommonModule,
+    LocationsModule,
+    HotspotsModule,
+    DepartmentsInformationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
