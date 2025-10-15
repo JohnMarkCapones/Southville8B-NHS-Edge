@@ -220,9 +220,13 @@ const atRiskStudents = allStudents.slice(-3).map((student) => ({
 const COLORS = ["hsl(var(--teacher-primary))", "hsl(var(--teacher-accent))", "#10b981", "#f59e0b", "#ef4444"]
 
 function RealTimeClock() {
-  const [time, setTime] = useState(new Date())
+  // Initialize to null to avoid hydration mismatch - time will be set on client
+  const [time, setTime] = useState<Date | null>(null)
 
   useEffect(() => {
+    // Set initial time on client mount
+    setTime(new Date())
+
     const timer = setInterval(() => {
       setTime(new Date())
     }, 1000)
@@ -248,8 +252,18 @@ function RealTimeClock() {
     })
   }
 
+  // Show placeholder until time is set on client to avoid hydration mismatch
+  if (!time) {
+    return (
+      <div className="text-right">
+        <div className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400">--:--:--</div>
+        <div className="text-sm text-blue-500 dark:text-blue-300">Loading...</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="text-right">
+    <div className="text-right" suppressHydrationWarning>
       <div className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400">{formatTime(time)}</div>
       <div className="text-sm text-blue-500 dark:text-blue-300">{formatDate(time)}</div>
     </div>

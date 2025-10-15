@@ -206,6 +206,11 @@ interface PrimarySidebarProps {
 const PrimarySidebar = ({ activeSection }: PrimarySidebarProps) => {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSectionChange = (sectionId: string) => {
     // Map section IDs to routes with proper defaults
@@ -252,11 +257,12 @@ const PrimarySidebar = ({ activeSection }: PrimarySidebarProps) => {
       {/* Bottom Actions */}
       <div className="p-2 space-y-2 border-t border-border">
         <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(mounted && theme === "dark" ? "light" : "dark")}
           className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:shadow-md group"
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          title={`Switch to ${mounted && theme === "dark" ? "light" : "dark"} mode`}
+          suppressHydrationWarning
         >
-          {theme === "dark" ? (
+          {mounted && theme === "dark" ? (
             <Sun className="h-5 w-5 group-hover:rotate-180 transition-transform duration-500" />
           ) : (
             <Moon className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />

@@ -133,9 +133,9 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  if (!mounted) return null
-
-  const isDarkMode = theme === "dark"
+  // Don't return null - this causes hydration mismatch
+  // Instead, render the same structure but handle theme safely
+  const isDarkMode = mounted ? theme === "dark" : false
 
   const mainNavigation = navigation.slice(0, 3) // Home, Academics, Student Life
   const moreNavigation = navigation.slice(3) // Athletics, News & Events
@@ -143,6 +143,7 @@ export function Header() {
   return (
     <>
       <header
+        role="banner"
         className={cn(
           "sticky top-0 z-50 w-full transition-all duration-300 border-b-0",
           isScrolled
@@ -193,8 +194,9 @@ export function Header() {
             </Link>
 
             {/* Desktop Navigation - Enhanced */}
-            <NavigationMenu className="hidden lg:flex">
-              <NavigationMenuList className="space-x-1 xl:space-x-2">
+            <nav role="navigation" aria-label="Main navigation" className="hidden lg:flex">
+              <NavigationMenu>
+                <NavigationMenuList className="space-x-1 xl:space-x-2">
                 {navigation.map((item) => (
                   <NavigationMenuItem key={item.title}>
                     {item.items ? (
@@ -204,6 +206,7 @@ export function Header() {
                             "group hover:bg-accent/50 transition-all duration-300 text-sm xl:text-base font-medium px-2 xl:px-3 py-1.5 rounded-lg",
                             isDarkMode && "hover:bg-accent text-foreground",
                           )}
+                          aria-label={`${item.title} menu`}
                         >
                           <item.icon className="w-4 h-4 xl:w-5 xl:h-5 mr-2 transition-transform duration-300" />
                           {item.title}
@@ -263,6 +266,7 @@ export function Header() {
                             "group inline-flex h-9 xl:h-10 w-max items-center justify-center rounded-lg bg-background px-2 xl:px-3 py-1.5 text-sm xl:text-base font-medium transition-all duration-300 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
                             isDarkMode && "bg-card hover:bg-accent",
                           )}
+                          aria-label={`Go to ${item.title}`}
                         >
                           <item.icon className="w-4 h-4 xl:w-5 xl:h-5 mr-2 transition-transform duration-300" />
                           {item.title}
@@ -273,9 +277,11 @@ export function Header() {
                 ))}
               </NavigationMenuList>
             </NavigationMenu>
+            </nav>
 
-            <NavigationMenu className="hidden md:flex lg:hidden">
-              <NavigationMenuList className="space-x-1">
+            <nav role="navigation" aria-label="Main navigation" className="hidden md:flex lg:hidden">
+              <NavigationMenu>
+                <NavigationMenuList className="space-x-1">
                 {/* Main navigation items */}
                 {mainNavigation.map((item) => (
                   <NavigationMenuItem key={item.title}>
@@ -286,6 +292,7 @@ export function Header() {
                             "group hover:bg-accent/50 transition-all duration-300 text-sm font-medium px-2 py-1.5 rounded-lg",
                             isDarkMode && "hover:bg-accent text-foreground",
                           )}
+                          aria-label={`${item.title} menu`}
                         >
                           <item.icon className="w-4 h-4 mr-2 transition-transform duration-300" />
                           {item.title}
@@ -361,6 +368,7 @@ export function Header() {
                       "group hover:bg-accent/50 transition-all duration-300 text-sm font-medium px-2 py-1.5 rounded-lg",
                       isDarkMode && "hover:bg-accent text-foreground",
                     )}
+                    aria-label="More navigation options"
                   >
                     <Menu className="w-4 h-4 mr-2 transition-transform duration-300" />
                     More
@@ -396,6 +404,7 @@ export function Header() {
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
+            </nav>
 
             {/* Right Side Actions - Enhanced mobile layout */}
             <div className="flex items-center space-x-0.5 xs:space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 flex-shrink-0">
@@ -412,13 +421,14 @@ export function Header() {
                   "hover:bg-accent/50 transition-all duration-300 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10",
                   isDarkMode && "hover:bg-accent",
                 )}
-                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+                onClick={() => setTheme(mounted && theme === "light" ? "dark" : "light")}
+                aria-label={`Switch to ${mounted && theme === "light" ? "dark" : "light"} mode`}
+                suppressHydrationWarning
               >
-                {theme === "light" ? (
-                  <Sun className="h-3 w-3 xs:h-4 xs:w-4 sm:h-4 sm:w-4 text-yellow-500 transition-transform duration-300" />
-                ) : (
+                {mounted && theme === "dark" ? (
                   <Moon className="h-3 w-3 xs:h-4 xs:w-4 sm:h-4 sm:w-4 text-blue-400 transition-transform duration-300" />
+                ) : (
+                  <Sun className="h-3 w-3 xs:h-4 xs:w-4 sm:h-4 sm:w-4 text-yellow-500 transition-transform duration-300" />
                 )}
               </AnimatedButton>
 
@@ -435,6 +445,7 @@ export function Header() {
                       "text-[9px] xs:text-[10px] sm:text-xs md:text-sm lg:text-sm",
                       "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white",
                     )}
+                    aria-label="Access portal"
                   >
                     <div className="relative flex items-center">
                       <Shield className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 lg:w-4 lg:h-4 mr-0.5 xs:mr-1 sm:mr-1.5 md:mr-2 transition-transform duration-300" />
@@ -490,6 +501,7 @@ export function Header() {
                       "md:hidden hover:bg-accent/50 transition-all duration-300 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8",
                       isDarkMode && "hover:bg-accent",
                     )}
+                    aria-label="Open mobile menu"
                   >
                     <Menu className="h-4 w-4 xs:h-4 xs:w-4 transition-transform duration-300" />
                   </AnimatedButton>
@@ -538,6 +550,7 @@ export function Header() {
                                 `bg-gradient-to-r ${button.color} text-white hover:shadow-lg`,
                               )}
                               onClick={() => setIsMobileMenuOpen(false)}
+                              aria-label={`Access ${button.title}`}
                             >
                               <button.icon className="w-5 h-5 mb-2 transition-transform duration-300" />
                               <span className="text-xs font-medium text-center leading-tight">{button.title}</span>
@@ -560,6 +573,7 @@ export function Header() {
                                 "flex items-center space-x-3 p-3 rounded-xl hover:bg-accent transition-all duration-300 group",
                               )}
                               onClick={() => setIsMobileMenuOpen(false)}
+                              aria-label={`Go to ${item.title}`}
                             >
                               <item.icon className="w-5 h-5 text-primary transition-transform duration-300" />
                               <span className="font-medium">{item.title}</span>

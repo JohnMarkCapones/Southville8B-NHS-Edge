@@ -200,22 +200,20 @@ export function HeroSection() {
               </p>
 
               {/* CTA Row */}
-              <div className="mt-6 sm:mt-7 flex flex-col xs:flex-row gap-2.5 sm:gap-3">
-                <Link href="/guess/academics" className="w-full xs:w-auto">
+              <div className="mt-6 sm:mt-7 flex flex-col xs:flex-row gap-3 sm:gap-4">
+                <Link href="/guess/academics" className="inline-block w-full xs:w-auto">
                   <Button
-                    size="lg"
-                    className="w-full xs:w-auto rounded-full px-6 sm:px-7 py-5 sm:py-6 font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-xl transition-all"
+                    className="w-full xs:w-auto h-12 sm:h-14 min-h-[44px] rounded-full px-6 sm:px-7 font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-xl transition-all touch-manipulation"
                   >
                     <BookOpen className="w-5 h-5 mr-2" />
                     Explore Academics
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
-                <Link href="/guess/virtual-tour" className="w-full xs:w-auto">
+                <Link href="/guess/virtual-tour" className="inline-block w-full xs:w-auto">
                   <Button
-                    size="lg"
                     variant="outline"
-                    className="w-full xs:w-auto rounded-full px-6 sm:px-7 py-5 sm:py-6 font-semibold border-2 border-blue-300 text-blue-900 hover:bg-blue-50 dark:border-blue-200/80 dark:text-blue-200 dark:hover:bg-slate-800/70 bg-transparent"
+                    className="w-full xs:w-auto h-12 sm:h-14 min-h-[44px] rounded-full px-6 sm:px-7 font-semibold border-2 border-blue-300 text-blue-900 hover:bg-blue-50 dark:border-blue-200/80 dark:text-blue-200 dark:hover:bg-slate-800/70 bg-transparent touch-manipulation"
                   >
                     <Play className="w-5 h-5 mr-2" />
                     Virtual Tour
@@ -248,9 +246,9 @@ export function HeroSection() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg md:text-xl font-semibold">
+                    <h2 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg md:text-xl font-semibold">
                       Quick Links
-                    </h3>
+                    </h2>
                   </div>
                   <Badge className="bg-blue-600 text-white text-[11px] sm:text-xs">Start Here</Badge>
                 </div>

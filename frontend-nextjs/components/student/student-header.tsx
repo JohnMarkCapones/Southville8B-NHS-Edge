@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -48,7 +48,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
   const [selectedLanguage, setSelectedLanguage] = useState("English")
   const [showNotifications, setShowNotifications] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const languages = [
     { code: "en", name: "English", flag: "🇺🇸" },
@@ -134,6 +139,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 variant="ghost"
                 size="sm"
                 onClick={onToggleSidebar}
+                aria-label="Toggle sidebar"
                 className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
               >
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -164,10 +170,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   variant="ghost"
                   size="sm"
                   className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
+                  suppressHydrationWarning
                 >
-                  {theme === "light" && <Sun className="w-4 h-4" />}
-                  {theme === "dark" && <Moon className="w-4 h-4" />}
-                  {theme === "system" && <Monitor className="w-4 h-4" />}
+                  {mounted && theme === "light" && <Sun className="w-4 h-4" />}
+                  {mounted && theme === "dark" && <Moon className="w-4 h-4" />}
+                  {mounted && theme === "system" && <Monitor className="w-4 h-4" />}
+                  {!mounted && <Sun className="w-4 h-4" />}
                   <ChevronDown className="w-3 h-3 ml-1 hidden sm:inline" />
                 </Button>
               </DropdownMenuTrigger>
@@ -182,7 +190,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                     >
                       <IconComponent className="w-4 h-4" />
                       <span className="text-sm">{option.label}</span>
-                      {theme === option.value && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
+                      {mounted && theme === option.value && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
                     </DropdownMenuItem>
                   )
                 })}

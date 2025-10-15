@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { HeroSection } from "@/components/ui/hero-section"
@@ -72,9 +72,34 @@ const CelebrationOverlay = dynamic(
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("academic")
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme } = useTheme()
-  const isGamingTheme = theme === "gaming"
-  const isDarkMode = theme === "dark" || theme === "gaming"
+
+  // Calculate theme values safely after mounting to avoid hydration mismatch
+  const isGamingTheme = mounted ? theme === "gaming" : false
+  const isDarkMode = mounted ? (theme === "dark" || theme === "gaming") : false
+
+  // Generate background circles only on client to avoid hydration mismatch
+  const [backgroundCircles, setBackgroundCircles] = useState<Array<{
+    left: string
+    top: string
+    width: string
+    height: string
+  }>>([])
+
+  useEffect(() => {
+    setMounted(true)
+
+    // Generate random positions only on client side
+    setBackgroundCircles(
+      Array.from({ length: 6 }, () => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        width: `${Math.random() * 200 + 100}px`,
+        height: `${Math.random() * 200 + 100}px`,
+      }))
+    )
+  }, [])
 
   const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 })
   const [welcomeRef, welcomeInView] = useIntersectionObserver({ threshold: 0.1 })
@@ -311,10 +336,11 @@ export default function HomePage() {
   ]
 
   return (
-    <div className={cn("min-h-screen", isDarkMode && "dark")}>      
-      <section ref={heroRef}>
-        <HeroSection />
-      </section>
+    <div className={cn("min-h-screen", isDarkMode && "dark")} suppressHydrationWarning>
+      <div id="main-content">
+        <section ref={heroRef} aria-label="Hero section">
+          <HeroSection />
+        </section>
       <div className="relative z-[30] -mt-3 sm:-mt-4">
         <AnnouncementBanner items={announcementItems} fullBleed />
       </div>
@@ -331,7 +357,7 @@ export default function HomePage() {
       >
         {/* Background decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
+          {backgroundCircles.map((circle, i) => (
             <div
               key={i}
               className={cn(
@@ -339,10 +365,10 @@ export default function HomePage() {
                 isDarkMode ? "bg-blue-400" : "bg-gradient-to-r from-blue-400 to-purple-400",
               )}
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                width: `${Math.random() * 200 + 100}px`,
-                height: `${Math.random() * 200 + 100}px`,
+                left: circle.left,
+                top: circle.top,
+                width: circle.width,
+                height: circle.height,
               }}
             />
           ))}
@@ -617,21 +643,21 @@ export default function HomePage() {
               <TabsList className="grid grid-cols-3 bg-gray-100 dark:bg-gray-800 rounded-full p-1 shadow-sm">
                 <TabsTrigger
                   value="academic"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
+                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-gray-800 dark:data-[state=inactive]:text-gray-300 transition-all duration-200"
                 >
                   <GraduationCap className="w-4 h-4 mr-2" />
                   Academic Excellence
                 </TabsTrigger>
                 <TabsTrigger
                   value="arts"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
+                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-gray-800 dark:data-[state=inactive]:text-gray-300 transition-all duration-200"
                 >
                   <Palette className="w-4 h-4 mr-2" />
                   Arts & Culture
                 </TabsTrigger>
                 <TabsTrigger
                   value="special"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
+                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-gray-800 dark:data-[state=inactive]:text-gray-300 transition-all duration-200"
                 >
                   <Heart className="w-4 h-4 mr-2" />
                   Special Interest
@@ -807,6 +833,7 @@ export default function HomePage() {
 
       {/* Celebration Overlay */}
       <CelebrationOverlay isOpen={isCelebrationOpen} onClose={() => setIsCelebrationOpen(false)} />
+      </div>
     </div>
   )
 }

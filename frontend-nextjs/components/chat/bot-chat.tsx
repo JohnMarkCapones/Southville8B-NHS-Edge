@@ -145,6 +145,7 @@ export function BotChat({ className }: BotChatProps) {
             ? "bg-gradient-to-r from-gaming-neon-purple to-gaming-neon-pink text-gaming-dark animate-gamingPulse"
             : "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
         )}
+        aria-label="Open AI assistant"
       >
         <Bot className="h-6 w-6" />
         <Sparkles className="absolute -top-1 -right-1 w-4 h-4 animate-pulse" />

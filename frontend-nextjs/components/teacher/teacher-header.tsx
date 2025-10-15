@@ -61,9 +61,9 @@ export function TeacherHeader() {
     setMounted(true)
   }, [])
 
-  if (!mounted) return null
-
-  const isDarkMode = theme === "dark"
+  // Don't return null - causes hydration mismatch
+  // Instead, calculate theme safely with mounted check
+  const isDarkMode = mounted ? theme === "dark" : false
 
   const handleLogout = () => {
     console.log("[v0] Teacher logout confirmed")
@@ -426,10 +426,11 @@ export function TeacherHeader() {
               variant="ghost"
               size="icon"
               className="hover:bg-white/10 hover:scale-110 transition-all duration-300"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              onClick={() => setTheme(mounted && theme === "light" ? "dark" : "light")}
+              suppressHydrationWarning
             >
               <div className="relative w-5 h-5">
-                {theme === "light" ? (
+                {mounted && theme === "light" ? (
                   <Sun className="w-5 h-5 text-yellow-300" />
                 ) : (
                   <Moon className="w-5 h-5 text-blue-200" />

@@ -8,7 +8,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Let Vercel handle image optimization in production
     // Allow local placeholder SVG with query params (required from Next.js 16)
     // Enable Next.js automatic image optimization
     formats: ['image/webp', 'image/avif'],
@@ -20,13 +20,6 @@ const nextConfig = {
     localPatterns: [
       {
         pathname: "/placeholder.svg",
-        // Match any query parameters for placeholder SVG
-        search: "*",
-      },
-      {
-        pathname: "/placeholder.svg",
-        // Match specific query parameters that are commonly used
-        search: "height=*&width=*&text=*",
       },
       {
         pathname: "/logo-48.webp",
@@ -52,8 +45,7 @@ const nextConfig = {
     // Improve bundling performance (PPR disabled - requires Next.js canary)
     optimizeServerReact: true,
   },
-  // Output standalone for better production performance
-  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  // Use default output on Vercel (no standalone)
   async redirects() {
     return [
       {

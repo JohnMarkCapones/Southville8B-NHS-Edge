@@ -45,12 +45,16 @@ export default function QuizPage() {
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [selectedSubject, setSelectedSubject] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [currentTime, setCurrentTime] = useState(new Date())
+  // Initialize to null to avoid hydration mismatch - will be set on client
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [showQuizNotification, setShowQuizNotification] = useState(true)
   const [instructionModalOpen, setInstructionModalOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    setMounted(true)
+    setCurrentTime(new Date())
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
@@ -391,29 +395,28 @@ export default function QuizPage() {
               <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 🚨 Incoming Quiz Alert!
               </DialogTitle>
-              <DialogDescription className="text-base text-slate-700 dark:text-slate-300">
-                <div className="space-y-3">
-                  <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-indigo-200/30 dark:border-indigo-700/30">
-                    <div className="font-semibold text-indigo-700 dark:text-indigo-300">
-                      Mathematics - Quadratic Equations
-                    </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Starting in 5 minutes</div>
-                    <div className="flex items-center gap-2 mt-2 text-xs">
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        <Timer className="w-3 h-3 mr-1" />
-                        45 min
-                      </Badge>
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                        <Trophy className="w-3 h-3 mr-1" />
-                        100 pts
-                      </Badge>
-                    </div>
+              {/* Changed from DialogDescription to div to avoid invalid HTML nesting (<p> cannot contain <div>) */}
+              <div className="text-base text-slate-700 dark:text-slate-300 space-y-3">
+                <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-indigo-200/30 dark:border-indigo-700/30">
+                  <div className="font-semibold text-indigo-700 dark:text-indigo-300">
+                    Mathematics - Quadratic Equations
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    Get ready! Make sure you have a stable internet connection and a quiet environment.
+                  <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Starting in 5 minutes</div>
+                  <div className="flex items-center gap-2 mt-2 text-xs">
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      <Timer className="w-3 h-3 mr-1" />
+                      45 min
+                    </Badge>
+                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      <Trophy className="w-3 h-3 mr-1" />
+                      100 pts
+                    </Badge>
                   </div>
                 </div>
-              </DialogDescription>
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  Get ready! Make sure you have a stable internet connection and a quiet environment.
+                </div>
+              </div>
             </DialogHeader>
             <DialogFooter className="flex gap-2 mt-6">
               <Button

@@ -212,10 +212,16 @@ export function EventSystem() {
                     <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">Featured</Badge>
                   </div>
                   <div className="absolute top-4 right-4 flex gap-2">
-                    <button className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all">
+                    <button 
+                      className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
+                      aria-label={event.isInterested ? "Remove from interested" : "Mark as interested"}
+                    >
                       <Heart className={`w-4 h-4 ${event.isInterested ? "text-red-500 fill-current" : "text-white"}`} />
                     </button>
-                    <button className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all">
+                    <button 
+                      className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
+                      aria-label="Share event"
+                    >
                       <Share2 className="w-4 h-4 text-white" />
                     </button>
                   </div>
@@ -308,13 +314,16 @@ export function EventSystem() {
                 </Badge>
               </div>
               <div className="absolute top-3 right-3 flex gap-2">
-                <button className="w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all">
+                <button 
+                  className="w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
+                  aria-label={event.isInterested ? "Remove from interested" : "Mark as interested"}
+                >
                   <Heart className={`w-3 h-3 ${event.isInterested ? "text-red-500 fill-current" : "text-white"}`} />
                 </button>
               </div>
               {event.isRegistered && (
                 <div className="absolute bottom-3 left-3">
-                  <Badge className="bg-green-500 text-white">Registered</Badge>
+                  <Badge variant="success">Registered</Badge>
                 </div>
               )}
             </div>

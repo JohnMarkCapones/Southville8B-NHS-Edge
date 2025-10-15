@@ -380,7 +380,7 @@ export default function SubjectsCarousel() {
         </div>
 
         {/* Navigation Dots */}
-        <div className="flex justify-center space-x-2 mt-4">
+        <div className="flex justify-center space-x-2 mt-4" role="tablist" aria-label="Subject slides">
           {classroomSections.map((_, index) => (
             <button
               key={index}
@@ -390,7 +390,12 @@ export default function SubjectsCarousel() {
                   ? "bg-indigo-500 w-6"
                   : "bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500"
               }`}
-            />
+              role="tab"
+              aria-label={`Go to slide ${index + 1} of ${classroomSections.length}`}
+              aria-selected={index === currentIndex}
+            >
+              <span className="sr-only">{index === currentIndex ? `Slide ${index + 1} (current)` : `Slide ${index + 1}`}</span>
+            </button>
           ))}
         </div>
       </div>
