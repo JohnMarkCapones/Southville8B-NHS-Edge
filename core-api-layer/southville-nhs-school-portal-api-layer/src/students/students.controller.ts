@@ -22,6 +22,9 @@ import {
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
+import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
+import { EmergencyContact } from './entities/emergency-contact.entity';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PoliciesGuard } from '../auth/guards/policies.guard';
@@ -174,5 +177,69 @@ export class StudentsController {
       message: 'This is a public endpoint - no authentication required',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  // Get emergency contacts for a student
+  @Get(':studentUserId/emergency-contacts')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get emergency contacts for a student' })
+  @ApiResponse({
+    status: 200,
+    description: 'Emergency contacts retrieved',
+    type: [EmergencyContact],
+  })
+  async getEmergencyContacts(
+    @Param('studentUserId') studentUserId: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    // Students can only view their own
+    if (user.role === 'Student' && user.id !== studentUserId) {
+      throw new ForbiddenException(
+        'You can only view your own emergency contacts',
+      );
+    }
+    return this.studentsService.getEmergencyContacts(studentUserId);
+  }
+
+  // Add emergency contact
+  @Post(':studentUserId/emergency-contacts')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Add emergency contact (Admin only)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Emergency contact created',
+    type: EmergencyContact,
+  })
+  async addEmergencyContact(
+    @Param('studentUserId') studentUserId: string,
+    @Body() createDto: CreateEmergencyContactDto,
+  ) {
+    return this.studentsService.addEmergencyContact(studentUserId, createDto);
+  }
+
+  // Update emergency contact
+  @Patch('emergency-contacts/:contactId')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update emergency contact (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Emergency contact updated',
+    type: EmergencyContact,
+  })
+  async updateEmergencyContact(
+    @Param('contactId') contactId: string,
+    @Body() updateDto: UpdateEmergencyContactDto,
+  ) {
+    return this.studentsService.updateEmergencyContact(contactId, updateDto);
+  }
+
+  // Delete emergency contact
+  @Delete('emergency-contacts/:contactId')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete emergency contact (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Emergency contact deleted' })
+  async deleteEmergencyContact(@Param('contactId') contactId: string) {
+    await this.studentsService.deleteEmergencyContact(contactId);
+    return { message: 'Emergency contact deleted successfully' };
   }
 }

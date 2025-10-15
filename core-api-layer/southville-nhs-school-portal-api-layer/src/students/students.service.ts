@@ -10,6 +10,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Student } from './entities/student.entity';
+import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
+import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
+import { EmergencyContact } from './entities/emergency-contact.entity';
 
 @Injectable()
 export class StudentsService {
@@ -172,6 +175,14 @@ export class StudentsService {
         }
         throw new InternalServerErrorException(
           `Failed to create student record: ${studentError.message}`,
+        );
+      }
+
+      // Step 4: Create emergency contacts if provided
+      if (createStudentDto.emergencyContacts?.length) {
+        await this.createEmergencyContacts(
+          authUser.user.id,
+          createStudentDto.emergencyContacts,
         );
       }
 
@@ -348,6 +359,183 @@ export class StudentsService {
     if (error) {
       this.logger.error('Error removing student:', error);
       throw new InternalServerErrorException('Failed to remove student');
+    }
+  }
+
+  // Snake to camel case mapper for emergency contacts
+  private mapEmergencyContactDbToDto(dbRecord: any): EmergencyContact {
+    return {
+      id: dbRecord.id,
+      studentId: dbRecord.student_id,
+      guardianName: dbRecord.guardian_name,
+      relationship: dbRecord.relationship,
+      phoneNumber: dbRecord.phone_number,
+      email: dbRecord.email,
+      address: dbRecord.address,
+      isPrimary: dbRecord.is_primary,
+      createdAt: dbRecord.created_at,
+      updatedAt: dbRecord.updated_at,
+    };
+  }
+
+  // Create emergency contacts for a student
+  private async createEmergencyContacts(
+    studentUserId: string,
+    contacts: CreateEmergencyContactDto[],
+  ): Promise<void> {
+    if (!contacts || contacts.length === 0) return;
+
+    const supabase = this.getSupabaseClient();
+
+    // Ensure only one primary contact
+    let hasPrimary = false;
+    const contactsToInsert = contacts.map((contact, index) => {
+      const isPrimary = contact.isPrimary && !hasPrimary;
+      if (isPrimary) hasPrimary = true;
+
+      return {
+        student_id: studentUserId,
+        guardian_name: contact.guardianName,
+        relationship: contact.relationship,
+        phone_number: contact.phoneNumber,
+        email: contact.email,
+        address: contact.address,
+        is_primary: isPrimary || (index === 0 && !hasPrimary), // First contact is primary if none specified
+      };
+    });
+
+    const { error } = await supabase
+      .from('emergency_contacts')
+      .insert(contactsToInsert);
+
+    if (error) {
+      this.logger.error('Error creating emergency contacts:', error);
+      throw new InternalServerErrorException(
+        `Failed to create emergency contacts: ${error.message}`,
+      );
+    }
+  }
+
+  // Get emergency contacts for a student
+  async getEmergencyContacts(
+    studentUserId: string,
+  ): Promise<EmergencyContact[]> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: contacts, error } = await supabase
+      .from('emergency_contacts')
+      .select('*')
+      .eq('student_id', studentUserId)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      this.logger.error('Error fetching emergency contacts:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch emergency contacts',
+      );
+    }
+
+    return contacts.map((c) => this.mapEmergencyContactDbToDto(c));
+  }
+
+  // Add single emergency contact
+  async addEmergencyContact(
+    studentUserId: string,
+    contactDto: CreateEmergencyContactDto,
+  ): Promise<EmergencyContact> {
+    const supabase = this.getSupabaseClient();
+
+    // If setting as primary, unset other primary contacts
+    if (contactDto.isPrimary) {
+      await supabase
+        .from('emergency_contacts')
+        .update({ is_primary: false })
+        .eq('student_id', studentUserId);
+    }
+
+    const { data: contact, error } = await supabase
+      .from('emergency_contacts')
+      .insert({
+        student_id: studentUserId,
+        guardian_name: contactDto.guardianName,
+        relationship: contactDto.relationship,
+        phone_number: contactDto.phoneNumber,
+        email: contactDto.email,
+        address: contactDto.address,
+        is_primary: contactDto.isPrimary || false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error adding emergency contact:', error);
+      throw new InternalServerErrorException('Failed to add emergency contact');
+    }
+
+    return this.mapEmergencyContactDbToDto(contact);
+  }
+
+  // Update emergency contact
+  async updateEmergencyContact(
+    contactId: string,
+    updateDto: UpdateEmergencyContactDto,
+  ): Promise<EmergencyContact> {
+    const supabase = this.getSupabaseClient();
+
+    // If setting as primary, unset other primary contacts for this student
+    if (updateDto.isPrimary) {
+      const { data: existingContact } = await supabase
+        .from('emergency_contacts')
+        .select('student_id')
+        .eq('id', contactId)
+        .single();
+
+      if (existingContact) {
+        await supabase
+          .from('emergency_contacts')
+          .update({ is_primary: false })
+          .eq('student_id', existingContact.student_id);
+      }
+    }
+
+    const { data: contact, error } = await supabase
+      .from('emergency_contacts')
+      .update({
+        guardian_name: updateDto.guardianName,
+        relationship: updateDto.relationship,
+        phone_number: updateDto.phoneNumber,
+        email: updateDto.email,
+        address: updateDto.address,
+        is_primary: updateDto.isPrimary,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', contactId)
+      .select()
+      .single();
+
+    if (error || !contact) {
+      this.logger.error('Error updating emergency contact:', error);
+      throw new NotFoundException('Emergency contact not found');
+    }
+
+    return this.mapEmergencyContactDbToDto(contact);
+  }
+
+  // Delete emergency contact
+  async deleteEmergencyContact(contactId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    const { error } = await supabase
+      .from('emergency_contacts')
+      .delete()
+      .eq('id', contactId);
+
+    if (error) {
+      this.logger.error('Error deleting emergency contact:', error);
+      throw new InternalServerErrorException(
+        'Failed to delete emergency contact',
+      );
     }
   }
 }
