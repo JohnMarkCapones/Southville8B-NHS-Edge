@@ -117,11 +117,14 @@ export class AuthService {
       // ✅ NEW: Ensure user exists in public.users table
       await this.ensureUserExistsInPublicTable(data.user);
 
+      // ✅ Fetch actual role from public.users table
+      const roleFromDatabase = await this.getUserRoleFromDatabase(data.user.id);
+
       // Transform Supabase user data to our interface
       const user: SupabaseUser = {
         id: data.user.id,
         email: data.user.email || '',
-        role: data.user.role,
+        role: roleFromDatabase || data.user.role, // ✅ Use database role, fallback to Supabase role
         user_metadata: data.user.user_metadata,
         app_metadata: data.user.app_metadata,
         aud: data.user.aud || 'authenticated',
