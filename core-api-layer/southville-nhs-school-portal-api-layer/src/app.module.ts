@@ -30,6 +30,7 @@ import { R2ConfigValidationService } from './config/r2-config-validation/r2-conf
 import { R2ConfigModule } from './config/r2-config/r2-config.module';
 import { StorageModule } from './storage/storage.module';
 import { ModulesModule } from './modules/modules.module';
+import { DepartmentsModule } from './departments/departments.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
 
@@ -71,6 +72,7 @@ import r2Config from './config/r2.config';
     R2ConfigModule,
     StorageModule,
     ModulesModule,
+    DepartmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService, R2ConfigValidationService],

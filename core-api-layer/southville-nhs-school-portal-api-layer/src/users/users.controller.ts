@@ -31,7 +31,7 @@ import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 import { UsersService } from './users.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
-import { CreateStudentDto } from './dto/create-student.dto';
+import { CreateStudentRequestDto } from './dto/create-student.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import {
@@ -88,7 +88,7 @@ export class UsersController {
     description: 'Forbidden - Insufficient permissions',
   })
   async createStudent(
-    @Body() createStudentDto: CreateStudentDto,
+    @Body() createStudentDto: CreateStudentRequestDto,
     @AuthUser() user: SupabaseUser,
   ) {
     return this.usersService.createStudent(createStudentDto, user.id);

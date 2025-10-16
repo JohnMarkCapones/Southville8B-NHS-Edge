@@ -8,10 +8,14 @@ import {
   MaxLength,
   Min,
   Max,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { CreateEmergencyContactDto } from '../../students/dto/create-emergency-contact.dto';
 
-export class CreateStudentDto {
+export class CreateStudentRequestDto {
   @IsString()
   @MinLength(2)
   @MaxLength(50)
@@ -132,4 +136,15 @@ export class CreateStudentDto {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   sectionId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateEmergencyContactDto)
+  @ApiProperty({
+    type: [CreateEmergencyContactDto],
+    description: 'Emergency contacts (optional)',
+    required: false,
+  })
+  emergencyContacts?: CreateEmergencyContactDto[];
 }

@@ -9,7 +9,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { DepartmentsInformationService } from './departments-information.service';
 import { CreateDepartmentsInformationDto } from './dto/create-departments-information.dto';
 import { UpdateDepartmentsInformationDto } from './dto/update-departments-information.dto';
@@ -21,6 +27,7 @@ import { UserRole } from '../users/dto/create-user.dto';
 
 @ApiTags('Departments Information')
 @Controller('departments-information')
+@ApiBearerAuth('JWT-auth')
 export class DepartmentsInformationController {
   constructor(
     private readonly departmentsInformationService: DepartmentsInformationService,
