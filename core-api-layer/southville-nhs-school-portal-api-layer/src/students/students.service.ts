@@ -5,8 +5,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Student } from './entities/student.entity';
@@ -20,25 +19,8 @@ import { StudentRanking } from './entities/student-ranking.entity';
 @Injectable()
 export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
-  private supabase: SupabaseClient | null = null;
 
-  constructor(private configService: ConfigService) {}
-
-  private getSupabaseClient(): SupabaseClient {
-    if (!this.supabase) {
-      const supabaseUrl = this.configService.get<string>('supabase.url');
-      const supabaseServiceKey = this.configService.get<string>(
-        'supabase.serviceKey',
-      );
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase configuration is missing');
-      }
-
-      this.supabase = createClient(supabaseUrl, supabaseServiceKey);
-    }
-    return this.supabase;
-  }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   /**
    * Generate password from birthday (YYYYMMDD format)
@@ -55,7 +37,7 @@ export class StudentsService {
    * Validate email uniqueness
    */
   private async validateEmailUniqueness(email: string): Promise<void> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     const { data: publicUser } = await supabase
       .from('users')
@@ -72,7 +54,7 @@ export class StudentsService {
    * Get role ID by name
    */
   private async getRoleIdByName(roleName: string): Promise<string | null> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
     const { data, error } = await supabase
       .from('roles')
       .select('id')
@@ -92,7 +74,7 @@ export class StudentsService {
    * @returns The student ID
    */
   private async getStudentIdByUserId(userId: string): Promise<string> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     const { data: student, error } = await supabase
       .from('students')
@@ -127,7 +109,7 @@ export class StudentsService {
         createStudentDto.birthday,
       );
 
-      const supabase = this.getSupabaseClient();
+      const supabase = this.supabaseService.getServiceClient();
 
       // Step 1: Create user in Supabase Auth
       const { data: authUser, error: authError } =
@@ -237,7 +219,7 @@ export class StudentsService {
   }
 
   async findAll(filters: any = {}): Promise<any> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
     const {
       page = 1,
       limit = 10,
@@ -297,7 +279,7 @@ export class StudentsService {
   }
 
   async findOne(id: string): Promise<Student> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     const { data: student, error } = await supabase
       .from('students')
@@ -326,7 +308,7 @@ export class StudentsService {
     id: string,
     updateStudentDto: UpdateStudentDto,
   ): Promise<Student> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     const { data: student, error } = await supabase
       .from('students')
@@ -359,7 +341,7 @@ export class StudentsService {
   }
 
   async remove(id: string): Promise<void> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Get student to find user_id
     const { data: student } = await supabase
@@ -410,7 +392,7 @@ export class StudentsService {
   ): Promise<void> {
     if (!contacts || contacts.length === 0) return;
 
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Ensure only one primary contact
     let hasPrimary = false;
@@ -451,7 +433,7 @@ export class StudentsService {
   async getEmergencyContacts(
     studentUserId: string,
   ): Promise<EmergencyContact[]> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // First resolve students.id from users.id
     const studentId = await this.getStudentIdByUserId(studentUserId);
@@ -478,7 +460,7 @@ export class StudentsService {
     studentUserId: string,
     contactDto: CreateEmergencyContactDto,
   ): Promise<EmergencyContact> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // First resolve students.id from users.id
     const studentId = await this.getStudentIdByUserId(studentUserId);
@@ -537,7 +519,7 @@ export class StudentsService {
     contactId: string,
     updateDto: UpdateEmergencyContactDto,
   ): Promise<EmergencyContact> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // If setting as primary, unset other primary contacts for this student
     if (updateDto.isPrimary) {
@@ -580,7 +562,7 @@ export class StudentsService {
 
   // Delete emergency contact
   async deleteEmergencyContact(contactId: string): Promise<void> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     const { error } = await supabase
       .from('emergency_contacts')
@@ -603,7 +585,7 @@ export class StudentsService {
   async createRanking(
     createDto: CreateStudentRankingDto,
   ): Promise<StudentRanking> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Verify student exists and get their current grade level
     const { data: student, error: studentError } = await supabase
@@ -693,7 +675,7 @@ export class StudentsService {
     limit: number;
     totalPages: number;
   }> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
     const {
       page = 1,
       limit = 10,
@@ -752,7 +734,7 @@ export class StudentsService {
    * Get a single ranking by ID
    */
   async findRankingById(id: string): Promise<StudentRanking> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     const { data, error } = await supabase
       .from('student_rankings')
@@ -776,7 +758,7 @@ export class StudentsService {
    * Get all rankings for a specific student
    */
   async findRankingsByStudent(studentId: string): Promise<StudentRanking[]> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Verify student exists
     const { data: student, error: studentError } = await supabase
@@ -818,7 +800,7 @@ export class StudentsService {
     id: string,
     updateDto: UpdateStudentRankingDto,
   ): Promise<StudentRanking> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Get current ranking to check if we need to sync
     const { data: currentRanking, error: currentError } = await supabase
@@ -924,7 +906,7 @@ export class StudentsService {
    * Delete a student ranking
    */
   async deleteRanking(id: string): Promise<void> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Get ranking info before deletion for logging
     const { data: ranking } = await supabase
@@ -957,7 +939,7 @@ export class StudentsService {
    * Sync student's latest ranking to the main students table
    */
   private async syncStudentRankToMainTable(studentId: string): Promise<void> {
-    const supabase = this.getSupabaseClient();
+    const supabase = this.supabaseService.getServiceClient();
 
     // Get the latest ranking for this student
     const { data: latestRanking, error } = await supabase

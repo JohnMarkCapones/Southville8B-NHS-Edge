@@ -22,7 +22,7 @@ export class ModuleAccessService {
     try {
       // Get module details
       const { data: module, error: moduleError } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('modules')
         .select(
           `
@@ -51,7 +51,7 @@ export class ModuleAccessService {
       // For section-specific modules, check if student is enrolled in a section that has access
       const { data: studentSection, error: studentError } =
         await this.supabaseService
-          .getClient()
+          .getServiceClient()
           .from('students')
           .select('section_id')
           .eq('user_id', studentUserId)
@@ -67,7 +67,7 @@ export class ModuleAccessService {
       // Check if student's section has access to this module
       const { data: sectionModule, error: sectionError } =
         await this.supabaseService
-          .getClient()
+          .getServiceClient()
           .from('section_modules')
           .select('visible')
           .eq('section_id', studentSection.section_id)
@@ -105,7 +105,7 @@ export class ModuleAccessService {
     try {
       // Get module details
       const { data: module, error: moduleError } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('modules')
         .select(
           `
@@ -136,7 +136,7 @@ export class ModuleAccessService {
       if (module.is_global && module.subject_id) {
         const { data: teacherSubject, error: teacherError } =
           await this.supabaseService
-            .getClient()
+            .getServiceClient()
             .from('teachers')
             .select('subject_specialization_id')
             .eq('user_id', teacherUserId)
@@ -173,7 +173,7 @@ export class ModuleAccessService {
   async getStudentSectionId(studentUserId: string): Promise<string | null> {
     try {
       const { data: student, error } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('students')
         .select('section_id')
         .eq('user_id', studentUserId)
@@ -196,7 +196,7 @@ export class ModuleAccessService {
   async getTeacherSubjectId(teacherUserId: string): Promise<string | null> {
     try {
       const { data: teacher, error } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('teachers')
         .select('subject_specialization_id')
         .eq('user_id', teacherUserId)
@@ -222,7 +222,7 @@ export class ModuleAccessService {
   ): Promise<boolean> {
     try {
       const { data: sectionModule, error } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('section_modules')
         .select('visible')
         .eq('section_id', sectionId)
@@ -246,7 +246,7 @@ export class ModuleAccessService {
   async isAdmin(userId: string): Promise<boolean> {
     try {
       const { data: user, error } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('users')
         .select(
           `

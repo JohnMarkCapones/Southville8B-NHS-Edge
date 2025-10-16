@@ -669,11 +669,20 @@ export class ModulesService {
             uploader:uploaded_by(id, full_name, email),
             subject:subject_id(id, subject_name, description)
           `,
-          )
-          .or(
+          );
+
+        // Build the OR condition properly
+        if (teacherSubject) {
+          // Teacher has a subject specialization
+          queryBuilder = queryBuilder.or(
             `uploaded_by.eq.${userId},and(is_global.eq.true,subject_id.eq.${teacherSubject})`,
-          )
-          .eq('is_deleted', false);
+          );
+        } else {
+          // Teacher has no subject specialization - can only see their own modules
+          queryBuilder = queryBuilder.eq('uploaded_by', userId);
+        }
+
+        queryBuilder = queryBuilder.eq('is_deleted', false);
 
         // Apply other filters
         if (query.search) {
