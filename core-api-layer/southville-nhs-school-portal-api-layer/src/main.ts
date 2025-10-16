@@ -7,6 +7,7 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 import helmet from '@fastify/helmet';
 import compression from '@fastify/compress';
+import multipart from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -33,6 +34,13 @@ async function bootstrap() {
 
   // Compression middleware
   await app.register(compression);
+
+  // Multipart support for file uploads
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  });
 
   // Global validation pipe
   app.useGlobalPipes(

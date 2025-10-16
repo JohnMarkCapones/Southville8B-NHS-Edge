@@ -26,13 +26,18 @@ import { CommonModule } from './common/common.module';
 import { LocationsModule } from './locations/locations.module';
 import { HotspotsModule } from './hotspots/hotspots.module';
 import { DepartmentsInformationModule } from './departments-information/departments-information.module';
+import { R2ConfigValidationService } from './config/r2-config-validation/r2-config-validation.service';
+import { R2ConfigModule } from './config/r2-config/r2-config.module';
+import { StorageModule } from './storage/storage.module';
+import { ModulesModule } from './modules/modules.module';
 import supabaseConfig from './config/supabase.config';
+import r2Config from './config/r2.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [supabaseConfig],
+      load: [supabaseConfig, r2Config],
     }),
     ThrottlerModule.forRoot([
       {
@@ -63,8 +68,11 @@ import supabaseConfig from './config/supabase.config';
     LocationsModule,
     HotspotsModule,
     DepartmentsInformationModule,
+    R2ConfigModule,
+    StorageModule,
+    ModulesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, R2ConfigValidationService],
 })
 export class AppModule {}
