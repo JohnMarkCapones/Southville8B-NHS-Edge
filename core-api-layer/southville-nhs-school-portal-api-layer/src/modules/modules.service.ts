@@ -381,7 +381,7 @@ export class ModulesService {
   async findOne(id: string): Promise<Module | null> {
     try {
       const { data: module, error } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('modules')
         .select(
           `
