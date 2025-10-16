@@ -11,7 +11,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateUserDto, UserRole, UserType } from './dto/create-user.dto';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
-import { CreateStudentDto } from './dto/create-student.dto';
+import { CreateStudentRequestDto } from './dto/create-student.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import { ImportUsersDto } from './dto/import-users.dto';
@@ -231,7 +231,7 @@ export class UsersService {
    */
   private async createStudentRecord(
     userId: string,
-    studentData: CreateStudentDto,
+    studentData: CreateStudentRequestDto,
   ): Promise<Student> {
     const supabase = this.getSupabaseClient();
 
@@ -398,8 +398,8 @@ export class UsersService {
     return this.createUser(userData, createdBy);
   }
 
-  async createStudent(dto: CreateStudentDto, createdBy: string) {
-    // Convert CreateStudentDto to CreateUserDto format
+  async createStudent(dto: CreateStudentRequestDto, createdBy: string) {
+    // Convert CreateStudentRequestDto to CreateUserDto format
     const userData: any = {
       email: `${dto.lrnId}@student.local`, // Auto-generate email
       fullName: `${dto.firstName} ${dto.lastName}`, // Auto-generate full name
@@ -430,7 +430,7 @@ export class UsersService {
           result = await this.createAdmin(data as CreateAdminDto, createdBy);
         } else if (userType === 'student') {
           result = await this.createStudent(
-            data as CreateStudentDto,
+            data as CreateStudentRequestDto,
             createdBy,
           );
         } else {
@@ -721,7 +721,7 @@ export class UsersService {
                   );
                 } else if (dto.userType === 'student') {
                   result = await this.createStudent(
-                    dto as CreateStudentDto,
+                    dto as CreateStudentRequestDto,
                     'system',
                   );
                 } else {
@@ -800,7 +800,7 @@ export class UsersService {
         honorStatus: row.honorStatus || row.honor_status,
         age: row.age ? parseInt(row.age) : undefined,
         sectionId: row.sectionId || row.section_id,
-      } as CreateStudentDto;
+      } as CreateStudentRequestDto;
     }
   }
 }
