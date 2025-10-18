@@ -3,22 +3,28 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class UserManagementViewModel : ViewModelBase
 {
+    private readonly IApiClient _apiClient;
+    private readonly IToastService _toastService;
+    
     // Navigation callback supplied by shell
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? NavigateBack { get; set; }
 
-    [ObservableProperty] private int _totalUsers = 342;
-    [ObservableProperty] private int _students = 285;
-    [ObservableProperty] private int _teachers = 45;
-    [ObservableProperty] private int _admins = 12;
-    [ObservableProperty] private int _activeUsers = 320;
+    [ObservableProperty] private int _totalUsers = 0;
+    [ObservableProperty] private int _students = 0;
+    [ObservableProperty] private int _teachers = 0;
+    [ObservableProperty] private int _admins = 0;
+    [ObservableProperty] private int _activeUsers = 0;
 
     [ObservableProperty] private ObservableCollection<UserViewModel> _users = new();
     [ObservableProperty] private ObservableCollection<UserViewModel> _filteredUsers = new();
@@ -38,27 +44,107 @@ public partial class UserManagementViewModel : ViewModelBase
     public double ActivePercentage => TotalUsers > 0 ? (double)ActiveUsers / TotalUsers * 100 : 0;
     public bool HasFilteredUsers => FilteredUsers?.Any() == true;
 
-    public UserManagementViewModel()
+    public UserManagementViewModel(IApiClient apiClient, IToastService toastService)
     {
-        // Sample Data for Demonstration
-        Users = new ObservableCollection<UserViewModel>
-        {
-            new() { FullName = "John Michael Smith", Username="j.smith2024", Email="john.smith@southville8b.edu", Role="Student", Status="Active", Grade="Grade 10", StudentId="2024-001", LastLogin = DateTime.Now.AddMinutes(-30), DateCreated = new DateTime(2024,1,15), PhoneNumber = "+63 912 345 6789" },
-            new() { FullName = "Maria Elena Rodriguez", Username="m.rodriguez", Email="maria.rodriguez@southville8b.edu", Role="Teacher", Status="Active", Grade="Faculty", EmployeeId="T-2020-015", LastLogin = DateTime.Now.AddHours(-2), DateCreated = new DateTime(2020,8,20), PhoneNumber = "+63 917 234 5678", Department="Mathematics" },
-            new() { FullName = "Sarah Kim Chen", Username="s.chen2025", Email="sarah.chen@southville8b.edu", Role="Student", Status="Active", Grade="Grade 9", StudentId="2025-045", LastLogin = DateTime.Now.AddMinutes(-15), DateCreated = new DateTime(2024,2,10), PhoneNumber = "+63 908 123 4567" },
-            new() { FullName = "Robert James Wilson", Username="r.wilson", Email="robert.wilson@southville8b.edu", Role="Admin", Status="Active", Grade="N/A", EmployeeId="A-2019-003", LastLogin = DateTime.Now.AddMinutes(-5), DateCreated = new DateTime(2019,6,1), PhoneNumber = "+63 915 987 6543", Department = "IT Administration" },
-            new() { FullName = "Emma Grace Thompson", Username="e.thompson2023", Email="emma.thompson@southville8b.edu", Role="Student", Status="Inactive", Grade="Grade 12", StudentId="2023-089", LastLogin = DateTime.Now.AddDays(-7), DateCreated = new DateTime(2023,1,8), PhoneNumber = "+63 919 876 5432" },
-            new() { FullName = "Dr. Michael David Brown", Username="m.brown", Email="michael.brown@southville8b.edu", Role="Teacher", Status="Active", Grade="Faculty", EmployeeId="T-2018-007", LastLogin = DateTime.Now.AddHours(-1), DateCreated = new DateTime(2018,9,15), PhoneNumber = "+63 916 765 4321", Department="Science" },
-            new() { FullName = "Ashley Marie Davis", Username="a.davis2024", Email="ashley.davis@southville8b.edu", Role="Student", Status="Active", Grade="Grade 11", StudentId="2024-067", LastLogin = DateTime.Now.AddMinutes(-45), DateCreated = new DateTime(2024,1,20), PhoneNumber = "+63 920 654 3210" },
-            new() { FullName = "Lisa Anne Garcia", Username="l.garcia", Email="lisa.garcia@southville8b.edu", Role="Staff", Status="Active", Grade="N/A", EmployeeId="S-2021-012", LastLogin = DateTime.Now.AddMinutes(-90), DateCreated = new DateTime(2021,3,10), PhoneNumber = "+63 918 543 2109", Department="Library" },
-            new() { FullName = "James Alexander Miller", Username="j.miller2025", Email="james.miller@southville8b.edu", Role="Student", Status="Suspended", Grade="Grade 8", StudentId="2025-123", LastLogin = DateTime.Now.AddDays(-3), DateCreated = new DateTime(2024,8,25), PhoneNumber = "+63 913 432 1098" },
-            new() { FullName = "Jennifer Rose Taylor", Username="j.taylor", Email="jennifer.taylor@southville8b.edu", Role="Teacher", Status="Active", Grade="Faculty", EmployeeId="T-2022-025", LastLogin = DateTime.Now.AddMinutes(-20), DateCreated = new DateTime(2022,1,12), PhoneNumber = "+63 921 321 0987", Department="English" },
-            new() { FullName = "Kevin Paul Anderson", Username="k.anderson2024", Email="kevin.anderson@southville8b.edu", Role="Student", Status="Pending", Grade="Grade 9", StudentId="2024-156", LastLogin = null, DateCreated = DateTime.Now.AddDays(-2), PhoneNumber = "+63 922 210 9876" },
-            new() { FullName = "Catherine Joy Martinez", Username="c.martinez", Email="catherine.martinez@southville8b.edu", Role="Admin", Status="Active", Grade="N/A", EmployeeId="A-2020-008", LastLogin = DateTime.Now.AddMinutes(-10), DateCreated = new DateTime(2020,11,5), PhoneNumber = "+63 923 109 8765", Department = "Academic Affairs" }
-        };
+        _apiClient = apiClient;
+        _toastService = toastService;
+        
+        // Initialize collections
+        Users = new ObservableCollection<UserViewModel>();
+        FilteredUsers = new ObservableCollection<UserViewModel>();
+        
+        // Load metrics and users from API
+        _ = LoadKpiMetricsAsync();
+        _ = LoadUsersAsync();
+    }
 
-        FilteredUsers = new ObservableCollection<UserViewModel>(Users);
-        UpdateStatistics();
+    private async Task LoadUsersAsync()
+    {
+        try
+        {
+            var response = await _apiClient.GetUsersAsync();
+            if (response?.Users != null)
+            {
+                Users.Clear();
+                foreach (var userDto in response.Users)
+                {
+                    var userVm = MapUserDtoToViewModel(userDto);
+                    Users.Add(userVm);
+                }
+                
+                // Update statistics based on loaded users
+                // Note: Students and Teachers counts come from KPI API
+                UpdateStatisticsFromUsers();
+                ApplyFilters();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading users: {ex.Message}");
+            // Show empty state when API fails
+            Users.Clear();
+            FilteredUsers.Clear();
+            UpdateStatisticsFromUsers();
+        }
+    }
+
+    private async Task LoadKpiMetricsAsync()
+    {
+        try
+        {
+            var metrics = await _apiClient.GetAdminDashboardMetricsAsync();
+            if (metrics != null)
+            {
+                // Update KPI values from API
+                TotalUsers = metrics.TotalStudents + metrics.ActiveTeachers;
+                Students = metrics.TotalStudents;
+                Teachers = metrics.ActiveTeachers;
+                // Note: ActiveUsers is calculated from user list status, not OnlineUsersCount
+                // OnlineUsersCount represents real-time connections, not status="Active"
+                
+                // Trigger property change notifications for percentage calculations
+                OnPropertyChanged(nameof(StudentPercentage));
+                OnPropertyChanged(nameof(TeacherPercentage));
+                
+                System.Diagnostics.Debug.WriteLine($"KPI Metrics loaded: Students={Students}, Teachers={Teachers}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading KPI metrics: {ex.Message}");
+            // Keep existing default values as fallback
+        }
+    }
+
+    private UserViewModel MapUserDtoToViewModel(UserDto dto)
+    {
+        return new UserViewModel
+        {
+            Id = dto.Id,
+            FullName = dto.FullName,
+            Username = GenerateUsernameFromEmail(dto.Email),
+            Email = dto.Email,
+            Role = dto.Role,
+            Status = dto.Status,
+            Grade = dto.GradeLevel ?? (dto.Role == "Teacher" ? "Faculty" : "N/A"),
+            StudentId = dto.StudentId ?? "",
+            EmployeeId = dto.EmployeeId ?? "",
+            PhoneNumber = dto.PhoneNumber ?? "",
+            Department = dto.Department ?? "",
+            LastLogin = !string.IsNullOrEmpty(dto.LastLogin) && DateTime.TryParse(dto.LastLogin, out var lastLogin) ? lastLogin : null,
+            DateCreated = !string.IsNullOrEmpty(dto.CreatedAt) && DateTime.TryParse(dto.CreatedAt, out var createdAt) ? createdAt : DateTime.Now
+        };
+    }
+
+    private string GenerateUsernameFromEmail(string email)
+    {
+        if (string.IsNullOrEmpty(email)) return "";
+        
+        var atIndex = email.IndexOf('@');
+        if (atIndex > 0)
+            return email.Substring(0, atIndex);
+        
+        return email;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
@@ -96,13 +182,21 @@ public partial class UserManagementViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasFilteredUsers));
     }
 
-    private void UpdateStatistics()
+    /// <summary>
+    /// Update statistics from loaded user list (primarily for Admins count)
+    /// Students and Teachers counts come from KPI API
+    /// </summary>
+    private void UpdateStatisticsFromUsers()
     {
-        TotalUsers = Users.Count;
-        Students = Users.Count(u => u.Role == "Student");
-        Teachers = Users.Count(u => u.Role == "Teacher");
+        // Only update Admins from user list, as Students/Teachers come from KPI
         Admins = Users.Count(u => u.Role == "Admin");
+        
+        // Update TotalUsers to include all role counts
+        TotalUsers = Students + Teachers + Admins;
+        
+        // ActiveUsers = users with status "Active" (from loaded user list)
         ActiveUsers = Users.Count(u => u.Status == "Active");
+        System.Diagnostics.Debug.WriteLine($"Statistics updated: Total={TotalUsers}, Active={ActiveUsers}, Admins={Admins}");
 
         OnPropertyChanged(nameof(StudentPercentage));
         OnPropertyChanged(nameof(TeacherPercentage));
@@ -112,7 +206,11 @@ public partial class UserManagementViewModel : ViewModelBase
 
     [RelayCommand] private void CreateUser()
     {
-        var vm = new CreateUserViewModel { NavigateBack = () => NavigateTo?.Invoke(this) };
+        var vm = new CreateUserViewModel(_apiClient, _toastService) 
+        { 
+            NavigateBack = () => NavigateTo?.Invoke(this),
+            NavigateTo = NavigateTo
+        };
         NavigateTo?.Invoke(vm);
     }
 
@@ -127,24 +225,59 @@ public partial class UserManagementViewModel : ViewModelBase
 
     [RelayCommand] private void ToggleUserStatus(UserViewModel user)
     {
-        if (user.IsActive) user.Status = "Inactive";
-        else if (user.IsInactive) user.Status = "Active";
-        UpdateStatistics();
-        ApplyFilters();
+        _ = ToggleUserStatusAsync(user);
+    }
+
+    private async Task ToggleUserStatusAsync(UserViewModel user)
+    {
+        try
+        {
+            var newStatus = user.IsActive ? "Inactive" : "Active";
+            var success = await _apiClient.UpdateUserStatusAsync(user.Id, newStatus);
+            
+            if (success)
+            {
+                user.Status = newStatus;
+                UpdateStatisticsFromUsers();  // Changed from UpdateStatistics
+                ApplyFilters();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating user status: {ex.Message}");
+        }
     }
 
     [RelayCommand] private void ResetPassword(UserViewModel user) { }
 
     [RelayCommand] private void DeleteUser(UserViewModel user)
     {
-        Users.Remove(user);
-        UpdateStatistics();
-        ApplyFilters();
+        _ = DeleteUserAsync(user);
+    }
+
+    private async Task DeleteUserAsync(UserViewModel user)
+    {
+        try
+        {
+            var success = await _apiClient.DeleteUserAsync(user.Id);
+            
+            if (success)
+            {
+                Users.Remove(user);
+                UpdateStatisticsFromUsers();  // Changed from UpdateStatistics
+                ApplyFilters();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting user: {ex.Message}");
+        }
     }
 }
 
 public partial class UserViewModel : ViewModelBase
 {
+    [ObservableProperty] private string _id = "";
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _username = "";
     [ObservableProperty] private string _email = "";

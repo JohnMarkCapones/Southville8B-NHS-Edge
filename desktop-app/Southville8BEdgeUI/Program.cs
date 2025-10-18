@@ -38,6 +38,7 @@ namespace Southville8BEdgeUI
                     services.AddSingleton<IApiClient, ApiClient>();
                     services.AddSingleton<IAuthService, AuthService>();
                     services.AddSingleton<IRoleValidationService, RoleValidationService>();
+                    services.AddSingleton<ISseService, SseService>();
                     services.AddSingleton<IToastService, ToastService>();
                     services.AddSingleton<IDialogService, DialogService>();
                 })

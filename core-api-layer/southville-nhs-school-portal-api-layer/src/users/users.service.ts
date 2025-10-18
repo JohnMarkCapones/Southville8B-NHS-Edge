@@ -63,6 +63,18 @@ export class UsersService {
   }
 
   /**
+   * Generate password from birthday (YYYYMMDD format)
+   * Used for student accounts
+   */
+  private generatePasswordFromBirthday(birthday: string): string {
+    const date = new Date(birthday);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+
+  /**
    * Validate email uniqueness across auth.users and public.users
    */
   private async validateEmailUniqueness(email: string): Promise<void> {
@@ -77,6 +89,65 @@ export class UsersService {
 
     if (publicUser) {
       throw new ConflictException('Email already exists');
+    }
+  }
+
+  /**
+   * Validate teacher uniqueness by email and birthday
+   * Prevents creating duplicate teachers with same email AND birthday
+   */
+  private async validateTeacherUniqueness(
+    email: string,
+    birthday: string,
+  ): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Check if teacher with same email and birthday exists
+    const { data: existingTeacher } = await supabase
+      .from('teachers')
+      .select('id, user_id, first_name, last_name')
+      .eq('birthday', birthday)
+      .single();
+
+    if (existingTeacher) {
+      // Also check if the user_id matches the email
+      const { data: user } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('id', existingTeacher.user_id)
+        .eq('email', email)
+        .single();
+
+      if (user) {
+        throw new ConflictException(
+          `Teacher with email '${email}' and birthday '${birthday}' already exists`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Validate student uniqueness by LRN and birthday
+   * Prevents creating duplicate students with same LRN AND birthday
+   */
+  private async validateStudentUniqueness(
+    lrnId: string,
+    birthday: string,
+  ): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Check if student with same LRN and birthday exists
+    const { data: existingStudent } = await supabase
+      .from('students')
+      .select('id, lrn_id, first_name, last_name, birthday')
+      .eq('lrn_id', lrnId)
+      .eq('birthday', birthday)
+      .single();
+
+    if (existingStudent) {
+      throw new ConflictException(
+        `Student with LRN '${lrnId}' and birthday '${birthday}' already exists`,
+      );
     }
   }
 
@@ -267,7 +338,10 @@ export class UsersService {
   /**
    * Main user creation method
    */
-  async createUser(userData: CreateUserDto, createdBy: string): Promise<any> {
+  async createUser(
+    userData: CreateUserDto & { birthday?: string },
+    createdBy: string,
+  ): Promise<any> {
     let authUserId: string | null = null;
     let publicUserId: string | null = null;
 
@@ -275,14 +349,37 @@ export class UsersService {
       // Validate email uniqueness
       await this.validateEmailUniqueness(userData.email);
 
+      // Validate teacher-specific uniqueness
+      if (userData.userType === UserType.TEACHER && userData.birthday) {
+        await this.validateTeacherUniqueness(userData.email, userData.birthday);
+      }
+
+      // Validate student-specific uniqueness
+      if (userData.userType === UserType.STUDENT && userData.birthday) {
+        const studentData = userData as any;
+        if (studentData.lrnId) {
+          await this.validateStudentUniqueness(
+            studentData.lrnId,
+            userData.birthday,
+          );
+        }
+      }
+
       // Get role ID
       const roleId = await this.getRoleIdByName(userData.role);
       if (!roleId) {
         throw new BadRequestException(`Role '${userData.role}' does not exist`);
       }
 
-      // Generate secure password
-      const password = this.generateSecurePassword();
+      // Generate password based on user type
+      // Students and Teachers use birthday-based passwords (YYYYMMDD)
+      // Admins use secure random passwords
+      const password =
+        (userData.userType === UserType.STUDENT ||
+          userData.userType === UserType.TEACHER) &&
+        userData.birthday
+          ? this.generatePasswordFromBirthday(userData.birthday)
+          : this.generateSecurePassword();
 
       // Step 1: Create user in Supabase Auth
       const authUser = await this.createAuthUser(userData, password);
@@ -319,7 +416,7 @@ export class UsersService {
         `User created successfully: ${userData.email} (${userData.userType})`,
       );
 
-      return {
+      const response: any = {
         success: true,
         user: {
           id: authUser.id,
@@ -330,9 +427,15 @@ export class UsersService {
           status: 'Active',
         },
         specificRecord,
-        temporaryPassword: password,
         message: `${userData.userType} created successfully`,
       };
+
+      // Only include temporaryPassword for admins (students/teachers use predictable birthday-based passwords)
+      if (userData.userType === UserType.ADMIN) {
+        response.temporaryPassword = password;
+      }
+
+      return response;
     } catch (error) {
       // Rollback: Clean up created records
       const supabase = this.getSupabaseClient();
@@ -369,6 +472,11 @@ export class UsersService {
   }
 
   async createTeacher(dto: CreateTeacherDto, createdBy: string) {
+    // Validate teacher-specific uniqueness before creating user
+    if (dto.birthday) {
+      await this.validateTeacherUniqueness(dto.email, dto.birthday);
+    }
+
     // Convert CreateTeacherDto to CreateUserDto format
     const userData: any = {
       // Include all original teacher fields for the specific record creation
@@ -399,6 +507,11 @@ export class UsersService {
   }
 
   async createStudent(dto: CreateStudentRequestDto, createdBy: string) {
+    // Validate student-specific uniqueness before creating user
+    if (dto.birthday && dto.lrnId) {
+      await this.validateStudentUniqueness(dto.lrnId, dto.birthday);
+    }
+
     // Convert CreateStudentRequestDto to CreateUserDto format
     const userData: any = {
       email: `${dto.lrnId}@student.local`, // Auto-generate email
@@ -466,20 +579,23 @@ export class UsersService {
       sortOrder = 'desc',
     } = filters;
 
+    // Cap limit at reasonable maximum (1000 for admin interfaces)
+    const effectiveLimit = Math.min(limit, 1000);
+
     let query = supabase.from('users').select(
       `
         *,
-        role:roles(name),
-        teacher:teachers(*),
-        admin:admins(*),
-        student:students(*)
+        role:roles!role_id(id, name),
+        teacher:teachers!user_id(*),
+        admin:admins!user_id(*),
+        student:students!user_id(*)
       `,
       { count: 'exact' },
     );
 
     // Apply filters
     if (role) {
-      query = query.filter('roles.name', 'eq', role);
+      query = query.eq('role.name', role);
     }
     if (status) {
       query = query.eq('status', status);
@@ -491,10 +607,13 @@ export class UsersService {
     // Apply sorting
     query = query.order(sortBy, { ascending: sortOrder === 'asc' });
 
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
+    // Apply pagination only if limit is reasonable
+    if (effectiveLimit < 1000) {
+      const from = (page - 1) * effectiveLimit;
+      const to = from + effectiveLimit - 1;
+      query = query.range(from, to);
+    }
+    // For limit >= 1000, don't apply range to get all records
 
     const { data, error, count } = await query;
 
@@ -503,13 +622,59 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch users');
     }
 
+    // Transform the data to match UserDto structure
+    const transformedData =
+      data?.map((user: any) => {
+        const baseUser = {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role?.name || '',
+          status: user.status,
+          createdAt: user.created_at,
+          lastLogin: user.last_login || null,
+          phoneNumber: null as string | null,
+          department: null as string | null,
+          studentId: null as string | null,
+          gradeLevel: null as string | null,
+          employeeId: null as string | null,
+          subjectSpecialization: null as string | null,
+        };
+
+        // Map Student-specific fields
+        if (user.student) {
+          baseUser.studentId = user.student.student_id;
+          baseUser.gradeLevel = user.student.grade_level;
+          baseUser.phoneNumber = user.student.phone_number;
+        }
+
+        // Map Teacher-specific fields
+        if (user.teacher) {
+          baseUser.employeeId = user.teacher.id;
+          baseUser.phoneNumber = user.teacher.phone_number;
+          baseUser.department = user.teacher.department_id;
+          baseUser.subjectSpecialization =
+            user.teacher.subject_specialization_id;
+        }
+
+        // Map Admin-specific fields
+        if (user.admin) {
+          baseUser.employeeId = user.admin.id;
+          baseUser.phoneNumber = user.admin.phone_number;
+          baseUser.department = 'Administration';
+        }
+
+        return baseUser;
+      }) || [];
+
     return {
-      data,
+      data: transformedData,
       pagination: {
         page,
-        limit,
+        limit: effectiveLimit,
         total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages:
+          effectiveLimit < 1000 ? Math.ceil((count || 0) / effectiveLimit) : 1,
       },
     };
   }

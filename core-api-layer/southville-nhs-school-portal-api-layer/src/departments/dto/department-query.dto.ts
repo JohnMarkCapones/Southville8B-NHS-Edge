@@ -26,6 +26,7 @@ export class DepartmentQueryDto {
     example: true,
   })
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
 

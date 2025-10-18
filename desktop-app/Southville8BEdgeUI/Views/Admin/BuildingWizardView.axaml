@@ -1,0 +1,296 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Southville8BEdgeUI.Views.Admin.BuildingWizardView"
+             x:DataType="vm:BuildingWizardViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+    <UserControl.Styles>
+        <!-- Card Styles -->
+        <Style Selector="Border.wizard-card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="BoxShadow" Value="0 4 16 0 #20000000"/>
+            <Setter Property="MaxWidth" Value="600"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Text Styles -->
+        <Style Selector="TextBlock.wizard-title">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.wizard-subtitle">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,8,0,24"/>
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Input Styles -->
+        <Style Selector="TextBox.wizard-input">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        <Style Selector="TextBox.wizard-input:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource IndigoBrush}"/>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinWidth" Value="120"/>
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinWidth" Value="120"/>
+        </Style>
+
+        <!-- Progress Bar Style -->
+        <Style Selector="ProgressBar.wizard-progress">
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="Margin" Value="0,0,0,24"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="40" Spacing="24">
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock x:Name="WizardTitleText" Text="Create New Building" Classes="wizard-title"/>
+                <TextBlock x:Name="WizardSubtitleText" Text="Add a new building to the system with floors and rooms" Classes="wizard-subtitle"/>
+                <ProgressBar x:Name="WizardProgress" Classes="wizard-progress" Value="0" Maximum="100"/>
+            </StackPanel>
+
+            <!-- Wizard Content -->
+            <Border x:Name="WizardCard" Classes="wizard-card">
+                <StackPanel Spacing="20">
+                    <!-- Progress Indicator -->
+                    <StackPanel x:Name="ProgressPanel" Spacing="8" IsVisible="{Binding IsLoading}">
+                        <TextBlock Text="{Binding CreationProgress}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <ProgressBar Value="{Binding CreationProgressPercent}" Maximum="100" Classes="wizard-progress"/>
+                    </StackPanel>
+                    <!-- Step 1: Basic Information -->
+                    <StackPanel x:Name="BasicInfoStep" Spacing="16">
+                        <TextBlock Text="Basic Information" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Building Name" Classes="field-label"/>
+                            <TextBox x:Name="BuildingNameInput" 
+                                     Classes="wizard-input"
+                                     Watermark="Enter building name (e.g., Main Building)"
+                                     Text="{Binding BuildingName}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Building Code" Classes="field-label"/>
+                            <TextBox x:Name="BuildingCodeInput" 
+                                     Classes="wizard-input"
+                                     Watermark="Enter building code (e.g., MB)"
+                                     Text="{Binding BuildingCode}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Capacity" Classes="field-label"/>
+                            <TextBox x:Name="BuildingCapacityInput" 
+                                     Classes="wizard-input"
+                                     Watermark="Enter total building capacity (optional)"
+                                     Text="{Binding BuildingCapacity}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Step 2: Floors -->
+                    <StackPanel x:Name="FloorsStep" Spacing="16" IsVisible="False">
+                        <TextBlock Text="Floors" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        
+                        <TextBlock Text="Add floors to your building. You can add floors with different names and room counts." 
+                                   Foreground="{DynamicResource TextMutedBrush}" 
+                                   TextWrapping="Wrap" 
+                                   Margin="0,0,0,16"/>
+                        
+                        <!-- Add Floor Button -->
+                        <Button Content="+ Add Floor" 
+                                Command="{Binding AddFloorCommand}"
+                                Classes="secondary"
+                                HorizontalAlignment="Left"/>
+                        
+                        <!-- Floors List -->
+                        <ItemsControl ItemsSource="{Binding Floors}" Margin="0,16,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource PageBackgroundBrush}" 
+                                            CornerRadius="8" 
+                                            Padding="16"
+                                            Margin="0,0,0,12">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <TextBlock Grid.Column="0" 
+                                                       Text="{Binding Number, StringFormat='Floor {0}'}" 
+                                                       FontWeight="SemiBold" 
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" 
+                                                     Text="{Binding Name}" 
+                                                     Margin="12,0"
+                                                     Classes="wizard-input"/>
+                                            <Button Grid.Column="2" 
+                                                    Content="Remove" 
+                                                    Command="{Binding $parent[UserControl].((vm:BuildingWizardViewModel)DataContext).RemoveFloorCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Classes="secondary"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Step 3: Rooms -->
+                    <StackPanel x:Name="RoomsStep" Spacing="16" IsVisible="False">
+                        <TextBlock Text="Rooms" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        
+                        <TextBlock Text="Add rooms to each floor. Rooms are optional but recommended for better organization." 
+                                   Foreground="{DynamicResource TextMutedBrush}" 
+                                   TextWrapping="Wrap" 
+                                   Margin="0,0,0,16"/>
+                        
+                        <!-- Rooms per Floor -->
+                        <ItemsControl ItemsSource="{Binding Floors}" Margin="0,16,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Expander Margin="0,0,0,12" IsExpanded="False">
+                                        <Expander.Header>
+                                            <TextBlock Text="{Binding Name}"/>
+                                        </Expander.Header>
+                                        <StackPanel Spacing="12" Margin="16,0,0,0">
+                                            <Button Content="+ Add Room to this Floor" 
+                                                    Command="{Binding $parent[UserControl].((vm:BuildingWizardViewModel)DataContext).AddRoomCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Classes="secondary"
+                                                    HorizontalAlignment="Left"/>
+                                            
+                                            <!-- Rooms for this floor -->
+                                            <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:BuildingWizardViewModel)DataContext).Rooms}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{DynamicResource CardBackgroundBrush}" 
+                                                                CornerRadius="6" 
+                                                                Padding="12"
+                                                                Margin="0,0,0,8">
+                                                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                                                                <TextBlock Grid.Column="0" 
+                                                                           Text="{Binding RoomNumber}" 
+                                                                           FontWeight="SemiBold" 
+                                                                           VerticalAlignment="Center"
+                                                                           MinWidth="60"/>
+                                                                <TextBox Grid.Column="1" 
+                                                                         Text="{Binding Name}" 
+                                                                         Margin="8,0"
+                                                                         Classes="wizard-input"/>
+                                                                <TextBox Grid.Column="2" 
+                                                                         Text="{Binding Capacity}" 
+                                                                         Margin="8,0"
+                                                                         Width="80"
+                                                                         Classes="wizard-input"/>
+                                                                <ComboBox Grid.Column="3" 
+                                                                          SelectedItem="{Binding Status}"
+                                                                          Margin="8,0"
+                                                                          Width="100">
+                                                                    <ComboBoxItem Content="Available"/>
+                                                                    <ComboBoxItem Content="Occupied"/>
+                                                                    <ComboBoxItem Content="Maintenance"/>
+                                                                </ComboBox>
+                                                                <Button Grid.Column="4" 
+                                                                        Content="Remove" 
+                                                                        Command="{Binding $parent[UserControl].((vm:BuildingWizardViewModel)DataContext).RemoveRoomCommand}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Classes="secondary"
+                                                                        Margin="8,0,0,0"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Expander>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Step 4: Review -->
+                    <StackPanel x:Name="ReviewStep" Spacing="16" IsVisible="False">
+                        <TextBlock Text="Review Information" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        
+                        <Border Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="16">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="{Binding BuildingName, StringFormat='Building: {0}'}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding BuildingCode, StringFormat='Code: {0}'}"/>
+                                <TextBlock Text="{Binding BuildingCapacity, StringFormat='Capacity: {0}'}"/>
+                                <TextBlock Text="Floors: [To be implemented]"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,24,0,0">
+                        <Button Grid.Column="1" 
+                                x:Name="BackButton"
+                                Content="Back" 
+                                Classes="secondary"
+                                Command="{Binding PreviousCommand}"
+                                IsVisible="{Binding CanGoPrevious}"/>
+                        <Button Grid.Column="2" 
+                                x:Name="NextButton"
+                                Content="Next" 
+                                Classes="primary"
+                                Command="{Binding NextCommand}"
+                                IsEnabled="{Binding CanGoNext}"
+                                Margin="8,0,0,0"/>
+                        <Button Grid.Column="2" 
+                                x:Name="CreateButton"
+                                Content="Create Building" 
+                                Classes="primary"
+                                Command="{Binding FinishCommand}"
+                                IsVisible="{Binding CanFinish}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

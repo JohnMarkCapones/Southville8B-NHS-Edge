@@ -16,4 +16,48 @@ public interface IApiClient
     Task<bool> PostAsync(string endpoint, object? data = null);
     Task<bool> PutAsync(string endpoint, object? data = null);
     Task<bool> DeleteAsync(string endpoint);
+    Task<UserProfile?> GetUserProfileAsync(string userId);
+    Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken);
+    Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync();
+    
+    // User Management Methods
+    Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null);
+    Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto);
+    Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto);
+    Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto);
+    Task<bool> UpdateUserStatusAsync(string userId, string status);
+    Task<bool> DeleteUserAsync(string userId);
+    
+    // Section Management Methods
+    Task<SectionListResponse?> GetSectionsAsync(int limit = 100);
+    
+    // Building Management Methods
+    Task<BuildingListResponse?> GetBuildingsAsync(int limit = 100);
+    Task<BuildingDto?> GetBuildingByIdAsync(string id);
+    Task<BuildingDto?> CreateBuildingAsync(CreateBuildingDto dto);
+    Task<BuildingDto?> UpdateBuildingAsync(string id, UpdateBuildingDto dto);
+    Task<bool> DeleteBuildingAsync(string id);
+    
+    // Floor Management Methods
+    Task<FloorListResponse?> GetFloorsAsync(string? buildingId = null, int limit = 100);
+    Task<FloorDto?> GetFloorByIdAsync(string id);
+    Task<FloorDto?> CreateFloorAsync(CreateFloorDto dto);
+    Task<FloorDto?> UpdateFloorAsync(string id, UpdateFloorDto dto);
+    Task<bool> DeleteFloorAsync(string id);
+    
+    // Room Management Methods
+    Task<RoomListResponse?> GetRoomsAsync(string? floorId = null, string? buildingId = null, string? status = null, int limit = 100);
+    Task<RoomDto?> GetRoomByIdAsync(string id);
+    Task<RoomDto?> CreateRoomAsync(CreateRoomDto dto);
+    Task<List<RoomDto>?> CreateRoomsBulkAsync(string floorId, List<CreateRoomDto> rooms);
+    Task<RoomDto?> UpdateRoomAsync(string id, UpdateRoomDto dto);
+    Task<bool> DeleteRoomAsync(string id);
+    
+    // Department Management Methods
+    Task<DepartmentsResponse?> GetDepartmentsAsync(int page = 1, int limit = 100);
+    
+    // Subject Management Methods
+    Task<SubjectsResponse?> GetSubjectsByDepartmentAsync(string departmentId, int page = 1, int limit = 100);
+    
+    void SetAccessToken(string accessToken);
 }

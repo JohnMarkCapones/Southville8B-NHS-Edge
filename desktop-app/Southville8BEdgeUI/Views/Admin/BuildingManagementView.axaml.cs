@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Southville8BEdgeUI.Views.Admin;
 
-public partial class RoomManagementView : UserControl
+public partial class BuildingManagementView : UserControl
 {
     private const double TabletBreakpoint = 1024;
     private const double MobileBreakpoint = 768;
@@ -18,21 +18,18 @@ public partial class RoomManagementView : UserControl
     private readonly List<Control> _responsiveButtonElements = new();
     private readonly List<Control> _responsiveInputElements = new();
 
-    // Cache the separator reference to avoid repeated LINQ queries
-    private Border? _filterSeparator;
-
     // Element identification constants for optimized performance
     private const string TextElementSuffix = "Text";
     private const string ButtonElementSuffix = "Button";
     private const string SpecialElementName = "StatusIndicator";
 
-    public RoomManagementView()
+    public BuildingManagementView()
     {
         InitializeComponent();
         // IMPORTANT: Do NOT override DataContext at runtime; shell supplies the VM (with navigation callbacks).
         if (Design.IsDesignMode)
         {
-            DataContext = new RoomManagementViewModel(); // design-time preview only
+            DataContext = new BuildingManagementViewModel(null!); // design-time preview only
         }
 
         // Store references to elements that need responsive behavior
@@ -47,13 +44,14 @@ public partial class RoomManagementView : UserControl
         _responsiveTextElements.AddRange([
             MainHeaderText,
             SubtitleText,
-            AvailableRoomsValue,
-            AvailablePercentageText,
-            OccupiedRoomsValue,
-            OccupiedPercentageText,
-            MaintenanceRoomsValue,
-            MaintenancePercentageText,
-            UtilizationValue,
+            TotalBuildingsValue,
+            TotalBuildingsText,
+            TotalFloorsValue,
+            TotalFloorsText,
+            TotalRoomsValue,
+            TotalRoomsText,
+            TotalCapacityValue,
+            TotalCapacityText,
             EmptyTitleText,
             EmptySubtitleText
         ]);
@@ -63,21 +61,15 @@ public partial class RoomManagementView : UserControl
         ]);
 
         _responsiveButtonElements.AddRange([
-            ViewCalendarButton,
-            BookRoomButton
+            RefreshButton,
+            CreateBuildingButton
         ]);
 
         _responsiveInputElements.AddRange([
-            SearchInput,
-            FloorFilter,
-            StatusFilter,
-            TypeFilter
+            SearchInput
         ]);
 
-        // Cache the filter separator by name for accurate identification
-        _filterSeparator = FilterGrid.Children
-            .OfType<Border>()
-            .FirstOrDefault(b => b.Name == "FilterSeparator");
+        // No filter separator needed for simplified search
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -337,42 +329,14 @@ public partial class RoomManagementView : UserControl
 
     private void ApplyFilterGridLayout(LayoutConfiguration config)
     {
-        FilterGrid.ColumnDefinitions.Clear();
-        FilterGrid.RowDefinitions.Clear();
-
-        for (int i = 0; i < config.FilterColumns; i++)
-        {
-            FilterGrid.ColumnDefinitions.Add(new ColumnDefinition(i == 0 ? GridLength.Star : GridLength.Auto));
-        }
-
-        for (int i = 0; i < config.FilterRows; i++)
-        {
-            FilterGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        }
-
-        Control[] filterControls = { SearchInput, FloorFilter, StatusFilter, TypeFilter };
-        for (int i = 0; i < filterControls.Length; i++)
-        {
-            var (col, row, span) = config.FilterElementPositions[i];
-            Grid.SetColumn(filterControls[i], col);
-            Grid.SetRow(filterControls[i], row);
-            Grid.SetColumnSpan(filterControls[i], span);
-            filterControls[i].Margin = config.FilterElementMargins[i];
-        }
-
-        // Set separator position and visibility using the cached reference
-        if (_filterSeparator != null)
-        {
-            Grid.SetColumn(_filterSeparator, config.FilterSeparatorPosition.Column);
-            Grid.SetRow(_filterSeparator, config.FilterSeparatorPosition.Row);
-            _filterSeparator.IsVisible = config.FilterSeparatorVisible;
-        }
+        // Simplified layout - just a search input, no complex grid needed
+        // The search input is already properly positioned in the XAML
     }
 
     private void UpdateRoomCardElements(string sizeClass)
     {
         // Simplified - no unnecessary null check or intermediate variable
-        UpdateRoomCardsRecursively(RoomsGrid, sizeClass);
+        UpdateRoomCardsRecursively(BuildingsGrid, sizeClass);
     }
 
     private void UpdateRoomCardsRecursively(Control control, string sizeClass)

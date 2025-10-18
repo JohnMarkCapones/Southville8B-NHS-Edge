@@ -130,7 +130,7 @@ export class UsersController {
   async findAll(
     @AuthUser() user: SupabaseUser,
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 100,
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,

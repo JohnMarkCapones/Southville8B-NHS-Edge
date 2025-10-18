@@ -11,6 +11,7 @@
 
     <UserControl.Resources>
         <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        <converters:ConnectionStatusToColorConverter x:Key="ConnectionStatusToColorConverter"/>
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -295,10 +296,10 @@
                       <TextBlock Text="User Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  <Button Classes="nav-item" Command="{Binding NavigateToRoomManagementCommand}" Classes.active="{Binding IsRoomManagementActive}">
+                  <Button Classes="nav-item" Command="{Binding NavigateToBuildingManagementCommand}" Classes.active="{Binding IsBuildingManagementActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <ic:FluentIcon Icon="Building" IconSize="Size16"/>
-                      <TextBlock Text="Room Management" VerticalAlignment="Center"/>
+                      <TextBlock Text="Building Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
 
@@ -533,7 +534,7 @@
                                             </Border>
                                             <TextBlock Text="Events" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="120" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="{Binding EventsCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
                                         <TextBlock Text="Approved Events" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
@@ -548,10 +549,10 @@
                                                       Stretch="Uniform"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <TextBlock Text="Clicks" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text="Teachers" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="22k" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
-                                        <TextBlock Text="+12% Last Week" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{Binding TeachersCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="Active Teachers" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
 
@@ -567,7 +568,7 @@
                                             </Border>
                                             <TextBlock Text="Students" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="1512" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="{Binding StudentsCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
                                         <TextBlock Text="Registered Students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
@@ -584,11 +585,19 @@
                                             </Border>
                                             <TextBlock Text="Sections" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="144" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="{Binding SectionsCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
                                         <TextBlock Text="+10% Last Week" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
+                        </Border>
+
+                        <!-- Connection Status Indicator -->
+                        <Border Padding="16,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="{Binding ConnectionStatus, Converter={StaticResource ConnectionStatusToColorConverter}}"/>
+                                <TextBlock Text="{Binding ConnectionStatus}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
                         </Border>
 
                         <!-- Event Schedule (modified to dynamic calendar + rotating today classes) -->

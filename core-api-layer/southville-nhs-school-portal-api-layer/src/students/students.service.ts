@@ -205,9 +205,8 @@ export class StudentsService {
           userType: 'student',
           status: 'Active',
         },
-        student,
-        temporaryPassword: password,
-        message: 'Student created successfully',
+        specificRecord: student,
+        message: 'student created successfully',
       };
     } catch (error) {
       if (error instanceof ConflictException) {

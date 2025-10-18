@@ -5,8 +5,8 @@
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
              xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
-             x:Class="Southville8BEdgeUI.Views.Admin.RoomManagementView"
-             x:DataType="vm:RoomManagementViewModel"
+             x:Class="Southville8BEdgeUI.Views.Admin.BuildingManagementView"
+             x:DataType="vm:BuildingManagementViewModel"
              Background="{DynamicResource PageBackgroundBrush}">
 
     <UserControl.Styles>
@@ -310,21 +310,21 @@
             <!-- Header -->
             <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0">
-                    <TextBlock x:Name="MainHeaderText" Text="Room Management" Classes="main-header"/>
-                    <TextBlock x:Name="SubtitleText" Text="Manage classroom and event space bookings efficiently" Classes="subtitle"/>
+                    <TextBlock x:Name="MainHeaderText" Text="Building Management" Classes="main-header"/>
+                    <TextBlock x:Name="SubtitleText" Text="Manage buildings, floors, and rooms efficiently" Classes="subtitle"/>
                 </StackPanel>
 
                 <StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="ViewCalendarButton" Classes="secondary" Command="{Binding ViewCalendarCommand}">
+                    <Button x:Name="RefreshButton" Classes="secondary" Command="{Binding RefreshCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <ic:FluentIcon Icon="Calendar" IconSize="Size20"/>
-                            <TextBlock Text="View Calendar"/>
+                            <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size20"/>
+                            <TextBlock Text="Refresh"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="BookRoomButton" Classes="primary" Command="{Binding BookRoomCommand}">
+                    <Button x:Name="CreateBuildingButton" Classes="primary" Command="{Binding CreateBuildingWizardCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <ic:FluentIcon Icon="Add" IconSize="Size20"/>
-                            <TextBlock Text="Book Room"/>
+                            <TextBlock Text="Create Building"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -332,103 +332,87 @@
 
             <!-- Stat Cards -->
             <Grid x:Name="StatsGrid" ColumnDefinitions="*,*,*,*">
-                <!-- Available -->
+                <!-- Total Buildings -->
                 <Border Grid.Column="0" x:Name="StatsCard1" Classes="card" Margin="0,0,12,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="Available" Classes="label"/>
-                            <TextBlock x:Name="AvailableRoomsValue" Text="{Binding AvailableRooms}" Classes="stat-value"/>
-                            <TextBlock x:Name="AvailablePercentageText" Text="{Binding AvailablePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                            <TextBlock Text="Total Buildings" Classes="label"/>
+                            <TextBlock x:Name="TotalBuildingsValue" Text="{Binding TotalBuildings}" Classes="stat-value"/>
+                            <TextBlock x:Name="TotalBuildingsText" Text="Buildings in system" Classes="light" FontSize="12"/>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource TealSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <ic:FluentIcon Icon="CheckmarkCircle" IconSize="Size20" Foreground="{DynamicResource SuccessBrush}"/>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource IndigoSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Building" IconSize="Size20" Foreground="{DynamicResource IndigoBrush}"/>
                         </Border>
                     </Grid>
                 </Border>
-                <!-- Occupied -->
+                <!-- Total Floors -->
                 <Border Grid.Column="1" x:Name="StatsCard2" Classes="card" Margin="12,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="Occupied" Classes="label"/>
-                            <TextBlock x:Name="OccupiedRoomsValue" Text="{Binding OccupiedRooms}" Classes="stat-value"/>
-                            <TextBlock x:Name="OccupiedPercentageText" Text="{Binding OccupiedPercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                            <TextBlock Text="Total Floors" Classes="label"/>
+                            <TextBlock x:Name="TotalFloorsValue" Text="{Binding TotalFloors}" Classes="stat-value"/>
+                            <TextBlock x:Name="TotalFloorsText" Text="Floors across buildings" Classes="light" FontSize="12"/>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource DangerSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <ic:FluentIcon Icon="ErrorCircle" IconSize="Size20" Foreground="{DynamicResource DangerBrush}"/>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource TealSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Layer" IconSize="Size20" Foreground="{DynamicResource TealBrush}"/>
                         </Border>
                     </Grid>
                 </Border>
-                <!-- Maintenance -->
+                <!-- Total Rooms -->
                 <Border Grid.Column="2" x:Name="StatsCard3" Classes="card" Margin="12,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="Maintenance" Classes="label"/>
-                            <TextBlock x:Name="MaintenanceRoomsValue" Text="{Binding MaintenanceRooms}" Classes="stat-value"/>
-                            <TextBlock x:Name="MaintenancePercentageText" Text="{Binding MaintenancePercentage, StringFormat={}{0:F1}% of total}" Classes="light" FontSize="12"/>
+                            <TextBlock Text="Total Rooms" Classes="label"/>
+                            <TextBlock x:Name="TotalRoomsValue" Text="{Binding TotalRooms}" Classes="stat-value"/>
+                            <TextBlock x:Name="TotalRoomsText" Text="Rooms across all floors" Classes="light" FontSize="12"/>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource WarningSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <ic:FluentIcon Icon="Wrench" IconSize="Size20" Foreground="{DynamicResource WarningBrush}"/>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource GreenSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Door" IconSize="Size20" Foreground="{DynamicResource SuccessBrush}"/>
                         </Border>
                     </Grid>
                 </Border>
-                <!-- Utilization -->
+                <!-- Total Capacity -->
                 <Border Grid.Column="3" x:Name="StatsCard4" Classes="card" Margin="12,0,0,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Utilization" Classes="label"/>
-                        <TextBlock x:Name="UtilizationValue" Text="{Binding UtilizationPercentage, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-                        <ProgressBar x:Name="UtilizationProgressBar" Value="{Binding UtilizationPercentage}" Minimum="0" Maximum="100" Height="8" CornerRadius="4" Foreground="{DynamicResource IndigoBrush}"/>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Total Capacity" Classes="label"/>
+                            <TextBlock x:Name="TotalCapacityValue" Text="{Binding TotalCapacity}" Classes="stat-value"/>
+                            <TextBlock x:Name="TotalCapacityText" Text="Total seating capacity" Classes="light" FontSize="12"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource PurpleSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="People" IconSize="Size20" Foreground="{DynamicResource PurpleBrush}"/>
+                        </Border>
+                    </Grid>
                 </Border>
             </Grid>
 
-            <!-- Filter and Search Bar -->
+            <!-- Search Bar -->
             <Border x:Name="FilterCard" Classes="card">
-                <Grid x:Name="FilterGrid" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                    <TextBox x:Name="SearchInput" Grid.Column="0" 
-                             Classes="search-input"
-                             Watermark="Search for a room..." 
-                             VerticalAlignment="Center"
-                             Text="{Binding SearchText}"/>
-                    <Border x:Name="FilterSeparator" Grid.Column="1" Background="{DynamicResource BorderBrush}" Width="1" Margin="12,0"/>
-                    <ComboBox x:Name="FloorFilter" Grid.Column="2" 
-                              Classes="filter-combo"
-                              PlaceholderText="All Floors" 
-                              Margin="12,0"
-                              ItemsSource="{Binding FloorOptions}"
-                              SelectedItem="{Binding SelectedFloor}"/>
-                    <ComboBox x:Name="StatusFilter" Grid.Column="3" 
-                              Classes="filter-combo"
-                              PlaceholderText="All Status" 
-                              Margin="12,0"
-                              ItemsSource="{Binding StatusOptions}"
-                              SelectedItem="{Binding SelectedStatus}"/>
-                    <ComboBox x:Name="TypeFilter" Grid.Column="4" 
-                              Classes="filter-combo"
-                              PlaceholderText="All Types" 
-                              Margin="12,0"
-                              ItemsSource="{Binding TypeOptions}"
-                              SelectedItem="{Binding SelectedType}"/>
-                </Grid>
+                <TextBox x:Name="SearchInput" 
+                         Classes="search-input"
+                         Watermark="Search buildings, floors, or rooms..." 
+                         VerticalAlignment="Center"
+                         Text="{Binding SearchText}"/>
             </Border>
 
-            <!-- Room Grid -->
-            <ItemsControl x:Name="RoomsGrid" ItemsSource="{Binding FilteredRooms}">
+            <!-- Buildings Grid -->
+            <ItemsControl x:Name="BuildingsGrid" ItemsSource="{Binding FilteredBuildings}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:RoomViewModel">
+                    <DataTemplate DataType="vm:RoomCardViewModel">
                         <Border x:Name="RoomCard" Classes="room-card" 
                                 Classes.status-available="{Binding IsAvailable}"
                                 Classes.status-occupied="{Binding IsOccupied}"
-                                Classes.status-maintenance="{Binding IsInMaintenance}">
+                                Classes.status-maintenance="{Binding IsMaintenance}">
                             <StackPanel Spacing="16">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel Grid.Column="0">
                                         <TextBlock x:Name="RoomNameText" Text="{Binding Name}" Classes="room-title"/>
-                                        <TextBlock x:Name="RoomTypeText" Text="{Binding Type}" Classes="light" FontSize="12"/>
+                                        <TextBlock x:Name="RoomTypeText" Text="{Binding RoomNumber}" Classes="light" FontSize="12"/>
                                     </StackPanel>
                                     <Border Grid.Column="1" 
                                             x:Name="StatusIndicator"
@@ -469,14 +453,14 @@
                                             x:Name="ViewDetailsButton"
                                             Content="View Details" 
                                             Classes="secondary"
-                                            Command="{Binding $parent[UserControl].((vm:RoomManagementViewModel)DataContext).ViewRoomDetailsCommand}"
+                                            Command="{Binding $parent[UserControl].((vm:BuildingManagementViewModel)DataContext).RefreshCommand}"
                                             CommandParameter="{Binding}"/>
                                     <Button Grid.Column="1" 
                                             x:Name="ActionButton"
                                             Content="{Binding ActionButtonText}" 
                                             Classes.primary="{Binding IsAvailable}"
                                             Classes.secondary="{Binding !IsAvailable}"
-                                            Command="{Binding $parent[UserControl].((vm:RoomManagementViewModel)DataContext).RoomActionCommand}"
+                                            Command="{Binding $parent[UserControl].((vm:BuildingManagementViewModel)DataContext).RefreshCommand}"
                                             CommandParameter="{Binding}"
                                             IsEnabled="{Binding CanPerformAction}"
                                             Margin="8,0,0,0"/>

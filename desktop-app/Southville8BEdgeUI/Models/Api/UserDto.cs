@@ -11,11 +11,40 @@ public class UserDto
     [JsonPropertyName("email")]
     public string Email { get; set; } = string.Empty;
 
+    [JsonPropertyName("fullName")]
+    public string FullName { get; set; } = string.Empty;
+
     [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
 
-    [JsonPropertyName("created_at")]
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = string.Empty;
+
+    [JsonPropertyName("lastLogin")]
+    public string? LastLogin { get; set; }
+
+    [JsonPropertyName("phoneNumber")]
+    public string? PhoneNumber { get; set; }
+
+    [JsonPropertyName("department")]
+    public string? Department { get; set; }
+
+    // Student specific fields
+    [JsonPropertyName("studentId")]
+    public string? StudentId { get; set; }
+
+    [JsonPropertyName("gradeLevel")]
+    public string? GradeLevel { get; set; }
+
+    // Teacher specific fields
+    [JsonPropertyName("employeeId")]
+    public string? EmployeeId { get; set; }
+
+    [JsonPropertyName("subjectSpecialization")]
+    public string? SubjectSpecialization { get; set; }
 
     [JsonPropertyName("email_confirmed_at")]
     public string? EmailConfirmedAt { get; set; }

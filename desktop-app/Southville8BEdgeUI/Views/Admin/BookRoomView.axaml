@@ -81,11 +81,11 @@
     </StackPanel>
   </ScrollViewer>
   <UserControl.Resources>
-    <DataTemplate x:Key="_RoomTemplate" DataType="vm:RoomViewModel">
+    <DataTemplate x:Key="_RoomTemplate" DataType="vm:RoomCardViewModel">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="{Binding Name}"/>
-        <TextBlock Text="{Binding Type}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
-        <!-- Use dynamic StatusBrush from RoomViewModel -->
+        <TextBlock Text="{Binding RoomNumber}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+        <!-- Use dynamic StatusBrush from RoomCardViewModel -->
         <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontSize="11"/>
       </StackPanel>
     </DataTemplate>
