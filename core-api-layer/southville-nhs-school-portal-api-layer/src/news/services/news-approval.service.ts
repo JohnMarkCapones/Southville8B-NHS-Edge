@@ -313,7 +313,7 @@ export class NewsApprovalService {
       .select(
         `
         *,
-        approver:users(id, full_name, email)
+        approver:users!news_approval_approver_id_fkey(id, full_name, email)
       `,
       )
       .eq('news_id', newsId)
@@ -349,7 +349,7 @@ export class NewsApprovalService {
       .select(
         `
         *,
-        author:users(id, full_name, email),
+        author:users!news_author_id_fkey(id, full_name, email),
         category:news_categories(id, name, slug)
       `,
       )
