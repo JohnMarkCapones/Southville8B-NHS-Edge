@@ -117,41 +117,14 @@ export class AuthService {
       // ✅ NEW: Ensure user exists in public.users table
       await this.ensureUserExistsInPublicTable(data.user);
 
-      // Get the user's role from the database
-      const supabase = this.getServiceClient();
-      
-      // First get the user data
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, role_id')
-        .eq('id', data.user.id)
-        .single();
+      // ✅ Fetch actual role from public.users table
+      const roleFromDatabase = await this.getUserRoleFromDatabase(data.user.id);
 
-      if (userError || !userData) {
-        this.logger.error('Failed to fetch user data:', userError);
-        throw new InternalServerErrorException('Failed to fetch user information');
-      }
-
-      // Then get the role name
-      let userRole = 'Student'; // default
-      if (userData.role_id) {
-        const { data: roleData, error: roleError } = await supabase
-          .from('roles')
-          .select('name')
-          .eq('id', userData.role_id)
-          .single();
-
-        if (!roleError && roleData) {
-          userRole = roleData.name;
-        }
-      }
-
-      this.logger.log(`🔐 User ${data.user.email} logged in with role: ${userRole}`);
-      
+      // Transform Supabase user data to our interface
       const user: SupabaseUser = {
         id: data.user.id,
         email: data.user.email || '',
-        role: userRole, // Get role name from database
+        role: roleFromDatabase || data.user.role, // ✅ Use database role, fallback to Supabase role
         user_metadata: data.user.user_metadata,
         app_metadata: data.user.app_metadata,
         aud: data.user.aud || 'authenticated',
