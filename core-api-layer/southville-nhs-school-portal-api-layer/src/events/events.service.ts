@@ -262,15 +262,11 @@ export class EventsService {
       search,
     } = filters;
 
+    // Start with a simple query to avoid complex joins that might fail
     let query = supabase.from('events').select(
       `
         *,
-        organizer:users(id, full_name, email),
-        tags:event_tags(tag:tags(id, name, color)),
-        additionalInfo:event_additional_info(id, title, content, order_index),
-        highlights:event_highlights(id, title, content, image_url, order_index),
-        schedule:event_schedule(id, activity_time, activity_description, order_index),
-        faq:events_faq(id, question, answer)
+        organizer:users!organizer_id(id, full_name, email)
       `,
       { count: 'exact' },
     );

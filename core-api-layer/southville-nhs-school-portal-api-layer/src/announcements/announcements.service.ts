@@ -174,7 +174,7 @@ export class AnnouncementsService {
     let query = supabase.from('announcements').select(
       `
         *,
-        user:users(id, full_name, email),
+        user:users!fk_user(id, full_name, email),
         tags:announcement_tags(
           tag:tags(id, name, color)
         ),
@@ -281,7 +281,7 @@ export class AnnouncementsService {
       .select(
         `
           *,
-          user:users(id, full_name, email),
+          user:users!fk_user(id, full_name, email),
           tags:announcement_tags(
             tag:tags(id, name, color)
           ),
@@ -487,7 +487,7 @@ export class AnnouncementsService {
     let query = supabase.from('announcements').select(
       `
         *,
-        user:users(id, full_name, email),
+        user:users!fk_user(id, full_name, email),
         tags:announcement_tags(
           tag:tags(id, name, color)
         ),

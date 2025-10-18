@@ -37,16 +37,16 @@ import { AuditInterceptor } from './audit.interceptor';
 
 @ApiTags('Announcements')
 @Controller('announcements')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
 @UseInterceptors(AuditInterceptor)
-@ApiBearerAuth('JWT-auth')
 export class AnnouncementsController {
   private readonly logger = new Logger(AnnouncementsController.name);
 
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Post()
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new announcement (Admin/Teacher only)' })
   @ApiResponse({
     status: 201,
@@ -68,7 +68,6 @@ export class AnnouncementsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get all announcements with pagination and filtering',
   })
@@ -134,7 +133,9 @@ export class AnnouncementsController {
   }
 
   @Get('my-announcements')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: "Get announcements targeted to current user's role",
   })
@@ -181,7 +182,6 @@ export class AnnouncementsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get announcement by ID' })
   @ApiResponse({
     status: 200,
@@ -195,7 +195,9 @@ export class AnnouncementsController {
   }
 
   @Patch(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update announcement (Admin or Teacher if owner)' })
   @ApiResponse({
     status: 200,
@@ -224,7 +226,9 @@ export class AnnouncementsController {
   }
 
   @Delete(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete announcement (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -241,7 +245,9 @@ export class AnnouncementsController {
 
   // Tag management endpoints
   @Post('tags')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new tag (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -260,7 +266,6 @@ export class AnnouncementsController {
   }
 
   @Get('tags')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all tags' })
   @ApiResponse({
     status: 200,
@@ -273,7 +278,9 @@ export class AnnouncementsController {
   }
 
   @Patch('tags/:id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update tag (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -296,7 +303,9 @@ export class AnnouncementsController {
   }
 
   @Delete('tags/:id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete tag (Admin only)' })
   @ApiResponse({ status: 200, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

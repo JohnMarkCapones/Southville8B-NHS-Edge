@@ -31,6 +31,9 @@ import { R2ConfigModule } from './config/r2-config/r2-config.module';
 import { StorageModule } from './storage/storage.module';
 import { ModulesModule } from './modules/modules.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { TeacherFilesModule } from './teacher-files/teacher-files.module';
+import { QuizModule } from './quiz/quiz.module';
+import { NewsModule } from './news/news.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
 
@@ -73,6 +76,9 @@ import r2Config from './config/r2.config';
     StorageModule,
     ModulesModule,
     DepartmentsModule,
+    TeacherFilesModule,
+    QuizModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [AppService, R2ConfigValidationService],

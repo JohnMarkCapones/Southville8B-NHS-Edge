@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Read(//c/Users/John Mark/Music/Edge/Southville8B-NHS-Edge/frontend-nextjs/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
