@@ -7,6 +7,7 @@ import { StorageModule } from '../storage/storage.module';
 import {
   NewsController,
   NewsCategoriesController,
+  JournalismMembershipController,
 } from './controllers';
 
 // Services
@@ -17,6 +18,7 @@ import {
   NewsCategoriesService,
   TagsService,
   NewsImageService,
+  JournalismMembershipService,
 } from './services';
 
 /**
@@ -33,6 +35,7 @@ import {
   controllers: [
     NewsController,
     NewsCategoriesController,
+    JournalismMembershipController,
   ],
   providers: [
     // Core service
@@ -44,6 +47,7 @@ import {
     NewsCategoriesService,
     TagsService,
     NewsImageService,
+    JournalismMembershipService,
   ],
   exports: [
     // Export services for use in other modules
@@ -53,6 +57,7 @@ import {
     NewsCategoriesService,
     TagsService,
     NewsImageService,
+    JournalismMembershipService,
   ],
 })
 export class NewsModule {}

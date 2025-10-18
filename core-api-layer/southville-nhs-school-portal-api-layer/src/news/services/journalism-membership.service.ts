@@ -1,0 +1,495 @@
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+} from '@nestjs/common';
+import { SupabaseService } from '../../supabase/supabase.service';
+import { AddMemberDto, UpdateMemberPositionDto } from '../dto';
+
+/**
+ * Service for managing journalism team membership
+ * Handles adding/removing members and assigning positions
+ */
+@Injectable()
+export class JournalismMembershipService {
+  private readonly logger = new Logger(JournalismMembershipService.name);
+
+  // Positions that only Admins can assign
+  private readonly ADMIN_ONLY_POSITIONS = ['Adviser'];
+
+  // Positions that Advisers can assign
+  private readonly ADVISER_CAN_ASSIGN = [
+    'Co-Adviser',
+    'Editor-in-Chief',
+    'Co-Editor-in-Chief',
+    'Publisher',
+    'Writer',
+    'Member',
+  ];
+
+  // Unique positions (only 1 person can have these)
+  private readonly UNIQUE_POSITIONS = ['Adviser', 'Editor-in-Chief'];
+
+  constructor(private readonly supabaseService: SupabaseService) {}
+
+  /**
+   * Get journalism domain ID
+   * @returns Promise<string>
+   */
+  private async getJournalismDomainId(): Promise<string> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    const { data, error } = await supabase
+      .from('domains')
+      .select('id')
+      .eq('type', 'journalism')
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new BadRequestException(
+        'Journalism domain not found. Please contact administrator.',
+      );
+    }
+
+    return data.id;
+  }
+
+  /**
+   * Get domain role ID by position name
+   * @param positionName Position name
+   * @returns Promise<string>
+   */
+  private async getDomainRoleId(positionName: string): Promise<string> {
+    const supabase = this.supabaseService.getServiceClient();
+    const domainId = await this.getJournalismDomainId();
+
+    const { data, error } = await supabase
+      .from('domain_roles')
+      .select('id')
+      .eq('domain_id', domainId)
+      .eq('name', positionName)
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new NotFoundException(
+        `Position "${positionName}" not found in journalism domain`,
+      );
+    }
+
+    return data.id;
+  }
+
+  /**
+   * Check if user is Admin or Super Admin
+   * @param userId User ID
+   * @returns Promise<boolean>
+   */
+  private async isAdmin(userId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    const { data } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    return data?.role === 'Admin' || data?.role === 'Super Admin';
+  }
+
+  /**
+   * Check if user is Adviser in journalism
+   * @param userId User ID
+   * @returns Promise<boolean>
+   */
+  private async isAdviser(userId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getServiceClient();
+    const domainId = await this.getJournalismDomainId();
+
+    const { data } = await supabase
+      .from('user_domain_roles')
+      .select(
+        `
+        id,
+        domain_roles!inner(
+          domain_id,
+          name
+        )
+      `,
+      )
+      .eq('user_id', userId)
+      .eq('domain_roles.domain_id', domainId)
+      .maybeSingle();
+
+    if (!data) return false;
+
+    const domainRoles = data.domain_roles as any;
+    return domainRoles?.name === 'Adviser' || domainRoles?.name === 'Co-Adviser';
+  }
+
+  /**
+   * Check if requester can assign this position
+   * @param requesterId Requester user ID
+   * @param position Position to assign
+   * @throws ForbiddenException if not allowed
+   */
+  private async canAssignPosition(
+    requesterId: string,
+    position: string,
+  ): Promise<void> {
+    const isAdminUser = await this.isAdmin(requesterId);
+
+    // Admins can assign any position
+    if (isAdminUser) {
+      return;
+    }
+
+    // Check if requester is Adviser
+    const isAdviserUser = await this.isAdviser(requesterId);
+
+    if (!isAdviserUser) {
+      throw new ForbiddenException(
+        'Only Admins and Advisers can manage journalism membership',
+      );
+    }
+
+    // Advisers cannot assign Adviser position (only Admins can)
+    if (this.ADMIN_ONLY_POSITIONS.includes(position)) {
+      throw new ForbiddenException(
+        `Only Admins can assign the "${position}" position`,
+      );
+    }
+
+    // Advisers can assign all other positions
+    if (!this.ADVISER_CAN_ASSIGN.includes(position)) {
+      throw new ForbiddenException(`Cannot assign position: ${position}`);
+    }
+  }
+
+  /**
+   * Check if position is already taken (for unique positions)
+   * @param position Position name
+   * @param excludeUserId User ID to exclude from check (for updates)
+   * @throws ConflictException if position is taken
+   */
+  private async checkUniquePosition(
+    position: string,
+    excludeUserId?: string,
+  ): Promise<void> {
+    if (!this.UNIQUE_POSITIONS.includes(position)) {
+      return; // Not a unique position, no check needed
+    }
+
+    const supabase = this.supabaseService.getServiceClient();
+    const domainId = await this.getJournalismDomainId();
+    const roleId = await this.getDomainRoleId(position);
+
+    let query = supabase
+      .from('user_domain_roles')
+      .select('user_id')
+      .eq('domain_id', domainId)
+      .eq('domain_role_id', roleId);
+
+    if (excludeUserId) {
+      query = query.neq('user_id', excludeUserId);
+    }
+
+    const { data } = await query.maybeSingle();
+
+    if (data) {
+      throw new ConflictException(
+        `The "${position}" position is already assigned to another user. Only one person can have this position.`,
+      );
+    }
+  }
+
+  /**
+   * Add a user to journalism domain with a position
+   * @param addMemberDto Add member DTO
+   * @param requesterId User ID making the request
+   * @returns Promise<any>
+   */
+  async addMember(
+    addMemberDto: AddMemberDto,
+    requesterId: string,
+  ): Promise<any> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // Check permissions
+    await this.canAssignPosition(requesterId, addMemberDto.position);
+
+    // Check if position is unique and already taken
+    await this.checkUniquePosition(addMemberDto.position);
+
+    // Get domain and role IDs
+    const domainId = await this.getJournalismDomainId();
+    const roleId = await this.getDomainRoleId(addMemberDto.position);
+
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, full_name, email, role')
+      .eq('id', addMemberDto.userId)
+      .maybeSingle();
+
+    if (userError || !user) {
+      throw new NotFoundException(
+        `User with ID ${addMemberDto.userId} not found`,
+      );
+    }
+
+    // Check if user is already a member
+    const { data: existing } = await supabase
+      .from('user_domain_roles')
+      .select('id')
+      .eq('user_id', addMemberDto.userId)
+      .eq('domain_id', domainId)
+      .maybeSingle();
+
+    if (existing) {
+      throw new ConflictException(
+        `User is already a member of journalism team. Use update endpoint to change their position.`,
+      );
+    }
+
+    // Add user to domain
+    const { data: membership, error: insertError } = await supabase
+      .from('user_domain_roles')
+      .insert({
+        user_id: addMemberDto.userId,
+        domain_id: domainId,
+        domain_role_id: roleId,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      this.logger.error('Error adding member to journalism:', insertError);
+      throw new BadRequestException(
+        `Failed to add member: ${insertError.message}`,
+      );
+    }
+
+    this.logger.log(
+      `User ${addMemberDto.userId} added to journalism as ${addMemberDto.position} by ${requesterId}`,
+    );
+
+    return {
+      id: membership.id,
+      userId: addMemberDto.userId,
+      userName: user.full_name,
+      userEmail: user.email,
+      position: addMemberDto.position,
+      addedBy: requesterId,
+      message: `Successfully added ${user.full_name} as ${addMemberDto.position}`,
+    };
+  }
+
+  /**
+   * Update a member's position
+   * @param userId User ID to update
+   * @param updateDto Update position DTO
+   * @param requesterId User ID making the request
+   * @returns Promise<any>
+   */
+  async updateMemberPosition(
+    userId: string,
+    updateDto: UpdateMemberPositionDto,
+    requesterId: string,
+  ): Promise<any> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // Check permissions
+    await this.canAssignPosition(requesterId, updateDto.position);
+
+    // Check if new position is unique and already taken (exclude current user)
+    await this.checkUniquePosition(updateDto.position, userId);
+
+    // Get domain and new role IDs
+    const domainId = await this.getJournalismDomainId();
+    const newRoleId = await this.getDomainRoleId(updateDto.position);
+
+    // Check if user is a member
+    const { data: currentMembership, error: fetchError } = await supabase
+      .from('user_domain_roles')
+      .select(
+        `
+        id,
+        domain_roles!inner(name)
+      `,
+      )
+      .eq('user_id', userId)
+      .eq('domain_id', domainId)
+      .maybeSingle();
+
+    if (fetchError || !currentMembership) {
+      throw new NotFoundException(
+        `User is not a member of journalism team. Use add endpoint to add them first.`,
+      );
+    }
+
+    const currentRole = (currentMembership.domain_roles as any)?.name;
+
+    // Update position
+    const { error: updateError } = await supabase
+      .from('user_domain_roles')
+      .update({
+        domain_role_id: newRoleId,
+      })
+      .eq('id', currentMembership.id);
+
+    if (updateError) {
+      this.logger.error('Error updating member position:', updateError);
+      throw new BadRequestException(
+        `Failed to update position: ${updateError.message}`,
+      );
+    }
+
+    this.logger.log(
+      `User ${userId} position changed from ${currentRole} to ${updateDto.position} by ${requesterId}`,
+    );
+
+    return {
+      userId,
+      previousPosition: currentRole,
+      newPosition: updateDto.position,
+      updatedBy: requesterId,
+      message: `Successfully updated position from ${currentRole} to ${updateDto.position}`,
+    };
+  }
+
+  /**
+   * Remove a user from journalism domain
+   * @param userId User ID to remove
+   * @param requesterId User ID making the request
+   * @returns Promise<void>
+   */
+  async removeMember(userId: string, requesterId: string): Promise<void> {
+    const supabase = this.supabaseService.getServiceClient();
+    const domainId = await this.getJournalismDomainId();
+
+    // Get current membership info
+    const { data: membership, error: fetchError } = await supabase
+      .from('user_domain_roles')
+      .select(
+        `
+        id,
+        domain_roles!inner(name)
+      `,
+      )
+      .eq('user_id', userId)
+      .eq('domain_id', domainId)
+      .maybeSingle();
+
+    if (fetchError || !membership) {
+      throw new NotFoundException(`User is not a member of journalism team`);
+    }
+
+    const position = (membership.domain_roles as any)?.name;
+
+    // Check permissions
+    await this.canAssignPosition(requesterId, position);
+
+    // Delete membership
+    const { error: deleteError } = await supabase
+      .from('user_domain_roles')
+      .delete()
+      .eq('id', membership.id);
+
+    if (deleteError) {
+      this.logger.error('Error removing member from journalism:', deleteError);
+      throw new BadRequestException(
+        `Failed to remove member: ${deleteError.message}`,
+      );
+    }
+
+    this.logger.log(
+      `User ${userId} (${position}) removed from journalism by ${requesterId}`,
+    );
+  }
+
+  /**
+   * Get all journalism members
+   * @returns Promise<any[]>
+   */
+  async getAllMembers(): Promise<any[]> {
+    const supabase = this.supabaseService.getServiceClient();
+    const domainId = await this.getJournalismDomainId();
+
+    const { data, error } = await supabase
+      .from('user_domain_roles')
+      .select(
+        `
+        id,
+        user_id,
+        users!inner(id, full_name, email, role),
+        domain_roles!inner(name, description)
+      `,
+      )
+      .eq('domain_id', domainId)
+      .order('domain_roles(name)', { ascending: true });
+
+    if (error) {
+      this.logger.error('Error fetching journalism members:', error);
+      throw new BadRequestException('Failed to fetch members');
+    }
+
+    return data.map((record) => {
+      const user = record.users as any;
+      const role = record.domain_roles as any;
+
+      return {
+        membershipId: record.id,
+        userId: record.user_id,
+        userName: user.full_name,
+        userEmail: user.email,
+        userRole: user.role,
+        position: role.name,
+        positionDescription: role.description,
+      };
+    });
+  }
+
+  /**
+   * Get a specific member's details
+   * @param userId User ID
+   * @returns Promise<any>
+   */
+  async getMember(userId: string): Promise<any> {
+    const supabase = this.supabaseService.getServiceClient();
+    const domainId = await this.getJournalismDomainId();
+
+    const { data, error } = await supabase
+      .from('user_domain_roles')
+      .select(
+        `
+        id,
+        user_id,
+        users!inner(id, full_name, email, role),
+        domain_roles!inner(name, description)
+      `,
+      )
+      .eq('user_id', userId)
+      .eq('domain_id', domainId)
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new NotFoundException(`User is not a member of journalism team`);
+    }
+
+    const user = data.users as any;
+    const role = data.domain_roles as any;
+
+    return {
+      membershipId: data.id,
+      userId: data.user_id,
+      userName: user.full_name,
+      userEmail: user.email,
+      userRole: user.role,
+      position: role.name,
+      positionDescription: role.description,
+    };
+  }
+}

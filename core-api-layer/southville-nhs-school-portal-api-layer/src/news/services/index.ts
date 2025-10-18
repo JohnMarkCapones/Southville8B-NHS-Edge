@@ -4,3 +4,4 @@ export * from './news-approval.service';
 export * from './news-categories.service';
 export * from './news-image.service';
 export * from './tags.service';
+export * from './journalism-membership.service';
