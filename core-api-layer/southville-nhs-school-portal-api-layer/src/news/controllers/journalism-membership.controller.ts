@@ -117,9 +117,9 @@ export class JournalismMembershipController {
   })
   async addMember(
     @Body() addMemberDto: AddMemberDto,
-    @AuthUser('id') requesterId: string,
+    @AuthUser() user: any,
   ) {
-    return this.membershipService.addMember(addMemberDto, requesterId);
+    return this.membershipService.addMember(addMemberDto, user.id);
   }
 
   /**
@@ -155,12 +155,12 @@ export class JournalismMembershipController {
   async updatePosition(
     @Param('userId') userId: string,
     @Body() updateDto: UpdateMemberPositionDto,
-    @AuthUser('id') requesterId: string,
+    @AuthUser() user: any,
   ) {
     return this.membershipService.updateMemberPosition(
       userId,
       updateDto,
-      requesterId,
+      user.id,
     );
   }
 
@@ -182,8 +182,8 @@ export class JournalismMembershipController {
   @ApiResponse({ status: 404, description: 'Member not found' })
   async removeMember(
     @Param('userId') userId: string,
-    @AuthUser('id') requesterId: string,
+    @AuthUser() user: any,
   ) {
-    await this.membershipService.removeMember(userId, requesterId);
+    await this.membershipService.removeMember(userId, user.id);
   }
 }

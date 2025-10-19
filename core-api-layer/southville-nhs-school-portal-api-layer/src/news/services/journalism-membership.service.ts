@@ -90,13 +90,43 @@ export class JournalismMembershipService {
   private async isAdmin(userId: string): Promise<boolean> {
     const supabase = this.supabaseService.getServiceClient();
 
-    const { data } = await supabase
+    // Step 1: Get user's role_id
+    const { data: user, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role_id')
       .eq('id', userId)
       .maybeSingle();
 
-    return data?.role === 'Admin' || data?.role === 'Super Admin';
+    this.logger.debug(`isAdmin check for user ${userId}: role_id = ${user?.role_id}`);
+
+    if (userError || !user?.role_id) {
+      this.logger.warn(`Failed to get user role_id: ${userError?.message}`);
+      return false;
+    }
+
+    // Step 2: Get role name from roles table
+    const { data: role, error: roleError } = await supabase
+      .from('roles')
+      .select('name')
+      .eq('id', user.role_id)
+      .maybeSingle();
+
+    this.logger.debug(`Role lookup for role_id ${user.role_id}: ${role?.name}`);
+
+    if (roleError || !role) {
+      this.logger.warn(`Failed to get role name: ${roleError?.message}`);
+      return false;
+    }
+
+    const isAdmin = (
+      role.name === 'Admin' ||
+      role.name === 'Super Admin' ||
+      role.name === 'SuperAdmin'
+    );
+
+    this.logger.debug(`User ${userId} isAdmin: ${isAdmin} (role: ${role.name})`);
+
+    return isAdmin;
   }
 
   /**
@@ -183,13 +213,13 @@ export class JournalismMembershipService {
     }
 
     const supabase = this.supabaseService.getServiceClient();
-    const domainId = await this.getJournalismDomainId();
     const roleId = await this.getDomainRoleId(position);
 
+    // user_domain_roles doesn't have domain_id, only domain_role_id
+    // The roleId already represents a unique position in the journalism domain
     let query = supabase
       .from('user_domain_roles')
       .select('user_id')
-      .eq('domain_id', domainId)
       .eq('domain_role_id', roleId);
 
     if (excludeUserId) {
@@ -230,22 +260,28 @@ export class JournalismMembershipService {
     // Check if user exists
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, full_name, email, role')
+      .select('id, full_name, email')
       .eq('id', addMemberDto.userId)
       .maybeSingle();
 
     if (userError || !user) {
+      this.logger.error(`User lookup error: ${userError?.message}`);
       throw new NotFoundException(
         `User with ID ${addMemberDto.userId} not found`,
       );
     }
 
-    // Check if user is already a member
+    // Check if user is already a member (join through domain_roles to filter by domain)
     const { data: existing } = await supabase
       .from('user_domain_roles')
-      .select('id')
+      .select(
+        `
+        id,
+        domain_roles!inner(domain_id)
+      `,
+      )
       .eq('user_id', addMemberDto.userId)
-      .eq('domain_id', domainId)
+      .eq('domain_roles.domain_id', domainId)
       .maybeSingle();
 
     if (existing) {
@@ -254,12 +290,11 @@ export class JournalismMembershipService {
       );
     }
 
-    // Add user to domain
+    // Add user to domain (user_domain_roles only has user_id and domain_role_id, no domain_id column)
     const { data: membership, error: insertError } = await supabase
       .from('user_domain_roles')
       .insert({
         user_id: addMemberDto.userId,
-        domain_id: domainId,
         domain_role_id: roleId,
       })
       .select()
@@ -311,17 +346,17 @@ export class JournalismMembershipService {
     const domainId = await this.getJournalismDomainId();
     const newRoleId = await this.getDomainRoleId(updateDto.position);
 
-    // Check if user is a member
+    // Check if user is a member (join through domain_roles to filter by domain)
     const { data: currentMembership, error: fetchError } = await supabase
       .from('user_domain_roles')
       .select(
         `
         id,
-        domain_roles!inner(name)
+        domain_roles!inner(name, domain_id)
       `,
       )
       .eq('user_id', userId)
-      .eq('domain_id', domainId)
+      .eq('domain_roles.domain_id', domainId)
       .maybeSingle();
 
     if (fetchError || !currentMembership) {
@@ -370,17 +405,17 @@ export class JournalismMembershipService {
     const supabase = this.supabaseService.getServiceClient();
     const domainId = await this.getJournalismDomainId();
 
-    // Get current membership info
+    // Get current membership info (join through domain_roles to filter by domain)
     const { data: membership, error: fetchError } = await supabase
       .from('user_domain_roles')
       .select(
         `
         id,
-        domain_roles!inner(name)
+        domain_roles!inner(name, domain_id)
       `,
       )
       .eq('user_id', userId)
-      .eq('domain_id', domainId)
+      .eq('domain_roles.domain_id', domainId)
       .maybeSingle();
 
     if (fetchError || !membership) {
@@ -418,17 +453,18 @@ export class JournalismMembershipService {
     const supabase = this.supabaseService.getServiceClient();
     const domainId = await this.getJournalismDomainId();
 
+    // Join through domain_roles to filter by domain_id
     const { data, error } = await supabase
       .from('user_domain_roles')
       .select(
         `
         id,
         user_id,
-        users!inner(id, full_name, email, role),
-        domain_roles!inner(name, description)
+        users!inner(id, full_name, email),
+        domain_roles!inner(name, description, domain_id)
       `,
       )
-      .eq('domain_id', domainId)
+      .eq('domain_roles.domain_id', domainId)
       .order('domain_roles(name)', { ascending: true });
 
     if (error) {
@@ -445,7 +481,6 @@ export class JournalismMembershipService {
         userId: record.user_id,
         userName: user.full_name,
         userEmail: user.email,
-        userRole: user.role,
         position: role.name,
         positionDescription: role.description,
       };
@@ -461,18 +496,19 @@ export class JournalismMembershipService {
     const supabase = this.supabaseService.getServiceClient();
     const domainId = await this.getJournalismDomainId();
 
+    // Join through domain_roles to filter by domain_id
     const { data, error } = await supabase
       .from('user_domain_roles')
       .select(
         `
         id,
         user_id,
-        users!inner(id, full_name, email, role),
-        domain_roles!inner(name, description)
+        users!inner(id, full_name, email),
+        domain_roles!inner(name, description, domain_id)
       `,
       )
       .eq('user_id', userId)
-      .eq('domain_id', domainId)
+      .eq('domain_roles.domain_id', domainId)
       .maybeSingle();
 
     if (error || !data) {
@@ -487,7 +523,6 @@ export class JournalismMembershipService {
       userId: data.user_id,
       userName: user.full_name,
       userEmail: user.email,
-      userRole: user.role,
       position: role.name,
       positionDescription: role.description,
     };
