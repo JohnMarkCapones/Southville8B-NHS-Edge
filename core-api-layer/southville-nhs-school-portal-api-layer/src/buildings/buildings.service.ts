@@ -172,6 +172,9 @@ export class BuildingsService {
   ): Promise<Building> {
     const supabase = this.getSupabaseClient();
 
+    // Log the incoming DTO for debugging
+    this.logger.debug(`Updating building ${id} with data:`, updateBuildingDto);
+
     // Check if building code already exists (if updating code)
     if (updateBuildingDto.code) {
       const { data: existingBuilding } = await supabase
@@ -186,16 +189,28 @@ export class BuildingsService {
       }
     }
 
+    // Build update object, only including defined values
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updateBuildingDto.buildingName !== undefined) {
+      updateData.building_name = updateBuildingDto.buildingName;
+    }
+    if (updateBuildingDto.code !== undefined) {
+      updateData.code = updateBuildingDto.code;
+    }
+    if (updateBuildingDto.capacity !== undefined) {
+      updateData.capacity = updateBuildingDto.capacity;
+    }
+
+    this.logger.debug(`Supabase update payload:`, updateData);
+
     const { data: building, error } = await supabase
       .from('buildings')
-      .update({
-        building_name: updateBuildingDto.buildingName,
-        code: updateBuildingDto.code,
-        capacity: updateBuildingDto.capacity,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
-      .select()
+      .select('*')
       .single();
 
     if (error) {

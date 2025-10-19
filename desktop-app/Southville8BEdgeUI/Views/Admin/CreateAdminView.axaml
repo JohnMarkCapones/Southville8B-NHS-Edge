@@ -175,7 +175,7 @@
                         <StackPanel Grid.Column="0" Grid.Row="3" Margin="0,0,12,0">
                             <TextBlock Text="Department" Classes="field-label"/>
                             <ComboBox ItemsSource="{Binding DepartmentOptions}" 
-                                      SelectedItem="{Binding DepartmentId}" 
+                                    SelectedValue="{Binding DepartmentId}"
                                       Classes="form-combo" 
                                       PlaceholderText="Select department (optional)"/>
                         </StackPanel>

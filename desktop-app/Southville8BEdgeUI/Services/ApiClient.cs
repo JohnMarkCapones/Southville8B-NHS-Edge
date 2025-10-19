@@ -86,6 +86,16 @@ public class ApiClient : IApiClient
         return await ExecuteRequestAsync(HttpMethod.Put, endpoint, data);
     }
 
+    public async Task<T?> PatchAsync<T>(string endpoint, object? data = null) where T : class
+    {
+        return await ExecuteRequestAsync<T>(HttpMethod.Patch, endpoint, data);
+    }
+
+    public async Task<bool> PatchAsync(string endpoint, object? data = null)
+    {
+        return await ExecuteRequestAsync(HttpMethod.Patch, endpoint, data);
+    }
+
     public async Task<bool> DeleteAsync(string endpoint)
     {
         return await ExecuteRequestAsync(HttpMethod.Delete, endpoint);
@@ -204,7 +214,7 @@ public class ApiClient : IApiClient
 
     public async Task<BuildingDto?> UpdateBuildingAsync(string id, UpdateBuildingDto dto)
     {
-        return await PutAsync<BuildingDto>($"buildings/{id}", dto);
+        return await PatchAsync<BuildingDto>($"buildings/{id}", dto);
     }
 
     public async Task<bool> DeleteBuildingAsync(string id)
@@ -281,14 +291,14 @@ public class ApiClient : IApiClient
         return await PostAsync<RoomDto>("rooms", dto);
     }
 
-    public async Task<List<RoomDto>?> CreateRoomsBulkAsync(string floorId, List<CreateRoomDto> rooms)
+    public async Task<List<RoomDto>?> CreateRoomsBulkAsync(List<CreateRoomDto> rooms)
     {
         return await PostAsync<List<RoomDto>>("rooms/bulk", rooms);
     }
 
     public async Task<RoomDto?> UpdateRoomAsync(string id, UpdateRoomDto dto)
     {
-        return await PutAsync<RoomDto>($"rooms/{id}", dto);
+        return await PatchAsync<RoomDto>($"rooms/{id}", dto);
     }
 
     public async Task<bool> DeleteRoomAsync(string id)
@@ -307,19 +317,13 @@ public class ApiClient : IApiClient
     // Department Management Methods
     public async Task<DepartmentsResponse?> GetDepartmentsAsync(int page = 1, int limit = 100)
     {
-        var response = await _httpClient.GetAsync($"departments?page={page}&limit={limit}");
-        response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<DepartmentsResponse>(content, _jsonOptions);
+        return await GetAsync<DepartmentsResponse>($"departments?page={page}&limit={limit}");
     }
 
     // Subject Management Methods
     public async Task<SubjectsResponse?> GetSubjectsByDepartmentAsync(string departmentId, int page = 1, int limit = 100)
     {
-        var response = await _httpClient.GetAsync($"subjects?departmentId={departmentId}&page={page}&limit={limit}");
-        response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<SubjectsResponse>(content, _jsonOptions);
+        return await GetAsync<SubjectsResponse>($"subjects?departmentId={departmentId}&page={page}&limit={limit}");
     }
 
     public void SetAccessToken(string accessToken)
@@ -352,7 +356,7 @@ public class ApiClient : IApiClient
 
             using var request = new HttpRequestMessage(method, endpoint);
 
-            if (data != null && (method == HttpMethod.Post || method == HttpMethod.Put))
+            if (data != null && (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch))
             {
                 var json = JsonSerializer.Serialize(data, _jsonOptions);
                 request.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
@@ -420,7 +424,7 @@ public class ApiClient : IApiClient
 
             using var request = new HttpRequestMessage(method, endpoint);
 
-            if (data != null && (method == HttpMethod.Post || method == HttpMethod.Put))
+            if (data != null && (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch))
             {
                 var json = JsonSerializer.Serialize(data, _jsonOptions);
                 request.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");

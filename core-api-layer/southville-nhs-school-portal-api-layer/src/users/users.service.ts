@@ -81,11 +81,18 @@ export class UsersService {
     const supabase = this.getSupabaseClient();
 
     // Check public.users table
-    const { data: publicUser } = await supabase
+    const { data: publicUser, error } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating email uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate email uniqueness',
+      );
+    }
 
     if (publicUser) {
       throw new ConflictException('Email already exists');
@@ -102,27 +109,37 @@ export class UsersService {
   ): Promise<void> {
     const supabase = this.getSupabaseClient();
 
-    // Check if teacher with same email and birthday exists
-    const { data: existingTeacher } = await supabase
+    // Single query to check if teacher with same email and birthday exists
+    const { data: existingTeacher, error } = await supabase
       .from('teachers')
-      .select('id, user_id, first_name, last_name')
+      .select(
+        `
+        id,
+        user_id,
+        first_name,
+        last_name,
+        birthday,
+        user:users!user_id(
+          id,
+          email
+        )
+      `,
+      )
       .eq('birthday', birthday)
-      .single();
+      .eq('user.email', email)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating teacher uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate teacher uniqueness',
+      );
+    }
 
     if (existingTeacher) {
-      // Also check if the user_id matches the email
-      const { data: user } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('id', existingTeacher.user_id)
-        .eq('email', email)
-        .single();
-
-      if (user) {
-        throw new ConflictException(
-          `Teacher with email '${email}' and birthday '${birthday}' already exists`,
-        );
-      }
+      throw new ConflictException(
+        `Teacher with email '${email}' and birthday '${birthday}' already exists`,
+      );
     }
   }
 
@@ -137,12 +154,19 @@ export class UsersService {
     const supabase = this.getSupabaseClient();
 
     // Check if student with same LRN and birthday exists
-    const { data: existingStudent } = await supabase
+    const { data: existingStudent, error } = await supabase
       .from('students')
       .select('id, lrn_id, first_name, last_name, birthday')
       .eq('lrn_id', lrnId)
       .eq('birthday', birthday)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating student uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate student uniqueness',
+      );
+    }
 
     if (existingStudent) {
       throw new ConflictException(
@@ -586,7 +610,7 @@ export class UsersService {
       `
         *,
         role:roles!role_id(id, name),
-        teacher:teachers!user_id(*),
+        teacher:teachers!user_id(*, department:departments!department_id(id, department_name)),
         admin:admins!user_id(*),
         student:students!user_id(*)
       `,
@@ -595,7 +619,35 @@ export class UsersService {
 
     // Apply filters
     if (role) {
-      query = query.eq('role.name', role);
+      // Resolve role name to role_id first (PostgREST doesn't support filtering on joined aliases)
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', role)
+        .maybeSingle();
+
+      if (roleError) {
+        this.logger.error('Error fetching role:', roleError);
+        throw new InternalServerErrorException(
+          'Failed to fetch role information',
+        );
+      }
+
+      if (!roleData) {
+        // Role name doesn't exist, return empty result
+        this.logger.warn(`Role '${role}' not found, returning empty user list`);
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit: effectiveLimit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      query = query.eq('role_id', roleData.id);
     }
     if (status) {
       query = query.eq('status', status);
@@ -652,7 +704,8 @@ export class UsersService {
         if (user.teacher) {
           baseUser.employeeId = user.teacher.id;
           baseUser.phoneNumber = user.teacher.phone_number;
-          baseUser.department = user.teacher.department_id;
+          baseUser.department =
+            user.teacher.department?.department_name || null;
           baseUser.subjectSpecialization =
             user.teacher.subject_specialization_id;
         }
@@ -687,10 +740,18 @@ export class UsersService {
       .select(
         `
         *,
-        role:roles(name),
-        teacher:teachers(*),
-        admin:admins(*),
-        student:students(*)
+        role:roles!role_id(id, name),
+        teacher:teachers!user_id(
+          *,
+          subject_specialization:subjects!subject_specialization_id(id, subject_name),
+          department:departments!department_id(id, department_name),
+          advisory_section:sections!advisory_section_id(id, name, grade_level)
+        ),
+        admin:admins!user_id(*),
+        student:students!user_id(
+          *,
+          section:sections!section_id(id, name, grade_level)
+        )
       `,
       )
       .eq('id', id)

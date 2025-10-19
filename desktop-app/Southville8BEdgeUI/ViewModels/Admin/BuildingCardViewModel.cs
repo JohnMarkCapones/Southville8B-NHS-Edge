@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Southville8BEdgeUI.Models.Api;
 using Southville8BEdgeUI.Services;
+using Avalonia.Threading;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -16,6 +17,11 @@ public partial class BuildingCardViewModel : ViewModelBase
     // Navigation callbacks
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? OnBuildingChanged { get; set; }
+    public Action<BuildingCardViewModel>? OnAddFloorRequested { get; set; }
+    public Action<FloorCardViewModel>? OnAddRoomRequested { get; set; }
+    public Action<BuildingCardViewModel>? OnEditBuildingRequested { get; set; }
+    public Action<RoomCardViewModel>? OnEditRoomRequested { get; set; }
+    public Action<FloorCardViewModel>? OnEditFloorRequested { get; set; }
 
     [ObservableProperty] private string _id = string.Empty;
     [ObservableProperty] private string _buildingName = string.Empty;
@@ -51,7 +57,10 @@ public partial class BuildingCardViewModel : ViewModelBase
                 var floorCard = new FloorCardViewModel(_apiClient)
                 {
                     NavigateTo = NavigateTo,
-                    OnFloorChanged = OnBuildingChanged
+                    OnFloorChanged = OnBuildingChanged,
+                    OnAddRoomRequested = OnAddRoomRequested,
+                    OnEditRoomRequested = OnEditRoomRequested,
+                    OnEditFloorRequested = OnEditFloorRequested
                 };
                 floorCard.LoadFromDto(floor);
                 Floors.Add(floorCard);
@@ -78,25 +87,33 @@ public partial class BuildingCardViewModel : ViewModelBase
     {
         try
         {
-            IsLoading = true;
+            await Dispatcher.UIThread.InvokeAsync(() => IsLoading = true);
             var response = await _apiClient.GetFloorsAsync(Id, 100);
             if (response?.Data != null)
             {
-                Floors.Clear();
-                foreach (var floor in response.Data)
-                {
-                    var floorCard = new FloorCardViewModel(_apiClient)
+                // Build items off-thread to avoid blocking UI
+                var items = response.Data.Select(floor => {
+                    var vm = new FloorCardViewModel(_apiClient)
                     {
                         NavigateTo = NavigateTo,
-                        OnFloorChanged = OnBuildingChanged
+                        OnFloorChanged = OnBuildingChanged,
+                        OnAddRoomRequested = OnAddRoomRequested,
+                        OnEditRoomRequested = OnEditRoomRequested,
+                        OnEditFloorRequested = OnEditFloorRequested
                     };
-                    floorCard.LoadFromDto(floor);
-                    Floors.Add(floorCard);
-                }
+                    vm.LoadFromDto(floor);
+                    return vm;
+                }).ToList();
                 
-                OnPropertyChanged(nameof(TotalFloors));
-                OnPropertyChanged(nameof(TotalRooms));
-                OnPropertyChanged(nameof(TotalCapacity));
+                // Marshal ObservableCollection updates to UI thread
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Floors.Clear();
+                    foreach (var vm in items) Floors.Add(vm);
+                    OnPropertyChanged(nameof(TotalFloors));
+                    OnPropertyChanged(nameof(TotalRooms));
+                    OnPropertyChanged(nameof(TotalCapacity));
+                });
             }
         }
         catch (Exception ex)
@@ -105,15 +122,14 @@ public partial class BuildingCardViewModel : ViewModelBase
         }
         finally
         {
-            IsLoading = false;
+            await Dispatcher.UIThread.InvokeAsync(() => IsLoading = false);
         }
     }
 
     [RelayCommand]
     private void EditBuilding()
     {
-        // TODO: Navigate to edit building dialog
-        System.Diagnostics.Debug.WriteLine($"Edit building: {BuildingName}");
+        OnEditBuildingRequested?.Invoke(this);
     }
 
     [RelayCommand]
@@ -136,7 +152,6 @@ public partial class BuildingCardViewModel : ViewModelBase
     [RelayCommand]
     private void AddFloor()
     {
-        // TODO: Navigate to add floor dialog
-        System.Diagnostics.Debug.WriteLine($"Add floor to building: {BuildingName}");
+        OnAddFloorRequested?.Invoke(this);
     }
 }

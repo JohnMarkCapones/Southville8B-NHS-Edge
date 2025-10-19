@@ -16,7 +16,6 @@ import { UserRole } from '../users/dto/create-user.dto';
 export class DesktopSidebarController {
   constructor(private readonly desktopSidebarService: DesktopSidebarService) {}
 
-  @Get('kpi/stream')
   @Sse('kpi/stream')
   @Roles(UserRole.ADMIN)
   @ApiOperation({

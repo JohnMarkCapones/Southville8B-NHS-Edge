@@ -99,14 +99,14 @@ export class DesktopSidebarService {
 
   // SSE stream for real-time metrics
   getMetricsStream(): Observable<MessageEvent> {
-    return this.metricsSubject.asObservable().pipe(
-      map(
-        (metrics) =>
-          new MessageEvent('metrics-update', {
-            data: JSON.stringify(metrics),
-          }),
-      ),
-    );
+    return this.metricsSubject
+      .asObservable()
+      .pipe(
+        map(
+          (metrics) =>
+            ({ type: 'metrics-update', data: metrics }) as MessageEvent,
+        ),
+      );
   }
 
   // Manual trigger for immediate update

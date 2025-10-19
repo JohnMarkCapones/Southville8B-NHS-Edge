@@ -206,7 +206,7 @@ export class StudentsService {
           status: 'Active',
         },
         specificRecord: student,
-        message: 'student created successfully',
+        message: 'Student created successfully',
       };
     } catch (error) {
       if (error instanceof ConflictException) {

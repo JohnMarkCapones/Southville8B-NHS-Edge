@@ -220,7 +220,16 @@ public partial class UserManagementViewModel : ViewModelBase
         NavigateTo?.Invoke(vm);
     }
 
-    [RelayCommand] private void ViewUserDetails(UserViewModel user) { }
+    [RelayCommand] 
+    private void ViewUserDetails(UserViewModel user)
+    {
+        var vm = new UserDetailViewModel(_apiClient, _toastService, user.Id)
+        {
+            NavigateBack = () => NavigateTo?.Invoke(this)
+        };
+        _ = vm.LoadUserAsync(); // Start loading
+        NavigateTo?.Invoke(vm);
+    }
     [RelayCommand] private void EditUser(UserViewModel user) { }
 
     [RelayCommand] private void ToggleUserStatus(UserViewModel user)

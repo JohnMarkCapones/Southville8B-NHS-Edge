@@ -182,102 +182,35 @@ public partial class CreateStudentViewModel : ViewModelBase
                 SectionId = SelectedSection?.Id
             };
 
-            // 🔍 DETAILED LOGGING - Log the DTO being sent to API
-            System.Diagnostics.Debug.WriteLine("=== STUDENT CREATION DATA ===");
-            System.Diagnostics.Debug.WriteLine($"First Name: '{dto.FirstName}'");
-            System.Diagnostics.Debug.WriteLine($"Last Name: '{dto.LastName}'");
-            System.Diagnostics.Debug.WriteLine($"Middle Name: '{dto.MiddleName ?? "NULL"}'");
-            System.Diagnostics.Debug.WriteLine($"Student ID: '{dto.StudentId}'");
-            System.Diagnostics.Debug.WriteLine($"LRN ID: '{dto.LrnId}'");
-            System.Diagnostics.Debug.WriteLine($"Birthday: '{dto.Birthday}'");
-            System.Diagnostics.Debug.WriteLine($"Grade Level: '{dto.GradeLevel}'");
-            System.Diagnostics.Debug.WriteLine($"Enrollment Year: {dto.EnrollmentYear}");
-            System.Diagnostics.Debug.WriteLine($"Honor Status: '{dto.HonorStatus ?? "NULL"}'");
-            System.Diagnostics.Debug.WriteLine($"Age: {dto.Age ?? -1}");
-            System.Diagnostics.Debug.WriteLine($"Section ID: '{dto.SectionId ?? "NULL"}'");
-            
-            // 🔍 LOG GENERATED CREDENTIALS
-            var generatedEmail = $"{dto.LrnId}@student.local";
-            var generatedPassword = Birthday.Value.ToString("yyyyMMdd");
-            System.Diagnostics.Debug.WriteLine("=== GENERATED CREDENTIALS ===");
-            System.Diagnostics.Debug.WriteLine($"Email: '{generatedEmail}'");
-            System.Diagnostics.Debug.WriteLine($"Password: '{generatedPassword}'");
-            
-            // 🔍 LOG FULL DTO AS JSON
-            var dtoJson = System.Text.Json.JsonSerializer.Serialize(dto, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
-            });
-            System.Diagnostics.Debug.WriteLine("=== FULL DTO JSON ===");
-            System.Diagnostics.Debug.WriteLine(dtoJson);
-
-            // Call API
-            System.Diagnostics.Debug.WriteLine("=== CALLING API ===");
-            System.Diagnostics.Debug.WriteLine($"API Endpoint: POST /api/v1/users/student");
+            // Create student record
+            System.Diagnostics.Debug.WriteLine("Creating student record");
             
             var response = await _apiClient.CreateStudentAsync(dto);
 
-            // 🔍 LOG API RESPONSE
-            System.Diagnostics.Debug.WriteLine("=== API RESPONSE ===");
+            // Log API response (non-sensitive information only)
             if (response != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Success: {response.Success}");
-                System.Diagnostics.Debug.WriteLine($"Message: '{response.Message}'");
-                System.Diagnostics.Debug.WriteLine($"User ID: '{response.UserId ?? "NULL"}'");
-                
-                if (response.Errors != null && response.Errors.Count > 0)
+                System.Diagnostics.Debug.WriteLine($"API response received - Success: {response.Success}");
+                if (!response.Success && response.Errors != null && response.Errors.Count > 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Errors: [{string.Join(", ", response.Errors)}]");
-                }
-                
-                if (response.User != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Created User Email: '{response.User.Email}'");
-                    System.Diagnostics.Debug.WriteLine($"Created User Role: '{response.User.Role}'");
-                    System.Diagnostics.Debug.WriteLine($"Created User Status: '{response.User.Status}'");
+                    System.Diagnostics.Debug.WriteLine($"API errors: {response.Errors.Count} error(s)");
                 }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("Response is NULL");
+                System.Diagnostics.Debug.WriteLine("API response is null");
             }
 
             if (response?.Success == true)
             {
-                // Show success toast notification
-                System.Diagnostics.Debug.WriteLine("=== SHOWING SUCCESS TOAST ===");
-                System.Diagnostics.Debug.WriteLine($"ToastService is null: {_toastService == null}");
-                
-                // TEMPORARY: Try direct notification as test
-                try 
-                {
-                    var window = Avalonia.Application.Current?.ApplicationLifetime is 
-                        Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop 
-                        ? desktop.MainWindow : null;
-                        
-                    if (window != null)
-                    {
-                        var testManager = new Avalonia.Controls.Notifications.WindowNotificationManager(window)
-                        {
-                            Position = Avalonia.Controls.Notifications.NotificationPosition.TopRight,
-                            MaxItems = 3
-                        };
-                        testManager.Show(new Avalonia.Controls.Notifications.Notification("TEST", "Direct test notification", Avalonia.Controls.Notifications.NotificationType.Success));
-                        System.Diagnostics.Debug.WriteLine("=== DIRECT TEST NOTIFICATION SENT ===");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Direct test failed: {ex.Message}");
-                }
+                // Show success notification using injected service
+                System.Diagnostics.Debug.WriteLine("Student creation successful");
                 
                 _toastService?.Success(
                     $"Student '{FirstName} {LastName}' created successfully! You can create another student or click Cancel to go back.",
                     "Student Created",
                     expiration: TimeSpan.FromSeconds(5)
                 );
-                
-                System.Diagnostics.Debug.WriteLine("=== TOAST CALLED ===");
                 
                 // Reset form for next student
                 ResetForm();
@@ -295,7 +228,7 @@ public partial class CreateStudentViewModel : ViewModelBase
                     errorMsg = response?.Message ?? "Failed to create student. Please try again.";
                 }
                 
-                // Show both in-form error and toast
+                // Show error notification
                 ErrorMessage = errorMsg;
                 _toastService?.Error(errorMsg, "Creation Failed", expiration: TimeSpan.FromSeconds(5));
             }
@@ -304,7 +237,7 @@ public partial class CreateStudentViewModel : ViewModelBase
         {
             ErrorMessage = $"An error occurred: {ex.Message}";
             _toastService?.Error(ex.Message, "Error", expiration: TimeSpan.FromSeconds(5));
-            System.Diagnostics.Debug.WriteLine($"Error creating student: {ex}");
+            System.Diagnostics.Debug.WriteLine($"Student creation failed: {ex.Message}");
         }
         finally
         {

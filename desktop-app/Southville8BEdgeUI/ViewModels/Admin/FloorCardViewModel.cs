@@ -1,11 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Southville8BEdgeUI.Models.Api;
 using Southville8BEdgeUI.Services;
+using Avalonia.Threading;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -16,6 +18,9 @@ public partial class FloorCardViewModel : ViewModelBase
     // Navigation callbacks
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? OnFloorChanged { get; set; }
+    public Action<FloorCardViewModel>? OnAddRoomRequested { get; set; }
+    public Action<RoomCardViewModel>? OnEditRoomRequested { get; set; }
+    public Action<FloorCardViewModel>? OnEditFloorRequested { get; set; }
 
     [ObservableProperty] private string _id = string.Empty;
     [ObservableProperty] private string _buildingId = string.Empty;
@@ -44,21 +49,27 @@ public partial class FloorCardViewModel : ViewModelBase
         // Load rooms if provided
         if (dto.Rooms != null)
         {
-            Rooms.Clear();
-            foreach (var room in dto.Rooms)
-            {
-                var roomCard = new RoomCardViewModel(_apiClient)
+            // Build items off-thread to avoid blocking UI
+            var items = dto.Rooms.Select(room => {
+                var vm = new RoomCardViewModel(_apiClient)
                 {
                     NavigateTo = NavigateTo,
-                    OnRoomChanged = OnFloorChanged
+                    OnRoomChanged = OnFloorChanged,
+                    OnEditRoomRequested = OnEditRoomRequested
                 };
-                roomCard.LoadFromDto(room);
-                Rooms.Add(roomCard);
-            }
+                vm.LoadFromDto(room);
+                return vm;
+            }).ToList();
+            
+            // Marshal ObservableCollection updates to UI thread
+            Dispatcher.UIThread.Post(() =>
+            {
+                Rooms.Clear();
+                foreach (var vm in items) Rooms.Add(vm);
+                OnPropertyChanged(nameof(TotalRooms));
+                OnPropertyChanged(nameof(TotalCapacity));
+            });
         }
-        
-        OnPropertyChanged(nameof(TotalRooms));
-        OnPropertyChanged(nameof(TotalCapacity));
     }
 
     public void LoadFromFloorInfo(FloorInfo floorInfo)
@@ -83,24 +94,34 @@ public partial class FloorCardViewModel : ViewModelBase
     {
         try
         {
-            IsLoading = true;
+            await Dispatcher.UIThread.InvokeAsync(() => IsLoading = true);
             var response = await _apiClient.GetRoomsAsync(Id, null, null, 100);
             if (response?.Data != null)
             {
-                Rooms.Clear();
-                foreach (var room in response.Data)
-                {
-                    var roomCard = new RoomCardViewModel(_apiClient)
+                // Build items off-thread to avoid blocking UI
+                var items = response.Data.Select(room => {
+                    var vm = new RoomCardViewModel(_apiClient)
                     {
                         NavigateTo = NavigateTo,
-                        OnRoomChanged = OnFloorChanged
+                        OnRoomChanged = OnFloorChanged,
+                        OnEditRoomRequested = OnEditRoomRequested
                     };
-                    roomCard.LoadFromDto(room);
-                    Rooms.Add(roomCard);
-                }
+                    vm.LoadFromDto(room);
+                    return vm;
+                }).ToList();
                 
-                OnPropertyChanged(nameof(TotalRooms));
-                OnPropertyChanged(nameof(TotalCapacity));
+                // Compute totals off-thread
+                var totalRooms = items.Count;
+                var totalCapacity = items.Sum(r => r.Capacity ?? 0);
+                
+                // Marshal ObservableCollection updates to UI thread
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Rooms.Clear();
+                    foreach (var vm in items) Rooms.Add(vm);
+                    OnPropertyChanged(nameof(TotalRooms));
+                    OnPropertyChanged(nameof(TotalCapacity));
+                });
             }
         }
         catch (Exception ex)
@@ -109,15 +130,14 @@ public partial class FloorCardViewModel : ViewModelBase
         }
         finally
         {
-            IsLoading = false;
+            await Dispatcher.UIThread.InvokeAsync(() => IsLoading = false);
         }
     }
 
     [RelayCommand]
     private void EditFloor()
     {
-        // TODO: Navigate to edit floor dialog
-        System.Diagnostics.Debug.WriteLine($"Edit floor: {Name}");
+        OnEditFloorRequested?.Invoke(this);
     }
 
     [RelayCommand]
@@ -140,7 +160,6 @@ public partial class FloorCardViewModel : ViewModelBase
     [RelayCommand]
     private void AddRoom()
     {
-        // TODO: Navigate to add room dialog
-        System.Diagnostics.Debug.WriteLine($"Add room to floor: {Name}");
+        OnAddRoomRequested?.Invoke(this);
     }
 }

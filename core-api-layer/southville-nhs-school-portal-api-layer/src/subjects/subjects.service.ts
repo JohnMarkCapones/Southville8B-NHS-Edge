@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { Subject } from './entities/subject.entity';
@@ -46,7 +47,7 @@ export class SubjectsService {
         supabaseQuery = supabaseQuery.eq('department_id', departmentId);
       }
 
-      if (gradeLevel) {
+      if (gradeLevel !== undefined && gradeLevel !== null) {
         supabaseQuery = supabaseQuery.eq('grade_level', gradeLevel);
       }
 
@@ -90,11 +91,16 @@ export class SubjectsService {
         `,
         )
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         this.logger.error('Error fetching subject:', error);
         throw new InternalServerErrorException('Failed to fetch subject');
+      }
+
+      if (!data) {
+        this.logger.warn(`Subject with id ${id} not found`);
+        throw new NotFoundException('Subject not found');
       }
 
       return data;

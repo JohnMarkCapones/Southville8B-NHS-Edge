@@ -353,6 +353,14 @@ public partial class AdminShellViewModel : ViewModelBase
             FirstWeekDays.Add(d);
     }
 
+    private void DisposeCurrentContent()
+    {
+        if (CurrentContent is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
+
     private AdminDashboardViewModel CreateDashboardViewModel() => new(_apiClient, _sseService, _accessToken)
     {
         NavigateToBuildingManagementCommand = NavigateToBuildingManagementCommand,
@@ -381,11 +389,32 @@ public partial class AdminShellViewModel : ViewModelBase
         CloseUserDropdown();
     }
 
-    [RelayCommand] private void NavigateToDashboard() { CurrentContent = CreateDashboardViewModel(); CurrentPage = "Dashboard"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToBuildingManagement() { var vm = new BuildingManagementViewModel(_apiClient); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Building Management"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToDashboard() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateDashboardViewModel(); 
+        CurrentPage = "Dashboard"; 
+        CloseUserDropdown(); 
+    }
+    [RelayCommand] private void NavigateToBuildingManagement() 
+    { 
+        DisposeCurrentContent();
+        var vm = new BuildingManagementViewModel(_apiClient); 
+        vm.NavigateTo = inner => CurrentContent = inner; 
+        vm.NavigateBack = () => NavigateToDashboard(); 
+        CurrentContent = vm; 
+        CurrentPage = "Building Management"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToEventsDashboard() { var vm = new EventDashboardViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToELibrary() { CurrentContent = new ELibraryManagementViewModel(); CurrentPage = "E-Library Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToUserManagement() { CurrentContent = CreateUserManagementViewModel(); CurrentPage = "User Management"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToUserManagement() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateUserManagementViewModel(); 
+        CurrentPage = "User Management"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToChat() { var vm = new ChatViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Chat"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToProfile() { CurrentContent = new ProfileViewModel(); CurrentPage = "Profile"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }

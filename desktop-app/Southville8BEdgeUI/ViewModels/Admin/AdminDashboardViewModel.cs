@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Southville8BEdgeUI.Converters;
 using Avalonia.Data;
 using Southville8BEdgeUI.Services;
@@ -14,7 +15,7 @@ using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
-public partial class AdminDashboardViewModel : ViewModelBase
+public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
 {
     private readonly IApiClient _apiClient;
     private readonly ISseService _sseService;
@@ -258,10 +259,23 @@ public partial class AdminDashboardViewModel : ViewModelBase
 
     private void OnDashboardMetricsUpdated(object? sender, AdminDashboardMetrics metrics)
     {
-        TotalStudents = metrics.TotalStudents;
-        ActiveTeachers = metrics.ActiveTeachers;
-        TotalSections = metrics.TotalSections;
-        OnlineUsersCount = metrics.OnlineUsersCount;
+        // Marshal property updates to UI thread to avoid cross-thread binding exceptions
+        Dispatcher.UIThread.Post(() =>
+        {
+            TotalStudents = metrics.TotalStudents;
+            ActiveTeachers = metrics.ActiveTeachers;
+            TotalSections = metrics.TotalSections;
+            OnlineUsersCount = metrics.OnlineUsersCount;
+        });
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from SSE events to prevent memory leaks
+        if (_sseService != null)
+        {
+            _sseService.DashboardMetricsUpdated -= OnDashboardMetricsUpdated;
+        }
     }
 }
 

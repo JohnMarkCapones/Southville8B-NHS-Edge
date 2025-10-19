@@ -62,32 +62,31 @@ public class SseService : ISseService
             using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
+            var dataBuffer = new StringBuilder();
+            
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
                 var line = await reader.ReadLineAsync();
                 
+                System.Diagnostics.Debug.WriteLine($"SSE received: {line ?? "(null)"}");
+
+                // Handle empty lines as SSE event separators
                 if (string.IsNullOrEmpty(line))
-                    continue;
-
-                System.Diagnostics.Debug.WriteLine($"SSE received: {line}");
-
-                // Handle SSE format: data: {json}
-                if (line.StartsWith("data: "))
                 {
-                    var json = line.Substring(6).Trim();
-                    if (!string.IsNullOrEmpty(json))
+                    // Flush buffered data when we encounter an empty line (event separator)
+                    if (dataBuffer.Length > 0)
                     {
+                        var json = dataBuffer.ToString().Trim();
+                        System.Diagnostics.Debug.WriteLine($"Processing buffered SSE data: {json}");
+                        
                         try
                         {
-                            System.Diagnostics.Debug.WriteLine($"Parsing JSON: {json}");
-                            
                             // Try to parse as SidebarMetrics first
                             var sidebarMetrics = JsonSerializer.Deserialize<SidebarMetrics>(json);
                             if (sidebarMetrics != null)
                             {
                                 System.Diagnostics.Debug.WriteLine($"Parsed sidebar metrics: Events={sidebarMetrics.Events}, Teachers={sidebarMetrics.Teachers}, Students={sidebarMetrics.Students}, Sections={sidebarMetrics.Sections}");
                                 MetricsUpdated?.Invoke(this, sidebarMetrics);
-                                continue;
                             }
                         }
                         catch (JsonException)
@@ -100,7 +99,6 @@ public class SseService : ISseService
                                 {
                                     System.Diagnostics.Debug.WriteLine($"Parsed dashboard metrics: Students={dashboardMetrics.TotalStudents}, Teachers={dashboardMetrics.ActiveTeachers}, Sections={dashboardMetrics.TotalSections}");
                                     DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
-                                    continue;
                                 }
                             }
                             catch (JsonException ex)
@@ -109,12 +107,30 @@ public class SseService : ISseService
                                 System.Diagnostics.Debug.WriteLine($"Raw JSON: {json}");
                             }
                         }
+                        
+                        // Clear the buffer after processing
+                        dataBuffer.Clear();
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("SSE separator line received (no buffered data)");
+                    }
+                    continue;
                 }
-                // Handle empty SSE lines (separators)
-                else if (line.Trim() == "")
+
+                // Handle SSE format: data: {json}
+                if (line.StartsWith("data: "))
                 {
-                    System.Diagnostics.Debug.WriteLine("SSE separator line received");
+                    var dataContent = line.Substring(6);
+                    
+                    // Accumulate multi-line data frames
+                    if (dataBuffer.Length > 0)
+                    {
+                        dataBuffer.AppendLine();
+                    }
+                    dataBuffer.Append(dataContent);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Accumulated SSE data: {dataContent}");
                 }
                 // Handle other SSE event types
                 else if (line.StartsWith("event: "))

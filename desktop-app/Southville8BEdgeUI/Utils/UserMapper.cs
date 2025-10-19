@@ -41,12 +41,16 @@ public static class UserMapper
     /// <returns>Combined full name</returns>
     public static string CombineFullName(string firstName, string lastName, string? middleName = null)
     {
-        var parts = new List<string> { firstName };
+        var parts = new List<string>();
+        
+        if (!string.IsNullOrWhiteSpace(firstName))
+            parts.Add(firstName.Trim());
         
         if (!string.IsNullOrWhiteSpace(middleName))
-            parts.Add(middleName);
+            parts.Add(middleName.Trim());
         
-        parts.Add(lastName);
+        if (!string.IsNullOrWhiteSpace(lastName))
+            parts.Add(lastName.Trim());
         
         return string.Join(" ", parts);
     }

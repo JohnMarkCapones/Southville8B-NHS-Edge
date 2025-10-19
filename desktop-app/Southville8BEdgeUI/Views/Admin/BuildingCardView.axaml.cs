@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Southville8BEdgeUI.ViewModels.Admin;
 

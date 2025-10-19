@@ -237,7 +237,8 @@
 				HorizontalAlignment="Stretch"
 				BoxShadow="0 20 40 -12 #0000001A, 0 8 32 -8 #0000000F"
 				Margin="0,0,0,0">
-			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+			<Grid>
+				<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
 				<!-- Header row: Title + Logo aligned -->
 				<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,24">
 					<StackPanel Grid.Column="0" Spacing="8" VerticalAlignment="Top">
@@ -435,6 +436,48 @@
 						   FontSize="12"
 						   Foreground="{DynamicResource TextMutedBrush}"
 						   Margin="0,40,0,0"/>
+				</Grid>
+
+				<!-- Quick Dev Login Badge (Remove in Production) -->
+				<StackPanel HorizontalAlignment="Right" 
+							VerticalAlignment="Bottom" 
+							Margin="0,0,-12,-12"
+							Spacing="4">
+					<Border Background="#3B82F6" 
+							CornerRadius="8,0,0,0" 
+							Padding="8,6"
+							BoxShadow="0 4 8 0 #00000020">
+						<StackPanel Spacing="6">
+							<TextBlock Text="DEV" 
+									   FontSize="10" 
+									   FontWeight="Bold" 
+									   Foreground="White" 
+									   HorizontalAlignment="Center"/>
+							<Button Content="Admin" 
+									Command="{Binding FillAdminCredentialsCommand}"
+									FontSize="11"
+									Padding="12,4"
+									Background="#10B981"
+									Foreground="White"
+									CornerRadius="4"
+									BorderThickness="0"
+									HorizontalAlignment="Stretch"
+									MinHeight="28"
+									Cursor="Hand"/>
+							<Button Content="Teacher" 
+									Command="{Binding FillTeacherCredentialsCommand}"
+									FontSize="11"
+									Padding="12,4"
+									Background="#F59E0B"
+									Foreground="White"
+									CornerRadius="4"
+									BorderThickness="0"
+									HorizontalAlignment="Stretch"
+									MinHeight="28"
+									Cursor="Hand"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
 			</Grid>
 		</Border>
 	</Grid>

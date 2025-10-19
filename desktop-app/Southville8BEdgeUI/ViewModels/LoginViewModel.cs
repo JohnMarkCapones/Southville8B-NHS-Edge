@@ -169,6 +169,22 @@ public partial class LoginViewModel : ViewModelBase
         _toastService.Info("Forgot password functionality not yet implemented.");
     }
 
+    [RelayCommand]
+    private void FillAdminCredentials()
+    {
+        Email = "superadmin@gmail.com";
+        Password = "skadoosh";
+        ClearError();
+    }
+
+    [RelayCommand]
+    private void FillTeacherCredentials()
+    {
+        Email = "johnmarkcapones93@gmail.com";
+        Password = "skadoosh";
+        ClearError();
+    }
+
     private void SetError(string message)
     {
         ErrorMessage = message;

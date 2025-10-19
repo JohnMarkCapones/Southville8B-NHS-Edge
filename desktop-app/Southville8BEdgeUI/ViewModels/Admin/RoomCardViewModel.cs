@@ -18,6 +18,7 @@ public partial class RoomCardViewModel : ViewModelBase
     // Navigation callbacks
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? OnRoomChanged { get; set; }
+    public Action<RoomCardViewModel>? OnEditRoomRequested { get; set; }
 
     [ObservableProperty] private string _id = string.Empty;
     [ObservableProperty] private string _floorId = string.Empty;
@@ -27,6 +28,7 @@ public partial class RoomCardViewModel : ViewModelBase
     [ObservableProperty] private string _status = "Available";
     [ObservableProperty] private int? _displayOrder;
     [ObservableProperty] private int? _floor;
+    [ObservableProperty] private string _floorName = string.Empty;
 
     // Computed property for XAML binding compatibility
     public string RoomId => Id;
@@ -96,6 +98,7 @@ public partial class RoomCardViewModel : ViewModelBase
         Status = dto.Status;
         DisplayOrder = dto.DisplayOrder;
         Floor = dto.Floor?.Number;
+        FloorName = dto.Floor?.Name ?? $"Floor {dto.Floor?.Number}";
     }
 
     public void LoadFromRoomInfo(RoomInfo roomInfo)
@@ -110,8 +113,7 @@ public partial class RoomCardViewModel : ViewModelBase
     [RelayCommand]
     private void EditRoom()
     {
-        // TODO: Navigate to edit room dialog
-        System.Diagnostics.Debug.WriteLine($"Edit room: {RoomNumber}");
+        OnEditRoomRequested?.Invoke(this);
     }
 
     [RelayCommand]

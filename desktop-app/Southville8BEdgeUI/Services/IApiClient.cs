@@ -12,9 +12,11 @@ public interface IApiClient
     Task<T?> GetAsync<T>(string endpoint) where T : class;
     Task<T?> PostAsync<T>(string endpoint, object? data = null) where T : class;
     Task<T?> PutAsync<T>(string endpoint, object? data = null) where T : class;
+    Task<T?> PatchAsync<T>(string endpoint, object? data = null) where T : class;
     Task<T?> DeleteAsync<T>(string endpoint) where T : class;
     Task<bool> PostAsync(string endpoint, object? data = null);
     Task<bool> PutAsync(string endpoint, object? data = null);
+    Task<bool> PatchAsync(string endpoint, object? data = null);
     Task<bool> DeleteAsync(string endpoint);
     Task<UserProfile?> GetUserProfileAsync(string userId);
     Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken);
@@ -49,7 +51,7 @@ public interface IApiClient
     Task<RoomListResponse?> GetRoomsAsync(string? floorId = null, string? buildingId = null, string? status = null, int limit = 100);
     Task<RoomDto?> GetRoomByIdAsync(string id);
     Task<RoomDto?> CreateRoomAsync(CreateRoomDto dto);
-    Task<List<RoomDto>?> CreateRoomsBulkAsync(string floorId, List<CreateRoomDto> rooms);
+    Task<List<RoomDto>?> CreateRoomsBulkAsync(List<CreateRoomDto> rooms);
     Task<RoomDto?> UpdateRoomAsync(string id, UpdateRoomDto dto);
     Task<bool> DeleteRoomAsync(string id);
     
