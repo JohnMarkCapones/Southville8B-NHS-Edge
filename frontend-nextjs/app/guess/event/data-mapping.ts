@@ -206,3 +206,4 @@ export async function findEventBySlugFromAPI(slug: string): Promise<FrontendEven
   const events = await fetchEventsFromAPI()
   return events.find(event => event.slug === slug) || null
 }
+
