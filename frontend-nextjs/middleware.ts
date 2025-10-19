@@ -265,6 +265,10 @@ export async function middleware(request: NextRequest) {
     '/_next',           // Next.js internals
     '/api/auth',        // Auth endpoints
     '/api/test',        // Test endpoint
+    '/api/test-clubs',  // Clubs API test endpoint
+    '/api/test-clubs-simple', // Simple clubs API test endpoint
+    '/api/simple-clubs-test', // Simple clubs test endpoint
+    '/api/debug-clubs', // Clubs debug endpoint
     '/favicon.ico',     // Favicon
     '/api/announcements', // Public announcements (if any)
     '/videos',          // Public video files

@@ -267,7 +267,7 @@ export function mapBackendClubToFrontend(backendClub: BackendClub): ClubItem {
 export async function fetchClubsFromAPI(): Promise<ClubItem[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
   const res = await fetch(`${apiUrl}/api/v1/clubs`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: 0 }, // No caching for development
   });
 
   if (!res.ok) {
@@ -284,7 +284,7 @@ export async function findClubBySlugFromAPI(slug: string): Promise<ClubItem | nu
   
   // First, get all clubs and find the one with matching slug
   const res = await fetch(`${apiUrl}/api/v1/clubs`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: 0 }, // No caching for development
   });
 
   if (!res.ok) {

@@ -21,7 +21,10 @@ import {
   ArrowRight,
   Crown,
   Medal,
-  Star
+  Star,
+  ChevronRight,
+  Home,
+  ArrowLeft
 } from "lucide-react"
 
 // Icon mapping for clubs
@@ -144,11 +147,46 @@ export default async function ClubsIndexPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <JsonLd data={[breadcrumbs]} />
       
-      {/* Header Section */}
-      <div className="text-center mb-16">
+      {/* Breadcrumbs and Back Button */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Breadcrumbs */}
+            <nav className="flex items-center space-x-2 text-sm" aria-label="Breadcrumb">
+              <Link 
+                href="/" 
+                className="flex items-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              >
+                <Home className="w-4 h-4 mr-1" />
+                Home
+              </Link>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <span className="text-slate-900 dark:text-slate-100 font-medium">
+                Clubs
+              </span>
+            </nav>
+
+            {/* Back Button */}
+            <Link href="/">
+              <AnimatedButton
+                variant="outline"
+                size="sm"
+                className="hover:scale-105 transition-all duration-300"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </AnimatedButton>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-10">
+        {/* Header Section */}
+        <div className="text-center mb-16">
         <Badge variant="secondary" className="mb-4 bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
           <Users className="w-4 h-4 mr-2" />
           Student Organizations
@@ -229,6 +267,7 @@ export default async function ClubsIndexPage() {
             </Link>
           </AnimatedButton>
         </div>
+      </div>
       </div>
     </div>
   )

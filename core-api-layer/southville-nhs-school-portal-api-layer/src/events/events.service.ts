@@ -262,9 +262,17 @@ export class EventsService {
       search,
     } = filters;
 
-    // Start with a simple query to avoid complex joins that might fail
+    // Start with a query that includes related data
     let query = supabase.from('events').select(
-      `*`,
+      `
+      *,
+      organizer:users!events_organizer_id_fkey(id, full_name, email),
+      tags:event_tags(tag:tags(id, name, color)),
+      additionalInfo:event_additional_info(id, title, content, order_index),
+      highlights:event_highlights(id, title, content, image_url, order_index),
+      schedule:event_schedule(id, activity_time, activity_description, order_index),
+      faq:events_faq(id, question, answer)
+      `,
       { count: 'exact' },
     );
 
@@ -351,6 +359,7 @@ export class EventsService {
         eventImage: event.event_image,
         status: event.status,
         visibility: event.visibility,
+        is_featured: event.is_featured,
         createdAt: event.created_at,
         updatedAt: event.updated_at,
         organizer: event.organizer,
@@ -423,6 +432,7 @@ export class EventsService {
       eventImage: data.event_image,
       status: data.status,
       visibility: data.visibility,
+      is_featured: data.is_featured,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       organizer: data.organizer,
@@ -451,13 +461,71 @@ export class EventsService {
       return cached as { data: Event[]; pagination: any };
     }
 
+    const supabase = this.getSupabaseClient();
     const today = new Date().toISOString().split('T')[0];
-    const result = await this.findAll({
-      startDate: today,
-      status: 'published',
-      visibility: 'public',
-      limit: 20,
-    });
+
+    // Direct query for upcoming events (public, no auth required)
+    const { data, error, count } = await supabase
+      .from('events')
+      .select(
+        `
+        *,
+        organizer:users!events_organizer_id_fkey(id, full_name, email),
+        tags:event_tags(tag:tags(id, name, color)),
+        additionalInfo:event_additional_info(id, title, content, order_index),
+        highlights:event_highlights(id, title, content, image_url, order_index),
+        schedule:event_schedule(id, activity_time, activity_description, order_index),
+        faq:events_faq(id, question, answer)
+        `,
+        { count: 'exact' }
+      )
+      .eq('status', 'published')
+      .eq('visibility', 'public')
+      .gte('date', today)
+      .order('date', { ascending: true })
+      .limit(20);
+
+    if (error) {
+      this.logger.error('Error fetching upcoming events:', error);
+      throw new InternalServerErrorException('Failed to fetch upcoming events');
+    }
+
+    // Transform the data to match our entity structure
+    const transformedData = data?.map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      organizerId: event.organizer_id,
+      eventImage: event.event_image,
+      status: event.status,
+      visibility: event.visibility,
+      is_featured: event.is_featured,
+      createdAt: event.created_at,
+      updatedAt: event.updated_at,
+      organizer: event.organizer,
+      tags: event.tags?.map((t) => t.tag),
+      additionalInfo: event.additionalInfo?.sort(
+        (a, b) => a.order_index - b.order_index,
+      ),
+      highlights: event.highlights?.sort(
+        (a, b) => a.order_index - b.order_index,
+      ),
+      schedule: event.schedule?.sort((a, b) => a.order_index - b.order_index),
+      faq: event.faq,
+    })) || [];
+
+    const result = {
+      data: transformedData,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / 20),
+      },
+    };
 
     // Cache the result
     await this.cacheManager.set(cacheKey, result, this.UPCOMING_CACHE_TTL);

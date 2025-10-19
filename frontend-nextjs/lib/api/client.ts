@@ -7,8 +7,6 @@
  * @module lib/api/client
  */
 
-'use client';
-
 import { apiConfig, buildApiUrl } from './config';
 import { ApiError, createErrorFromResponse, logError } from './errors';
 

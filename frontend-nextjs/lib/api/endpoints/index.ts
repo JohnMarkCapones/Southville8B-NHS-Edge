@@ -5,3 +5,5 @@
 
 export * from './auth';
 export * from './announcements';
+export * from './events';
+export * from './clubs';

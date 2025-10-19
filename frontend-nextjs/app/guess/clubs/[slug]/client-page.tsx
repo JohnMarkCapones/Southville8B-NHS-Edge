@@ -38,6 +38,8 @@ import {
   Microscope,
   Code,
   Globe,
+  ChevronLeft,
+  Home,
 } from "lucide-react"
 
 // Icon mapping
@@ -152,6 +154,47 @@ export default function ClientPage({ club }: ClientPageProps) {
 
   return (
     <div className="min-h-screen">
+      {/* Breadcrumbs and Back Button */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Breadcrumbs */}
+            <nav className="flex items-center space-x-2 text-sm" aria-label="Breadcrumb">
+              <Link 
+                href="/" 
+                className="flex items-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              >
+                <Home className="w-4 h-4 mr-1" />
+                Home
+              </Link>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <Link 
+                href="/guess/clubs" 
+                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              >
+                Clubs
+              </Link>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <span className="text-slate-900 dark:text-slate-100 font-medium">
+                {club.name}
+              </span>
+            </nav>
+
+            {/* Back Button */}
+            <Link href="/guess/clubs">
+              <AnimatedButton
+                variant="outline"
+                size="sm"
+                className="hover:scale-105 transition-all duration-300"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back to Clubs
+              </AnimatedButton>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <section
         ref={heroRef}
