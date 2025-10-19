@@ -81,13 +81,13 @@ export class JournalismMembershipController {
   }
 
   /**
-   * Add a new member to journalism
-   * Admins can add anyone (including Advisers)
-   * Advisers can add students (Writer, Publisher, EIC, etc.)
+   * Add a new student to journalism team
+   * Only students can be added with positions: Editor-in-Chief, Co-Editor-in-Chief, Publisher, Writer, Member
+   * Teacher positions (Adviser, Co-Adviser) are managed separately
    */
   @Post()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Add a new member to journalism team' })
+  @ApiOperation({ summary: 'Add a new student member to journalism team' })
   @ApiResponse({
     status: 201,
     description: 'Member added successfully',
@@ -123,13 +123,12 @@ export class JournalismMembershipController {
   }
 
   /**
-   * Update a member's position
-   * Admins can update anyone
-   * Advisers can update student positions (not other Advisers)
+   * Update a student member's position
+   * Can only update to student positions: Editor-in-Chief, Co-Editor-in-Chief, Publisher, Writer, Member
    */
   @Patch(':userId')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Update a member\'s position' })
+  @ApiOperation({ summary: 'Update a student member\'s position' })
   @ApiResponse({
     status: 200,
     description: 'Position updated successfully',
@@ -165,14 +164,12 @@ export class JournalismMembershipController {
   }
 
   /**
-   * Remove a member from journalism
-   * Admins can remove anyone
-   * Advisers can remove students (not other Advisers)
+   * Remove a student member from journalism team
    */
   @Delete(':userId')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Remove a member from journalism team' })
+  @ApiOperation({ summary: 'Remove a student member from journalism team' })
   @ApiResponse({ status: 204, description: 'Member removed successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({

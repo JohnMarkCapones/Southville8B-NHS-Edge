@@ -17,18 +17,17 @@ import { AddMemberDto, UpdateMemberPositionDto } from '../dto';
 export class JournalismMembershipService {
   private readonly logger = new Logger(JournalismMembershipService.name);
 
-  // Positions that only Admins can assign
-  private readonly ADMIN_ONLY_POSITIONS = ['Adviser'];
-
-  // Positions that Advisers can assign
-  private readonly ADVISER_CAN_ASSIGN = [
-    'Co-Adviser',
+  // Valid student positions (what Advisers can assign to students)
+  private readonly STUDENT_POSITIONS = [
     'Editor-in-Chief',
     'Co-Editor-in-Chief',
     'Publisher',
     'Writer',
     'Member',
   ];
+
+  // Teacher positions (Adviser, Co-Adviser) - managed separately, not through this API
+  private readonly TEACHER_POSITIONS = ['Adviser', 'Co-Adviser'];
 
   // Unique positions (only 1 person can have these)
   private readonly UNIQUE_POSITIONS = ['Adviser', 'Editor-in-Chief'];
@@ -169,32 +168,28 @@ export class JournalismMembershipService {
     requesterId: string,
     position: string,
   ): Promise<void> {
-    const isAdminUser = await this.isAdmin(requesterId);
-
-    // Admins can assign any position
-    if (isAdminUser) {
-      return;
+    // Teacher positions (Adviser, Co-Adviser) should not be assigned through this API
+    if (this.TEACHER_POSITIONS.includes(position)) {
+      throw new ForbiddenException(
+        `The "${position}" position is for teachers and cannot be assigned through this API. Teacher positions should be managed separately.`,
+      );
     }
 
-    // Check if requester is Adviser
+    // Only student positions are allowed
+    if (!this.STUDENT_POSITIONS.includes(position)) {
+      throw new ForbiddenException(
+        `Invalid position: ${position}. Valid student positions are: ${this.STUDENT_POSITIONS.join(', ')}`,
+      );
+    }
+
+    // Check if requester is Admin or Adviser
+    const isAdminUser = await this.isAdmin(requesterId);
     const isAdviserUser = await this.isAdviser(requesterId);
 
-    if (!isAdviserUser) {
+    if (!isAdminUser && !isAdviserUser) {
       throw new ForbiddenException(
-        'Only Admins and Advisers can manage journalism membership',
+        'Only Admins and Advisers can manage journalism student membership',
       );
-    }
-
-    // Advisers cannot assign Adviser position (only Admins can)
-    if (this.ADMIN_ONLY_POSITIONS.includes(position)) {
-      throw new ForbiddenException(
-        `Only Admins can assign the "${position}" position`,
-      );
-    }
-
-    // Advisers can assign all other positions
-    if (!this.ADVISER_CAN_ASSIGN.includes(position)) {
-      throw new ForbiddenException(`Cannot assign position: ${position}`);
     }
   }
 
@@ -257,10 +252,10 @@ export class JournalismMembershipService {
     const domainId = await this.getJournalismDomainId();
     const roleId = await this.getDomainRoleId(addMemberDto.position);
 
-    // Check if user exists
+    // Check if user exists and get their role
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, full_name, email')
+      .select('id, full_name, email, role_id, roles!inner(name)')
       .eq('id', addMemberDto.userId)
       .maybeSingle();
 
@@ -268,6 +263,14 @@ export class JournalismMembershipService {
       this.logger.error(`User lookup error: ${userError?.message}`);
       throw new NotFoundException(
         `User with ID ${addMemberDto.userId} not found`,
+      );
+    }
+
+    // Verify user is a student (only students can be assigned journalism positions)
+    const userRole = (user.roles as any)?.name;
+    if (userRole !== 'Student') {
+      throw new ForbiddenException(
+        `Only students can be assigned journalism positions. This user is a ${userRole}.`,
       );
     }
 
@@ -461,7 +464,7 @@ export class JournalismMembershipService {
         id,
         user_id,
         users!inner(id, full_name, email),
-        domain_roles!inner(name, description, domain_id)
+        domain_roles!inner(name, domain_id)
       `,
       )
       .eq('domain_roles.domain_id', domainId)
@@ -482,7 +485,6 @@ export class JournalismMembershipService {
         userName: user.full_name,
         userEmail: user.email,
         position: role.name,
-        positionDescription: role.description,
       };
     });
   }
@@ -504,7 +506,7 @@ export class JournalismMembershipService {
         id,
         user_id,
         users!inner(id, full_name, email),
-        domain_roles!inner(name, description, domain_id)
+        domain_roles!inner(name, domain_id)
       `,
       )
       .eq('user_id', userId)
@@ -524,7 +526,6 @@ export class JournalismMembershipService {
       userName: user.full_name,
       userEmail: user.email,
       position: role.name,
-      positionDescription: role.description,
     };
   }
 }

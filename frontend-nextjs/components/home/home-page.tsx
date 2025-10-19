@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { AnnouncementsSection } from "@/components/homepage/announcements-section"
+import { EventsSection } from "@/components/homepage/events-section"
 import {
   BookOpen,
   Users,
@@ -449,6 +450,8 @@ export default function HomePage() {
       </section>
 
       <AnnouncementsSection />
+
+      <EventsSection />
 
       {/* Student Rankings */}
       <section ref={rankingsRef} className="py-20 bg-background">

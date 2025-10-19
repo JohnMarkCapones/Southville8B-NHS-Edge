@@ -6,10 +6,8 @@ import { ApiProperty } from '@nestjs/swagger';
  */
 export class UpdateMemberPositionDto {
   @ApiProperty({
-    description: 'New journalism position',
+    description: 'New journalism position (student positions only)',
     enum: [
-      'Adviser',
-      'Co-Adviser',
       'Editor-in-Chief',
       'Co-Editor-in-Chief',
       'Publisher',
@@ -21,8 +19,6 @@ export class UpdateMemberPositionDto {
   @IsString()
   @IsNotEmpty()
   @IsIn([
-    'Adviser',
-    'Co-Adviser',
     'Editor-in-Chief',
     'Co-Editor-in-Chief',
     'Publisher',

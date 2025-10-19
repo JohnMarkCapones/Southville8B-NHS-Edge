@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { absoluteUrl } from "@/lib/seo"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
+import { fetchEventsFromAPI } from "./data-mapping"
 import { EVENTS } from "./[slug]/data"
 
 export const metadata: Metadata = {
@@ -16,11 +17,24 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "Events | Southville 8B NHS" },
 }
 
-export default function EventsIndexPage() {
+export default async function EventsIndexPage() {
   const breadcrumbs = buildBreadcrumbListSchema([
     { name: "Home", url: absoluteUrl("/") },
     { name: "Events", url: absoluteUrl("/guess/event") },
   ])
+
+  // Try to fetch from API, fallback to static data
+  let events
+  try {
+    events = await fetchEventsFromAPI()
+    // If API returns empty array, use static data as fallback
+    if (events.length === 0) {
+      events = EVENTS
+    }
+  } catch (error) {
+    console.error('Failed to fetch events from API, using static data:', error)
+    events = EVENTS
+  }
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -30,7 +44,7 @@ export default function EventsIndexPage() {
         Explore upcoming and featured events across arts, sports, academics, and more.
       </p>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {EVENTS.map((e) => (
+        {events.map((e) => (
           <Link key={e.id} href={`/guess/event/${e.slug}`} className="group block border rounded-xl p-5 hover:shadow-lg transition">
             <div className="text-sm text-muted-foreground">{new Date(e.date).toLocaleDateString()} • {e.time}</div>
             <div className="mt-2 font-semibold text-lg group-hover:underline">{e.title}</div>
@@ -44,4 +58,4 @@ export default function EventsIndexPage() {
 
 // Revalidate Events index hourly
 export const revalidate = 3600
-export const dynamic = "force-static"
+export const dynamic = "force-dynamic"

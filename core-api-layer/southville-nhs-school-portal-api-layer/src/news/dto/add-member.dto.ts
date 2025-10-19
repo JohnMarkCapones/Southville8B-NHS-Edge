@@ -14,10 +14,8 @@ export class AddMemberDto {
   userId: string;
 
   @ApiProperty({
-    description: 'Journalism position to assign',
+    description: 'Journalism position to assign (student positions only)',
     enum: [
-      'Adviser',
-      'Co-Adviser',
       'Editor-in-Chief',
       'Co-Editor-in-Chief',
       'Publisher',
@@ -29,8 +27,6 @@ export class AddMemberDto {
   @IsString()
   @IsNotEmpty()
   @IsIn([
-    'Adviser',
-    'Co-Adviser',
     'Editor-in-Chief',
     'Co-Editor-in-Chief',
     'Publisher',
