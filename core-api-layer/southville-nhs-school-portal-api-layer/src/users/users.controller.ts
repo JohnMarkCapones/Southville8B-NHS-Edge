@@ -165,6 +165,22 @@ export class UsersController {
     return this.usersService.exportUsers(format, { role });
   }
 
+  @Get('me')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get current authenticated user profile',
+    description:
+      'Returns the profile of the currently authenticated user with role-specific data (teacher/admin/student)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getCurrentUser(@AuthUser() user: SupabaseUser) {
+    return this.usersService.findOne(user.id);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get a specific user' })

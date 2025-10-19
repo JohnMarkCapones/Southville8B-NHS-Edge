@@ -682,28 +682,128 @@ export class UsersService {
   async findOne(id: string): Promise<User> {
     const supabase = this.getSupabaseClient();
 
-    const { data: user, error } = await supabase
+    this.logger.log(`[findOne] Fetching user with ID: ${id}`);
+
+    // First, let's try a simple query to get the basic user data
+    const { data: basicUser, error: basicError } = await supabase
       .from('users')
-      .select(
-        `
-        *,
-        role:roles(name),
-        teacher:teachers(*),
-        admin:admins(*),
-        student:students(*)
-      `,
-      )
+      .select('*')
       .eq('id', id)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+    if (basicError) {
+      if (basicError.code === 'PGRST116') {
+        this.logger.error(`[findOne] User not found: ${id}`);
         throw new NotFoundException('User not found');
       }
-      this.logger.error('Error fetching user:', error);
+      this.logger.error('[findOne] Error fetching basic user data:', {
+        userId: id,
+        errorCode: basicError.code,
+        errorMessage: basicError.message,
+        errorDetails: basicError.details,
+        errorHint: basicError.hint,
+        fullError: JSON.stringify(basicError, null, 2),
+      });
       throw new InternalServerErrorException('Failed to fetch user');
     }
 
+    if (!basicUser) {
+      this.logger.error(`[findOne] User data is null for ID: ${id}`);
+      throw new NotFoundException('User not found');
+    }
+
+    this.logger.log(`[findOne] Basic user found: ${basicUser.email}, Role ID: ${basicUser.role_id || 'NO_ROLE_ID'}`);
+
+    // Now let's try to get the role information
+    let roleData = null;
+    if (basicUser.role_id) {
+      const { data: role, error: roleError } = await supabase
+        .from('roles')
+        .select('*')
+        .eq('id', basicUser.role_id)
+        .single();
+
+      if (roleError) {
+        this.logger.error('[findOne] Error fetching role:', {
+          roleId: basicUser.role_id,
+          errorCode: roleError.code,
+          errorMessage: roleError.message,
+        });
+      } else {
+        roleData = role;
+        this.logger.log(`[findOne] Role found: ${role.name}`);
+      }
+    }
+
+    // Try to get role-specific data
+    let teacherData = null;
+    let adminData = null;
+    let studentData = null;
+
+    // Check for teacher data
+    const { data: teacher, error: teacherError } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('user_id', id)
+      .single();
+
+    if (teacherError && teacherError.code !== 'PGRST116') {
+      this.logger.error('[findOne] Error fetching teacher data:', {
+        userId: id,
+        errorCode: teacherError.code,
+        errorMessage: teacherError.message,
+      });
+    } else if (teacher) {
+      teacherData = teacher;
+      this.logger.log(`[findOne] Teacher data found: ${teacher.first_name} ${teacher.last_name}`);
+    }
+
+    // Check for admin data
+    const { data: admin, error: adminError } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('user_id', id)
+      .single();
+
+    if (adminError && adminError.code !== 'PGRST116') {
+      this.logger.error('[findOne] Error fetching admin data:', {
+        userId: id,
+        errorCode: adminError.code,
+        errorMessage: adminError.message,
+      });
+    } else if (admin) {
+      adminData = admin;
+      this.logger.log(`[findOne] Admin data found: ${admin.name}`);
+    }
+
+    // Check for student data
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('user_id', id)
+      .single();
+
+    if (studentError && studentError.code !== 'PGRST116') {
+      this.logger.error('[findOne] Error fetching student data:', {
+        userId: id,
+        errorCode: studentError.code,
+        errorMessage: studentError.message,
+      });
+    } else if (student) {
+      studentData = student;
+      this.logger.log(`[findOne] Student data found: ${student.first_name} ${student.last_name}`);
+    }
+
+    // Construct the final user object
+    const user = {
+      ...basicUser,
+      role: roleData,
+      teacher: teacherData,
+      admin: adminData,
+      student: studentData,
+    };
+
+    this.logger.log(`[findOne] Final user object constructed for: ${user.email}`);
     return user;
   }
 

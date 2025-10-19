@@ -34,13 +34,13 @@ import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 
 @ApiTags('Departments')
 @Controller('departments')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
-@ApiBearerAuth('JWT-auth')
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Post()
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create new department (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -65,7 +65,6 @@ export class DepartmentsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all departments' })
   @ApiQuery({
     name: 'page',
@@ -122,7 +121,6 @@ export class DepartmentsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get department by ID' })
   @ApiParam({ name: 'id', description: 'Department ID' })
   @ApiResponse({
@@ -141,7 +139,9 @@ export class DepartmentsController {
   }
 
   @Patch(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update department (Admin only)' })
   @ApiParam({ name: 'id', description: 'Department ID' })
   @ApiResponse({
@@ -169,7 +169,9 @@ export class DepartmentsController {
   }
 
   @Delete(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Soft delete department (Admin only)' })
   @ApiParam({ name: 'id', description: 'Department ID' })
@@ -191,7 +193,9 @@ export class DepartmentsController {
   }
 
   @Post(':id/activate')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Activate department (Admin only)' })
   @ApiParam({ name: 'id', description: 'Department ID' })
   @ApiResponse({
@@ -213,7 +217,9 @@ export class DepartmentsController {
   }
 
   @Post(':id/deactivate')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Deactivate department (Admin only)' })
   @ApiParam({ name: 'id', description: 'Department ID' })
   @ApiResponse({
@@ -235,7 +241,9 @@ export class DepartmentsController {
   }
 
   @Post(':id/assign-head')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Assign department head (Admin only)' })
   @ApiParam({ name: 'id', description: 'Department ID' })
   @ApiResponse({

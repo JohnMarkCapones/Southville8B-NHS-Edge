@@ -78,8 +78,8 @@ export class AlertsService {
    */
   async findAll(
     queryDto: QueryAlertDto,
-    userId: string,
-    userRole: UserRole,
+    userId?: string,
+    userRole?: UserRole,
   ): Promise<{
     data: Alert[];
     total: number;
@@ -100,12 +100,15 @@ export class AlertsService {
 
       let query = supabase.from('alerts').select('*', { count: 'exact' });
 
-      // Apply authorization filter
-      if (userRole !== UserRole.ADMIN) {
+      // Apply authorization filter (only if user is authenticated)
+      if (userId && userRole && userRole !== UserRole.ADMIN) {
         // Non-admins only see:
         // 1. Global alerts (recipient_id is null)
         // 2. Alerts targeted to them (recipient_id = userId)
         query = query.or(`recipient_id.is.null,recipient_id.eq.${userId}`);
+      } else if (!userId) {
+        // Public access - only show global alerts (recipient_id is null)
+        query = query.is('recipient_id', null);
       }
 
       // Filter by type if provided
@@ -157,20 +160,23 @@ export class AlertsService {
    */
   async findOne(
     id: string,
-    userId: string,
-    userRole: UserRole,
+    userId?: string,
+    userRole?: UserRole,
   ): Promise<Alert> {
     try {
       const supabase = this.getSupabaseClient();
 
       let query = supabase.from('alerts').select('*').eq('id', id);
 
-      // Apply authorization filter
-      if (userRole !== UserRole.ADMIN) {
+      // Apply authorization filter (only if user is authenticated)
+      if (userId && userRole && userRole !== UserRole.ADMIN) {
         // Non-admins only see:
         // 1. Global alerts (recipient_id is null)
         // 2. Alerts targeted to them (recipient_id = userId)
         query = query.or(`recipient_id.is.null,recipient_id.eq.${userId}`);
+      } else if (!userId) {
+        // Public access - only show global alerts (recipient_id is null)
+        query = query.is('recipient_id', null);
       }
 
       const { data: alert, error } = await query.single();

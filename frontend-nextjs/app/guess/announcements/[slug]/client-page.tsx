@@ -20,8 +20,6 @@ import {
   Users,
   Clock,
 } from "lucide-react"
-import { getAnnouncementBySlug, getRelatedAnnouncements, announcementsData } from "@/lib/announcements-data"
-
 const categoryConfig = {
   urgent: {
     icon: AlertCircle,
@@ -53,20 +51,29 @@ const categoryConfig = {
   },
 }
 
-export default function AnnouncementDetailClient({ params }: { params: { slug: string } }) {
-  const announcement = getAnnouncementBySlug(params.slug)
-  if (!announcement) {
-    return null
-  }
+type Announcement = {
+  id: string
+  title: string
+  excerpt: string
+  content: string
+  category: 'urgent' | 'academic' | 'event' | 'general'
+  date: string
+  author: { name: string }
+  source: string
+  sticky: boolean
+  slug: string
+  tags: string[]
+  attachments: any[]
+}
 
+export default function AnnouncementDetailClient({ announcement }: { announcement: Announcement }) {
   const config = categoryConfig[announcement.category]
   const Icon = config.icon
-  const relatedAnnouncements = getRelatedAnnouncements(announcement.slug, announcement.category)
-
-  // Find previous and next announcements
-  const currentIndex = announcementsData.findIndex((a) => a.slug === announcement.slug)
-  const previousAnnouncement = currentIndex > 0 ? announcementsData[currentIndex - 1] : null
-  const nextAnnouncement = currentIndex < announcementsData.length - 1 ? announcementsData[currentIndex + 1] : null
+  
+  // For now, no related announcements since we're not fetching all data
+  const relatedAnnouncements: Announcement[] = []
+  const previousAnnouncement = null
+  const nextAnnouncement = null
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -186,7 +193,23 @@ export default function AnnouncementDetailClient({ params }: { params: { slug: s
             {/* Article Content */}
             <AnimatedCard className="mb-8">
               <div
-                className="prose prose-slate dark:prose-invert max-w-none p-8 prose-headings:font-bold prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4 prose-h4:text-lg prose-h4:mt-6 prose-h4:mb-3 prose-p:leading-relaxed prose-p:mb-4 prose-ul:my-4 prose-li:my-2 prose-strong:text-foreground"
+                className={cn(
+                  "prose prose-slate dark:prose-invert max-w-none p-8",
+                  "prose-headings:font-bold prose-headings:text-foreground",
+                  "prose-h1:text-3xl prose-h1:mt-8 prose-h1:mb-6 prose-h1:leading-tight",
+                  "prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:leading-tight",
+                  "prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4 prose-h3:leading-tight",
+                  "prose-h4:text-lg prose-h4:mt-6 prose-h4:mb-3 prose-h4:leading-tight",
+                  "prose-p:leading-relaxed prose-p:mb-6 prose-p:text-foreground",
+                  "prose-ul:my-6 prose-ul:pl-6",
+                  "prose-ol:my-6 prose-ol:pl-6",
+                  "prose-li:my-2 prose-li:leading-relaxed",
+                  "prose-strong:text-foreground prose-strong:font-semibold",
+                  "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
+                  "prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-6 prose-blockquote:italic",
+                  "prose-code:bg-muted prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm",
+                  "prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto"
+                )}
                 dangerouslySetInnerHTML={{ __html: announcement.content }}
               />
 

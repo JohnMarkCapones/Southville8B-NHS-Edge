@@ -34,6 +34,9 @@ import { DepartmentsModule } from './departments/departments.module';
 import { DesktopSidebarModule } from './desktop-sidebar/desktop-sidebar.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { SubjectsModule } from './subjects/subjects.module';
+import { TeacherFilesModule } from './teacher-files/teacher-files.module';
+import { QuizModule } from './quiz/quiz.module';
+import { NewsModule } from './news/news.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
 
@@ -79,6 +82,9 @@ import r2Config from './config/r2.config';
     DesktopSidebarModule,
     AdminDashboardModule,
     SubjectsModule,
+    TeacherFilesModule,
+    QuizModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [AppService, R2ConfigValidationService],

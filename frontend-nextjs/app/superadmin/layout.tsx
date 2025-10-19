@@ -3,6 +3,7 @@
 import type React from "react"
 import { usePathname } from "next/navigation"
 import { DashboardLayout } from "@/components/superadmin/dashboard/layout"
+import { RequireAuth } from "@/components/auth"
 
 export default function SuperAdminLayout({
   children,
@@ -145,9 +146,11 @@ export default function SuperAdminLayout({
   const { activeSection, activeSubSection } = getCurrentSection()
 
   return (
-    <DashboardLayout activeSection={activeSection} activeSubSection={activeSubSection}>
-      {children}
-    </DashboardLayout>
+    <RequireAuth requiredRoles={['Admin']}>
+      <DashboardLayout activeSection={activeSection} activeSubSection={activeSubSection}>
+        {children}
+      </DashboardLayout>
+    </RequireAuth>
   )
 }
 
