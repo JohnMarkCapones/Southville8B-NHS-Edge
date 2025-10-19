@@ -92,7 +92,7 @@ export class NewsController {
   @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async findBySlugPublic(@Param('slug') slug: string) {
-    return this.newsService.findBySlug(slug);
+    return this.newsService.findBySlugPublic(slug);
   }
 
   // ============================================
