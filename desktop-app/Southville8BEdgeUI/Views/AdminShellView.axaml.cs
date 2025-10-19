@@ -3,28 +3,28 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Southville8BEdgeUI.Services;
 using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Southville8BEdgeUI.Views;
 
 public partial class AdminShellView : UserControl
 {
-    private readonly IToastService _toastService = new ToastService();
-    private readonly IDialogService _dialogService = new DialogService();
+    private readonly IToastService _toastService;
+    private readonly IDialogService _dialogService;
 
     public AdminShellView()
     {
         InitializeComponent();
+        
+        // Get services from DI container
+        _toastService = ServiceLocator.Services.GetRequiredService<IToastService>();
+        _dialogService = ServiceLocator.Services.GetRequiredService<IDialogService>();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-
-        var window = TopLevel.GetTopLevel(this) as Window;
-        if (window is not null)
-        {
-            _toastService.Initialize(window);
-        }
+        // ToastService is now initialized in MainWindow, no need to initialize here
     }
 
     // Expose helpers so View-layer code can trigger notifications if needed

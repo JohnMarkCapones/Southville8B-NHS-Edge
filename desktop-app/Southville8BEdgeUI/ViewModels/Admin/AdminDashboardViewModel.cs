@@ -3,23 +3,35 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Southville8BEdgeUI.Converters;
 using Avalonia.Data;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
-public partial class AdminDashboardViewModel : ViewModelBase
+public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
 {
+    private readonly IApiClient _apiClient;
+    private readonly ISseService _sseService;
+
     // Main Statistics
     [ObservableProperty] private int _totalStudents = 1512;
     [ObservableProperty] private int _activeTeachers = 45;
+    [ObservableProperty] private int _totalSections = 144;
     [ObservableProperty] private int _totalStaff = 12;
     [ObservableProperty] private int _upcomingEventsCount = 8;
     [ObservableProperty] private int _availableRoomsCount = 15;
     [ObservableProperty] private int _totalRooms = 36;
+
+    // Loading and Error States
+    [ObservableProperty] private bool _isLoadingMetrics;
+    [ObservableProperty] private bool _hasMetricsError;
 
     // Performance Metrics
     [ObservableProperty] private double _studentAttendanceRate = 94.2;
@@ -52,7 +64,7 @@ public partial class AdminDashboardViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<GradeDistributionViewModel> _gradeDistribution = default!;
 
     // Quick Action Commands
-    public IRelayCommand? NavigateToRoomManagementCommand { get; set; }
+    public IRelayCommand? NavigateToBuildingManagementCommand { get; set; }
     public IRelayCommand? NavigateToEventsDashboardCommand { get; set; }
     public IRelayCommand? NavigateToUserManagementCommand { get; set; }
     public IRelayCommand? NavigateToChatCommand { get; set; }
@@ -67,14 +79,29 @@ public partial class AdminDashboardViewModel : ViewModelBase
         SystemUptime > 99.5 ? "SuccessBrush" : SystemUptime > 95 ? "WarningBrush" : "DangerBrush",
         "TextPrimaryBrush");
 
-    public AdminDashboardViewModel()
+    public AdminDashboardViewModel(IApiClient apiClient, ISseService sseService, string? accessToken = null)
     {
+        _apiClient = apiClient;
+        _sseService = sseService;
+        
+        // Set access token immediately if provided
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            _apiClient.SetAccessToken(accessToken);
+        }
+        
         InitializeWeeklyStats();
         InitializeUpcomingEvents();
         InitializeRecentActivities();
         InitializeSystemAlerts();
         InitializePerformanceMetrics();
         InitializeGradeDistribution();
+        
+        // Subscribe to SSE updates
+        SubscribeToDashboardUpdates();
+        
+        // Load initial metrics
+        _ = LoadDashboardMetrics();
     }
 
     private static IBrush ResolveBrush(string key, string fallbackKey)
@@ -187,10 +214,69 @@ public partial class AdminDashboardViewModel : ViewModelBase
         };
     }
 
-    [RelayCommand] private void RefreshDashboard() { }
+    [RelayCommand] 
+    private void RefreshDashboard() 
+    { 
+        _ = LoadDashboardMetrics();
+    }
+    
     [RelayCommand] private void ViewAllAlerts() { }
     [RelayCommand] private void DismissAlert(SystemAlertViewModel alert) { SystemAlerts.Remove(alert); }
     [RelayCommand] private void ViewDetailedReports() { }
+
+    private async Task LoadDashboardMetrics()
+    {
+        IsLoadingMetrics = true;
+        HasMetricsError = false;
+        
+        try 
+        {
+            var metrics = await _apiClient.GetAdminDashboardMetricsAsync();
+            if (metrics != null)
+            {
+                TotalStudents = metrics.TotalStudents;
+                ActiveTeachers = metrics.ActiveTeachers;
+                TotalSections = metrics.TotalSections;
+                OnlineUsersCount = metrics.OnlineUsersCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading dashboard metrics: {ex.Message}");
+            HasMetricsError = true;
+            // Keep existing values as fallback
+        }
+        finally
+        {
+            IsLoadingMetrics = false;
+        }
+    }
+
+    private void SubscribeToDashboardUpdates()
+    {
+        _sseService.DashboardMetricsUpdated += OnDashboardMetricsUpdated;
+    }
+
+    private void OnDashboardMetricsUpdated(object? sender, AdminDashboardMetrics metrics)
+    {
+        // Marshal property updates to UI thread to avoid cross-thread binding exceptions
+        Dispatcher.UIThread.Post(() =>
+        {
+            TotalStudents = metrics.TotalStudents;
+            ActiveTeachers = metrics.ActiveTeachers;
+            TotalSections = metrics.TotalSections;
+            OnlineUsersCount = metrics.OnlineUsersCount;
+        });
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from SSE events to prevent memory leaks
+        if (_sseService != null)
+        {
+            _sseService.DashboardMetricsUpdated -= OnDashboardMetricsUpdated;
+        }
+    }
 }
 
 public partial class WeeklyStatViewModel : ViewModelBase
@@ -353,6 +439,82 @@ public partial class GradeDistributionViewModel : ViewModelBase
 
     // Notify dependent brush when the key changes
     partial void OnColorKeyChanged(string value) => OnPropertyChanged(nameof(ColorBrush));
+}
+
+public partial class DetailedEventViewModel : ViewModelBase
+{
+    [ObservableProperty] private string _title = "";
+    [ObservableProperty] private string _description = "";
+    [ObservableProperty] private DateTime _startTime;
+    [ObservableProperty] private DateTime _endTime;
+    [ObservableProperty] private string _location = "";
+    [ObservableProperty] private string _type = "";
+    [ObservableProperty] private string _status = "";
+    [ObservableProperty] private int _attendeeCount;
+
+    public string TimeRange => $"{StartTime:MMM dd, hh:mm tt} - {EndTime:hh:mm tt}";
+    public string StatusText => Status switch
+    {
+        "upcoming" => "Upcoming",
+        "ongoing" => "Ongoing", 
+        "completed" => "Completed",
+        "cancelled" => "Cancelled",
+        _ => Status
+    };
+
+    public IBrush StatusBrush => Status switch
+    {
+        "upcoming" => AdminDashboardViewModel.ResolveBrushStatic("InfoBrush", "TextPrimaryBrush"),
+        "ongoing" => AdminDashboardViewModel.ResolveBrushStatic("SuccessBrush", "TextPrimaryBrush"),
+        "completed" => AdminDashboardViewModel.ResolveBrushStatic("TextMutedBrush", "TextPrimaryBrush"),
+        "cancelled" => AdminDashboardViewModel.ResolveBrushStatic("DangerBrush", "TextPrimaryBrush"),
+        _ => AdminDashboardViewModel.ResolveBrushStatic("TextMutedBrush", "TextPrimaryBrush")
+    };
+
+    partial void OnStartTimeChanged(DateTime value) => OnPropertyChanged(nameof(TimeRange));
+    partial void OnEndTimeChanged(DateTime value) => OnPropertyChanged(nameof(TimeRange));
+    partial void OnStatusChanged(string value)
+    {
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(StatusBrush));
+    }
+}
+
+public partial class RecentActivityViewModel : ViewModelBase
+{
+    [ObservableProperty] private string _user = "";
+    [ObservableProperty] private string _action = "";
+    [ObservableProperty] private string _target = "";
+    [ObservableProperty] private DateTime _timestamp;
+    [ObservableProperty] private string _type = "";
+
+    public string TimeAgo
+    {
+        get
+        {
+            var diff = DateTime.Now - Timestamp;
+            if (diff.TotalMinutes < 60)
+                return $"{(int)diff.TotalMinutes}m ago";
+            if (diff.TotalHours < 24)
+                return $"{(int)diff.TotalHours}h ago";
+            return $"{(int)diff.TotalDays}d ago";
+        }
+    }
+
+    public string Description => $"{User} {Action} {Target}";
+    public string IconName => Type switch
+    {
+        "user" => "Person",
+        "system" => "Settings",
+        "security" => "Shield",
+        "data" => "Database",
+        _ => "Info"
+    };
+
+    partial void OnTimestampChanged(DateTime value) => OnPropertyChanged(nameof(TimeAgo));
+    partial void OnUserChanged(string value) => OnPropertyChanged(nameof(Description));
+    partial void OnActionChanged(string value) => OnPropertyChanged(nameof(Description));
+    partial void OnTargetChanged(string value) => OnPropertyChanged(nameof(Description));
 }
 
 // Static helper for nested VM brush resolution

@@ -6,6 +6,7 @@ namespace Southville8BEdgeUI.Converters
 {
     public class BoolToArrowConverter : IValueConverter
     {
+        public static readonly BoolToArrowConverter Instance = new();
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool isPositive)

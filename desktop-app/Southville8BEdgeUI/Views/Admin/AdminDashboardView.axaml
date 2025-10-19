@@ -333,13 +333,13 @@
         <Border Grid.Column="2" x:Name="KpiCard3" Classes="card kpi-card-standard">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Text="Online Users" Classes="stat-title"/>
+              <TextBlock Grid.Column="0" Text="Total Sections" Classes="stat-title"/>
               <Border Grid.Column="1" Background="{DynamicResource InfoSoftBrush}" CornerRadius="6" Padding="4">
-                <ic:FluentIcon x:Name="OnlineIcon" Icon="Globe" IconSize="Size20"/>
+                <ic:FluentIcon x:Name="SectionsIcon" Icon="Box" IconSize="Size20"/>
               </Border>
             </Grid>
-            <TextBlock x:Name="OnlineUsersValue" Text="{Binding OnlineUsersCount}" Classes="stat-value"/>
-            <TextBlock x:Name="OnlineUsersSubtext" Text="Currently active" Classes="small-text" Foreground="{DynamicResource InfoBrush}"/>
+            <TextBlock x:Name="TotalSectionsValue" Text="{Binding TotalSections}" Classes="stat-value"/>
+            <TextBlock x:Name="SectionsSubtext" Text="Active sections" Classes="small-text" Foreground="{DynamicResource InfoBrush}"/>
           </StackPanel>
         </Border>
         <Border Grid.Column="3" x:Name="KpiCard4" Classes="card kpi-card-standard">
@@ -478,7 +478,7 @@
             <TextBlock Text="Quick Actions" Classes="section-header"/>
             <Grid x:Name="QuickActionsGrid" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
               <Button Grid.Column="0" Grid.Row="0" x:Name="RoomsButton" Classes="quick-action" Background="{DynamicResource IndigoBrush}"
-                      Command="{Binding NavigateToRoomManagementCommand}" Margin="0,0,8,8">
+                      Command="{Binding NavigateToBuildingManagementCommand}" Margin="0,0,8,8">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <ic:FluentIcon Icon="Door" IconSize="Size20"/>
                   <TextBlock Text="Rooms"/>

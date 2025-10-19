@@ -150,6 +150,12 @@ export class BuildingsController {
     @AuthUser() user: SupabaseUser,
   ) {
     console.log(`Updating building ${id} for user: ${user.email} (${user.id})`);
+    console.log(
+      'RAW BODY received in controller:',
+      JSON.stringify(updateBuildingDto),
+    );
+    console.log('DTO keys:', Object.keys(updateBuildingDto));
+    console.log('DTO values:', Object.values(updateBuildingDto));
     return this.buildingsService.update(id, updateBuildingDto);
   }
 
