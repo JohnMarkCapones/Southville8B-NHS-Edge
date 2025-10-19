@@ -30,7 +30,8 @@ ON CONFLICT (slug) DO NOTHING;
 -- STEP 2: CREATE TAGS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS tags (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), 
+  
   name varchar(100) UNIQUE NOT NULL,
   slug varchar(120) UNIQUE NOT NULL,
   created_at timestamptz DEFAULT now()

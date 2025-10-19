@@ -9,7 +9,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 export class NewsAccessService {
   private readonly logger = new Logger(NewsAccessService.name);
 
-  // Positions that can create/submit articles
+  // Positions that can create/submit articles (both students and teachers)
   private readonly PUBLISHING_POSITIONS = [
     'Adviser',
     'Co-Adviser',
@@ -19,7 +19,7 @@ export class NewsAccessService {
     'Writer',
   ];
 
-  // Positions that can approve articles (Teachers only)
+  // Teacher positions that can approve articles
   private readonly APPROVER_POSITIONS = ['Adviser', 'Co-Adviser'];
 
   constructor(private readonly supabaseService: SupabaseService) {}

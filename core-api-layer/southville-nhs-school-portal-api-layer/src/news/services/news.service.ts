@@ -400,7 +400,7 @@ export class NewsService {
       .select(
         `
         *,
-        author:users(id, full_name, email),
+        author:users!news_author_id_fkey(id, full_name, email),
         category:news_categories(id, name, slug)
       `,
       )
@@ -454,12 +454,12 @@ export class NewsService {
       .select(
         `
         *,
-        author:users(id, full_name, email),
+        author:users!news_author_id_fkey(id, full_name, email),
         category:news_categories(id, name, slug),
         tags:news_tags(tag:tags(id, name, slug)),
         co_authors:news_co_authors(
           id, role,
-          user:users(id, full_name, email)
+          user:users!news_co_authors_co_author_user_id_fkey(id, full_name, email)
         )
       `,
       )
@@ -487,12 +487,12 @@ export class NewsService {
       .select(
         `
         *,
-        author:users(id, full_name, email),
+        author:users!news_author_id_fkey(id, full_name, email),
         category:news_categories(id, name, slug),
         tags:news_tags(tag:tags(id, name, slug)),
         co_authors:news_co_authors(
           id, role,
-          user:users(id, full_name, email)
+          user:users!news_co_authors_co_author_user_id_fkey(id, full_name, email)
         )
       `,
       )

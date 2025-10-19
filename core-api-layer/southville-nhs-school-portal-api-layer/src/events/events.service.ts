@@ -264,10 +264,7 @@ export class EventsService {
 
     // Start with a simple query to avoid complex joins that might fail
     let query = supabase.from('events').select(
-      `
-        *,
-        organizer:users!organizer_id(id, full_name, email)
-      `,
+      `*`,
       { count: 'exact' },
     );
 
@@ -399,7 +396,7 @@ export class EventsService {
       .select(
         `
         *,
-        organizer:users(id, full_name, email),
+        organizer:users!events_organizer_id_fkey(id, full_name, email),
         tags:event_tags(tag:tags(id, name, color)),
         additionalInfo:event_additional_info(id, title, content, order_index),
         highlights:event_highlights(id, title, content, image_url, order_index),
