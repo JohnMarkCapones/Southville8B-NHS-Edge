@@ -37,8 +37,6 @@ import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Academic Calendar')
 @Controller('academic-calendar')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
-@ApiBearerAuth('JWT-auth')
 export class AcademicCalendarController {
   private readonly logger = new Logger(AcademicCalendarController.name);
 
@@ -47,7 +45,9 @@ export class AcademicCalendarController {
   ) {}
 
   @Post()
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Create a new academic calendar (Admin only)',
     description:
@@ -81,7 +81,6 @@ export class AcademicCalendarController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get all academic calendars',
     description:
@@ -179,7 +178,6 @@ export class AcademicCalendarController {
   }
 
   @Get('current')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get current month calendar',
     description: 'Retrieve the academic calendar for the current month',
@@ -202,7 +200,6 @@ export class AcademicCalendarController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get a specific academic calendar by ID',
     description: 'Retrieve a single academic calendar with optional days',
@@ -239,7 +236,9 @@ export class AcademicCalendarController {
   }
 
   @Patch(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update an academic calendar (Admin only)',
     description: 'Update an existing academic calendar',
@@ -278,7 +277,9 @@ export class AcademicCalendarController {
   }
 
   @Delete(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Delete an academic calendar (Admin only)',
     description: 'Permanently delete an academic calendar and all related data',
@@ -342,7 +343,6 @@ export class AcademicCalendarController {
   }
 
   @Get(':id/days')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get all days for a calendar',
     description: 'Retrieve all calendar days for a specific academic calendar',
@@ -373,7 +373,9 @@ export class AcademicCalendarController {
   }
 
   @Patch('days/:dayId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update a calendar day (Admin only)',
     description: 'Update a specific calendar day',

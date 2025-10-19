@@ -44,9 +44,7 @@ import { UserRole } from '../users/dto/create-user.dto';
 import { AuditInterceptor } from './audit.interceptor';
 
 @ApiTags('Events')
-@ApiBearerAuth('JWT-auth')
 @Controller('events')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
 @UseInterceptors(AuditInterceptor)
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
@@ -54,7 +52,9 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new event (Admin/Teacher only)' })
   @ApiResponse({
     status: 201,
@@ -76,7 +76,6 @@ export class EventsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get all events with pagination and filtering',
   })
@@ -165,7 +164,6 @@ export class EventsController {
   }
 
   @Get('upcoming')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get upcoming events' })
   @ApiResponse({
     status: 200,
@@ -177,7 +175,6 @@ export class EventsController {
   }
 
   @Get('organizer/:organizerId')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get events by organizer' })
   @ApiQuery({
     name: 'page',
@@ -206,7 +203,6 @@ export class EventsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get event by ID' })
   @ApiResponse({
     status: 200,
@@ -220,7 +216,9 @@ export class EventsController {
   }
 
   @Patch(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update event (Admin or organizer)' })
   @ApiResponse({
     status: 200,
@@ -244,7 +242,9 @@ export class EventsController {
   }
 
   @Delete(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete event (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -259,7 +259,9 @@ export class EventsController {
 
   // Additional Info endpoints
   @Post(':id/additional-info')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add additional info to event' })
   @ApiResponse({
     status: 201,
@@ -277,7 +279,9 @@ export class EventsController {
   }
 
   @Patch(':id/additional-info/:infoId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update additional info' })
   @ApiResponse({
     status: 200,
@@ -296,7 +300,9 @@ export class EventsController {
   }
 
   @Delete(':id/additional-info/:infoId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Remove additional info' })
   @ApiResponse({
     status: 200,
@@ -313,7 +319,9 @@ export class EventsController {
 
   // Highlights endpoints
   @Post(':id/highlights')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add highlight to event' })
   @ApiResponse({
     status: 201,
@@ -331,7 +339,9 @@ export class EventsController {
   }
 
   @Patch(':id/highlights/:highlightId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update highlight' })
   @ApiResponse({
     status: 200,
@@ -350,7 +360,9 @@ export class EventsController {
   }
 
   @Delete(':id/highlights/:highlightId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Remove highlight' })
   @ApiResponse({
     status: 200,
@@ -367,7 +379,9 @@ export class EventsController {
 
   // Schedule endpoints
   @Post(':id/schedule')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add schedule item to event' })
   @ApiResponse({
     status: 201,
@@ -385,7 +399,9 @@ export class EventsController {
   }
 
   @Patch(':id/schedule/:scheduleId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update schedule item' })
   @ApiResponse({
     status: 200,
@@ -404,7 +420,9 @@ export class EventsController {
   }
 
   @Delete(':id/schedule/:scheduleId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Remove schedule item' })
   @ApiResponse({
     status: 200,
@@ -421,7 +439,9 @@ export class EventsController {
 
   // FAQ endpoints
   @Post(':id/faq')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add FAQ to event' })
   @ApiResponse({
     status: 201,
@@ -439,7 +459,9 @@ export class EventsController {
   }
 
   @Patch(':id/faq/:faqId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update FAQ' })
   @ApiResponse({
     status: 200,
@@ -458,7 +480,9 @@ export class EventsController {
   }
 
   @Delete(':id/faq/:faqId')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Remove FAQ' })
   @ApiResponse({
     status: 200,
@@ -475,7 +499,9 @@ export class EventsController {
 
   // Reorder endpoints
   @Patch(':id/reorder/:entityType')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Reorder event items' })
   @ApiResponse({
     status: 200,

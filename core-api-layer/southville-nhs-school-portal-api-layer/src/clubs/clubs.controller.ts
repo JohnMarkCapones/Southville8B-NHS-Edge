@@ -27,13 +27,13 @@ import { UpdateClubDto } from './dto/update-club.dto';
 
 @ApiTags('clubs')
 @Controller('clubs')
-@UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
-@ApiBearerAuth('JWT-auth')
 export class ClubsController {
   constructor(private readonly clubsService: ClubsService) {}
 
   @Post()
+  @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new club' })
   @ApiResponse({ status: 201, description: 'Club created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -44,7 +44,6 @@ export class ClubsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all clubs' })
   @ApiResponse({ status: 200, description: 'Clubs retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -54,7 +53,6 @@ export class ClubsController {
   }
 
   @Get(':clubId')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get club by ID' })
   @ApiResponse({ status: 200, description: 'Club retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Club not found' })
@@ -65,8 +63,10 @@ export class ClubsController {
   }
 
   @Patch(':clubId')
+  @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Policies('clubId', 'club.edit')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update club' })
   @ApiResponse({ status: 200, description: 'Club updated successfully' })
   @ApiResponse({ status: 404, description: 'Club not found' })
@@ -80,8 +80,10 @@ export class ClubsController {
   }
 
   @Delete(':clubId')
+  @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Policies('clubId', 'club.delete')
+  @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete club' })
   @ApiResponse({ status: 204, description: 'Club deleted successfully' })
@@ -95,8 +97,6 @@ export class ClubsController {
   // Club Management endpoints with PBAC
 
   @Get(':clubId/members')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Policies('clubId', 'club.view_members')
   @ApiOperation({ summary: 'Get club members' })
   @ApiResponse({
     status: 200,
@@ -109,8 +109,10 @@ export class ClubsController {
   }
 
   @Post(':clubId/members')
+  @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Policies('clubId', 'club.manage_members')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add member to club' })
   @ApiResponse({ status: 201, description: 'Member added successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -121,8 +123,10 @@ export class ClubsController {
   }
 
   @Patch(':clubId/finances')
+  @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Policies('clubId', 'club.manage_finances')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update club finances' })
   @ApiResponse({ status: 200, description: 'Finances updated successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })

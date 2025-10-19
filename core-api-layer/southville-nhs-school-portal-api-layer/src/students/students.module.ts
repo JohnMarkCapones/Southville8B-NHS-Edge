@@ -5,7 +5,10 @@ import { AuthModule } from '../auth/auth.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [AuthModule, SupabaseModule], // Import AuthModule and SupabaseModule
+  imports: [
+    AuthModule, // Import AuthModule to access AuthService and SupabaseAuthGuard
+    SupabaseModule, // Import SupabaseModule to access SupabaseService
+  ],
   controllers: [StudentsController],
   providers: [StudentsService],
 })

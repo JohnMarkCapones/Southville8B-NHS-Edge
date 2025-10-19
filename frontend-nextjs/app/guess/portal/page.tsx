@@ -6,18 +6,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, EyeOff, LogIn, User, Users, GraduationCap, Shield, Sparkles, Zap, Star, Lock, Globe } from "lucide-react"
+import { Eye, EyeOff, LogIn, User, Users, GraduationCap, Shield, Sparkles, Zap, Star, Lock, Globe, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import React from "react"
 import { useTheme } from "next-themes"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { loginAction } from "@/app/actions/auth"
 
 export default function UnifiedPortalPage() {
   const [showPassword, setShowPassword] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
   const { theme } = useTheme()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const role = searchParams.get("role") || "student"
   const isGamingTheme = theme === "gaming"
 
@@ -64,15 +70,37 @@ export default function UnifiedPortalPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setIsLoading(true)
 
-    // Simulate login process
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Call login server action
+      const result = await loginAction({ email, password })
 
-    // Redirect based on role
-    window.location.href = `/dashboard/${role}`
+      if (!result.success) {
+        setError(result.error || 'Login failed. Please try again.')
+        setIsLoading(false)
+        return
+      }
 
-    setIsLoading(false)
+      // Redirect based on role
+      const redirectPath = result.role === 'Admin' 
+        ? '/superadmin' 
+        : result.role === 'Teacher' 
+        ? '/teacher' 
+        : '/student'
+
+      console.log('[Login] ✅ Login successful, redirecting to:', redirectPath);
+      console.log('[Login] User role:', result.role);
+      
+      // Use hard navigation to ensure cookies are sent with next request
+      // This prevents race conditions with client-side routing
+      window.location.href = redirectPath;
+    } catch (err: any) {
+      console.error('[Login] ❌ Login error:', err)
+      setError(err.message || 'An unexpected error occurred. Please try again.')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -168,22 +196,34 @@ export default function UnifiedPortalPage() {
 
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-6">
+                {/* Error Alert */}
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="space-y-2">
                   <Label
-                    htmlFor="username"
+                    htmlFor="email"
                     className={cn("text-sm font-medium", isGamingTheme && "text-gaming-neon-green")}
                   >
-                    User ID
+                    Email Address
                   </Label>
                   <Input
-                    id="username"
-                    placeholder={currentRole.placeholder}
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className={cn(
                       "h-12 text-base",
                       isGamingTheme &&
                         "bg-gaming-accent border-gaming-neon-green/30 text-gaming-neon-green placeholder:text-gaming-neon-green/50 focus:border-gaming-neon-green",
                     )}
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -199,12 +239,15 @@ export default function UnifiedPortalPage() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className={cn(
                         "h-12 text-base pr-12",
                         isGamingTheme &&
                           "bg-gaming-accent border-gaming-neon-green/30 text-gaming-neon-green placeholder:text-gaming-neon-green/50 focus:border-gaming-neon-green",
                       )}
                       required
+                      disabled={isLoading}
                     />
                     <Button
                       type="button"

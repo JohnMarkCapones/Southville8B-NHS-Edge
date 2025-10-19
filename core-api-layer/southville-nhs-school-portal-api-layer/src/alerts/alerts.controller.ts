@@ -31,15 +31,15 @@ import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 
 @ApiTags('Alerts')
 @Controller('alerts')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
-@ApiBearerAuth('JWT-auth')
 export class AlertsController {
   private readonly logger = new Logger(AlertsController.name);
 
   constructor(private readonly alertsService: AlertsService) {}
 
   @Post()
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Create a new alert (Admin only)',
     description: 'Create a new alert that will be visible to all users',
@@ -69,7 +69,6 @@ export class AlertsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get all alerts',
     description: 'Retrieve all alerts with optional filtering and pagination',
@@ -133,7 +132,6 @@ export class AlertsController {
   })
   async findAll(
     @Query() queryDto: QueryAlertDto,
-    @AuthUser() user: SupabaseUser,
   ): Promise<{
     data: Alert[];
     total: number;
@@ -141,13 +139,11 @@ export class AlertsController {
     limit: number;
     totalPages: number;
   }> {
-    // Convert string role to UserRole enum
-    const userRole = (user.role as UserRole) || UserRole.STUDENT;
-    return this.alertsService.findAll(queryDto, user.id, userRole);
+    // Public endpoint - show all public alerts (no user filter)
+    return this.alertsService.findAll(queryDto);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get a specific alert by ID',
     description: 'Retrieve a single alert with all details',
@@ -166,21 +162,17 @@ export class AlertsController {
     status: 404,
     description: 'Alert not found',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
   async findOne(
     @Param('id') id: string,
-    @AuthUser() user: SupabaseUser,
   ): Promise<Alert> {
-    // Convert string role to UserRole enum
-    const userRole = (user.role as UserRole) || UserRole.STUDENT;
-    return this.alertsService.findOne(id, user.id, userRole);
+    // Public endpoint - show alert without user filter
+    return this.alertsService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update an alert (Admin only)',
     description: 'Update an existing alert',
@@ -220,7 +212,9 @@ export class AlertsController {
   }
 
   @Delete(':id')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Delete an alert (Admin only)',
     description: 'Permanently delete an alert',
