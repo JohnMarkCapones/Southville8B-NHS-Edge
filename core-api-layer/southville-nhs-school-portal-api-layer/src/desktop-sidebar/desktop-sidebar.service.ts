@@ -52,11 +52,11 @@ export class DesktopSidebarService {
 
   private async fetchMetrics(): Promise<SidebarMetrics> {
     try {
-      // Fetch events count
+      // Fetch events count (published + completed events only)
       const { count: eventsCount } = await this.supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved');
+        .in('status', ['published', 'completed']);
 
       // Fetch teachers count (users with teacher role)
       const { count: teachersCount } = await this.supabase

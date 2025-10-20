@@ -11,6 +11,8 @@ import {
   UseInterceptors,
   Logger,
   ParseIntPipe,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +20,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -31,6 +34,8 @@ import { UpdateEventScheduleDto } from './dto/update-event-schedule.dto';
 import { CreateEventFaqDto } from './dto/create-event.dto';
 import { UpdateEventFaqDto } from './dto/update-event-faq.dto';
 import { ReorderEventItemsDto } from './dto/reorder-event-items.dto';
+import { EventStatisticsDto } from './dto/event-statistics.dto';
+import { TagDto } from './dto/tag.dto';
 import { Event } from './entities/event.entity';
 import { EventAdditionalInfo } from './entities/event-additional-info.entity';
 import { EventHighlight } from './entities/event-highlight.entity';
@@ -42,6 +47,9 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AuthUser } from '../auth/auth-user.decorator';
 import { UserRole } from '../users/dto/create-user.dto';
 import { AuditInterceptor } from './audit.interceptor';
+import { v4 as uuidv4 } from 'uuid';
+import * as path from 'path';
+import { R2StorageService } from '../storage/r2-storage/r2-storage.service';
 
 @ApiTags('Events')
 @Controller('events')
@@ -49,7 +57,56 @@ import { AuditInterceptor } from './audit.interceptor';
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
 
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly r2StorageService: R2StorageService,
+  ) {}
+
+  /**
+   * Enrich event with presigned URL for image access
+   */
+  private async enrichEventWithPresignedUrl(event: any): Promise<any> {
+    if (!event.eventImage) return event;
+
+    try {
+      let fileKey: string | null = null;
+
+      // Check if it's already a key (new format)
+      if (event.eventImage.startsWith('events/images/')) {
+        fileKey = event.eventImage;
+      }
+      // Check if it's a public URL (old format) - extract the key
+      else if (event.eventImage.includes('/events/images/')) {
+        // Extract key from URL like: https://pub-xxx.r2.dev/events/images/filename.jpg
+        const urlParts = event.eventImage.split('/events/images/');
+        if (urlParts.length === 2) {
+          fileKey = `events/images/${urlParts[1]}`;
+        }
+      }
+
+      if (fileKey) {
+        this.logger.debug(
+          `Converting image URL to presigned URL. Original: ${event.eventImage}, Key: ${fileKey}`,
+        );
+        event.eventImage = await this.r2StorageService.getPresignedUrl(
+          fileKey,
+          86400,
+        );
+        this.logger.debug(`Generated presigned URL: ${event.eventImage}`);
+      } else {
+        this.logger.warn(
+          `Could not extract file key from image URL: ${event.eventImage}`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to generate presigned URL for ${event.eventImage}: ${error.message}`,
+      );
+      // Keep the original URL if presigned URL generation fails
+    }
+
+    return event;
+  }
 
   @Post()
   @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -160,7 +217,164 @@ export class EventsController {
       tagId,
       search,
     };
-    return this.eventsService.findAll(filters);
+    const result = await this.eventsService.findAll(filters);
+
+    // Enrich events with presigned URLs
+    if (result && result.data) {
+      for (const event of result.data) {
+        await this.enrichEventWithPresignedUrl(event);
+      }
+    }
+
+    return result;
+  }
+
+  @Get('statistics')
+  @ApiOperation({ summary: 'Get event statistics and KPIs' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event statistics retrieved successfully',
+    type: EventStatisticsDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getStatistics(): Promise<EventStatisticsDto> {
+    return this.eventsService.getStatistics();
+  }
+
+  @Get('tags')
+  @ApiOperation({ summary: 'Get all event tags' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event tags retrieved successfully',
+    type: [TagDto],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getTags(): Promise<TagDto[]> {
+    return this.eventsService.getTags();
+  }
+
+  @Post('upload-image')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Upload event image to R2 storage' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 200,
+    description: 'Image uploaded successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          example: 'https://pub-xxx.r2.dev/events/images/uuid-image.jpg',
+        },
+        fileName: { type: 'string' },
+        fileSize: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request - Invalid image file' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async uploadImage(@Req() request: any, @AuthUser('id') userId: string) {
+    try {
+      const parts = request.parts();
+      let imageBuffer: Buffer | null = null;
+      let imageFilename: string = '';
+      let imageMimeType: string = '';
+
+      for await (const part of parts) {
+        if (part.type === 'file' && part.fieldname === 'image') {
+          const chunks: Buffer[] = [];
+          for await (const chunk of part.file) {
+            chunks.push(chunk);
+          }
+          imageBuffer = Buffer.concat(chunks);
+          imageFilename = part.filename;
+          imageMimeType = part.mimetype;
+        }
+      }
+
+      if (!imageBuffer || !imageFilename) {
+        throw new BadRequestException('No image file provided');
+      }
+
+      // Validate image type
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+      ];
+      if (!allowedTypes.includes(imageMimeType)) {
+        throw new BadRequestException(
+          'Invalid image type. Allowed: JPEG, PNG, GIF, WEBP',
+        );
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024;
+      if (imageBuffer.length > maxSize) {
+        throw new BadRequestException(
+          `Image too large: ${(imageBuffer.length / (1024 * 1024)).toFixed(2)}MB. Maximum: 10MB`,
+        );
+      }
+
+      // Sanitize filename
+      const ext = path.extname(imageFilename);
+      const sanitizedName = imageFilename
+        .replace(ext, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .substring(0, 50);
+
+      // Generate unique file key for R2
+      const uniqueId = uuidv4();
+      const finalFilename = `${uniqueId}-${sanitizedName}${ext}`;
+      const fileKey = `events/images/${finalFilename}`;
+
+      this.logger.debug(`Uploading image to R2: ${fileKey}`);
+
+      // Upload to R2
+      const uploadResult = await this.r2StorageService.uploadFile(
+        fileKey,
+        imageBuffer,
+        imageMimeType,
+      );
+
+      if (!uploadResult.success) {
+        this.logger.error(`R2 upload failed for ${fileKey}`);
+        throw new BadRequestException('Failed to upload image to storage');
+      }
+
+      this.logger.log(`Image uploaded successfully: ${fileKey}`);
+
+      this.logger.debug(`Upload result: ${JSON.stringify(uploadResult)}`);
+
+      // Return file key instead of presigned URL to avoid database length limits
+      // Presigned URLs will be generated on-demand in findOne/findAll endpoints
+      return {
+        url: fileKey, // Store just the key, not the presigned URL
+        fileName: imageFilename,
+        fileSize: imageBuffer.length,
+      };
+    } catch (error) {
+      this.logger.error('Error uploading image:', error);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        `Failed to upload image: ${error.message || 'Unknown error'}`,
+      );
+    }
   }
 
   @Get('upcoming')
@@ -212,7 +426,8 @@ export class EventsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Event not found' })
   async findOne(@Param('id') id: string): Promise<Event> {
-    return this.eventsService.findOne(id);
+    const event = await this.eventsService.findOne(id);
+    return this.enrichEventWithPresignedUrl(event);
   }
 
   @Patch(':id')

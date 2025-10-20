@@ -134,9 +134,10 @@
                 <!-- Header -->
                 <Grid ColumnDefinitions="*,Auto">
                     <!-- <TextBlock Text="Buildings" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/> -->
-                    <Button Content="+ Add Building" 
-                            Command="{Binding OpenCreateBuildingDialogCommand}"
-                            Classes="primary-button"/>
+                    <Button Command="{Binding OpenCreateBuildingDialogCommand}"
+                            Classes="primary-button"
+                            Background="#C64747"/>
+                            <TextBlock Text="Add Building" Foreground="White"/>
                 </Grid>
 
                 <!-- Search Bar -->

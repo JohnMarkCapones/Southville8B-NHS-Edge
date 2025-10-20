@@ -27,6 +27,8 @@ import { UpdateEventScheduleDto } from './dto/update-event-schedule.dto';
 import { CreateEventFaqDto } from './dto/create-event.dto';
 import { UpdateEventFaqDto } from './dto/update-event-faq.dto';
 import { ReorderEventItemsDto } from './dto/reorder-event-items.dto';
+import { EventStatisticsDto } from './dto/event-statistics.dto';
+import { TagDto } from './dto/tag.dto';
 
 @Injectable()
 export class EventsService {
@@ -264,7 +266,10 @@ export class EventsService {
 
     // Start with a simple query to avoid complex joins that might fail
     let query = supabase.from('events').select(
-      `*`,
+      `
+      *,
+      organizer:users!events_organizer_id_fkey(id, full_name, email)
+    `,
       { count: 'exact' },
     );
 
@@ -1048,10 +1053,157 @@ export class EventsService {
     }
   }
 
+  async getTags(): Promise<TagDto[]> {
+    const cacheKey = 'events:tags';
+
+    // Try to get from cache first
+    const cached = await this.cacheManager.get<TagDto[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const supabase = this.getSupabaseClient();
+
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('id, name, slug')
+        .order('name', { ascending: true });
+
+      if (error) {
+        this.logger.error('Error fetching tags:', error);
+        throw new InternalServerErrorException('Failed to fetch tags');
+      }
+
+      const tags: TagDto[] = (data || []).map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        slug: tag.slug,
+      }));
+
+      // Cache the result for 10 minutes
+      await this.cacheManager.set(cacheKey, tags, this.UPCOMING_CACHE_TTL);
+
+      return tags;
+    } catch (error) {
+      this.logger.error('Error fetching tags:', error);
+      throw new InternalServerErrorException('Failed to fetch tags');
+    }
+  }
+
+  async getStatistics(): Promise<EventStatisticsDto> {
+    const cacheKey = 'events:statistics';
+
+    // Try to get from cache first
+    const cached = await this.cacheManager.get<EventStatisticsDto>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const supabase = this.getSupabaseClient();
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    try {
+      // Execute all queries in parallel for better performance
+      const [
+        totalResult,
+        thisWeekResult,
+        publishedResult,
+        draftResult,
+        cancelledResult,
+        upcomingResult,
+        pastResult,
+      ] = await Promise.all([
+        // Total events
+        supabase.from('events').select('id', { count: 'exact', head: true }),
+
+        // This week events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', startOfWeek.toISOString()),
+
+        // Published events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'published'),
+
+        // Draft events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'draft'),
+
+        // Cancelled events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'cancelled'),
+
+        // Upcoming events (published and future date)
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'published')
+          .gte('date', now.toISOString().split('T')[0]),
+
+        // Past events (completed or past date)
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .or(
+            `status.eq.completed,and(date.lt.${now.toISOString().split('T')[0]})`,
+          ),
+      ]);
+
+      // Check for errors
+      const errors = [
+        totalResult.error,
+        thisWeekResult.error,
+        publishedResult.error,
+        draftResult.error,
+        cancelledResult.error,
+        upcomingResult.error,
+        pastResult.error,
+      ].filter(Boolean);
+
+      if (errors.length > 0) {
+        this.logger.error('Error fetching event statistics:', errors);
+        throw new InternalServerErrorException(
+          'Failed to fetch event statistics',
+        );
+      }
+
+      const statistics: EventStatisticsDto = {
+        totalEvents: totalResult.count || 0,
+        thisWeekEvents: thisWeekResult.count || 0,
+        publishedEvents: publishedResult.count || 0,
+        draftEvents: draftResult.count || 0,
+        cancelledEvents: cancelledResult.count || 0,
+        upcomingEvents: upcomingResult.count || 0,
+        pastEvents: pastResult.count || 0,
+      };
+
+      // Cache the result for 5 minutes
+      await this.cacheManager.set(cacheKey, statistics, this.CACHE_TTL);
+
+      return statistics;
+    } catch (error) {
+      this.logger.error('Error calculating event statistics:', error);
+      throw new InternalServerErrorException(
+        'Failed to calculate event statistics',
+      );
+    }
+  }
+
   private async invalidateEventCaches(): Promise<void> {
     // Note: In a production environment, you might want to implement
     // a more sophisticated cache invalidation strategy
-    const patterns = ['events:*', 'events:upcoming'];
+    const patterns = ['events:*', 'events:upcoming', 'events:statistics'];
 
     for (const pattern of patterns) {
       // Since cache-manager doesn't expose keys(), we'll rely on TTL expiration

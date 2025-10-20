@@ -7,9 +7,12 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Southville8BEdgeUI.Models.Api;
+using System.IdentityModel.Tokens.Jwt;
+using System.Diagnostics;
 
 namespace Southville8BEdgeUI.Services;
 
@@ -52,7 +55,8 @@ public class ApiClient : IApiClient
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull // avoid sending nulls in PATCH/POST
         };
     }
 
@@ -326,6 +330,150 @@ public class ApiClient : IApiClient
         return await GetAsync<SubjectsResponse>($"subjects?departmentId={departmentId}&page={page}&limit={limit}");
     }
 
+    // Event Management Methods
+    public async Task<EventListResponse?> GetEventsAsync(int page = 1, int limit = 10, string? status = null, string? search = null, string? tagId = null)
+    {
+        try
+        {
+            var queryParams = new List<string> { $"page={page}", $"limit={limit}" };
+            
+            if (!string.IsNullOrEmpty(status))
+                queryParams.Add($"status={Uri.EscapeDataString(status)}");
+            
+            if (!string.IsNullOrEmpty(search))
+                queryParams.Add($"search={Uri.EscapeDataString(search)}");
+            
+            if (!string.IsNullOrEmpty(tagId))
+                queryParams.Add($"tagId={Uri.EscapeDataString(tagId)}");
+
+            var endpoint = $"events?{string.Join("&", queryParams)}";
+            return await GetAsync<EventListResponse>(endpoint);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching events: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<EventStatisticsDto?> GetEventStatisticsAsync()
+    {
+        try
+        {
+            return await GetAsync<EventStatisticsDto>("events/statistics");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching event statistics: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<TagDto>?> GetEventTagsAsync()
+    {
+        try
+        {
+            return await GetAsync<List<TagDto>>("events/tags");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching event tags: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<EventDto?> GetEventByIdAsync(string id)
+    {
+        try
+        {
+            return await GetAsync<EventDto>($"events/{id}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching event by ID: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<EventDto?> CreateEventAsync(CreateEventDto dto)
+    {
+        try
+        {
+            return await PostAsync<EventDto>("events", dto);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error creating event: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<EventDto?> UpdateEventAsync(string id, UpdateEventDto dto)
+    {
+        try
+        {
+            return await PatchAsync<EventDto>($"events/{id}", dto);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating event: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> DeleteEventAsync(string id)
+    {
+        try
+        {
+            return await DeleteAsync($"events/{id}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting event: {ex.Message}");
+            return false;
+        }
+    }
+
+    // Event FAQ Management Methods
+    public async Task<EventFaqDto?> AddEventFaqAsync(string eventId, CreateEventFaqDto dto)
+    {
+        try
+        {
+            return await PostAsync<EventFaqDto>($"events/{eventId}/faq", dto);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error adding FAQ: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<EventFaqDto?> UpdateEventFaqAsync(string eventId, string faqId, UpdateEventFaqDto dto)
+    {
+        try
+        {
+            return await PatchAsync<EventFaqDto>($"events/{eventId}/faq/{faqId}", dto);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating FAQ: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task DeleteEventFaqAsync(string eventId, string faqId)
+    {
+        try
+        {
+            await DeleteAsync($"events/{eventId}/faq/{faqId}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting FAQ: {ex.Message}");
+            throw;
+        }
+    }
+
     public void SetAccessToken(string accessToken)
     {
         _currentAccessToken = accessToken;
@@ -560,6 +708,141 @@ public class ApiClient : IApiClient
                 throw new ServerException("Server error occurred. Please try again later.");
             default:
                 throw new ApiException($"Request failed with status {response.StatusCode}: {errorMessage}");
+        }
+    }
+
+    public string? GetCurrentUserId()
+    {
+        try
+        {
+            var token = GetCachedToken();
+            if (string.IsNullOrEmpty(token))
+                return null;
+
+            // Parse JWT token
+            var handler = new JwtSecurityTokenHandler();
+            var jsonToken = handler.ReadJwtToken(token);
+
+            // Extract user ID from 'sub' claim (standard JWT claim for subject/user ID)
+            var userId = jsonToken.Claims.FirstOrDefault(x => x.Type == "sub")?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                // Fallback: try 'user_id' claim
+                userId = jsonToken.Claims.FirstOrDefault(x => x.Type == "user_id")?.Value;
+            }
+
+            return userId;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error extracting user ID from token: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<string?> UploadEventImageAsync(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+            {
+                Debug.WriteLine($"File not found: {filePath}");
+                return null;
+            }
+
+            using var content = new MultipartFormDataContent();
+            var fileContent = new ByteArrayContent(File.ReadAllBytes(filePath));
+            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(GetMimeType(filePath));
+            content.Add(fileContent, "image", Path.GetFileName(filePath));
+
+            var response = await _httpClient.PostAsync("events/upload-image", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+                var json = JsonSerializer.Deserialize<JsonElement>(result);
+                return json.GetProperty("url").GetString();
+            }
+
+            Debug.WriteLine($"Upload failed: {response.StatusCode}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error uploading image: {ex.Message}");
+            return null;
+        }
+    }
+
+    private string GetMimeType(string filePath)
+    {
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => "application/octet-stream"
+        };
+    }
+
+    public string? GetCachedToken()
+    {
+        return _currentAccessToken ?? _tokenStorage.GetAccessTokenAsync().Result;
+    }
+
+    // Alerts API
+    public async Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50)
+    {
+        try
+        {
+            return await GetAsync<AlertListResponse>($"alerts?page={page}&limit={limit}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error fetching alerts: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto)
+    {
+        try
+        {
+            return await PostAsync<AlertDto>("alerts", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error creating alert: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto)
+    {
+        try
+        {
+            return await PatchAsync<AlertDto>($"alerts/{id}", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error updating alert: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> DeleteAlertAsync(string id)
+    {
+        try
+        {
+            return await DeleteAsync($"alerts/{id}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error deleting alert: {ex.Message}");
+            return false;
         }
     }
 }

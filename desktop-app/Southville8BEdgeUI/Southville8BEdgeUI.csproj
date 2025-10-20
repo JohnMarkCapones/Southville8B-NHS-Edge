@@ -34,6 +34,7 @@
     <PackageReference Include="Avalonia.Svg.Skia" Version="11.0.0.19" />
     <!-- Fluent UI icon set -->
     <PackageReference Include="FluentIcons.Avalonia" Version="1.1.311" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <!-- API Integration packages -->
     <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
