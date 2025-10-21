@@ -41,7 +41,7 @@ public class ApiClient : IApiClient
         }
         
         _httpClient.BaseAddress = new Uri(baseUrl);
-        _httpClient.Timeout = TimeSpan.FromSeconds(int.Parse(apiSettings["Timeout"] ?? "30"));
+        _httpClient.Timeout = TimeSpan.FromSeconds(int.Parse(apiSettings["Timeout"] ?? "120"));
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         // Debug logging
@@ -191,6 +191,18 @@ public class ApiClient : IApiClient
         catch
         {
             return false;
+        }
+    }
+
+    public async Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto)
+    {
+        try
+        {
+            return await PostAsync<BulkImportResultDto>("users/import-students-csv", dto);
+        }
+        catch
+        {
+            return null;
         }
     }
 

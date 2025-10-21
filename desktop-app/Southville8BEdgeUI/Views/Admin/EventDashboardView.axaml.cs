@@ -458,6 +458,7 @@ public class MockApiClient : IApiClient
     public Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<bool> UpdateUserStatusAsync(string userId, string status) => Task.FromResult(false);
     public Task<bool> DeleteUserAsync(string userId) => Task.FromResult(false);
+    public Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
     public Task<SectionListResponse?> GetSectionsAsync(int limit = 100) => Task.FromResult<SectionListResponse?>(null);
     public Task<BuildingListResponse?> GetBuildingsAsync(int limit = 100) => Task.FromResult<BuildingListResponse?>(null);
     public Task<BuildingDto?> GetBuildingByIdAsync(string id) => Task.FromResult<BuildingDto?>(null);

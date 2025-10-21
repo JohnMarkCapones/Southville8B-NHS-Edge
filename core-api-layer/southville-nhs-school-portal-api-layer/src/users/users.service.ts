@@ -16,6 +16,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import { ImportUsersDto } from './dto/import-users.dto';
 import {
+  ImportStudentsCsvDto,
+  CsvStudentRowDto,
+  BulkImportResultDto,
+} from './dto/import-students-csv.dto';
+import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
@@ -322,6 +327,39 @@ export class UsersService {
   }
 
   /**
+   * Create emergency contact record
+   */
+  private async createEmergencyContactRecord(
+    studentId: string,
+    contactData: any,
+  ): Promise<any> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: contact, error } = await supabase
+      .from('emergency_contacts')
+      .insert({
+        student_id: studentId,
+        guardian_name: contactData.guardianName,
+        relationship: contactData.relationship,
+        phone_number: contactData.phoneNumber,
+        email: contactData.email,
+        address: contactData.address,
+        is_primary: contactData.isPrimary,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error creating emergency contact record:', error);
+      throw new InternalServerErrorException(
+        `Failed to create emergency contact record: ${error.message}`,
+      );
+    }
+
+    return contact;
+  }
+
+  /**
    * Create student record
    */
   private async createStudentRecord(
@@ -546,7 +584,27 @@ export class UsersService {
       ...dto,
     };
 
-    return this.createUser(userData, createdBy);
+    const result = await this.createUser(userData, createdBy);
+
+    // Create emergency contacts if provided
+    if (dto.emergencyContacts && dto.emergencyContacts.length > 0) {
+      const emergencyContacts: any[] = [];
+      for (const contact of dto.emergencyContacts) {
+        try {
+          const contactRecord: any = await this.createEmergencyContactRecord(
+            result.specificRecord.id,
+            contact,
+          );
+          emergencyContacts.push(contactRecord);
+        } catch (error) {
+          this.logger.error('Error creating emergency contact:', error);
+          // Continue with other contacts even if one fails
+        }
+      }
+      (result as any).emergencyContacts = emergencyContacts;
+    }
+
+    return result;
   }
 
   async createBulkUsers(dtos: BulkCreateUsersDto, createdBy: string) {
@@ -773,7 +831,9 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    this.logger.log(`[findOne] Basic user found: ${basicUser.email}, Role ID: ${basicUser.role_id || 'NO_ROLE_ID'}`);
+    this.logger.log(
+      `[findOne] Basic user found: ${basicUser.email}, Role ID: ${basicUser.role_id || 'NO_ROLE_ID'}`,
+    );
 
     // Now let's try to get the role information
     let roleData = null;
@@ -816,7 +876,9 @@ export class UsersService {
       });
     } else if (teacher) {
       teacherData = teacher;
-      this.logger.log(`[findOne] Teacher data found: ${teacher.first_name} ${teacher.last_name}`);
+      this.logger.log(
+        `[findOne] Teacher data found: ${teacher.first_name} ${teacher.last_name}`,
+      );
     }
 
     // Check for admin data
@@ -852,7 +914,9 @@ export class UsersService {
       });
     } else if (student) {
       studentData = student;
-      this.logger.log(`[findOne] Student data found: ${student.first_name} ${student.last_name}`);
+      this.logger.log(
+        `[findOne] Student data found: ${student.first_name} ${student.last_name}`,
+      );
     }
 
     // Construct the final user object
@@ -864,7 +928,9 @@ export class UsersService {
       student: studentData,
     };
 
-    this.logger.log(`[findOne] Final user object constructed for: ${user.email}`);
+    this.logger.log(
+      `[findOne] Final user object constructed for: ${user.email}`,
+    );
     return user;
   }
 
@@ -1127,6 +1193,178 @@ export class UsersService {
         age: row.age ? parseInt(row.age) : undefined,
         sectionId: row.sectionId || row.section_id,
       } as CreateStudentRequestDto;
+    }
+  }
+
+  /**
+   * Parse phone number from scientific notation to proper format
+   */
+  private parsePhoneNumber(value: string): string {
+    // Check if scientific notation
+    if (value.includes('E+') || value.includes('e+')) {
+      const num = parseFloat(value);
+      return '+' + num.toString();
+    }
+    return value;
+  }
+
+  /**
+   * Find section by name and grade level
+   */
+  private async findOrThrowSection(
+    sectionName: string,
+    gradeLevel: string,
+  ): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    // Try to find existing section
+    const { data: section, error } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('name', sectionName)
+      .eq('grade_level', gradeLevel)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching section:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch section information',
+      );
+    }
+
+    // If section exists, return its ID
+    if (section) {
+      return section.id;
+    }
+
+    // Section doesn't exist - create it
+    this.logger.log(`Creating new section: ${sectionName} for ${gradeLevel}`);
+
+    const { data: newSection, error: createError } = await supabase
+      .from('sections')
+      .insert({
+        name: sectionName,
+        grade_level: gradeLevel,
+        // Optional fields are nullable, so we don't need to provide them
+        teacher_id: null,
+        room_id: null,
+        building_id: null,
+      })
+      .select('id')
+      .single();
+
+    if (createError) {
+      this.logger.error('Error creating section:', createError);
+      throw new InternalServerErrorException(
+        `Failed to create section '${sectionName}' for grade '${gradeLevel}'`,
+      );
+    }
+
+    return newSection.id;
+  }
+
+  /**
+   * Parse CSV student rows and group by student (LRN)
+   */
+  private parseCsvStudentRows(rows: CsvStudentRowDto[]): Map<string, any> {
+    const studentMap = new Map<string, any>();
+
+    for (const row of rows) {
+      const lrnId = row.lrn_id;
+
+      if (!studentMap.has(lrnId)) {
+        // First occurrence of this student
+        studentMap.set(lrnId, {
+          student: {
+            firstName: row.first_name,
+            lastName: row.last_name,
+            middleName: row.middle_name,
+            lrnId: row.lrn_id,
+            birthday: row.birthday,
+            gradeLevel: row.grade_level,
+            enrollmentYear: row.enrollment,
+            age: row.age,
+            section: row.section,
+          },
+          emergencyContacts: [],
+        });
+      }
+
+      // Add emergency contact
+      const studentData = studentMap.get(lrnId);
+      studentData.emergencyContacts.push({
+        guardianName: row.guardian_name,
+        relationship: row.relationship,
+        phoneNumber: this.parsePhoneNumber(row.phone_number),
+        email: row.email,
+        address: row.address,
+        isPrimary: studentData.emergencyContacts.length === 0, // First contact is primary
+      });
+    }
+
+    return studentMap;
+  }
+
+  /**
+   * Import students from CSV data
+   */
+  async importStudentsFromCsv(
+    importDto: ImportStudentsCsvDto,
+    createdBy: string,
+  ): Promise<BulkImportResultDto> {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    try {
+      // Parse and group CSV rows by student
+      const studentMap = this.parseCsvStudentRows(importDto.students);
+
+      for (const [lrnId, studentData] of studentMap) {
+        try {
+          // Find section ID
+          const sectionId = await this.findOrThrowSection(
+            studentData.student.section,
+            studentData.student.gradeLevel,
+          );
+
+          // Create student DTO
+          const studentDto: CreateStudentRequestDto = {
+            firstName: studentData.student.firstName,
+            lastName: studentData.student.lastName,
+            middleName: studentData.student.middleName,
+            studentId: `STU-${Date.now()}`, // Auto-generate student ID
+            lrnId: studentData.student.lrnId,
+            birthday: studentData.student.birthday,
+            gradeLevel: studentData.student.gradeLevel,
+            enrollmentYear: studentData.student.enrollmentYear,
+            age: studentData.student.age,
+            sectionId: sectionId,
+            emergencyContacts: studentData.emergencyContacts,
+          };
+
+          // Create student (this will handle auth user, public user, student record, and emergency contacts)
+          const result = await this.createStudent(studentDto, createdBy);
+          results.push(result);
+        } catch (error) {
+          errors.push({
+            lrnId: lrnId,
+            studentName: `${studentData.student.firstName} ${studentData.student.lastName}`,
+            error: error.message,
+          });
+        }
+      }
+
+      return {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+    } catch (error) {
+      this.logger.error('Error importing students from CSV:', error);
+      throw new InternalServerErrorException(
+        'Failed to import students from CSV',
+      );
     }
   }
 }

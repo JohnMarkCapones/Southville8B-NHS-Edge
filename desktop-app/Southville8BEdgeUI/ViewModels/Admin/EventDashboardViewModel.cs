@@ -297,8 +297,8 @@ public partial class EventDashboardViewModel : ViewModelBase
         {
             var success = await _apiClient.DeleteEventAsync(eventItem.Id);
             if (success)
-            {
-                Events.Remove(eventItem);
+    {
+        Events.Remove(eventItem);
                 FilteredEvents.Remove(eventItem);
                 await LoadStatisticsAsync();
                 OnPropertyChanged(nameof(HasFilteredEvents));

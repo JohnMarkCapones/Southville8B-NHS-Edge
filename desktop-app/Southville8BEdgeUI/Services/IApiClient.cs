@@ -29,6 +29,7 @@ public interface IApiClient
     Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto);
     Task<bool> UpdateUserStatusAsync(string userId, string status);
     Task<bool> DeleteUserAsync(string userId);
+    Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto);
     
     // Section Management Methods
     Task<SectionListResponse?> GetSectionsAsync(int limit = 100);

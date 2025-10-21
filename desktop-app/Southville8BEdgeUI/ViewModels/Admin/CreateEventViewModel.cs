@@ -191,7 +191,7 @@ public partial class CreateEventViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(HasValidationErrors));
     }
-    
+
     partial void OnStartDateChanged(DateTime value)
     {
         Debug.WriteLine($"StartDate changed to: {value}");
