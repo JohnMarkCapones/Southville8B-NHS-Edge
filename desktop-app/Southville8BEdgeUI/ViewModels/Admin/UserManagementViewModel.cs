@@ -216,7 +216,7 @@ public partial class UserManagementViewModel : ViewModelBase
 
     [RelayCommand] private void ImportUsers()
     {
-        var vm = new ImportUsersViewModel { NavigateBack = () => NavigateTo?.Invoke(this) };
+        var vm = new ImportUsersViewModel(_apiClient, _toastService) { NavigateBack = () => NavigateTo?.Invoke(this) };
         NavigateTo?.Invoke(vm);
     }
 

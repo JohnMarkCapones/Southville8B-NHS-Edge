@@ -13,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using System.Globalization;
 
 namespace Southville8BEdgeUI.ViewModels;
 
@@ -86,6 +87,13 @@ public partial class AdminShellViewModel : ViewModelBase
 
     public Action<ViewModelBase>? NavigateTo { get; set; }
 
+    // Sidebar events (current/next + upcoming page)
+    [ObservableProperty] private EventDto? _currentEvent;
+    [ObservableProperty] private EventDto? _nextEvent;
+    [ObservableProperty] private ObservableCollection<EventDto> _upcomingEvents = new();
+    [ObservableProperty] private bool _hasCurrentEvent;
+    [ObservableProperty] private bool _hasNextEvent;
+
     // Added optional parameter enableRotation (default true) to allow unit tests to disable DispatcherTimer creation.
     public AdminShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, UserDto? user = null, string? accessToken = null, bool enableRotation = true)
     {
@@ -127,11 +135,13 @@ public partial class AdminShellViewModel : ViewModelBase
 
         InitializeTodayClasses();
         GenerateCalendarDays();
-        if (enableRotation)
-            StartTodayRotation();
+        // Remove auto-rotation per requirement (keep data structure for now but do not start timer)
 
         // Initialize SSE connection
         InitializeSseConnection();
+
+        // Load sidebar events (today + next 7 days)
+        _ = LoadSidebarEventsAsync();
     }
 
 
@@ -316,6 +326,125 @@ public partial class AdminShellViewModel : ViewModelBase
         _todayRotationTimer.Start();
     }
 
+    // Loads current and next events and the first page of upcoming events (5 items)
+    private async Task LoadSidebarEventsAsync()
+    {
+        try
+        {
+            var today = DateTime.Now.Date;
+            var end = today.AddDays(7);
+            var startStr = today.ToString("yyyy-MM-dd");
+            var endStr = end.ToString("yyyy-MM-dd");
+
+            // Fetch published events within range using generic GET to pass date filters
+            var endpoint = $"events?page=1&limit=50&status=published&startDate={startStr}&endDate={endStr}";
+            var response = await _apiClient.GetAsync<EventListResponse>(endpoint);
+            if (response?.Data == null)
+            {
+                CurrentEvent = null;
+                NextEvent = null;
+                UpcomingEvents.Clear();
+                return;
+            }
+
+            var events = response.Data;
+
+            // Build comparable DateTime for each event using date + time (time may be HH:mm or HH:mm:ss)
+            static DateTime? toDateTime(EventDto e)
+            {
+                if (string.IsNullOrWhiteSpace(e.Date)) return null;
+                if (!DateTime.TryParseExact(e.Date, new[] { "yyyy-MM-dd", "yyyy-M-d" }, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var d))
+                    return null;
+                if (string.IsNullOrWhiteSpace(e.Time)) return d;
+                // Normalize time
+                if (TimeSpan.TryParse(e.Time, out var ts))
+                    return d.Date.Add(ts);
+                return d;
+            }
+
+            var now = DateTime.Now;
+            var todayStr = today.ToString("yyyy-MM-dd");
+
+            var candidatesToday = events
+                .Where(e => string.Equals(e.Date, todayStr, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            EventDto? current = candidatesToday
+                .Where(e =>
+                {
+                    var dt = toDateTime(e);
+                    return dt.HasValue && dt.Value <= now;
+                })
+                .OrderBy(e => toDateTime(e))
+                .LastOrDefault();
+
+            EventDto? next = events
+                .Where(e =>
+                {
+                    var dt = toDateTime(e);
+                    return dt.HasValue && dt.Value > now;
+                })
+                .OrderBy(e => toDateTime(e))
+                .FirstOrDefault();
+
+            CurrentEvent = current;
+            HasCurrentEvent = CurrentEvent != null;
+            NextEvent = next;
+            HasNextEvent = NextEvent != null;
+
+            // Upcoming list starting after now, take next 5
+            var upcoming = events
+                .Where(e =>
+                {
+                    var dt = toDateTime(e);
+                    return dt.HasValue && dt.Value >= now;
+                })
+                .OrderBy(e => toDateTime(e))
+                .Take(5)
+                .ToList();
+
+            UpcomingEvents.Clear();
+            foreach (var ev in upcoming) UpcomingEvents.Add(ev);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load sidebar events: {ex.Message}");
+            CurrentEvent = null;
+            NextEvent = null;
+            UpcomingEvents.Clear();
+        }
+    }
+
+    [RelayCommand]
+    private async Task MarkCurrentEventCompleted()
+    {
+        if (CurrentEvent == null || string.IsNullOrWhiteSpace(CurrentEvent.Id)) return;
+        try
+        {
+            await _apiClient.UpdateEventAsync(CurrentEvent.Id, new UpdateEventDto { Status = "completed" });
+            await LoadSidebarEventsAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to complete current event: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ViewMoreEvents()
+    {
+        DisposeCurrentContent();
+        var vm = new EventDashboardViewModel(_apiClient)
+        {
+            NavigateTo = inner => CurrentContent = inner,
+            NavigateBack = () => NavigateToDashboard()
+        };
+        vm.PageSize = 5; // paginate by 5 as requested
+        CurrentContent = vm;
+        CurrentPage = "Events Dashboard";
+        CloseUserDropdown();
+    }
+
     private void GenerateCalendarDays()
     {
         _monthGridDays.Clear();
@@ -384,7 +513,8 @@ public partial class AdminShellViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToAlerts()
     {
-        CurrentContent = new AlertsViewModel();
+        var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+        CurrentContent = new AlertsViewModel(apiClient);
         CurrentPage = "Alerts";
         CloseUserDropdown();
     }
@@ -406,7 +536,7 @@ public partial class AdminShellViewModel : ViewModelBase
         CurrentPage = "Building Management"; 
         CloseUserDropdown(); 
     }
-    [RelayCommand] private void NavigateToEventsDashboard() { var vm = new EventDashboardViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToEventsDashboard() { var vm = new EventDashboardViewModel(_apiClient); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToELibrary() { CurrentContent = new ELibraryManagementViewModel(); CurrentPage = "E-Library Management"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToUserManagement() 
     { 

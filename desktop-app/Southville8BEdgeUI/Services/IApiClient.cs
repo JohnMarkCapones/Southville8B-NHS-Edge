@@ -29,6 +29,7 @@ public interface IApiClient
     Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto);
     Task<bool> UpdateUserStatusAsync(string userId, string status);
     Task<bool> DeleteUserAsync(string userId);
+    Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto);
     
     // Section Management Methods
     Task<SectionListResponse?> GetSectionsAsync(int limit = 100);
@@ -61,5 +62,30 @@ public interface IApiClient
     // Subject Management Methods
     Task<SubjectsResponse?> GetSubjectsByDepartmentAsync(string departmentId, int page = 1, int limit = 100);
     
+    // Event Management Methods
+    Task<EventListResponse?> GetEventsAsync(int page = 1, int limit = 10, string? status = null, string? search = null, string? tagId = null);
+    Task<EventStatisticsDto?> GetEventStatisticsAsync();
+    Task<List<TagDto>?> GetEventTagsAsync();
+    Task<EventDto?> GetEventByIdAsync(string id);
+    Task<EventDto?> CreateEventAsync(CreateEventDto dto);
+    Task<EventDto?> UpdateEventAsync(string id, UpdateEventDto dto);
+    Task<bool> DeleteEventAsync(string id);
+    
+    // Event FAQ Management Methods
+    Task<EventFaqDto?> AddEventFaqAsync(string eventId, CreateEventFaqDto dto);
+    Task<EventFaqDto?> UpdateEventFaqAsync(string eventId, string faqId, UpdateEventFaqDto dto);
+    Task DeleteEventFaqAsync(string eventId, string faqId);
+    
+    // Event Image Upload
+    Task<string?> UploadEventImageAsync(string filePath);
+    
     void SetAccessToken(string accessToken);
+    string? GetCurrentUserId();
+    string? GetCachedToken();
+
+    // Alerts API
+    Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50);
+    Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto);
+    Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto);
+    Task<bool> DeleteAlertAsync(string id);
 }

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:api="using:Southville8BEdgeUI.Models.Api"
              xmlns:converters="using:Southville8BEdgeUI.Converters"
              x:Class="Southville8BEdgeUI.Views.Admin.CreateEventView"
              x:DataType="vm:CreateEventViewModel"
@@ -83,14 +84,45 @@
       <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
       <Setter Property="Margin" Value="0,8,0,0"/>
     </Style>
+    <Style Selector="ToggleButton.tag-toggle">
+      <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="ToggleButton.tag-toggle:checked">
+      <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
   </UserControl.Styles>
 
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="40" Spacing="32" x:Name="MainStack">
       <StackPanel>
-        <TextBlock Text="Create Event" Classes="page-title"/>
-        <TextBlock Text="Add a new event to the school calendar" Classes="page-subtitle"/>
+        <TextBlock Text="{Binding DialogTitle}" Classes="page-title"/>
+        <TextBlock Text="Manage event details" Classes="page-subtitle"/>
       </StackPanel>
+
+      <!-- Loading Overlay -->
+      <Border IsVisible="{Binding IsLoading}" 
+              Background="#80000000" 
+              Padding="20">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+          <ProgressBar IsIndeterminate="True" Width="200"/>
+          <TextBlock Text="Creating event..." Margin="0,8,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Error Message -->
+      <Border IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+              Background="#FEF2F2" 
+              BorderBrush="#FECACA"
+              Padding="12" 
+              Margin="0,0,0,16">
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="#DC2626"/>
+      </Border>
 
       <Border Classes="card">
         <StackPanel>
@@ -98,42 +130,120 @@
           <TextBlock Text="Basic Information" Classes="section-title"/>
           <TextBlock Text="Title" Classes="field-label"/>
           <TextBox Text="{Binding Title}" Watermark="Event title"/>
+          <TextBlock Text="{Binding TitleValidationMessage}" 
+                     Foreground="#DC2626" FontSize="12" 
+                     IsVisible="{Binding TitleValidationMessage, Converter={StaticResource InvertBool}}"/>
           <TextBlock Text="Status" Classes="field-label"/>
           <ComboBox ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding Status}"/>
-          <TextBlock Text="Type" Classes="field-label"/>
-            <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding Type}"/>
           <TextBlock Text="Location" Classes="field-label"/>
           <ComboBox ItemsSource="{Binding LocationOptions}" SelectedItem="{Binding Location}"/>
-          <TextBlock Text="Organizer" Classes="field-label"/>
-          <TextBox Text="{Binding Organizer}" Watermark="Department or person"/>
-          <TextBlock Text="Max Attendees" Classes="field-label"/>
-          <NumericUpDown Minimum="0" Maximum="10000" Value="{Binding MaxAttendees}"/>
+          <TextBlock Text="{Binding LocationValidationMessage}" 
+                     Foreground="#DC2626" FontSize="12" 
+                     IsVisible="{Binding LocationValidationMessage, Converter={StaticResource InvertBool}}"/>
+          <TextBlock Text="Visibility" Classes="field-label"/>
+          <ComboBox ItemsSource="{Binding VisibilityOptions}" SelectedItem="{Binding Visibility}"/>
 
           <!-- SCHEDULING -->
           <TextBlock Text="Scheduling" Classes="section-title"/>
-          <TextBlock Text="Start Date" Classes="field-label"/>
+          <TextBlock Text="Date" Classes="field-label"/>
           <DatePicker SelectedDate="{Binding StartDateOffset}"/>
-          <TextBlock Text="End Date" Classes="field-label"/>
-          <DatePicker SelectedDate="{Binding EndDateOffset}"/>
-          <TextBlock Text="Start Time" Classes="field-label"/>
-          <TextBox Text="{Binding StartTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding IsAllDay, Converter={StaticResource InvertBool}}"/>
-          <TextBlock Text="End Time" Classes="field-label"/>
-          <TextBox Text="{Binding EndTime, StringFormat=hh\\:mm}" Watermark="HH:MM" IsEnabled="{Binding IsAllDay, Converter={StaticResource InvertBool}}"/>
-          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-            <CheckBox IsChecked="{Binding IsAllDay}" Content="All Day"/>
-            <TextBlock Text="(When checked, time fields are disabled)" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-          </StackPanel>
-          <TextBlock Text="{Binding DateValidationMessage}" Classes="validation" IsVisible="{Binding HasDateValidationError}"/>
+          <TextBlock Text="{Binding DateValidationMessage}" 
+                     Foreground="#DC2626" FontSize="12" 
+                     IsVisible="{Binding DateValidationMessage, Converter={StaticResource InvertBool}}"/>
+          <TextBlock Text="Time" Classes="field-label"/>
+          <TimePicker SelectedTime="{Binding StartTime}"/>
 
           <!-- DETAILS -->
           <TextBlock Text="Details" Classes="section-title"/>
           <TextBlock Text="Description" Classes="field-label"/>
           <TextBox Text="{Binding Description}" Classes="description" Watermark="Describe the event purpose, agenda, etc."/>
+          <TextBlock Text="{Binding DescriptionValidationMessage}" 
+                     Foreground="#DC2626" FontSize="12" 
+                     IsVisible="{Binding DescriptionValidationMessage, Converter={StaticResource InvertBool}}"/>
+
+          <!-- IMAGE UPLOAD -->
+          <TextBlock Text="Event Image (Optional)" Classes="field-label"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Select Image" Command="{Binding SelectImageCommand}" Classes="secondary"/>
+            <TextBlock Text="{Binding EventImagePath}" VerticalAlignment="Center" 
+                       Foreground="{DynamicResource TextMutedBrush}"/>
+          </StackPanel>
+
+          <!-- TAG SELECTION -->
+          <TextBlock Text="Tags (Optional)" Classes="field-label"/>
+          <ItemsControl ItemsSource="{Binding AvailableTags}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="api:TagDto">
+                <ToggleButton Content="{Binding Name}" 
+                              Command="{Binding $parent[UserControl].((vm:CreateEventViewModel)DataContext).ToggleTagCommand}"
+                              CommandParameter="{Binding}"
+                              Classes="tag-toggle"
+                              Margin="0,0,8,8"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- FAQ SECTION -->
+          <StackPanel>
+            <TextBlock Text="FAQs" Classes="section-title"/>
+            
+            <!-- Add New FAQ -->
+            <TextBlock Text="Question" Classes="field-label"/>
+            <TextBox Text="{Binding NewFaqQuestion}" Watermark="What should attendees know?"/>
+            
+            <TextBlock Text="Answer" Classes="field-label"/>
+            <TextBox Text="{Binding NewFaqAnswer}" 
+                     Classes="description" 
+                     Watermark="Provide a helpful answer..."/>
+            
+            <Button Content="Add FAQ" 
+                    Command="{Binding AddFaqCommand}" 
+                    Classes="secondary"/>
+            
+            <!-- FAQ List -->
+            <ItemsControl ItemsSource="{Binding Faq}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="api:EventFaqDto">
+                  <Border BorderBrush="{DynamicResource BorderBrush}" 
+                          BorderThickness="1" 
+                          CornerRadius="8" 
+                          Padding="12">
+                    <StackPanel>
+                      <!-- View Mode -->
+                      <StackPanel IsVisible="{Binding $parent[vm:CreateEventViewModel].EditingFaq, Converter={StaticResource InvertBool}}">
+                        <TextBlock Text="{Binding Question}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Answer}"/>
+                        <StackPanel Orientation="Horizontal">
+                          <Button Content="Edit" Command="{Binding $parent[vm:CreateEventViewModel].StartEditFaqCommand}" CommandParameter="{Binding}"/>
+                          <Button Content="Delete" Command="{Binding $parent[vm:CreateEventViewModel].DeleteFaqCommand}" CommandParameter="{Binding}" Classes="danger"/>
+                        </StackPanel>
+                      </StackPanel>
+                      
+                      <!-- Edit Mode -->
+                      <StackPanel IsVisible="{Binding $parent[vm:CreateEventViewModel].EditingFaq}">
+                        <TextBox Text="{Binding $parent[vm:CreateEventViewModel].EditFaqQuestion}"/>
+                        <TextBox Text="{Binding $parent[vm:CreateEventViewModel].EditFaqAnswer}" Classes="description"/>
+                        <StackPanel Orientation="Horizontal">
+                          <Button Content="Save" Command="{Binding $parent[vm:CreateEventViewModel].SaveEditFaqCommand}"/>
+                          <Button Content="Cancel" Command="{Binding $parent[vm:CreateEventViewModel].CancelEditFaqCommand}"/>
+                        </StackPanel>
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
 
           <!-- ACTIONS -->
           <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,28,0,0" HorizontalAlignment="Right">
             <Button Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}"/>
-            <Button Content="Save" Classes="primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}"/>
+            <Button Content="{Binding SaveButtonText}" Classes="primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}"/>
           </StackPanel>
         </StackPanel>
       </Border>

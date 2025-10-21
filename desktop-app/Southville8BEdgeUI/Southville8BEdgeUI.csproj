@@ -32,8 +32,10 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <!-- Pinned SVG package for Avalonia 11 compatibility -->
     <PackageReference Include="Avalonia.Svg.Skia" Version="11.0.0.19" />
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
     <!-- Fluent UI icon set -->
     <PackageReference Include="FluentIcons.Avalonia" Version="1.1.311" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <!-- API Integration packages -->
     <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />

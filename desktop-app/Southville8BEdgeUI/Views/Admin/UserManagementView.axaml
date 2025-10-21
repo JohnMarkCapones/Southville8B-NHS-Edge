@@ -369,10 +369,10 @@
 							<TextBlock Text="Import Users"/>
 						</StackPanel>
 					</Button>
-					<Button x:Name="CreateButton" Classes="primary" Command="{Binding CreateUserCommand}">
+					<Button x:Name="CreateButton" Background="#C64747" Command="{Binding CreateUserCommand}">
 						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-							<ic:FluentIcon Icon="Add" IconSize="Size20"/>
-							<TextBlock Text="Create User"/>
+							<ic:FluentIcon Icon="Add" IconSize="Size20" Foreground="White"/>
+							<TextBlock Text="Create User" Foreground="White"/>
 						</StackPanel>
 					</Button>
 				</StackPanel>
