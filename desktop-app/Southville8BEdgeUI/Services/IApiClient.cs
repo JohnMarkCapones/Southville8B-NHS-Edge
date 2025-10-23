@@ -88,4 +88,39 @@ public interface IApiClient
     Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto);
     Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto);
     Task<bool> DeleteAlertAsync(string id);
+
+    // Teacher-specific API methods
+    Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId);
+    Task<List<ScheduleDto>?> GetTeacherTodaySchedulesAsync(string teacherId);
+    Task<List<TeacherActivityDto>?> GetTeacherRecentActivitiesAsync(string teacherId);
+    
+    // GWA Management Methods
+    Task<StudentGwaListResponse?> GetAdvisoryStudentsWithGwaAsync(string gradingPeriod, string schoolYear);
+    Task<StudentGwaDto?> CreateGwaEntryAsync(CreateGwaDto dto);
+    Task<StudentGwaDto?> UpdateGwaEntryAsync(string id, UpdateGwaDto dto);
+    Task<bool> DeleteGwaEntryAsync(string id);
+    
+    // Schedule Management Methods
+    Task<ScheduleListResponse?> GetSchedulesAsync(int page = 1, int limit = 20, string? sectionId = null, string? teacherId = null, string? dayOfWeek = null, string? schoolYear = null, string? semester = null);
+    Task<ScheduleDto?> GetScheduleByIdAsync(string scheduleId);
+    Task<ScheduleDto?> CreateScheduleAsync(CreateScheduleDto dto);
+    Task<ScheduleDto?> UpdateScheduleAsync(string scheduleId, UpdateScheduleDto dto);
+    Task<bool> DeleteScheduleAsync(string scheduleId);
+    
+    // Bulk operations
+    Task<List<ScheduleDto>?> BulkCreateSchedulesAsync(List<CreateScheduleDto> schedules);
+    
+    // Student assignment
+    Task<bool> AssignStudentsToScheduleAsync(string scheduleId, AssignStudentsDto dto);
+    Task<bool> RemoveStudentsFromScheduleAsync(string scheduleId, List<string> studentIds);
+    
+    // Conflict checking
+    Task<ConflictCheckResult?> CheckScheduleConflictsAsync(CreateScheduleDto dto);
+    
+    // Dropdown data for schedules
+    Task<List<Subject>?> GetSubjectsAsync();
+    Task<List<SectionDto>?> GetSectionsAsync();
+    Task<List<UserDto>?> GetTeachersAsync();
+    Task<List<RoomDto>?> GetRoomsAsync();
+    Task<List<BuildingDto>?> GetBuildingsAsync();
 }

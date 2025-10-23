@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Southville8BEdgeUI.ViewModels.Teacher;
+using Southville8BEdgeUI.Views.Admin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,14 +35,10 @@ public partial class GradeEntryView : UserControl
         public const string MainScrollViewer = "MainScrollViewer";
         public const string MainStackPanel = "MainStackPanel";
         public const string HeaderGrid = "HeaderGrid";
-        public const string StatsGrid = "StatsGrid";
-        public const string ContentGrid = "ContentGrid";
-        public const string GradeEntryCard = "GradeEntryCard";
-        public const string GradeSummaryCard = "GradeSummaryCard";
-        public const string GradeTableScrollViewer = "GradeTableScrollViewer";
-        public const string GradeTableHeader = "GradeTableHeader";
-        public static readonly string[] StatsCards = { "StatsCard1", "StatsCard2", "StatsCard3", "StatsCard4" };
-        public static readonly string[] ActionButtons = { "ExportButton", "SaveAllButton" };
+        public const string FilterGrid = "FilterGrid";
+        public const string GradeEntriesContainer = "GradeEntriesContainer";
+        public static readonly string[] StatsCards = Array.Empty<string>(); // No stats cards in current XAML
+        public static readonly string[] ActionButtons = Array.Empty<string>(); // No specific action buttons in current XAML
     }
 
     #endregion
@@ -67,15 +64,102 @@ public partial class GradeEntryView : UserControl
     public GradeEntryView()
     {
         InitializeComponent();
-        DataContext = new GradeEntryViewModel();
 
+        // TEMPORARY FIX: Disable responsive layout to prevent ArgumentOutOfRangeException
+        // The complex responsive system is causing index out of range errors
+        // We'll implement a simpler responsive system later
+        
         _layoutManager = new ResponsiveLayoutManager();
         _throttledUpdater = new ThrottledUpdater(TimeSpan.FromMilliseconds(100));
 
-        Dispatcher.UIThread.InvokeAsync(() =>
+        // Disable the complex responsive system temporarily
+        // Dispatcher.UIThread.InvokeAsync(() =>
+        // {
+        //     InitializeResponsiveSystem();
+        // }, DispatcherPriority.Background);
+        
+        // Simple responsive behavior without complex element manipulation
+        this.SizeChanged += OnSimpleSizeChanged;
+    }
+    
+    private void OnSimpleSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        // Enhanced simple responsive behavior without complex element manipulation
+        try
         {
-            InitializeResponsiveSystem();
-        }, DispatcherPriority.Background);
+            var width = e.NewSize.Width;
+            System.Diagnostics.Debug.WriteLine($"OnSimpleSizeChanged: Width = {width}");
+            
+            // Remove all responsive classes first
+            this.Classes.Remove("mobile");
+            this.Classes.Remove("tablet");
+            this.Classes.Remove("desktop");
+            
+            // Apply appropriate responsive class based on width
+            if (width < 768)
+            {
+                // Mobile layout
+                this.Classes.Add("mobile");
+                System.Diagnostics.Debug.WriteLine("Applied mobile responsive class");
+            }
+            else if (width < 1024)
+            {
+                // Tablet layout
+                this.Classes.Add("tablet");
+                System.Diagnostics.Debug.WriteLine("Applied tablet responsive class");
+            }
+            else
+            {
+                // Desktop layout
+                this.Classes.Add("desktop");
+                System.Diagnostics.Debug.WriteLine("Applied desktop responsive class");
+            }
+            
+            // Apply responsive classes to key elements if they exist
+            ApplyResponsiveClassesToElements();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Simple responsive layout error: {ex.Message}");
+        }
+    }
+    
+    private void ApplyResponsiveClassesToElements()
+    {
+        try
+        {
+            // Apply responsive classes to main elements safely
+            if (this.FindControl<StackPanel>("MainStackPanel") is StackPanel mainPanel)
+            {
+                mainPanel.Classes.Remove("mobile");
+                mainPanel.Classes.Remove("tablet");
+                mainPanel.Classes.Remove("desktop");
+                mainPanel.Classes.Add(this.Classes.Contains("mobile") ? "mobile" : 
+                                    this.Classes.Contains("tablet") ? "tablet" : "desktop");
+            }
+            
+            if (this.FindControl<Grid>("HeaderGrid") is Grid headerGrid)
+            {
+                headerGrid.Classes.Remove("mobile");
+                headerGrid.Classes.Remove("tablet");
+                headerGrid.Classes.Remove("desktop");
+                headerGrid.Classes.Add(this.Classes.Contains("mobile") ? "mobile" : 
+                                     this.Classes.Contains("tablet") ? "tablet" : "desktop");
+            }
+            
+            if (this.FindControl<Grid>("FilterGrid") is Grid filterGrid)
+            {
+                filterGrid.Classes.Remove("mobile");
+                filterGrid.Classes.Remove("tablet");
+                filterGrid.Classes.Remove("desktop");
+                filterGrid.Classes.Add(this.Classes.Contains("mobile") ? "mobile" : 
+                                     this.Classes.Contains("tablet") ? "tablet" : "desktop");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyResponsiveClassesToElements error: {ex.Message}");
+        }
     }
 
     private void InitializeResponsiveSystem()
@@ -94,19 +178,12 @@ public partial class GradeEntryView : UserControl
 
     private void CacheAllElements()
     {
-        // Cache main structural elements
+        // Cache main structural elements that actually exist in XAML
         _elementCache.CacheNamedElement(this, ElementIdentifiers.MainScrollViewer);
         _elementCache.CacheNamedElement(this, ElementIdentifiers.MainStackPanel);
         _elementCache.CacheNamedElement(this, ElementIdentifiers.HeaderGrid);
-        _elementCache.CacheNamedElement(this, ElementIdentifiers.StatsGrid);
-        _elementCache.CacheNamedElement(this, ElementIdentifiers.ContentGrid);
-        _elementCache.CacheNamedElement(this, ElementIdentifiers.GradeEntryCard);
-        _elementCache.CacheNamedElement(this, ElementIdentifiers.GradeSummaryCard);
-        _elementCache.CacheNamedElement(this, ElementIdentifiers.GradeTableScrollViewer);
-
-        // Cache stats cards and action buttons
-        _elementCache.CacheNamedElements(this, ElementIdentifiers.StatsCards);
-        _elementCache.CacheNamedElements(this, ElementIdentifiers.ActionButtons);
+        _elementCache.CacheNamedElement(this, ElementIdentifiers.FilterGrid);
+        _elementCache.CacheNamedElement(this, ElementIdentifiers.GradeEntriesContainer);
 
         // Cache typed elements for responsive styling
         _elementCache.CacheTypedElements(this);
@@ -143,7 +220,16 @@ public partial class GradeEntryView : UserControl
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        _throttledUpdater.Schedule(() => ApplyResponsiveLayout(e.NewSize.Width));
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"OnSizeChanged: Width = {e.NewSize.Width}, Height = {e.NewSize.Height}");
+            _throttledUpdater.Schedule(() => ApplyResponsiveLayout(e.NewSize.Width));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"OnSizeChanged ERROR: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"OnSizeChanged StackTrace: {ex.StackTrace}");
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -167,20 +253,56 @@ public partial class GradeEntryView : UserControl
 
     private void ApplyResponsiveLayout(double width)
     {
-        var newState = DetermineResponsiveState(width);
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Width = {width}");
+            
+            var newState = DetermineResponsiveState(width);
 
-        if (!ShouldUpdateLayout(newState, width))
-            return;
+            if (!ShouldUpdateLayout(newState, width))
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Skipping update - same state or width change too small");
+                return;
+            }
 
-        _currentState = newState;
-        _lastProcessedWidth = width;
+            System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Updating to state = {newState}");
+            
+            _currentState = newState;
+            _lastProcessedWidth = width;
 
         using var deferral = BatchUpdate();
         {
-            UpdateElementClasses(newState);
-            UpdateGridLayouts(newState);
-            UpdateTableLayout(newState);
-            UpdateDynamicElements(newState);
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Starting UpdateElementClasses");
+                UpdateElementClasses(newState);
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: UpdateElementClasses completed");
+                
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Starting UpdateGridLayouts");
+                UpdateGridLayouts(newState);
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: UpdateGridLayouts completed");
+                
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Starting UpdateTableLayout");
+                UpdateTableLayout(newState);
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: UpdateTableLayout completed");
+                
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Starting UpdateDynamicElements");
+                UpdateDynamicElements(newState);
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: UpdateDynamicElements completed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout BatchUpdate ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout BatchUpdate StackTrace: {ex.StackTrace}");
+            }
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout: Completed successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout ERROR: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"ApplyResponsiveLayout StackTrace: {ex.StackTrace}");
         }
     }
 
@@ -231,48 +353,16 @@ public partial class GradeEntryView : UserControl
     {
         var config = _layoutManager.GetConfiguration(state);
 
-        // Update Stats Grid
-        if (_elementCache.TryGetElement<Grid>(ElementIdentifiers.StatsGrid, out Grid? statsGrid) && statsGrid != null)
-        {
-            UpdateStatsGrid(statsGrid, config);
-        }
-
         // Update Header Grid
         if (_elementCache.TryGetElement<Grid>(ElementIdentifiers.HeaderGrid, out Grid? headerGrid) && headerGrid != null)
         {
             UpdateHeaderGrid(headerGrid, config);
         }
 
-        // Update Main Content Grid
-        if (_elementCache.TryGetElement<Grid>(ElementIdentifiers.ContentGrid, out Grid? contentGrid) && contentGrid != null)
+        // Update Filter Grid
+        if (_elementCache.TryGetElement<Grid>(ElementIdentifiers.FilterGrid, out Grid? filterGrid) && filterGrid != null)
         {
-            UpdateContentGrid(contentGrid, config);
-        }
-    }
-
-    private void UpdateStatsGrid(Grid grid, LayoutConfiguration config)
-    {
-        grid.ColumnDefinitions.Clear();
-        grid.RowDefinitions.Clear();
-
-        // Add column definitions
-        for (int i = 0; i < config.StatsColumns; i++)
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-
-        // Add row definitions
-        for (int i = 0; i < config.StatsRows; i++)
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-
-        // Position stats cards
-        for (int i = 0; i < ElementIdentifiers.StatsCards.Length; i++)
-        {
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.StatsCards[i], out Border? card) && card != null)
-            {
-                var position = config.StatsCardPositions[i];
-                Grid.SetColumn(card, position.Column);
-                Grid.SetRow(card, position.Row);
-                card.Margin = config.StatsCardMargins[i];
-            }
+            ApplyFilterGridLayout(filterGrid, state);
         }
     }
 
@@ -328,58 +418,9 @@ public partial class GradeEntryView : UserControl
         }
     }
 
-    private void UpdateContentGrid(Grid grid, LayoutConfiguration config)
-    {
-        grid.ColumnDefinitions.Clear();
-        grid.RowDefinitions.Clear();
-
-        if (config.StackMainContent)
-        {
-            // Mobile: Stack grade entry and summary vertically
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.GradeEntryCard, out Border? gradeCard) && gradeCard != null)
-            {
-                Grid.SetColumn(gradeCard, 0);
-                Grid.SetRow(gradeCard, 0);
-                gradeCard.Margin = new Thickness(0, 0, 0, 12);
-            }
-
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.GradeSummaryCard, out Border? summaryCard) && summaryCard != null)
-            {
-                Grid.SetColumn(summaryCard, 0);
-                Grid.SetRow(summaryCard, 1);
-                summaryCard.Margin = new Thickness(0, 12, 0, 0);
-            }
-        }
-        else
-        {
-            // Desktop/Tablet: Side-by-side layout
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(300)));
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
-
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.GradeEntryCard, out Border? gradeCard) && gradeCard != null)
-            {
-                Grid.SetColumn(gradeCard, 0);
-                Grid.SetRow(gradeCard, 0);
-                gradeCard.Margin = new Thickness(0, 0, 12, 0);
-            }
-
-            if (_elementCache.TryGetElement<Border>(ElementIdentifiers.GradeSummaryCard, out Border? summaryCard) && summaryCard != null)
-            {
-                Grid.SetColumn(summaryCard, 1);
-                Grid.SetRow(summaryCard, 0);
-                summaryCard.Margin = new Thickness(12, 0, 0, 0);
-            }
-        }
-    }
-
     private void UpdateTableLayout(ResponsiveState state)
     {
-        if (!_elementCache.TryGetElement<ScrollViewer>(ElementIdentifiers.GradeTableScrollViewer, out ScrollViewer? scrollViewer) || scrollViewer == null)
+        if (!_elementCache.TryGetElement<ScrollViewer>(ElementIdentifiers.GradeEntriesContainer, out ScrollViewer? scrollViewer) || scrollViewer == null)
             return;
 
         var config = _layoutManager.GetConfiguration(state);
@@ -400,85 +441,296 @@ public partial class GradeEntryView : UserControl
 
     private void UpdateDynamicElements(ResponsiveState state)
     {
-        // Clear cached elements to get fresh references
-        _responsiveTextBlocks.Clear();
-        _responsiveBorders.Clear();
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements: Starting with state = {state}");
+            
+            // Clear cached elements to get fresh references
+            _responsiveTextBlocks.Clear();
+            _responsiveBorders.Clear();
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements: Cleared cached elements");
 
-        // Find and cache all dynamic elements
-        FindDynamicElements();
+            // Find and cache all dynamic elements
+            FindDynamicElements();
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements: FindDynamicElements completed");
 
-        // Apply responsive styles directly
-        ApplyDynamicElementStyles(state);
+            // Apply responsive styles directly
+            ApplyDynamicElementStyles(state);
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements: ApplyDynamicElementStyles completed");
+            
+            // Apply responsive grid layouts
+            ApplyResponsiveGridLayouts(state);
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements: ApplyResponsiveGridLayouts completed");
+            
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements: Completed successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements ERROR: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"UpdateDynamicElements StackTrace: {ex.StackTrace}");
+        }
     }
 
     private void FindDynamicElements()
     {
-        // Search through the entire visual tree for responsive elements
-        foreach (var element in this.GetVisualDescendants())
+        try
         {
-            if (element is TextBlock textBlock)
+            // Search through the entire visual tree for responsive elements
+            var descendants = this.GetVisualDescendants().ToList();
+            foreach (var element in descendants)
             {
-                _responsiveTextBlocks.Add(textBlock);
-            }
+                if (element is TextBlock textBlock)
+                {
+                    _responsiveTextBlocks.Add(textBlock);
+                }
 
-            if (element is Border border)
-            {
-                _responsiveBorders.Add(border);
+                if (element is Border border)
+                {
+                    _responsiveBorders.Add(border);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"FindDynamicElements error: {ex.Message}");
         }
     }
 
     private void ApplyDynamicElementStyles(ResponsiveState state)
     {
-        // Apply responsive font sizes
-        double baseFontSize = GetBaseFontSize(state);
-        double headerFontSize = GetHeaderFontSize(state);
-        double cardPadding = GetCardPadding(state);
-
-        // Update text blocks with appropriate font sizes
-        foreach (var textBlock in _responsiveTextBlocks)
+        try
         {
-            // Apply different font sizes based on content type
-            if (IsHeaderText(textBlock))
-            {
-                textBlock.FontSize = headerFontSize;
-            }
-            else if (IsValueText(textBlock))
-            {
-                textBlock.FontSize = GetValueFontSize(state);
-            }
-            else
-            {
-                textBlock.FontSize = baseFontSize;
-            }
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles: Starting with state = {state}");
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles: TextBlocks count = {_responsiveTextBlocks.Count}");
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles: Borders count = {_responsiveBorders.Count}");
+            
+            // Apply responsive font sizes
+            double baseFontSize = GetBaseFontSize(state);
+            double headerFontSize = GetHeaderFontSize(state);
+            double cardPadding = GetCardPadding(state);
 
-            // Remove existing responsive classes
-            textBlock.Classes.Remove(ResponsiveClasses.Mobile);
-            textBlock.Classes.Remove(ResponsiveClasses.Tablet);
-
-            // Add appropriate responsive class
-            if (state != ResponsiveState.Desktop)
+            // Update text blocks with appropriate font sizes
+            foreach (var textBlock in _responsiveTextBlocks)
             {
-                textBlock.Classes.Add(GetClassName(state));
-            }
-        }
-
-        // Update card padding
-        foreach (var border in _responsiveBorders)
-        {
-            if (border.Classes.Contains("card"))
-            {
-                border.Padding = new Thickness(cardPadding);
+                // Apply different font sizes based on content type
+                if (IsHeaderText(textBlock))
+                {
+                    textBlock.FontSize = headerFontSize;
+                }
+                else if (IsValueText(textBlock))
+                {
+                    textBlock.FontSize = GetValueFontSize(state);
+                }
+                else
+                {
+                    textBlock.FontSize = baseFontSize;
+                }
 
                 // Remove existing responsive classes
-                border.Classes.Remove(ResponsiveClasses.Mobile);
-                border.Classes.Remove(ResponsiveClasses.Tablet);
+                textBlock.Classes.Remove(ResponsiveClasses.Mobile);
+                textBlock.Classes.Remove(ResponsiveClasses.Tablet);
 
                 // Add appropriate responsive class
                 if (state != ResponsiveState.Desktop)
                 {
-                    border.Classes.Add(GetClassName(state));
+                    textBlock.Classes.Add(GetClassName(state));
                 }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles: TextBlocks processing completed");
+
+            // Update card padding
+            foreach (var border in _responsiveBorders)
+            {
+                if (border.Classes.Contains("card"))
+                {
+                    border.Padding = new Thickness(cardPadding);
+
+                    // Remove existing responsive classes
+                    border.Classes.Remove(ResponsiveClasses.Mobile);
+                    border.Classes.Remove(ResponsiveClasses.Tablet);
+
+                    // Add appropriate responsive class
+                    if (state != ResponsiveState.Desktop)
+                    {
+                        border.Classes.Add(GetClassName(state));
+                    }
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles: Borders processing completed");
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles: Completed successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles ERROR: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"ApplyDynamicElementStyles StackTrace: {ex.StackTrace}");
+        }
+    }
+
+    private void ApplyResponsiveGridLayouts(ResponsiveState state)
+    {
+        try
+        {
+            // Find all responsive grids and apply appropriate layouts
+            var descendants = this.GetVisualDescendants().ToList();
+            foreach (var element in descendants)
+            {
+                if (element is Grid grid)
+                {
+                    ApplyGridResponsiveLayout(grid, state);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyResponsiveGridLayouts error: {ex.Message}");
+        }
+    }
+
+    private void ApplyGridResponsiveLayout(Grid grid, ResponsiveState state)
+    {
+        if (grid.Classes.Contains("responsive-inputs"))
+        {
+            ApplyResponsiveInputsLayout(grid, state);
+        }
+        else if (grid.Classes.Contains("filter-grid"))
+        {
+            ApplyFilterGridLayout(grid, state);
+        }
+        else if (grid.Classes.Contains("header-grid"))
+        {
+            ApplyHeaderGridLayout(grid, state);
+        }
+    }
+
+    private void ApplyResponsiveInputsLayout(Grid grid, ResponsiveState state)
+    {
+        grid.ColumnDefinitions.Clear();
+        grid.RowDefinitions.Clear();
+
+        if (state == ResponsiveState.Mobile)
+        {
+            // Mobile: Single column, three rows
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+            // Position children
+            for (int i = 0; i < grid.Children.Count; i++)
+            {
+                var child = grid.Children[i];
+                Grid.SetColumn(child, 0);
+                Grid.SetRow(child, i);
+            }
+        }
+        else
+        {
+            // Desktop/Tablet: Two columns, two rows
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+            // Position children
+            if (grid.Children.Count > 0)
+            {
+                Grid.SetColumn(grid.Children[0], 0);
+                Grid.SetRow(grid.Children[0], 0);
+            }
+            if (grid.Children.Count > 1)
+            {
+                Grid.SetColumn(grid.Children[1], 1);
+                Grid.SetRow(grid.Children[1], 0);
+            }
+            if (grid.Children.Count > 2)
+            {
+                Grid.SetColumn(grid.Children[2], 0);
+                Grid.SetColumnSpan(grid.Children[2], 2);
+                Grid.SetRow(grid.Children[2], 1);
+            }
+        }
+    }
+
+    private void ApplyFilterGridLayout(Grid grid, ResponsiveState state)
+    {
+        grid.ColumnDefinitions.Clear();
+        grid.RowDefinitions.Clear();
+
+        if (state == ResponsiveState.Mobile)
+        {
+            // Mobile: Single column, five rows
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+            // Position children
+            for (int i = 0; i < grid.Children.Count; i++)
+            {
+                var child = grid.Children[i];
+                Grid.SetColumn(child, 0);
+                Grid.SetRow(child, i);
+            }
+        }
+        else
+        {
+            // Desktop/Tablet: Six columns, single row
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+            // Position children
+            for (int i = 0; i < grid.Children.Count; i++)
+            {
+                var child = grid.Children[i];
+                Grid.SetColumn(child, i);
+                Grid.SetRow(child, 0);
+            }
+        }
+    }
+
+    private void ApplyHeaderGridLayout(Grid grid, ResponsiveState state)
+    {
+        grid.ColumnDefinitions.Clear();
+        grid.RowDefinitions.Clear();
+
+        if (state == ResponsiveState.Mobile)
+        {
+            // Mobile: Single column, two rows
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+            // Position children
+            for (int i = 0; i < grid.Children.Count; i++)
+            {
+                var child = grid.Children[i];
+                Grid.SetColumn(child, 0);
+                Grid.SetRow(child, i);
+            }
+        }
+        else
+        {
+            // Desktop/Tablet: Three columns, single row
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+            // Position children
+            for (int i = 0; i < grid.Children.Count; i++)
+            {
+                var child = grid.Children[i];
+                Grid.SetColumn(child, i);
+                Grid.SetRow(child, 0);
             }
         }
     }
@@ -583,10 +835,18 @@ public partial class GradeEntryView : UserControl
         // FIXED: Complete the method implementation with proper signature
         public void ApplyToAll(UserControl parent, Action<Control> action)
         {
-            // Apply to all visual descendants for dynamic responsive behavior
-            foreach (var element in parent.GetVisualDescendants().OfType<Control>())
+            try
             {
-                action(element);
+                // Apply to all visual descendants for dynamic responsive behavior
+                var descendants = parent.GetVisualDescendants().OfType<Control>().ToList();
+                foreach (var element in descendants)
+                {
+                    action(element);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyToAll error: {ex.Message}");
             }
         }
     }
@@ -614,22 +874,10 @@ public partial class GradeEntryView : UserControl
 
         private LayoutConfiguration CreateMobileConfig() => new()
         {
-            StatsColumns = 1,
-            StatsRows = 4,
-            StatsCardPositions = new[]
-            {
-                new GridPosition(0, 0),
-                new GridPosition(0, 1),
-                new GridPosition(0, 2),
-                new GridPosition(0, 3)
-            },
-            StatsCardMargins = new[]
-            {
-                new Thickness(0, 0, 0, 8),
-                new Thickness(0, 8, 0, 8),
-                new Thickness(0, 8, 0, 8),
-                new Thickness(0, 8, 0, 0)
-            },
+            StatsColumns = 0,
+            StatsRows = 0,
+            StatsCardPositions = Array.Empty<GridPosition>(),
+            StatsCardMargins = Array.Empty<Thickness>(),
             StackMainContent = true,
             StackHeaderContent = true,
             UseHorizontalScrolling = true
@@ -637,22 +885,10 @@ public partial class GradeEntryView : UserControl
 
         private LayoutConfiguration CreateTabletConfig() => new()
         {
-            StatsColumns = 2,
-            StatsRows = 2,
-            StatsCardPositions = new[]
-            {
-                new GridPosition(0, 0),
-                new GridPosition(1, 0),
-                new GridPosition(0, 1),
-                new GridPosition(1, 1)
-            },
-            StatsCardMargins = new[]
-            {
-                new Thickness(0, 0, 8, 8),
-                new Thickness(8, 0, 0, 8),
-                new Thickness(0, 8, 8, 0),
-                new Thickness(8, 8, 0, 0)
-            },
+            StatsColumns = 0,
+            StatsRows = 0,
+            StatsCardPositions = Array.Empty<GridPosition>(),
+            StatsCardMargins = Array.Empty<Thickness>(),
             StackMainContent = false,
             StackHeaderContent = false,
             UseHorizontalScrolling = false
@@ -660,22 +896,10 @@ public partial class GradeEntryView : UserControl
 
         private LayoutConfiguration CreateDesktopConfig() => new()
         {
-            StatsColumns = 4,
-            StatsRows = 1,
-            StatsCardPositions = new[]
-            {
-                new GridPosition(0, 0),
-                new GridPosition(1, 0),
-                new GridPosition(2, 0),
-                new GridPosition(3, 0)
-            },
-            StatsCardMargins = new[]
-            {
-                new Thickness(0, 0, 12, 0),
-                new Thickness(12, 0, 12, 0),
-                new Thickness(12, 0, 12, 0),
-                new Thickness(12, 0, 0, 0)
-            },
+            StatsColumns = 0,
+            StatsRows = 0,
+            StatsCardPositions = Array.Empty<GridPosition>(),
+            StatsCardMargins = Array.Empty<Thickness>(),
             StackMainContent = false,
             StackHeaderContent = false,
             UseHorizontalScrolling = false

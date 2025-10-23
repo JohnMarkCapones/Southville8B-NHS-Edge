@@ -503,4 +503,31 @@ public class MockApiClient : IApiClient
     public Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto) => Task.FromResult<AlertDto?>(new AlertDto { Id = Guid.NewGuid().ToString(), Type = dto.Type, Title = dto.Title, Message = dto.Message, ExpiresAt = DateTimeOffset.Now.AddDays(1), CreatedAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now });
     public Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto) => Task.FromResult<AlertDto?>(null);
     public Task<bool> DeleteAlertAsync(string id) => Task.FromResult(true);
+    
+    // Teacher-specific API methods (stubs for design-time)
+    public Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId) => Task.FromResult<TeacherSidebarMetrics?>(null);
+    public Task<List<ScheduleDto>?> GetTeacherTodaySchedulesAsync(string teacherId) => Task.FromResult<List<ScheduleDto>?>(null);
+    public Task<List<TeacherActivityDto>?> GetTeacherRecentActivitiesAsync(string teacherId) => Task.FromResult<List<TeacherActivityDto>?>(null);
+    
+    // GWA Management Methods (stubs for design-time)
+    public Task<StudentGwaListResponse?> GetAdvisoryStudentsWithGwaAsync(string gradingPeriod, string schoolYear) => Task.FromResult<StudentGwaListResponse?>(null);
+    public Task<StudentGwaDto?> CreateGwaEntryAsync(CreateGwaDto dto) => Task.FromResult<StudentGwaDto?>(null);
+    public Task<StudentGwaDto?> UpdateGwaEntryAsync(string id, UpdateGwaDto dto) => Task.FromResult<StudentGwaDto?>(null);
+    public Task<bool> DeleteGwaEntryAsync(string id) => Task.FromResult(false);
+    
+    // Schedule Management Methods (stubs for design-time)
+    public Task<ScheduleListResponse?> GetSchedulesAsync(int page = 1, int limit = 20, string? sectionId = null, string? teacherId = null, string? dayOfWeek = null, string? schoolYear = null, string? semester = null) => Task.FromResult<ScheduleListResponse?>(null);
+    public Task<ScheduleDto?> GetScheduleByIdAsync(string scheduleId) => Task.FromResult<ScheduleDto?>(null);
+    public Task<ScheduleDto?> CreateScheduleAsync(CreateScheduleDto dto) => Task.FromResult<ScheduleDto?>(null);
+    public Task<ScheduleDto?> UpdateScheduleAsync(string scheduleId, UpdateScheduleDto dto) => Task.FromResult<ScheduleDto?>(null);
+    public Task<bool> DeleteScheduleAsync(string scheduleId) => Task.FromResult(false);
+    public Task<List<ScheduleDto>?> BulkCreateSchedulesAsync(List<CreateScheduleDto> schedules) => Task.FromResult<List<ScheduleDto>?>(null);
+    public Task<bool> AssignStudentsToScheduleAsync(string scheduleId, AssignStudentsDto dto) => Task.FromResult(false);
+    public Task<bool> RemoveStudentsFromScheduleAsync(string scheduleId, List<string> studentIds) => Task.FromResult(false);
+    public Task<ConflictCheckResult?> CheckScheduleConflictsAsync(CreateScheduleDto dto) => Task.FromResult<ConflictCheckResult?>(null);
+    public Task<List<Subject>?> GetSubjectsAsync() => Task.FromResult<List<Subject>?>(null);
+    public Task<List<SectionDto>?> GetSectionsAsync() => Task.FromResult<List<SectionDto>?>(null);
+    public Task<List<UserDto>?> GetTeachersAsync() => Task.FromResult<List<UserDto>?>(null);
+    public Task<List<RoomDto>?> GetRoomsAsync() => Task.FromResult<List<RoomDto>?>(null);
+    public Task<List<BuildingDto>?> GetBuildingsAsync() => Task.FromResult<List<BuildingDto>?>(null);
 }

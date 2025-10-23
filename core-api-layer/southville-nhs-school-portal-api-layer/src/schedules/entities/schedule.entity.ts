@@ -114,8 +114,7 @@ export class Schedule {
   @ApiProperty({ description: 'Building information', required: false })
   building?: {
     id: string;
-    name: string;
-    description?: string;
+    buildingName: string;
   };
 
   @ApiProperty({

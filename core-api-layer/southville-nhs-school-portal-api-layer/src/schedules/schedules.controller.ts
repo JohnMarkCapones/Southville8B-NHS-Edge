@@ -177,6 +177,8 @@ export class SchedulesController {
     @Query('semester') semester?: string,
   ): Promise<{ data: Schedule[]; pagination: any }> {
     const filters: any = {
+      page,
+      limit,
       sectionId,
       teacherId,
       dayOfWeek,
@@ -446,5 +448,43 @@ export class SchedulesController {
     @Body() conflictCheckDto: ConflictCheckDto,
   ): Promise<{ hasConflicts: boolean; conflicts: any[] }> {
     return this.schedulesService.validateScheduleConflicts(conflictCheckDto);
+  }
+
+  @Get('teacher/today')
+  @Roles(UserRole.TEACHER)
+  @ApiOperation({
+    summary: "Get today's schedules for authenticated teacher",
+    description:
+      "Returns all schedules for the authenticated teacher for today's day of the week",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Today's teacher schedules retrieved successfully",
+    type: [Schedule],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teacher access required',
+  })
+  async getTeacherTodaySchedules(@AuthUser() user: any): Promise<Schedule[]> {
+    this.logger.log(`Getting today's schedules for teacher: ${user.id}`);
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayNames = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const todayDayName = dayNames[dayOfWeek];
+
+    return this.schedulesService.getTeacherTodaySchedules(
+      user.id,
+      todayDayName,
+    );
   }
 }
