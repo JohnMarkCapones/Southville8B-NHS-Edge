@@ -31,4 +31,13 @@ public class SubjectsResponse
 
     [JsonPropertyName("total")]
     public int Total { get; set; }
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("limit")]
+    public int Limit { get; set; }
+
+    [JsonPropertyName("totalPages")]
+    public int TotalPages { get; set; }
 }

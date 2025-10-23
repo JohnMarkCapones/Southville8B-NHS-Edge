@@ -1,0 +1,279 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             x:Class="Southville8BEdgeUI.Views.Admin.ClassSchedulesView"
+             x:DataType="vm:ClassSchedulesViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+    <UserControl.Styles>
+        <!-- RESPONSIVE TEXT STYLES -->
+        <Style Selector="TextBlock.main-header">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.tablet">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+        <Style Selector="TextBlock.main-header.mobile">
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+
+        <Style Selector="TextBlock.subtitle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.tablet">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle.mobile">
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.light">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+
+        <!-- CARD STYLES -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        <Style Selector="Border.card.mobile">
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style Selector="Border.card.tablet">
+            <Setter Property="Padding" Value="18"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+
+        <!-- BUTTON STYLES -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="{DynamicResource SecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+        </Style>
+        <Style Selector="Button.tertiary">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+        </Style>
+
+        <!-- STATS CARD STYLES -->
+        <Style Selector="Border.stat-card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+        </Style>
+        <Style Selector="Border.stat-card.mobile">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style Selector="Border.stat-card.tablet">
+            <Setter Property="Padding" Value="18"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer x:Name="MainScrollViewer" 
+                  HorizontalScrollBarVisibility="Disabled" 
+                  VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="24" Margin="24">
+            
+            <!-- HEADER SECTION -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Class Schedules" 
+                               Classes="main-header"/>
+                    <TextBlock Text="Manage class schedules, view conflicts, and assign students" 
+                               Classes="subtitle"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal" 
+                            Spacing="12" 
+                            VerticalAlignment="Center">
+                    <Button Classes="primary" 
+                            Command="{Binding OpenCreateDialogCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="📅" FontSize="16"/>
+                            <TextBlock Text="Create Schedule" FontSize="14"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- STATISTICS CARDS -->
+            <Grid x:Name="StatsGrid" Classes="stats-section">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <Border Grid.Column="0" Classes="stat-card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Total Schedules" 
+                                   FontSize="12" 
+                                   Classes="light"/>
+                        <TextBlock Text="{Binding TotalSchedules}" 
+                                   FontSize="24" 
+                                   FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="1" Classes="stat-card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Active Schedules" 
+                                   FontSize="12" 
+                                   Classes="light"/>
+                        <TextBlock Text="{Binding ActiveSchedules}" 
+                                   FontSize="24" 
+                                   FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="2" Classes="stat-card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Conflicts" 
+                                   FontSize="12" 
+                                   Classes="light"/>
+                        <TextBlock Text="{Binding ConflictCount}" 
+                                   FontSize="24" 
+                                   FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="3" Classes="stat-card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Teachers" 
+                                   FontSize="12" 
+                                   Classes="light"/>
+                        <TextBlock Text="{Binding TeacherCount}" 
+                                   FontSize="24" 
+                                   FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- FILTERS SECTION -->
+            <Border x:Name="FilterGrid" Classes="card filters-section">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Filters" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBox Grid.Column="0" 
+                                 Text="{Binding SearchText}" 
+                                 Watermark="Search schedules..."
+                                 Classes="search-input"/>
+                        
+                        <ComboBox Grid.Column="1" 
+                                  ItemsSource="{Binding Sections}"
+                                  SelectedItem="{Binding SelectedSection}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        
+                        <ComboBox Grid.Column="2" 
+                                  ItemsSource="{Binding Teachers}"
+                                  SelectedItem="{Binding SelectedTeacher}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding FullName}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        
+                        <ComboBox Grid.Column="3" 
+                                  ItemsSource="{Binding DayOptions}"
+                                  SelectedItem="{Binding SelectedDay}"/>
+                        
+                        <ComboBox Grid.Column="4" 
+                                  ItemsSource="{Binding SchoolYears}"
+                                  SelectedItem="{Binding SelectedSchoolYear}"/>
+                        
+                        <Button Grid.Column="5" 
+                                Classes="tertiary" 
+                                Command="{Binding ApplyFiltersCommand}">
+                            <TextBlock Text="Clear"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- SCHEDULES TABLE -->
+            <Border Classes="card">
+                <DataGrid ItemsSource="{Binding FilteredSchedules}" 
+                          AutoGenerateColumns="False" 
+                          CanUserResizeColumns="True" 
+                          GridLinesVisibility="Horizontal"
+                          CanUserSortColumns="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Subject" 
+                                            Binding="{Binding SubjectName}" 
+                                            Width="*"/>
+                        <DataGridTextColumn Header="Teacher" 
+                                            Binding="{Binding TeacherName}" 
+                                            Width="*"/>
+                        <DataGridTextColumn Header="Section" 
+                                            Binding="{Binding SectionName}" 
+                                            Width="Auto"/>
+                        <DataGridTextColumn Header="Day" 
+                                            Binding="{Binding DisplayDay}" 
+                                            Width="Auto"/>
+                        <DataGridTextColumn Header="Time" 
+                                            Binding="{Binding TimeRange}" 
+                                            Width="Auto"/>
+                        <DataGridTextColumn Header="Room" 
+                                            Binding="{Binding RoomNumber}" 
+                                            Width="Auto"/>
+                        <DataGridTextColumn Header="Building" 
+                                            Binding="{Binding BuildingName}" 
+                                            Width="Auto"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

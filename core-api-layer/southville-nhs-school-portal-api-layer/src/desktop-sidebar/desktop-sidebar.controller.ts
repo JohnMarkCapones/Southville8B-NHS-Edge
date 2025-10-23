@@ -1,14 +1,23 @@
-import { Controller, Get, Sse, MessageEvent, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Sse,
+  MessageEvent,
+  UseGuards,
+  Param,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
 import {
   DesktopSidebarService,
   SidebarMetrics,
+  TeacherSidebarMetrics,
 } from './desktop-sidebar.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/dto/create-user.dto';
+import { AuthUser } from '../auth/auth-user.decorator';
 
 @ApiTags('Desktop Sidebar')
 @Controller('desktop-sidebar')
@@ -70,5 +79,74 @@ export class DesktopSidebarController {
   })
   async getMetrics(): Promise<SidebarMetrics> {
     return await this.desktopSidebarService.triggerMetricsUpdate();
+  }
+
+  @Sse('teacher/kpi/stream')
+  @Roles(UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Get real-time teacher sidebar KPI metrics stream',
+    description:
+      'Server-Sent Events stream for live teacher sidebar KPI metrics updates (Classes, Assignments, Students, Messages)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream of teacher sidebar KPI metrics',
+    schema: {
+      type: 'object',
+      properties: {
+        data: { type: 'string', description: 'JSON string of teacher metrics' },
+        type: { type: 'string', description: 'Event type' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teacher access required',
+  })
+  streamTeacherMetrics(@AuthUser() user: any): Observable<MessageEvent> {
+    return this.desktopSidebarService.getTeacherMetricsStream(user.id);
+  }
+
+  @Get('teacher/kpi')
+  @Roles(UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Get current teacher sidebar KPI metrics',
+    description: 'Get current teacher sidebar KPI metrics (one-time request)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current teacher sidebar KPI metrics',
+    schema: {
+      type: 'object',
+      properties: {
+        totalClasses: {
+          type: 'number',
+          description: 'Number of active classes',
+        },
+        pendingAssignments: {
+          type: 'number',
+          description: 'Number of pending assignments',
+        },
+        totalStudents: { type: 'number', description: 'Number of students' },
+        unreadMessages: {
+          type: 'number',
+          description: 'Number of unread messages',
+        },
+        lastUpdated: { type: 'string', description: 'Last update timestamp' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teacher access required',
+  })
+  async getTeacherMetrics(
+    @AuthUser() user: any,
+  ): Promise<TeacherSidebarMetrics> {
+    return await this.desktopSidebarService.triggerTeacherMetricsUpdate(
+      user.id,
+    );
   }
 }
