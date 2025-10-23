@@ -216,7 +216,9 @@ export class MonitoringService {
         await supabase
           .from('quiz_participants')
           .update({
-            flag_count: supabase.rpc('increment', { participant_id: participant.id }),
+            flag_count: supabase.rpc('increment', {
+              participant_id: participant.id,
+            }),
             status: severity === 'critical' ? 'flagged' : undefined,
           })
           .eq('id', participant.id);

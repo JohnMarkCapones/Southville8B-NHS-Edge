@@ -45,12 +45,16 @@ export class AutoGradingService {
 
       // ===== DEBUG LOGGING =====
       this.logger.debug(`📊 Query result - Data: ${JSON.stringify(question)}`);
-      this.logger.debug(`❌ Query result - Error: ${JSON.stringify(questionError)}`);
+      this.logger.debug(
+        `❌ Query result - Error: ${JSON.stringify(questionError)}`,
+      );
 
       if (questionError || !question) {
         this.logger.error(`❌ FAILED to find question ${questionId}`);
         this.logger.error(`Error details: ${JSON.stringify(questionError)}`);
-        throw new InternalServerErrorException(`Question not found: ${questionId}`);
+        throw new InternalServerErrorException(
+          `Question not found: ${questionId}`,
+        );
       }
 
       this.logger.debug(`✅ Found question: ${question.question_type}`);
@@ -170,7 +174,11 @@ export class AutoGradingService {
     maxPoints: number = 1,
   ): Promise<GradingResult> {
     // True/False is the same as multiple choice with 2 options
-    return await this.gradeMultipleChoice(questionId, studentChoiceId, maxPoints);
+    return await this.gradeMultipleChoice(
+      questionId,
+      studentChoiceId,
+      maxPoints,
+    );
   }
 
   /**
@@ -411,7 +419,7 @@ export class AutoGradingService {
       return { isCorrect: false, pointsAwarded: 0 };
     }
 
-    const correctAnswer = choices.map(choice => choice.choice_id);
+    const correctAnswer = choices.map((choice) => choice.choice_id);
 
     if (studentAnswer.length !== correctAnswer.length) {
       return { isCorrect: false, pointsAwarded: 0 };
@@ -449,7 +457,9 @@ export class AutoGradingService {
       // Get all student answers for this attempt
       const { data: answers, error: answersError } = await supabase
         .from('quiz_student_answers')
-        .select('answer_id, question_id, choice_id, choice_ids, answer_text, answer_json')
+        .select(
+          'answer_id, question_id, choice_id, choice_ids, answer_text, answer_json',
+        )
         .eq('attempt_id', attemptId);
 
       if (answersError) {
@@ -457,7 +467,12 @@ export class AutoGradingService {
       }
 
       if (!answers || answers.length === 0) {
-        return { totalScore: 0, maxScore: 0, gradedCount: 0, manualGradingRequired: 0 };
+        return {
+          totalScore: 0,
+          maxScore: 0,
+          gradedCount: 0,
+          manualGradingRequired: 0,
+        };
       }
 
       let totalScore = 0;

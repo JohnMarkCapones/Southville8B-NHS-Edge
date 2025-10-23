@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
+import { useClubsTable, useDeleteClub } from "@/hooks/use-clubs"
+import { filterClubsBySearch, filterClubsByStatus, getDomainBadgeColor } from "@/lib/api/adapters/clubs.adapter"
 import {
   Search,
   Plus,
@@ -280,9 +282,12 @@ const mockClubs = [
 const ClubsPage = () => {
   const { toast } = useToast()
   const router = useRouter()
-  const [clubs, setClubs] = useState(mockClubs)
+
+  // Fetch clubs data from API
+  const { data: clubsData = [], isLoading, error } = useClubsTable()
+  const deleteClubMutation = useDeleteClub()
+
   const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
@@ -365,17 +370,18 @@ const ClubsPage = () => {
     club: any
   }>({ isOpen: false, club: null })
 
-  const filteredClubs = clubs.filter((club) => {
-    const matchesSearch =
-      club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      club.president.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      club.adviser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      club.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || club.category.toLowerCase() === categoryFilter
-    const matchesStatus = statusFilter === "all" || club.status.toLowerCase() === statusFilter
+  // Apply filters using adapter functions
+  const filteredClubs = useMemo(() => {
+    let result = clubsData
 
-    return matchesSearch && matchesCategory && matchesStatus
-  })
+    // Apply search filter
+    result = filterClubsBySearch(result, searchTerm)
+
+    // Apply status filter
+    result = filterClubsByStatus(result, statusFilter)
+
+    return result
+  }, [clubsData, searchTerm, statusFilter])
 
   const totalPages = Math.ceil(filteredClubs.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -399,13 +405,8 @@ const ClubsPage = () => {
 
   const handleFilterChange = (filterType: string, value: string) => {
     setCurrentPage(1)
-    switch (filterType) {
-      case "category":
-        setCategoryFilter(value)
-        break
-      case "status":
-        setStatusFilter(value)
-        break
+    if (filterType === "status") {
+      setStatusFilter(value)
     }
   }
 
@@ -425,24 +426,12 @@ const ClubsPage = () => {
     }
   }
 
-  const getCategoryBadge = (category: string) => {
-    const colors = {
-      Academic: "bg-blue-500/10 text-blue-700 border-blue-500/20 hover:bg-blue-500/20",
-      Sports: "bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500/20",
-      Arts: "bg-pink-500/10 text-pink-700 border-pink-500/20 hover:bg-pink-500/20",
-      Technology: "bg-cyan-500/10 text-cyan-700 border-cyan-500/20 hover:bg-cyan-500/20",
-      Service: "bg-orange-500/10 text-orange-700 border-orange-500/20 hover:bg-orange-500/20",
-      Cultural: "bg-purple-500/10 text-purple-700 border-purple-500/20 hover:bg-purple-500/20",
-    }
+  const getDomainBadge = (domain: string) => {
+    const colorClass = getDomainBadgeColor(domain)
 
     return (
-      <Badge
-        className={
-          colors[category as keyof typeof colors] ||
-          "bg-gray-500/10 text-gray-700 border-gray-500/20 hover:bg-gray-500/20"
-        }
-      >
-        {category}
+      <Badge className={colorClass}>
+        {domain}
       </Badge>
     )
   }
@@ -573,11 +562,12 @@ const ClubsPage = () => {
         ...restoreConfirmation.club,
         status: "Inactive",
       }
-      delete restoredClub.deletedAt
-      delete restoredClub.deletedBy
-      delete restoredClub.deletionReason
+      // TODO: Implement restore with API when soft delete is available
+      // delete restoredClub.deletedAt
+      // delete restoredClub.deletedBy
+      // delete restoredClub.deletionReason
 
-      setClubs((prev) => [restoredClub, ...prev])
+      // setClubs((prev) => [restoredClub, ...prev])
       setArchivedClubs((prev) => prev.filter((c) => c.id !== restoreConfirmation.club.id))
 
       toast({
@@ -633,13 +623,14 @@ const ClubsPage = () => {
   const handleBulkRestoreArchived = () => {
     const clubsToRestore = archivedClubs.filter((c) => selectedArchivedClubs.includes(c.id))
 
-    clubsToRestore.forEach((club) => {
-      const restoredClub = { ...club, status: "Inactive" }
-      delete restoredClub.deletedAt
-      delete restoredClub.deletedBy
-      delete restoredClub.deletionReason
-      setClubs((prev) => [restoredClub, ...prev])
-    })
+    // TODO: Implement bulk restore with API when soft delete is available
+    // clubsToRestore.forEach((club) => {
+    //   const restoredClub = { ...club, status: "Inactive" }
+    //   delete restoredClub.deletedAt
+    //   delete restoredClub.deletedBy
+    //   delete restoredClub.deletionReason
+    //   setClubs((prev) => [restoredClub, ...prev])
+    // })
 
     setArchivedClubs((prev) => prev.filter((c) => !selectedArchivedClubs.includes(c.id)))
     setSelectedArchivedClubs([])
@@ -711,22 +702,23 @@ const ClubsPage = () => {
     })
   }
 
-  const confirmDeleteClub = () => {
+  const confirmDeleteClub = async () => {
     if (deleteConfirmation.club) {
-      setClubs((prev) => prev.filter((c) => c.id !== deleteConfirmation.club.id))
+      try {
+        await deleteClubMutation.mutateAsync(deleteConfirmation.club.id)
 
-      toast({
-        title: "Club Deleted Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">{deleteConfirmation.club.name} has been permanently removed.</p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-4 h-4 bg-gradient-to-br from-red-500 to-red-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                <Users className="w-3 h-3" />
-              </div>
-              <span>{deleteConfirmation.club.category}</span>
-              <span>•</span>
-              <span>{deleteConfirmation.club.membersCount} members</span>
+        toast({
+          title: "Club Deleted Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">{deleteConfirmation.club.name} has been permanently removed.</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 bg-gradient-to-br from-red-500 to-red-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  <Users className="w-3 h-3" />
+                </div>
+                <span>{deleteConfirmation.club.domain}</span>
+                <span>•</span>
+                <span>{deleteConfirmation.club.membersCount} members</span>
             </div>
             <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
               <CheckCircle className="w-3 h-3" />
@@ -739,7 +731,16 @@ const ClubsPage = () => {
         className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
       })
 
-      setDeleteConfirmation({ isOpen: false, club: null })
+        setDeleteConfirmation({ isOpen: false, club: null })
+      } catch (error) {
+        console.error('Error deleting club:', error)
+        toast({
+          title: "Error Deleting Club",
+          description: "Failed to delete the club. Please try again.",
+          variant: "destructive",
+          duration: 5000,
+        })
+      }
     }
   }
 
@@ -750,9 +751,11 @@ const ClubsPage = () => {
 
   const confirmStatusChange = () => {
     if (statusConfirmation.club) {
-      setClubs((prev) =>
-        prev.map((c) => (c.id === statusConfirmation.club.id ? { ...c, status: statusConfirmation.newStatus } : c)),
-      )
+      // TODO: Implement status change with API when status field is added to backend
+      // For now, just show success message
+      // setClubs((prev) =>
+      //   prev.map((c) => (c.id === statusConfirmation.club.id ? { ...c, status: statusConfirmation.newStatus } : c)),
+      // )
 
       toast({
         title: `Status Updated`,
@@ -791,7 +794,8 @@ const ClubsPage = () => {
       activeMembers: 0,
     }
 
-    setClubs((prev) => [newClub, ...prev])
+    // TODO: Implement duplicate with API
+    // setClubs((prev) => [newClub, ...prev])
 
     toast({
       title: `Club Duplicated`,
@@ -906,7 +910,7 @@ const ClubsPage = () => {
           <h1 className="text-3xl font-bold text-foreground">Clubs & Organizations</h1>
           <p className="text-muted-foreground">Manage school clubs, organizations, and their members</p>
         </div>
-        <Button onClick={handleCreateClub} className="bg-primary hover:bg-primary/90">
+        <Button onClick={handleCreateClub} className="bg-primary hover:bg-primary/90" disabled={isLoading}>
           <Plus className="w-4 h-4 mr-2" />
           Create Club
         </Button>
@@ -920,7 +924,7 @@ const ClubsPage = () => {
               <Users className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Total Clubs</p>
-                <p className="text-2xl font-bold text-foreground">{clubs.length}</p>
+                <p className="text-2xl font-bold text-foreground">{clubsData.length}</p>
               </div>
             </div>
           </CardContent>
@@ -932,7 +936,7 @@ const ClubsPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Active Clubs</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {clubs.filter((c) => c.status === "Active").length}
+                  {clubsData.filter((c) => c.status === "Active").length}
                 </p>
               </div>
             </div>
@@ -945,7 +949,7 @@ const ClubsPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Total Members</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {clubs.reduce((sum, c) => sum + c.membersCount, 0)}
+                  {clubsData.reduce((sum, c) => sum + c.membersCount, 0)}
                 </p>
               </div>
             </div>
@@ -957,7 +961,7 @@ const ClubsPage = () => {
               <UserPlus className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Recruiting</p>
-                <p className="text-2xl font-bold text-foreground">{clubs.filter((c) => c.isRecruiting).length}</p>
+                <p className="text-2xl font-bold text-foreground">{clubsData.filter((c) => c.isRecruiting).length}</p>
               </div>
             </div>
           </CardContent>
@@ -988,7 +992,8 @@ const ClubsPage = () => {
                 />
               </div>
             </div>
-            <Select value={categoryFilter} onValueChange={(value) => handleFilterChange("category", value)}>
+            {/* TODO: Add domain filter when needed */}
+            {/* <Select value={categoryFilter} onValueChange={(value) => handleFilterChange("category", value)}>
               <SelectTrigger className="w-[200px] bg-background border-border text-foreground">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
@@ -1001,7 +1006,7 @@ const ClubsPage = () => {
                 <SelectItem value="service">Service</SelectItem>
                 <SelectItem value="cultural">Cultural</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
             <Select value={statusFilter} onValueChange={(value) => handleFilterChange("status", value)}>
               <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
                 <SelectValue placeholder="Filter by status" />
@@ -1078,108 +1083,134 @@ const ClubsPage = () => {
                     />
                   </TableHead>
                   <TableHead className="text-foreground">Club</TableHead>
-                  <TableHead className="text-foreground">Category</TableHead>
                   <TableHead className="text-foreground">President</TableHead>
+                  <TableHead className="text-foreground">Vice President</TableHead>
                   <TableHead className="text-foreground">Adviser</TableHead>
                   <TableHead className="text-foreground">Members</TableHead>
                   <TableHead className="text-foreground">Status</TableHead>
-                  <TableHead className="text-foreground">Meeting</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedClubs.map((club) => (
-                  <TableRow
-                    key={club.id}
-                    className="border-border cursor-pointer hover:bg-muted/50"
-                    onContextMenu={(e) => handleContextMenu(e, club)}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedClubs.includes(club.id)}
-                        onCheckedChange={(checked) => handleSelectClub(club.id, checked as boolean)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={club.logo || "/placeholder.svg"} alt={club.name} />
-                          <AvatarFallback>{club.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="max-w-md">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-foreground">{club.name}</div>
-                            {club.isRecruiting && (
-                              <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/20 text-xs">
-                                Recruiting
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-1 line-clamp-1">{club.description}</div>
-                        </div>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        <p className="text-muted-foreground">Loading clubs...</p>
                       </div>
-                    </TableCell>
-                    <TableCell>{getCategoryBadge(club.category)}</TableCell>
-                    <TableCell className="text-foreground">{club.president}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex flex-col gap-0.5">
-                        <span>{club.adviser}</span>
-                        <span className="text-xs">{club.department}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <button
-                        className="flex items-center gap-2 hover:text-primary transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleViewMembers(club)
-                        }}
-                      >
-                        <Users className="w-4 h-4" />
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium text-foreground">{club.membersCount}</span>
-                          <span className="text-xs text-muted-foreground">{club.activeMembers} active</span>
-                        </div>
-                      </button>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(club.status, club)}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center text-sm">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {club.meetingDay}
-                        </div>
-                        <div className="flex items-center text-xs">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {club.meetingTime}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-border">
-                          <DropdownMenuItem className="text-foreground" onClick={() => handleViewClub(club)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Club
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-foreground" onClick={() => handleEditClub(club)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Club
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClub(club)}>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Club
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-4">
+                        <AlertTriangle className="h-12 w-12 text-destructive" />
+                        <div>
+                          <p className="text-destructive font-medium">Error loading clubs</p>
+                          <p className="text-muted-foreground text-sm mt-1">
+                            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => window.location.reload()}
+                          variant="outline"
+                          className="mt-2"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          Retry
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedClubs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      No clubs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedClubs.map((club) => (
+                    <TableRow
+                      key={club.id}
+                      className="border-border cursor-pointer hover:bg-muted/50"
+                      onContextMenu={(e) => handleContextMenu(e, club)}
+                    >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedClubs.includes(club.id)}
+                          onCheckedChange={(checked) => handleSelectClub(club.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={club.logo || "/placeholder.svg"} alt={club.name} />
+                            <AvatarFallback>{club.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="max-w-md">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-foreground">{club.name}</div>
+                              {club.isRecruiting && (
+                                <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/20 text-xs">
+                                  Recruiting
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1 line-clamp-1">{club.description}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-foreground">{club.president}</TableCell>
+                      <TableCell className="text-foreground">{club.vicePresident}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{club.adviser}</span>
+                          <span className="text-xs">{club.department}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          className="flex items-center gap-2 hover:text-primary transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleViewMembers(club)
+                          }}
+                        >
+                          <Users className="w-4 h-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium text-foreground">{club.membersCount}</span>
+                            <span className="text-xs text-muted-foreground">{club.activeMembers} active</span>
+                          </div>
+                        </button>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(club.status, club)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-card border-border">
+                            <DropdownMenuItem className="text-foreground" onClick={() => handleViewClub(club)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Club
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-foreground" onClick={() => handleEditClub(club)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Club
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClub(club)}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Club
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -1454,7 +1485,7 @@ const ClubsPage = () => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{getCategoryBadge(club.category)}</TableCell>
+                        <TableCell>{getDomainBadge(club.category)}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {new Date(club.deletedAt).toLocaleDateString()}
                         </TableCell>
@@ -1755,7 +1786,7 @@ const ClubsPage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {getCategoryBadge(deleteConfirmation.club.category)}
+                        {getDomainBadge(deleteConfirmation.club.domain)}
                         {getStatusBadge(deleteConfirmation.club.status)}
                       </div>
                       <div className="space-y-2 text-sm text-muted-foreground">

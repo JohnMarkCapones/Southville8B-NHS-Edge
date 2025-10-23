@@ -51,7 +51,8 @@ export class GenerateAccessLinkDto {
   @IsBoolean()
   @ApiProperty({
     example: true,
-    description: 'Whether authentication is required to access quiz via this link',
+    description:
+      'Whether authentication is required to access quiz via this link',
     required: false,
     default: true,
   })

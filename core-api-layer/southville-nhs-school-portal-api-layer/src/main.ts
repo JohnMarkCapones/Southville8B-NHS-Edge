@@ -32,8 +32,11 @@ async function bootstrap() {
     },
   });
 
-  // Compression middleware
-  await app.register(compression);
+  // Compression middleware with optimized settings
+  await app.register(compression, {
+    encodings: ['gzip', 'deflate', 'br'], // Brotli compression for better performance
+    threshold: 1024, // Compress responses larger than 1KB
+  });
 
   // Multipart support for file uploads
   await app.register(multipart, {
@@ -63,6 +66,14 @@ async function bootstrap() {
     origin:
       process.env.NODE_ENV === 'production' ? ['https://yourdomain.com'] : true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-CSRF-Token',
+      'x-csrf-token',
+    ],
   });
 
   // Swagger documentation

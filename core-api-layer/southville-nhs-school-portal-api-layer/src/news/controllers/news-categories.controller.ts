@@ -30,9 +30,7 @@ import { CreateNewsCategoryDto } from '../dto';
 @ApiTags('news-categories')
 @Controller('news-categories')
 export class NewsCategoriesController {
-  constructor(
-    private readonly categoriesService: NewsCategoriesService,
-  ) {}
+  constructor(private readonly categoriesService: NewsCategoriesService) {}
 
   // ============================================
   // PUBLIC ENDPOINTS (No authentication required)
@@ -44,7 +42,10 @@ export class NewsCategoriesController {
    */
   @Get('public')
   @ApiOperation({ summary: 'Get all news categories (public)' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+  })
   async findAllPublic() {
     return this.categoriesService.findAll();
   }
@@ -106,7 +107,10 @@ export class NewsCategoriesController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all categories (authenticated)' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll() {
     return this.categoriesService.findAll();

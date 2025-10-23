@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { StudentLayout } from "@/components/student/student-layout"
+import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { formatDate, formatTime } from "@/lib/utils/dateUtils"
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "@/lib/i18n"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -71,17 +74,15 @@ interface Achievement {
 type TimerState = "focus" | "shortBreak" | "longBreak" | "idle"
 
 export default function PomodoroPage() {
+  const { t } = useTranslation()
   const [timeLeft, setTimeLeft] = useState(25 * 60)
   const [isRunning, setIsRunning] = useState(false)
   const [timerState, setTimerState] = useState<TimerState>("idle")
   const [completedCycles, setCompletedCycles] = useState(0)
-  const [sessions, setSessions] = useState<PomodoroSession[]>([])
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [focusMode, setFocusMode] = useState(false)
-  const [currentStreak, setCurrentStreak] = useState(0)
-  const [achievements, setAchievements] = useState<Achievement[]>([])
-
-  const [settings, setSettings] = useState<TimerSettings>({
+  
+  // Use reliable localStorage hooks
+  const [sessions, setSessions] = useLocalStorage<PomodoroSession[]>("pomodoro-sessions-v2", [])
+  const [settings, setSettings] = useLocalStorage<TimerSettings>("pomodoro-settings-v2", {
     focusTime: 25,
     shortBreak: 5,
     longBreak: 15,
@@ -93,6 +94,11 @@ export default function PomodoroPage() {
     darkMode: false,
     notifications: true,
   })
+  const [achievements, setAchievements] = useLocalStorage<Achievement[]>("pomodoro-achievements-v2", [])
+  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
+  const [currentStreak, setCurrentStreak] = useState(0)
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -144,69 +150,53 @@ export default function PomodoroPage() {
     ]
   }
 
+  // Initialize achievements if empty and ensure dates are proper
   useEffect(() => {
-    const savedSessions = localStorage.getItem("pomodoro-sessions")
-    if (savedSessions) {
-      try {
-        const parsedSessions = JSON.parse(savedSessions).map((session: any) => ({
-          ...session,
-          date: new Date(session.date),
-        }))
-        setSessions(parsedSessions)
-      } catch (error) {
-        console.error("Failed to parse saved sessions:", error)
-      }
-    }
-
-    const savedSettings = localStorage.getItem("pomodoro-settings")
-    if (savedSettings) {
-      try {
-        const parsedSettings = JSON.parse(savedSettings)
-        const validatedSettings = {
-          focusTime: Number(parsedSettings.focusTime) || 25,
-          shortBreak: Number(parsedSettings.shortBreak) || 5,
-          longBreak: Number(parsedSettings.longBreak) || 15,
-          longBreakInterval: Number(parsedSettings.longBreakInterval) || 4,
-          soundEnabled: parsedSettings.soundEnabled !== false,
-          soundType: parsedSettings.soundType || "bell",
-          autoStartBreaks: parsedSettings.autoStartBreaks || false,
-          autoStartPomodoros: parsedSettings.autoStartPomodoros || false,
-          darkMode: parsedSettings.darkMode || false,
-          notifications: parsedSettings.notifications !== false,
-        }
-        setSettings(validatedSettings)
-        setTimeLeft(validatedSettings.focusTime * 60)
-      } catch (error) {
-        console.error("Failed to parse saved settings:", error)
-      }
-    }
-
-    const savedAchievements = localStorage.getItem("pomodoro-achievements")
-    if (savedAchievements) {
-      try {
-        setAchievements(JSON.parse(savedAchievements))
-      } catch (error) {
-        setAchievements(initializeAchievements())
-      }
-    } else {
+    if (achievements.length === 0) {
       setAchievements(initializeAchievements())
+    } else {
+      // Ensure all dates are properly converted to Date objects
+      const achievementsWithProperDates = achievements.map(achievement => ({
+        ...achievement,
+        unlockedAt: achievement.unlockedAt ? 
+          (achievement.unlockedAt instanceof Date ? achievement.unlockedAt : new Date(achievement.unlockedAt)) : 
+          undefined,
+      }))
+      
+      // Only update if dates were actually converted
+      const needsUpdate = achievements.some(achievement => 
+        achievement.unlockedAt && !(achievement.unlockedAt instanceof Date)
+      )
+      
+      if (needsUpdate) {
+        setAchievements(achievementsWithProperDates)
+      }
     }
+  }, [achievements.length, setAchievements])
 
-    // Initialize audio with different sound types
+  // Ensure session dates are proper
+  useEffect(() => {
+    if (sessions.length > 0) {
+      const sessionsWithProperDates = sessions.map(session => ({
+        ...session,
+        date: session.date instanceof Date ? session.date : new Date(session.date),
+      }))
+      
+      // Only update if dates were actually converted
+      const needsUpdate = sessions.some(session => 
+        !(session.date instanceof Date)
+      )
+      
+      if (needsUpdate) {
+        setSessions(sessionsWithProperDates)
+      }
+    }
+  }, [sessions.length, setSessions])
+
+  // Initialize audio with different sound types
+  useEffect(() => {
     audioRef.current = new Audio(`/sounds/${settings.soundType}.mp3`)
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem("pomodoro-sessions", JSON.stringify(sessions))
-  }, [sessions])
-
-  useEffect(() => {
-    localStorage.setItem("pomodoro-settings", JSON.stringify(settings))
-  }, [settings])
-
-  useEffect(() => {
-    localStorage.setItem("pomodoro-achievements", JSON.stringify(achievements))
-  }, [achievements])
+  }, [settings.soundType])
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
@@ -495,10 +485,10 @@ export default function PomodoroPage() {
               <h1
                 className={`text-3xl lg:text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent ${focusMode ? "text-white" : ""}`}
               >
-                Pomodoro Timer
+                {t('productivity.pomodoro.title')}
               </h1>
               <p className={`mt-1 text-sm lg:text-base ${focusMode ? "text-gray-300" : "text-gray-600"}`}>
-                Boost your productivity with focused work sessions
+                {t('student.readyToAchieve')}
               </p>
             </div>
 
@@ -510,7 +500,7 @@ export default function PomodoroPage() {
                 className={`${focusMode ? "bg-gray-800 text-white border-gray-600" : "bg-white/70 backdrop-blur-sm hover:bg-white/90"} transition-all duration-200`}
               >
                 {focusMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                {focusMode ? "Exit Focus" : "Focus Mode"}
+                {focusMode ? t('common.stop') : t('productivity.pomodoro.focus')}
               </Button>
 
               <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
@@ -520,12 +510,12 @@ export default function PomodoroPage() {
                     className={`${focusMode ? "bg-gray-800 text-white border-gray-600" : "bg-white/70 backdrop-blur-sm"}`}
                   >
                     <Settings className="w-4 h-4 mr-2" />
-                    Settings
+                    {t('productivity.pomodoro.settings')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Timer Settings</DialogTitle>
+                    <DialogTitle>{t('productivity.pomodoro.settings')}</DialogTitle>
                   </DialogHeader>
 
                   <Tabs defaultValue="timer" className="w-full">
@@ -594,7 +584,7 @@ export default function PomodoroPage() {
 
                     <TabsContent value="audio" className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="sound-enabled">Enable Sound</Label>
+                        <Label htmlFor="sound-enabled">{t('productivity.pomodoro.settings')}</Label>
                         <Switch
                           id="sound-enabled"
                           checked={settings.soundEnabled}
@@ -658,7 +648,7 @@ export default function PomodoroPage() {
                   </Tabs>
 
                   <Button onClick={() => updateSettings(settings)} className="w-full">
-                    Save Settings
+                    {t('common.save')}
                   </Button>
                 </DialogContent>
               </Dialog>
@@ -810,7 +800,7 @@ export default function PomodoroPage() {
                       className={`bg-gradient-to-r ${getTimerColor()} hover:opacity-90 text-white px-6 lg:px-8 py-3 text-base lg:text-lg transform hover:scale-105 transition-all duration-200 shadow-lg`}
                     >
                       <Play className="w-5 h-5 lg:w-6 lg:h-6 mr-2" />
-                      Start
+                      {t('productivity.pomodoro.startTimer')}
                     </Button>
                   ) : (
                     <Button
@@ -820,7 +810,7 @@ export default function PomodoroPage() {
                       className={`px-6 lg:px-8 py-3 text-base lg:text-lg ${focusMode ? "bg-gray-700 text-white border-gray-600" : "bg-white/80 backdrop-blur-sm hover:bg-white/90"} transform hover:scale-105 transition-all duration-200 shadow-lg`}
                     >
                       <Pause className="w-5 h-5 lg:w-6 lg:h-6 mr-2" />
-                      Pause
+                      {t('productivity.pomodoro.pauseTimer')}
                     </Button>
                   )}
                   <Button
@@ -830,7 +820,7 @@ export default function PomodoroPage() {
                     className={`px-6 lg:px-8 py-3 text-base lg:text-lg ${focusMode ? "bg-gray-700 text-white border-gray-600" : "bg-white/80 backdrop-blur-sm hover:bg-white/90"} transform hover:scale-105 transition-all duration-200 shadow-lg`}
                   >
                     <RotateCcw className="w-5 h-5 lg:w-6 lg:h-6 mr-2" />
-                    Reset
+                    {t('productivity.pomodoro.resetTimer')}
                   </Button>
 
                   <Button
@@ -894,7 +884,7 @@ export default function PomodoroPage() {
                         <h4 className="font-semibold text-sm">{achievement.title}</h4>
                         <p className="text-xs text-gray-600 mt-1">{achievement.description}</p>
                         {achievement.unlocked && achievement.unlockedAt && (
-                          <p className="text-xs text-green-600 mt-1">{achievement.unlockedAt.toLocaleDateString()}</p>
+                          <p className="text-xs text-green-600 mt-1">{formatDate(achievement.unlockedAt)}</p>
                         )}
                       </div>
                     ))}
@@ -923,8 +913,7 @@ export default function PomodoroPage() {
                             <div>
                               <p className="font-medium">{session.focusTime} min focus session</p>
                               <p className="text-sm text-gray-600">
-                                {session.date.toLocaleDateString()} at{" "}
-                                {session.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {formatDate(session.date)} at {formatTime(session.date, { hour: "2-digit", minute: "2-digit" })}
                               </p>
                             </div>
                           </div>

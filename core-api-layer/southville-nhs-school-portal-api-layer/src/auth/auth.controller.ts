@@ -1,17 +1,29 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SupabaseUser } from './interfaces/supabase-user.interface';
 import { LoginDto, TokenVerifyDto } from './dto/login.dto';
+import { SessionManagementService } from '../session-management/session-management.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly sessionManagementService: SessionManagementService,
+  ) {}
 
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Authenticate user with email and password',
@@ -64,12 +76,25 @@ export class AuthController {
       },
     },
   })
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginDto, @Req() request: Request) {
     try {
+      // Get client IP for rate limiting
+      const clientIp =
+        request.ip || request.connection.remoteAddress || 'unknown';
+
       // Authenticate user with email and password
       const { user, session } = await this.authService.signIn(
         loginDto.email,
         loginDto.password,
+      );
+
+      // Create session for tracking
+      const sessionId = session.access_token; // Use access token as session ID
+      await this.sessionManagementService.createSession(
+        user.id,
+        sessionId,
+        request.headers['user-agent'] || 'unknown',
+        clientIp,
       );
 
       return {
@@ -90,6 +115,7 @@ export class AuthController {
         message: 'Login successful',
       };
     } catch (error) {
+      // Progressive rate limiting is now handled in AuthService
       throw error; // Let NestJS handle the error response
     }
   }

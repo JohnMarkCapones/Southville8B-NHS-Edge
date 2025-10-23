@@ -58,7 +58,9 @@ export class QuizAttemptsController {
     @AuthUser() user: SupabaseUser,
     @Req() request: FastifyRequest,
   ) {
-    this.logger.log(`Starting quiz attempt for student ${user.id} on quiz ${quizId}`);
+    this.logger.log(
+      `Starting quiz attempt for student ${user.id} on quiz ${quizId}`,
+    );
 
     // Extract IP address
     const ipAddress =

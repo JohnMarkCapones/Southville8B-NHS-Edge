@@ -14,19 +14,49 @@
 // CORE CLUB TYPES
 // ========================================
 
+export interface ClubGoal {
+  id: string;
+  club_id: string;
+  goal_text: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClubBenefitData {
+  id: string;
+  club_id: string;
+  title: string;
+  description: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClubFaqData {
+  id: string;
+  club_id: string;
+  question: string;
+  answer: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Club {
   id: string;
   name: string;
   description: string;
-  president_id: string;
-  vp_id: string;
-  secretary_id: string;
-  advisor_id: string;
+  president_id?: string;
+  vp_id?: string;
+  secretary_id?: string;
+  advisor_id?: string;
   co_advisor_id?: string;
-  domain_id: string;
+  domain_id?: string;
+  mission_statement?: string;
   created_at: string;
   updated_at: string;
-  
+
   // Relations (populated by backend)
   president?: User;
   vp?: User;
@@ -34,6 +64,11 @@ export interface Club {
   advisor?: User;
   co_advisor?: User;
   domain?: Domain;
+
+  // Nested data (populated by backend)
+  goals?: ClubGoal[];
+  benefits?: ClubBenefitData[];
+  faqs?: ClubFaqData[];
 }
 
 export interface User {
@@ -87,10 +122,24 @@ export interface ClubFormResponse {
   form_id: string;
   user_id: string;
   status: 'pending' | 'approved' | 'rejected';
-  submitted_at: string;
+  created_at: string;
+  updated_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
-  answers?: ClubFormAnswer[];
+  review_notes?: string;
+
+  // Populated relations
+  user?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+  reviewed_by_user?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+  answers?: ClubFormAnswerWithQuestion[];
 }
 
 export interface ClubFormAnswer {
@@ -98,6 +147,15 @@ export interface ClubFormAnswer {
   response_id: string;
   question_id: string;
   answer_text: string;
+  answer_value?: string;
+}
+
+export interface ClubFormAnswerWithQuestion extends ClubFormAnswer {
+  question?: {
+    id: string;
+    question_text: string;
+    question_type: string;
+  };
 }
 
 // ========================================
@@ -126,13 +184,28 @@ export interface ClubFormListResponse {
 
 export interface CreateClubDto {
   name: string;
-  description: string;
-  president_id: string;
-  vp_id: string;
-  secretary_id: string;
-  advisor_id: string;
+  description?: string;
+  president_id?: string;
+  vp_id?: string;
+  secretary_id?: string;
+  advisor_id?: string;
   co_advisor_id?: string;
-  domain_id: string;
+  domain_id?: string;
+  mission_statement?: string;
+  goals?: Array<{
+    goal_text: string;
+    order_index: number;
+  }>;
+  benefits?: Array<{
+    title: string;
+    description: string;
+    order_index: number;
+  }>;
+  faqs?: Array<{
+    question: string;
+    answer: string;
+    order_index: number;
+  }>;
 }
 
 export interface UpdateClubDto {

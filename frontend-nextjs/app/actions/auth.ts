@@ -19,14 +19,32 @@ import { redirect } from 'next/navigation';
 import type { LoginRequest, LoginResponse, TokenVerifyResponse } from '@/lib/api/types';
 
 /**
- * Cookie configuration for security
+ * Enhanced Cookie configuration for security
+ * 
+ * Implements your recommendations:
+ * - HttpOnly for sensitive tokens (refresh token)
+ * - Secure flag for HTTPS only in production
+ * - SameSite strict for CSRF protection
+ * - Session timeout: 2 hours of inactivity
  */
 const COOKIE_OPTIONS = {
   httpOnly: true, // Prevent JavaScript access (XSS protection)
   secure: process.env.NODE_ENV === 'production', // HTTPS only in production
   sameSite: 'strict' as const, // CSRF protection
-  path: '/',
-  maxAge: 60 * 60 * 24 * 7, // 7 days
+  path: '/', // Available site-wide
+  maxAge: 60 * 60 * 2, // 2 hours (session timeout)
+};
+
+const ACCESS_TOKEN_OPTIONS = {
+  ...COOKIE_OPTIONS,
+  httpOnly: false, // Client needs to read for Authorization header
+  maxAge: 60 * 60 * 2, // 2 hours (matches session timeout)
+};
+
+const REFRESH_TOKEN_OPTIONS = {
+  ...COOKIE_OPTIONS,
+  httpOnly: true, // Maximum security for refresh token
+  maxAge: 60 * 60 * 24 * 7, // 7 days (longer for refresh)
 };
 
 /**
@@ -69,21 +87,24 @@ export async function loginAction(credentials: LoginRequest) {
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Set cookies for tokens
+    // Set cookies for tokens with enhanced security
     // Access token: NOT HttpOnly so client can send it in Authorization header
     // Still secure with: CSRF protection, rate limiting, secure flag in prod, sameSite strict
-    cookieStore.set('sb-access-token', data.session.access_token, {
-      ...COOKIE_OPTIONS,
-      httpOnly: false, // Client needs to read and send in Authorization header
+    cookieStore.set('sb-access-token', data.session.access_token, ACCESS_TOKEN_OPTIONS);
+    
+    // Refresh token: KEEP HttpOnly for maximum security (only used server-side)
+    cookieStore.set('sb-refresh-token', data.session.refresh_token, REFRESH_TOKEN_OPTIONS);
+    
+    // Store token expiry (2 hours session timeout)
+    cookieStore.set('sb-token-expires', data.session.expires_at.toString(), {
+      ...ACCESS_TOKEN_OPTIONS,
+      httpOnly: false, // Client needs to read this for token refresh logic
     });
     
-    // Refresh token: KEEP HttpOnly for extra security (only used server-side)
-    cookieStore.set('sb-refresh-token', data.session.refresh_token, COOKIE_OPTIONS);
-    
-    // Store token expiry
-    cookieStore.set('sb-token-expires', data.session.expires_at.toString(), {
-      ...COOKIE_OPTIONS,
-      httpOnly: false, // Client needs to read this for token refresh logic
+    // Store session start time for timeout warnings
+    cookieStore.set('sb-session-start', Date.now().toString(), {
+      ...ACCESS_TOKEN_OPTIONS,
+      httpOnly: false, // Client needs to read this for timeout warnings
     });
 
     // Store user role for client-side routing (not sensitive)

@@ -8,6 +8,7 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import { ConditionalLayout } from "@/components/conditional-layout"
 import { Analytics } from "@vercel/analytics/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { LanguageProvider } from "@/lib/i18n"
 
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { SWRConfig } from "swr"
@@ -63,14 +64,16 @@ export function Providers({ children }: ProvidersProps) {
         keepPreviousData: true,
       }}
     >
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <ScrollToTop />
-          <ConditionalLayout>{children}</ConditionalLayout>
-          <Toaster />
-          <BackToTop />
-          <Analytics />
-          <SpeedInsights />
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <ScrollToTop />
+            <ConditionalLayout>{children}</ConditionalLayout>
+            <Toaster />
+            <BackToTop />
+            <Analytics />
+            <SpeedInsights />
+          </ThemeProvider>
+        </LanguageProvider>
       </SWRConfig>
     </QueryClientProvider>
   )

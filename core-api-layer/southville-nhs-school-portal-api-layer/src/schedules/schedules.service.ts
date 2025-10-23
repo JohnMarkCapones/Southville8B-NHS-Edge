@@ -217,8 +217,17 @@ export class SchedulesService {
       subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
       teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
       section:sections!inner(id, name, grade_level, teacher_id),
-      room:rooms!inner(id, room_number, capacity, floor_id),
-      building:buildings!inner(id, name, description)
+      room:rooms!inner(
+        id,
+        room_number,
+        capacity,
+        floor_id,
+        floor:floors(
+          id,
+          number,
+          building:buildings(id, building_name)
+        )
+      )
     `,
       { count: 'exact' },
     );
@@ -312,13 +321,24 @@ export class SchedulesService {
               roomNumber: schedule.room.room_number,
               capacity: schedule.room.capacity,
               floorId: schedule.room.floor_id,
+              floor: schedule.room.floor
+                ? {
+                    id: schedule.room.floor.id,
+                    floorNumber: schedule.room.floor.number,
+                    building: schedule.room.floor.building
+                      ? {
+                          id: schedule.room.floor.building.id,
+                          name: schedule.room.floor.building.building_name,
+                        }
+                      : undefined,
+                  }
+                : undefined,
             }
           : undefined,
-        building: schedule.building
+        building: schedule.room?.floor?.building
           ? {
-              id: schedule.building.id,
-              name: schedule.building.name,
-              description: schedule.building.description,
+              id: schedule.room.floor.building.id,
+              name: schedule.room.floor.building.building_name,
             }
           : undefined,
       })) || [];
@@ -371,8 +391,17 @@ export class SchedulesService {
         subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
         teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
         section:sections!inner(id, name, grade_level, teacher_id),
-        room:rooms!inner(id, room_number, capacity, floor_id),
-        building:buildings!inner(id, name, description),
+        room:rooms!inner(
+          id,
+          room_number,
+          capacity,
+          floor_id,
+          floor:floors(
+            id,
+            number,
+            building:buildings(id, building_name)
+          )
+        ),
         students:student_schedule(student:students(id, first_name, last_name, middle_name, student_id, lrn_id, grade_level))
       `,
       )
@@ -436,13 +465,24 @@ export class SchedulesService {
             roomNumber: (data as any).room.room_number,
             capacity: (data as any).room.capacity,
             floorId: (data as any).room.floor_id,
+            floor: (data as any).room.floor
+              ? {
+                  id: (data as any).room.floor.id,
+                  floorNumber: (data as any).room.floor.number,
+                  building: (data as any).room.floor.building
+                    ? {
+                        id: (data as any).room.floor.building.id,
+                        name: (data as any).room.floor.building.building_name,
+                      }
+                    : undefined,
+                }
+              : undefined,
           }
         : undefined,
-      building: (data as any).building
+      building: (data as any).room?.floor?.building
         ? {
-            id: (data as any).building.id,
-            name: (data as any).building.name,
-            description: (data as any).building.description,
+            id: (data as any).room.floor.building.id,
+            name: (data as any).room.floor.building.building_name,
           }
         : undefined,
       students: (data as any).students?.map((ss: any) => ss.student),
@@ -725,8 +765,17 @@ export class SchedulesService {
           subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
           teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
           section:sections!inner(id, name, grade_level, teacher_id),
-          room:rooms!inner(id, room_number, capacity, floor_id),
-          building:buildings!inner(id, name, description)
+          room:rooms!inner(
+            id,
+            room_number,
+            capacity,
+            floor_id,
+            floor:floors(
+              id,
+              number,
+              building:buildings(id, building_name)
+            )
+          )
         )
       `,
       )
@@ -792,13 +841,24 @@ export class SchedulesService {
               roomNumber: item.schedule.room.room_number,
               capacity: item.schedule.room.capacity,
               floorId: item.schedule.room.floor_id,
+              floor: item.schedule.room.floor
+                ? {
+                    id: item.schedule.room.floor.id,
+                    floorNumber: item.schedule.room.floor.number,
+                    building: item.schedule.room.floor.building
+                      ? {
+                          id: item.schedule.room.floor.building.id,
+                          name: item.schedule.room.floor.building.building_name,
+                        }
+                      : undefined,
+                  }
+                : undefined,
             }
           : undefined,
-        building: item.schedule.building
+        building: item.schedule.room?.floor?.building
           ? {
-              id: item.schedule.building.id,
-              name: item.schedule.building.name,
-              description: item.schedule.building.description,
+              id: item.schedule.room.floor.building.id,
+              name: item.schedule.room.floor.building.building_name,
             }
           : undefined,
       })) || [];

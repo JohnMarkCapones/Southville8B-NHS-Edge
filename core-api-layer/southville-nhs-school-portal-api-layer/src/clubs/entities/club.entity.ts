@@ -37,6 +37,9 @@ export class Club {
   @Column({ type: 'uuid', nullable: true })
   domain_id: string;
 
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  mission_statement: string;
+
   @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at: Date;
 

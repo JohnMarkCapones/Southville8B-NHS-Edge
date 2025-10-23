@@ -2,7 +2,7 @@
 
 import { DialogFooter } from "@/components/ui/dialog"
 
-import { useState } from "react"
+import { useState, use, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,6 +52,7 @@ import {
   MoveDown,
   Edit2,
   X,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -66,6 +67,32 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from "@/components/ui/switch"
+import {
+  useClubMemberships,
+  useClubMembershipMutations,
+  useClubPositions,
+} from "@/hooks"
+import { useClubForms, useClubForm } from "@/hooks/useClubForms"
+import { useClubFormMutations } from "@/hooks/useClubFormMutations"
+import { useFormResponses } from "@/hooks/useFormResponses"
+import { useFormResponseMutations } from "@/hooks/useFormResponseMutations"
+import { AddMemberDialog } from "@/components/teacher/clubs/AddMemberDialog"
+import {
+  QuestionType,
+  mapQuestionTypeToUI,
+  mapUITypeToBackend,
+  type FormQuestion,
+} from "@/lib/api/endpoints/club-forms"
+import {
+  getClubAnnouncements,
+  createClubAnnouncement,
+  updateClubAnnouncement,
+  deleteClubAnnouncement,
+  approveClubApplication,
+  rejectClubApplication,
+  type ClubAnnouncement,
+  type CreateClubAnnouncementDto,
+} from "@/lib/api/endpoints/clubs"
 
 const clubData = {
   id: "math-club",
@@ -280,11 +307,35 @@ const clubApplications = [
   },
 ]
 
-export default function ClubPage({ params }: { params: { id: string } }) {
+export default function ClubPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: clubId } = use(params)
+  const { toast } = useToast()
+
+  // Fetch club members and positions from API
+  const { data: memberships = [], isLoading: loadingMembers } = useClubMemberships(clubId)
+  const { data: positions = [] } = useClubPositions()
+  const { updateMember, removeMember } = useClubMembershipMutations(clubId)
+
+  // Club forms hooks
+  const { data: forms, isLoading: formsLoading } = useClubForms(clubId)
+  const activeForm = forms?.find((f) => f.isActive) || forms?.[0]
+  const {
+    data: formData,
+    isLoading: formLoading,
+    refetch: refetchForm,
+  } = useClubForm(clubId, activeForm?.id || '', !!activeForm?.id)
+  const formMutations = useClubFormMutations(clubId)
+  const {
+    data: formResponses = [],
+    isLoading: responsesLoading,
+  } = useFormResponses(clubId, activeForm?.id || '', !!activeForm?.id)
+  const responseMutations = useFormResponseMutations(clubId, activeForm?.id || '')
+
+  // UI State
   const [activeSection, setActiveSection] = useState("overview")
   const [viewMode, setViewMode] = useState<"management" | "preview">("management")
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop")
-  const [showAddMember, setShowAddMember] = useState(false)
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false)
   const [memberSearch, setMemberSearch] = useState("")
   const [memberFilter, setMemberFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -296,8 +347,6 @@ export default function ClubPage({ params }: { params: { id: string } }) {
 
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const [eventToDelete, setEventToDelete] = useState<number | null>(null)
-
-  const { toast } = useToast()
 
   const [events, setEvents] = useState([
     {
@@ -326,56 +375,33 @@ export default function ClubPage({ params }: { params: { id: string } }) {
     },
   ])
 
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      title: "Welcome to Math Club!",
-      content: "We're excited to have you join us this semester. Get ready for exciting competitions and workshops!",
-      date: "2024-03-01",
-      priority: "normal" as const,
-    },
-    {
-      id: 2,
-      title: "Competition Registration Open",
-      content: "Registration for the Regional Math Olympiad is now open. Please sign up by March 10th.",
-      date: "2024-03-05",
-      priority: "high" as const,
-    },
-  ])
+  const [announcements, setAnnouncements] = useState<ClubAnnouncement[]>([])
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false)
 
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false)
   const [announcementTitle, setAnnouncementTitle] = useState("")
   const [announcementContent, setAnnouncementContent] = useState("")
-  const [announcementPriority, setAnnouncementPriority] = useState<"normal" | "high" | "urgent">("normal")
-  const [announcementToDelete, setAnnouncementToDelete] = useState<number | null>(null)
+  const [announcementPriority, setAnnouncementPriority] = useState<"low" | "normal" | "high" | "urgent">("normal")
+  const [announcementToDelete, setAnnouncementToDelete] = useState<string | null>(null)
   const [showDeleteAnnouncementConfirmation, setShowDeleteAnnouncementConfirmation] = useState(false)
+  const [creatingAnnouncement, setCreatingAnnouncement] = useState(false)
+  const [deletingAnnouncement, setDeletingAnnouncement] = useState(false)
 
-  const [pendingMembers, setPendingMembers] = useState([
-    {
-      id: "p1",
-      name: "Maria Santos",
-      grade: "Grade 10",
-      email: "maria.santos@student.edu",
-      appliedDate: "2024-01-15",
-      reason: "I'm passionate about robotics and want to learn more about programming and engineering.",
-    },
-    {
-      id: "p2",
-      name: "John Reyes",
-      grade: "Grade 9",
-      email: "john.reyes@student.edu",
-      appliedDate: "2024-01-14",
-      reason: "I've been interested in robotics since elementary and would love to join the team.",
-    },
-    {
-      id: "p3",
-      name: "Sarah Chen",
-      grade: "Grade 11",
-      email: "sarah.chen@student.edu",
-      appliedDate: "2024-01-13",
-      reason: "I have experience with Arduino and want to contribute to the club's projects.",
-    },
-  ])
+  // Get pending applications from form responses
+  const pendingApplications = formResponses.filter((r) => r.status === 'pending')
+
+  // Transform form responses to match UI structure
+  const pendingMembers = pendingApplications.map((app) => ({
+    id: app.id,
+    responseId: app.id, // Keep response ID for API calls
+    name: app.user?.full_name || 'Unknown',
+    email: app.user?.email || '',
+    appliedDate: new Date(app.created_at).toLocaleDateString(),
+    // Extract reason from answers if exists
+    reason: app.answers?.find((a) => a.question?.question_text.toLowerCase().includes('why'))?.answer_text || 'No reason provided',
+    // Keep full app data for detailed view
+    fullApplication: app,
+  }))
 
   const [selectedPendingMembers, setSelectedPendingMembers] = useState<string[]>([])
   const [bulkActionType, setBulkActionType] = useState<"approve" | "reject" | null>(null)
@@ -383,51 +409,123 @@ export default function ClubPage({ params }: { params: { id: string } }) {
 
   const [pendingMemberToAction, setPendingMemberToAction] = useState<string | null>(null)
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
+  const [processingApplication, setProcessingApplication] = useState(false)
 
   // --- FIX START ---
-  // Declare 'members' state and initialize it with clubData.members
-  const [members, setMembers] = useState(clubData.members)
+  // Use API data for members instead of mock data
+  const members = memberships.map((m) => ({
+    id: m.id,
+    name: `${m.student?.first_name || ''} ${m.student?.last_name || ''}`.trim(),
+    grade: m.student?.grade_level || 'N/A',
+    email: m.student?.user_id || '',
+    role: m.position?.name || 'Member',
+    attendance: 100, // TODO: Calculate actual attendance
+    joinDate: m.joinedAt ? new Date(m.joinedAt).toISOString().split('T')[0] : 'N/A',
+    student_id: m.studentId,
+    position_id: m.positionId,
+    membership_id: m.id,
+  }))
 
-  const handleApproveMember = (memberId: string) => {
-    const member = pendingMembers.find((m) => m.id === memberId)
-    if (member) {
-      // Add to active members
-      const newMember = {
-        id: `m${members.length + 1}`, // Use 'members.length' for new ID
-        name: member.name,
-        grade: member.grade,
-        email: member.email,
-        role: "Member",
-        attendance: 100,
-        joinDate: new Date().toISOString().split("T")[0],
+  // Fetch club announcements from API
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      if (!clubId) return
+
+      setLoadingAnnouncements(true)
+      try {
+        const data = await getClubAnnouncements(clubId)
+        setAnnouncements(data)
+      } catch (error) {
+        console.error('Error fetching announcements:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load announcements. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoadingAnnouncements(false)
       }
-      setMembers([...members, newMember]) // Use 'setMembers'
+    }
 
-      // Remove from pending
-      setPendingMembers(pendingMembers.filter((m) => m.id !== memberId))
+    fetchAnnouncements()
+  }, [clubId, toast])
+
+  const handleApproveMember = async (memberId: string) => {
+    if (!activeForm?.id) {
+      toast({
+        title: "Error",
+        description: "No active form found for this club",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const member = pendingMembers.find((m) => m.id === memberId)
+    if (!member) return
+
+    setProcessingApplication(true)
+    try {
+      await approveClubApplication(clubId, activeForm.id, memberId)
 
       toast({
         title: "Member Approved",
-        description: `${member.name} has been added to the club.`,
+        description: `${member.name} has been approved to join the club.`,
       })
+
+      // Refresh form responses to update the list
+      // The useFormResponses hook will automatically update
+      // No need to manually update state
+    } catch (error) {
+      console.error('Error approving member:', error)
+      toast({
+        title: "Error",
+        description: "Failed to approve application. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingApplication(false)
+      setPendingMemberToAction(null)
+      setActionType(null)
     }
-    setPendingMemberToAction(null)
-    setActionType(null)
   }
   // --- FIX END ---
 
-  const handleRejectMember = (memberId: string) => {
+  const handleRejectMember = async (memberId: string) => {
+    if (!activeForm?.id) {
+      toast({
+        title: "Error",
+        description: "No active form found for this club",
+        variant: "destructive",
+      })
+      return
+    }
+
     const member = pendingMembers.find((m) => m.id === memberId)
-    if (member) {
-      setPendingMembers(pendingMembers.filter((m) => m.id !== memberId))
+    if (!member) return
+
+    setProcessingApplication(true)
+    try {
+      await rejectClubApplication(clubId, activeForm.id, memberId)
+
       toast({
         title: "Application Rejected",
         description: `${member.name}'s application has been rejected.`,
+      })
+
+      // Refresh form responses to update the list
+      // The useFormResponses hook will automatically update
+    } catch (error) {
+      console.error('Error rejecting member:', error)
+      toast({
+        title: "Error",
+        description: "Failed to reject application. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setProcessingApplication(false)
+      setPendingMemberToAction(null)
+      setActionType(null)
     }
-    setPendingMemberToAction(null)
-    setActionType(null)
   }
 
   const handleSelectAllPending = () => {
@@ -446,50 +544,119 @@ export default function ClubPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const handleBulkApprove = () => {
-    const approvedMembers = pendingMembers.filter((m) => selectedPendingMembers.includes(m.id))
+  const handleBulkApprove = async () => {
+    if (!activeForm?.id) {
+      toast({
+        title: "Error",
+        description: "No active form found for approving applications",
+        variant: "destructive",
+      })
+      return
+    }
 
-    // Add all approved members to active members
-    const newMembers = approvedMembers.map((member, index) => ({
-      id: `m${members.length + index + 1}`,
-      name: member.name,
-      grade: member.grade,
-      email: member.email,
-      role: "Member",
-      attendance: 100,
-      joinDate: new Date().toISOString().split("T")[0],
-    }))
+    setProcessingApplication(true)
 
-    setMembers([...members, ...newMembers])
+    try {
+      // Call API for each selected application in parallel
+      const approvePromises = selectedPendingMembers.map((memberId) =>
+        approveClubApplication(clubId, activeForm.id, memberId)
+          .catch((error) => ({ error: true, memberId }))
+      )
 
-    // Remove from pending
-    setPendingMembers(pendingMembers.filter((m) => !selectedPendingMembers.includes(m.id)))
+      const results = await Promise.all(approvePromises)
 
-    toast({
-      title: "Members Approved",
-      description: `${approvedMembers.length} member(s) have been added to the club.`,
-    })
+      // Count successes and failures
+      const failures = results.filter((r: any) => r.error)
+      const successes = results.length - failures.length
 
-    setSelectedPendingMembers([])
-    setShowBulkConfirmation(false)
-    setBulkActionType(null)
+      // Refetch to update UI
+      await refetchFormResponses()
+
+      if (failures.length === 0) {
+        toast({
+          title: "Members Approved",
+          description: `${successes} member(s) have been added to the club.`,
+        })
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${successes} approved, ${failures.length} failed.`,
+          variant: "destructive",
+        })
+      }
+
+      setSelectedPendingMembers([])
+      setShowBulkConfirmation(false)
+      setBulkActionType(null)
+    } catch (error) {
+      console.error('Bulk approve error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to approve applications",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingApplication(false)
+    }
   }
 
-  const handleBulkReject = () => {
-    const rejectedCount = selectedPendingMembers.length
+  const handleBulkReject = async () => {
+    if (!activeForm?.id) {
+      toast({
+        title: "Error",
+        description: "No active form found for rejecting applications",
+        variant: "destructive",
+      })
+      return
+    }
 
-    // Remove from pending
-    setPendingMembers(pendingMembers.filter((m) => !selectedPendingMembers.includes(m.id)))
+    setProcessingApplication(true)
 
-    toast({
-      title: "Applications Rejected",
-      description: `${rejectedCount} application(s) have been rejected.`,
-      variant: "destructive",
-    })
+    try {
+      const rejectedCount = selectedPendingMembers.length
 
-    setSelectedPendingMembers([])
-    setShowBulkConfirmation(false)
-    setBulkActionType(null)
+      // Call API for each selected application in parallel
+      const rejectPromises = selectedPendingMembers.map((memberId) =>
+        rejectClubApplication(clubId, activeForm.id, memberId)
+          .catch((error) => ({ error: true, memberId }))
+      )
+
+      const results = await Promise.all(rejectPromises)
+
+      // Count successes and failures
+      const failures = results.filter((r: any) => r.error)
+      const successes = results.length - failures.length
+
+      // Refetch to update UI
+      await refetchFormResponses()
+
+      if (failures.length === 0) {
+        toast({
+          title: "Applications Rejected",
+          description: `${rejectedCount} application(s) have been rejected.`,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${successes} rejected, ${failures.length} failed.`,
+          variant: "destructive",
+        })
+      }
+
+      setSelectedPendingMembers([])
+      setShowBulkConfirmation(false)
+      setBulkActionType(null)
+    } catch (error) {
+      console.error('Bulk reject error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to reject applications",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingApplication(false)
+    }
   }
 
   const confirmBulkAction = () => {
@@ -581,70 +748,139 @@ export default function ClubPage({ params }: { params: { id: string } }) {
   // State for FAQ management
   const [clubFaqs, setClubFaqs] = useState(clubData.faqs.map((faq) => ({ ...faq, id: Date.now() + Math.random() })))
 
-  const [customQuestions, setCustomQuestions] = useState([
-    {
-      id: 1,
-      question: "Why do you want to join this club?",
-      type: "long-text",
-      required: true,
-      order: 1,
-    },
-    {
-      id: 2,
-      question: "What relevant experience do you have?",
-      type: "long-text",
-      required: true,
-      order: 2,
-    },
-    {
-      id: 3,
-      question: "What are your availability?",
-      type: "short-text",
-      required: true,
-      order: 3,
-    },
-  ])
-  const [editingQuestion, setEditingQuestion] = useState<number | null>(null)
+  // Local state for form questions (synced with API data)
+  const [customQuestions, setCustomQuestions] = useState<any[]>([])
+  const [hasFormChanges, setHasFormChanges] = useState(false)
+  const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [showFormBuilder, setShowFormBuilder] = useState(false)
+
+  // Sync form data from API to local state
+  useEffect(() => {
+    if (formData?.questions) {
+      const mappedQuestions = formData.questions
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+        .map((q) => ({
+          id: q.id,
+          question: q.questionText,
+          type: mapQuestionTypeToUI(q.questionType),
+          required: q.required,
+          order: q.orderIndex,
+        }))
+      setCustomQuestions(mappedQuestions)
+      setHasFormChanges(false)
+    }
+  }, [formData])
 
   const addQuestion = () => {
     const newQuestion = {
-      id: Date.now(),
+      id: `temp-${Date.now()}`, // Temporary ID until saved
       question: "",
-      type: "short-text",
+      type: "short-text" as 'short-text' | 'long-text',
       required: false,
-      order: customQuestions.length + 1,
+      order: customQuestions.length,
     }
     setCustomQuestions([...customQuestions, newQuestion])
     setEditingQuestion(newQuestion.id)
+    setHasFormChanges(true)
   }
 
-  const updateQuestion = (id: number, field: string, value: any) => {
+  const updateQuestion = (id: string, field: string, value: any) => {
     setCustomQuestions(customQuestions.map((q) => (q.id === id ? { ...q, [field]: value } : q)))
+    setHasFormChanges(true)
   }
 
-  const deleteQuestion = (id: number) => {
+  const deleteQuestion = async (id: string) => {
+    // If it's a saved question (not temporary), delete from backend
+    if (activeForm?.id && !id.startsWith('temp-')) {
+      try {
+        await formMutations.deleteQuestion.mutateAsync({
+          formId: activeForm.id,
+          questionId: id,
+        })
+      } catch (error) {
+        console.error('Error deleting question:', error)
+        return // Don't remove from local state if API call failed
+      }
+    }
+
+    // Remove from local state
     setCustomQuestions(customQuestions.filter((q) => q.id !== id))
+    setHasFormChanges(true)
   }
 
   const moveQuestionUp = (index: number) => {
     if (index === 0) return
     const newQuestions = [...customQuestions]
     ;[newQuestions[index - 1], newQuestions[index]] = [newQuestions[index], newQuestions[index - 1]]
-    setCustomQuestions(newQuestions.map((q, i) => ({ ...q, order: i + 1 })))
+    setCustomQuestions(newQuestions.map((q, i) => ({ ...q, order: i })))
+    setHasFormChanges(true)
   }
 
   const moveQuestionDown = (index: number) => {
     if (index === customQuestions.length - 1) return
     const newQuestions = [...customQuestions]
     ;[newQuestions[index], newQuestions[index + 1]] = [newQuestions[index + 1], newQuestions[index]]
-    setCustomQuestions(newQuestions.map((q, i) => ({ ...q, order: i + 1 })))
+    setCustomQuestions(newQuestions.map((q, i) => ({ ...q, order: i })))
+    setHasFormChanges(true)
   }
 
-  const saveForm = () => {
-    console.log("[v0] Saving custom questions:", customQuestions)
-    // TODO: Connect to your backend API to save questions
-    setShowFormBuilder(false)
+  const saveForm = async () => {
+    try {
+      let formId = activeForm?.id
+
+      // If no form exists, create one first
+      if (!formId) {
+        const newForm = await formMutations.createForm.mutateAsync({
+          name: 'Member Application Form',
+          description: 'Application form for club membership',
+          is_active: true,
+          auto_approve: false,
+        })
+        formId = newForm.id
+      }
+
+      // Save all questions
+      for (const [index, question] of customQuestions.entries()) {
+        const questionData = {
+          question_text: question.question,
+          question_type: mapUITypeToBackend(question.type),
+          required: question.required,
+          order_index: index,
+        }
+
+        if (question.id.startsWith('temp-')) {
+          // Add new question
+          await formMutations.addQuestion.mutateAsync({
+            formId,
+            data: questionData,
+          })
+        } else {
+          // Update existing question
+          await formMutations.updateQuestion.mutateAsync({
+            formId,
+            questionId: question.id,
+            data: questionData,
+          })
+        }
+      }
+
+      // Refetch form data to sync
+      await refetchForm()
+      setHasFormChanges(false)
+      setShowFormBuilder(false)
+
+      toast({
+        title: 'Success',
+        description: 'Form saved successfully',
+      })
+    } catch (error: any) {
+      console.error('Error saving form:', error)
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to save form',
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleSave = () => {
@@ -680,7 +916,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
     setEventToDelete(null)
   }
 
-  const handleCreateAnnouncement = () => {
+  const handleCreateAnnouncement = async () => {
     if (!announcementTitle.trim() || !announcementContent.trim()) {
       toast({
         title: "Missing Information",
@@ -690,45 +926,70 @@ export default function ClubPage({ params }: { params: { id: string } }) {
       return
     }
 
-    const newAnnouncement = {
-      id: Date.now(),
-      title: announcementTitle,
-      content: announcementContent,
-      date: new Date().toISOString().split("T")[0],
-      priority: announcementPriority,
+    setCreatingAnnouncement(true)
+    try {
+      const newAnnouncementData: CreateClubAnnouncementDto = {
+        club_id: clubId,
+        title: announcementTitle,
+        content: announcementContent,
+        priority: announcementPriority,
+      }
+
+      const createdAnnouncement = await createClubAnnouncement(newAnnouncementData)
+      setAnnouncements([createdAnnouncement, ...announcements])
+
+      toast({
+        title: "Announcement Created",
+        description: "Your announcement has been posted successfully.",
+      })
+
+      // Reset form
+      setAnnouncementTitle("")
+      setAnnouncementContent("")
+      setAnnouncementPriority("normal")
+      setShowCreateAnnouncement(false)
+    } catch (error) {
+      console.error('Error creating announcement:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create announcement. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingAnnouncement(false)
     }
-
-    setAnnouncements([newAnnouncement, ...announcements])
-
-    toast({
-      title: "Announcement Created",
-      description: "Your announcement has been posted successfully.",
-    })
-
-    // Reset form
-    setAnnouncementTitle("")
-    setAnnouncementContent("")
-    setAnnouncementPriority("normal")
-    setShowCreateAnnouncement(false)
   }
 
-  const handleDeleteAnnouncement = (id: number) => {
+  const handleDeleteAnnouncement = (id: string) => {
     setAnnouncementToDelete(id)
     setShowDeleteAnnouncementConfirmation(true)
   }
 
-  const confirmDeleteAnnouncement = () => {
+  const confirmDeleteAnnouncement = async () => {
     if (announcementToDelete === null) return
 
-    setAnnouncements(announcements.filter((announcement) => announcement.id !== announcementToDelete))
+    setDeletingAnnouncement(true)
+    try {
+      await deleteClubAnnouncement(announcementToDelete)
+      setAnnouncements(announcements.filter((announcement) => announcement.id !== announcementToDelete))
 
-    toast({
-      title: "Announcement Deleted",
-      description: "The announcement has been successfully deleted.",
-    })
+      toast({
+        title: "Announcement Deleted",
+        description: "The announcement has been successfully deleted.",
+      })
 
-    setShowDeleteAnnouncementConfirmation(false)
-    setAnnouncementToDelete(null)
+      setShowDeleteAnnouncementConfirmation(false)
+      setAnnouncementToDelete(null)
+    } catch (error) {
+      console.error('Error deleting announcement:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete announcement. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingAnnouncement(false)
+    }
   }
 
   const getPriorityColor = (priority: string) => {
@@ -739,6 +1000,8 @@ export default function ClubPage({ params }: { params: { id: string } }) {
         return "bg-orange-100 text-orange-800 border-orange-200"
       case "normal":
         return "bg-blue-100 text-blue-800 border-blue-200"
+      case "low":
+        return "bg-gray-100 text-gray-800 border-gray-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }
@@ -885,22 +1148,32 @@ export default function ClubPage({ params }: { params: { id: string } }) {
     })
   }
 
-  const handleDeleteMember = () => {
+  const handleDeleteMember = async () => {
     if (memberToDelete) {
-      // TODO: Connect to your backend API to delete member
-      console.log("Deleting member:", memberToDelete.id)
+      try {
+        // Use the removeMember mutation from the hook
+        await removeMember.mutateAsync(memberToDelete.membership_id)
+      } catch (error) {
+        // Error is already handled by the mutation hook with toast
+        // Just log it silently
+        console.error('Error removing member:', error)
+      } finally {
+        // Always close the dialog, even if there's an error
+        setShowDeleteConfirm(false)
+        setMemberToDelete(null)
+      }
+    }
+  }
 
-      // Remove member from the members state
-      setMembers(members.filter((m) => m.id !== memberToDelete.id))
-
-      toast({
-        title: "Member Removed",
-        description: `${memberToDelete.name} has been removed from the club.`,
-        variant: "default",
+  // Handle position change for a member
+  const handlePositionChange = async (membershipId: string, newPositionId: string) => {
+    try {
+      await updateMember.mutateAsync({
+        membershipId,
+        data: { positionId: newPositionId },
       })
-
-      setShowDeleteConfirm(false)
-      setMemberToDelete(null)
+    } catch (error) {
+      console.error('Error updating member position:', error)
     }
   }
 
@@ -1464,7 +1737,8 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                   setBulkActionType("approve")
                                   setShowBulkConfirmation(true)
                                 }}
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                disabled={processingApplication}
+                                className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                                 size="sm"
                               >
                                 <CheckCircle className="w-4 h-4 mr-1" />
@@ -1475,14 +1749,20 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                   setBulkActionType("reject")
                                   setShowBulkConfirmation(true)
                                 }}
+                                disabled={processingApplication}
                                 variant="outline"
-                                className="border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                className="border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                                 size="sm"
                               >
                                 <XCircle className="w-4 h-4 mr-1" />
                                 Reject Selected
                               </Button>
-                              <Button onClick={() => setSelectedPendingMembers([])} variant="ghost" size="sm">
+                              <Button
+                                onClick={() => setSelectedPendingMembers([])}
+                                disabled={processingApplication}
+                                variant="ghost"
+                                size="sm"
+                              >
                                 Clear
                               </Button>
                             </div>
@@ -1542,7 +1822,8 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                     setPendingMemberToAction(member.id)
                                     setActionType("approve")
                                   }}
-                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  disabled={processingApplication}
+                                  className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                                   size="sm"
                                 >
                                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -1553,8 +1834,9 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                     setPendingMemberToAction(member.id)
                                     setActionType("reject")
                                   }}
+                                  disabled={processingApplication}
                                   variant="outline"
-                                  className="border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  className="border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                                   size="sm"
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
@@ -1583,7 +1865,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                             Add Role
                           </Button>
                           <Button
-                            onClick={() => setShowAddMember(true)}
+                            onClick={() => setShowAddMemberDialog(true)}
                             className="bg-green-600 hover:bg-green-700 shadow-md"
                           >
                             <UserPlus className="w-4 h-4 mr-2" />
@@ -1622,7 +1904,23 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {currentMembers.map((member) => (
+                          {loadingMembers ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-8">
+                                <div className="flex items-center justify-center">
+                                  <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400 mr-2" />
+                                  <span className="text-gray-600 dark:text-gray-400">Loading members...</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : currentMembers.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-8">
+                                <p className="text-gray-500 dark:text-gray-400">No members found</p>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            currentMembers.map((member) => (
                             <TableRow
                               key={member.id}
                               className="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border-b dark:border-slate-700"
@@ -1647,23 +1945,17 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                               </TableCell>
                               <TableCell>
                                 <Select
-                                  defaultValue={member.role}
-                                  onValueChange={(value) => {
-                                    // TODO: Connect to your backend API to update member role
-                                    console.log("Updating role for", member.id, "to", value)
-                                    toast({
-                                      title: "Role Updated",
-                                      description: `${member.name}'s role has been updated to ${value}.`,
-                                    })
-                                  }}
+                                  value={member.position_id}
+                                  onValueChange={(value) => handlePositionChange(member.membership_id, value)}
+                                  disabled={updateMember.isPending}
                                 >
                                   <SelectTrigger className="w-40 h-9 dark:bg-slate-800 dark:border-slate-600">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
-                                    {customRoles.map((role) => (
-                                      <SelectItem key={role} value={role}>
-                                        {role}
+                                    {positions.map((position) => (
+                                      <SelectItem key={position.id} value={position.id}>
+                                        {position.name}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -1692,7 +1984,8 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))}
+                          ))
+                          )}
                         </TableBody>
                       </Table>
 
@@ -1786,7 +2079,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                         <Download className="w-4 h-4 mr-2" />
                         Export Events
                       </Button>
-                      <Link href={`/teacher/clubs/${params.id}/events/create`}>
+                      <Link href={`/teacher/clubs/${clubId}/events/create`}>
                         <Button className="bg-purple-600 hover:bg-purple-700">
                           <Plus className="w-4 h-4 mr-2" />
                           Create Event
@@ -1931,7 +2224,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                   </td>
                                   <td className="py-4 px-4">
                                     <div className="flex gap-2">
-                                      <Link href={`/teacher/clubs/${params.id}/events/edit/${event.id}`}>
+                                      <Link href={`/teacher/clubs/${clubId}/events/edit/${event.id}`}>
                                         <Button
                                           variant="outline"
                                           size="sm"
@@ -2004,7 +2297,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                           // Added Link wrapper for quick event creation templates
                           <Link
                             key={index}
-                            href={`/teacher/clubs/${params.id}/events/create?template=${template.name.toLowerCase()}`}
+                            href={`/teacher/clubs/${clubId}/events/create?template=${template.name.toLowerCase()}`}
                           >
                             <div className="p-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg text-center hover:border-purple-400 dark:hover:border-purple-500 cursor-pointer transition-colors">
                               <template.icon
@@ -2055,7 +2348,12 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
-                      {announcements.length === 0 ? (
+                      {loadingAnnouncements ? (
+                        <div className="text-center py-12">
+                          <Loader2 className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4 animate-spin" />
+                          <p className="text-gray-600 dark:text-gray-400">Loading announcements...</p>
+                        </div>
+                      ) : announcements.length === 0 ? (
                         <div className="text-center py-12">
                           <Megaphone className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -2086,8 +2384,13 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                                       {announcement.priority}
                                     </Badge>
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                                      {announcement.date}
+                                      {new Date(announcement.created_at).toLocaleDateString()}
                                     </span>
+                                    {announcement.author && (
+                                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                                        by {announcement.author.full_name}
+                                      </span>
+                                    )}
                                   </div>
                                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                                     {announcement.title}
@@ -2981,62 +3284,6 @@ export default function ClubPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {/* Add Member Dialog */}
-      <Dialog open={showAddMember} onOpenChange={setShowAddMember}>
-        <DialogContent className="max-w-md dark:bg-slate-900 dark:border-slate-700">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900 dark:text-white">Add New Member</DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">
-              Add a student to the club membership.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-gray-900 dark:text-white">Student Name</Label>
-              <Input placeholder="Enter student name" className="dark:bg-slate-800 dark:border-slate-600" />
-            </div>
-            <div>
-              <Label className="text-gray-900 dark:text-white">Email</Label>
-              <Input placeholder="student@email.com" className="dark:bg-slate-800 dark:border-slate-600" />
-            </div>
-            <div>
-              <Label className="text-gray-900 dark:text-white">Grade Level</Label>
-              <Select>
-                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-600">
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
-                  <SelectItem value="grade-7">Grade 7</SelectItem>
-                  <SelectItem value="grade-8">Grade 8</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-gray-900 dark:text-white">Role</Label>
-              <Select defaultValue="Member">
-                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
-                  <SelectItem value="Member">Member</SelectItem>
-                  <SelectItem value="Officer">Officer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex space-x-2">
-              <Button className="flex-1 bg-green-600 hover:bg-green-700">Add Member</Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowAddMember(false)}
-                className="border-gray-300 dark:border-slate-600"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
         <AlertDialogContent className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
           <AlertDialogHeader>
@@ -3099,6 +3346,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
+                  <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="urgent">Urgent</SelectItem>
@@ -3106,9 +3354,22 @@ export default function ClubPage({ params }: { params: { id: string } }) {
               </Select>
             </div>
             <div className="flex space-x-2 pt-4">
-              <Button onClick={handleCreateAnnouncement} className="flex-1 bg-orange-600 hover:bg-orange-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Announcement
+              <Button
+                onClick={handleCreateAnnouncement}
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                disabled={creatingAnnouncement}
+              >
+                {creatingAnnouncement ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Announcement
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
@@ -3119,6 +3380,7 @@ export default function ClubPage({ params }: { params: { id: string } }) {
                   setAnnouncementPriority("normal")
                 }}
                 className="border-gray-300 dark:border-slate-600"
+                disabled={creatingAnnouncement}
               >
                 Cancel
               </Button>
@@ -3140,11 +3402,25 @@ export default function ClubPage({ params }: { params: { id: string } }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+            <AlertDialogCancel
+              className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+              disabled={deletingAnnouncement}
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteAnnouncement} className="bg-red-600 hover:bg-red-700 text-white">
-              Delete Announcement
+            <AlertDialogAction
+              onClick={confirmDeleteAnnouncement}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deletingAnnouncement}
+            >
+              {deletingAnnouncement ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Announcement"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -3361,6 +3637,14 @@ export default function ClubPage({ params }: { params: { id: string } }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Member Dialog */}
+      <AddMemberDialog
+        open={showAddMemberDialog}
+        onOpenChange={setShowAddMemberDialog}
+        clubId={clubId}
+        currentMembers={memberships}
+      />
     </div>
   )
 }

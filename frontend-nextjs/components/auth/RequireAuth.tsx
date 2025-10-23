@@ -94,11 +94,20 @@ export function RequireAuth({
     // If loading, do nothing (show loading state)
     if (isLoading) return;
 
-    // If error or no user, redirect to login
+    // If error or no user, redirect to portal with role parameter
     if (isError || !user) {
-      console.log('[RequireAuth] No authenticated user, redirecting to login');
-      const loginUrl = `/guess/login?redirect=${encodeURIComponent(pathname)}`;
-      router.push(loginUrl);
+      console.log('[RequireAuth] No authenticated user, redirecting to portal');
+      
+      // Determine role based on the current path
+      let role = 'student'; // default
+      if (pathname.startsWith('/teacher')) {
+        role = 'teacher';
+      } else if (pathname.startsWith('/admin') || pathname.startsWith('/superadmin')) {
+        role = 'admin';
+      }
+      
+      const portalUrl = `/guess/portal?role=${role}`;
+      router.push(portalUrl);
       return;
     }
 

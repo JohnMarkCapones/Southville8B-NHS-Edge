@@ -96,7 +96,9 @@ export class JournalismMembershipService {
       .eq('id', userId)
       .maybeSingle();
 
-    this.logger.debug(`isAdmin check for user ${userId}: role_id = ${user?.role_id}`);
+    this.logger.debug(
+      `isAdmin check for user ${userId}: role_id = ${user?.role_id}`,
+    );
 
     if (userError || !user?.role_id) {
       this.logger.warn(`Failed to get user role_id: ${userError?.message}`);
@@ -117,13 +119,14 @@ export class JournalismMembershipService {
       return false;
     }
 
-    const isAdmin = (
+    const isAdmin =
       role.name === 'Admin' ||
       role.name === 'Super Admin' ||
-      role.name === 'SuperAdmin'
-    );
+      role.name === 'SuperAdmin';
 
-    this.logger.debug(`User ${userId} isAdmin: ${isAdmin} (role: ${role.name})`);
+    this.logger.debug(
+      `User ${userId} isAdmin: ${isAdmin} (role: ${role.name})`,
+    );
 
     return isAdmin;
   }
@@ -155,7 +158,9 @@ export class JournalismMembershipService {
     if (!data) return false;
 
     const domainRoles = data.domain_roles as any;
-    return domainRoles?.name === 'Adviser' || domainRoles?.name === 'Co-Adviser';
+    return (
+      domainRoles?.name === 'Adviser' || domainRoles?.name === 'Co-Adviser'
+    );
   }
 
   /**

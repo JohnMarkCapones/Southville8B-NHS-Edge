@@ -269,6 +269,9 @@ export async function middleware(request: NextRequest) {
     '/api/test-clubs-simple', // Simple clubs API test endpoint
     '/api/simple-clubs-test', // Simple clubs test endpoint
     '/api/debug-clubs', // Clubs debug endpoint
+    '/api/test-academic-calendar', // Academic Calendar API test endpoint
+    '/api/test-student-rankings', // Student Rankings API test endpoint
+    '/api/test-public-rankings', // Public Rankings API test endpoint
     '/favicon.ico',     // Favicon
     '/api/announcements', // Public announcements (if any)
     '/videos',          // Public video files
@@ -306,10 +309,19 @@ export async function middleware(request: NextRequest) {
         );
       }
 
-      // For page routes, redirect to login
-      const loginUrl = new URL('/guess/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      // For page routes, redirect to portal with role parameter
+      const portalUrl = new URL('/guess/portal', request.url);
+      
+      // Determine role based on the path being accessed
+      let role = 'student'; // default
+      if (pathname.startsWith('/teacher')) {
+        role = 'teacher';
+      } else if (pathname.startsWith('/admin') || pathname.startsWith('/superadmin')) {
+        role = 'admin';
+      }
+      
+      portalUrl.searchParams.set('role', role);
+      return NextResponse.redirect(portalUrl);
     }
 
     // Check token expiry (if available)

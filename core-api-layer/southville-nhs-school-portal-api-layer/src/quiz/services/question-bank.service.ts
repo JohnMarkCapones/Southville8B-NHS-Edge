@@ -173,8 +173,12 @@ export class QuestionBankService {
     const { data: updatedQuestion, error } = await supabase
       .from('question_bank')
       .update({
-        ...(updateDto.questionText && { question_text: updateDto.questionText }),
-        ...(updateDto.questionType && { question_type: updateDto.questionType }),
+        ...(updateDto.questionText && {
+          question_text: updateDto.questionText,
+        }),
+        ...(updateDto.questionType && {
+          question_type: updateDto.questionType,
+        }),
         ...(updateDto.subjectId !== undefined && {
           subject_id: updateDto.subjectId,
         }),
@@ -220,7 +224,10 @@ export class QuestionBankService {
     // Verify ownership
     await this.findOne(id, teacherId);
 
-    const { error } = await supabase.from('question_bank').delete().eq('id', id);
+    const { error } = await supabase
+      .from('question_bank')
+      .delete()
+      .eq('id', id);
 
     if (error) {
       this.logger.error('Error deleting question:', error);

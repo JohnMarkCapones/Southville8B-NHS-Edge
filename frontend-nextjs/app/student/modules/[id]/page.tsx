@@ -28,81 +28,90 @@ import {
   Lightbulb,
   GraduationCap,
   Users,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { getModuleById, getModuleDownloadUrl, type Module } from "@/lib/api/endpoints/modules"
 
 export default function ModuleViewerPage() {
   const params = useParams()
   const router = useRouter()
-  const moduleId = Number.parseInt(params.id as string)
+  const moduleId = params.id as string
   const [currentPage, setCurrentPage] = useState(1)
   const [progress, setProgress] = useState(0)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(100)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [readingTime, setReadingTime] = useState(0)
+  const [module, setModule] = useState<Module | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
-  // Mock module data - in real app, this would come from API
-  const modules = [
-    {
-      id: 1,
-      title: "Quadratic Equations Formula Sheet",
-      subject: "Mathematics",
-      subjectId: 1,
-      description: "Comprehensive guide to quadratic equations with formulas, examples, and practice problems",
-      totalPages: 24,
-      estimatedTime: "45 min",
-      difficulty: "Intermediate",
-      type: "Reference Guide",
-      author: "Ms. Garcia",
-      lastUpdated: "2024-01-15",
-      rating: 4.8,
-      downloads: 1250,
-      thumbnail: "/mathematics-formula-sheet-pdf.jpg",
-      tags: ["Algebra", "Formulas", "Practice"],
-      chapters: [
-        { id: 1, title: "Introduction to Quadratic Equations", pages: "1-3", duration: "8 min" },
-        { id: 2, title: "Standard Form and Vertex Form", pages: "4-8", duration: "12 min" },
-        { id: 3, title: "Solving Methods", pages: "9-16", duration: "18 min" },
-        { id: 4, title: "Real-World Applications", pages: "17-21", duration: "15 min" },
-        { id: 5, title: "Practice Problems", pages: "22-24", duration: "12 min" },
-      ],
-    },
-    {
-      id: 2,
-      title: "Science Lab Safety Manual",
-      subject: "Science",
-      subjectId: 2,
-      description: "Essential safety protocols and procedures for laboratory work",
-      totalPages: 18,
-      estimatedTime: "30 min",
-      difficulty: "Beginner",
-      type: "Safety Manual",
-      author: "Mr. Santos",
-      lastUpdated: "2024-01-10",
-      rating: 4.9,
-      downloads: 980,
-      thumbnail: "/science-lab-safety-manual.jpg",
-      tags: ["Safety", "Laboratory", "Protocols"],
-      chapters: [
-        { id: 1, title: "General Safety Rules", pages: "1-4", duration: "8 min" },
-        { id: 2, title: "Equipment Handling", pages: "5-10", duration: "12 min" },
-        { id: 3, title: "Chemical Safety", pages: "11-15", duration: "10 min" },
-        { id: 4, title: "Emergency Procedures", pages: "16-18", duration: "8 min" },
-      ],
-    },
-  ]
+  // Fetch module data from API
+  useEffect(() => {
+    const fetchModule = async () => {
+      if (!moduleId) return
 
-  const module = modules.find((m) => m.id === moduleId)
+      try {
+        setLoading(true)
+        setError(null)
+        console.log('[ModuleViewer] Fetching module:', moduleId)
+        const data = await getModuleById(moduleId)
+        setModule(data)
+        console.log('[ModuleViewer] ✅ Module loaded:', data.title)
+      } catch (err) {
+        console.error('[ModuleViewer] ❌ Error fetching module:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load module')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchModule()
+  }, [moduleId])
+
+  // Download handler
+  const handleDownload = async () => {
+    if (!module) return
+
+    try {
+      setDownloading(true)
+      console.log('[ModuleViewer] Downloading module:', module.id)
+      const { url } = await getModuleDownloadUrl(module.id)
+      window.open(url, '_blank')
+      console.log('[ModuleViewer] ✅ Download URL generated')
+    } catch (err) {
+      console.error('[ModuleViewer] ❌ Download failed:', err)
+      alert('Failed to download module. Please try again.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  // Fallback helper function - adds "-april" prefix to indicate missing data
+  const fallback = (value: any, defaultValue: string = '-april') => {
+    if (value === null || value === undefined || value === '') {
+      return defaultValue
+    }
+    return value
+  }
+
+  // Calculate estimated pages (fallback to 20 if not available)
+  const totalPages = fallback(module?.file_size_bytes ? Math.ceil(module.file_size_bytes / 50000) : null, '-april 20')
+  const parsedTotalPages = typeof totalPages === 'string' && totalPages.includes('-april')
+    ? parseInt(totalPages.split('-april')[1]?.trim() || '20')
+    : totalPages
 
   useEffect(() => {
     if (module) {
       // Calculate progress based on current page
-      const newProgress = Math.round((currentPage / module.totalPages) * 100)
+      const newProgress = Math.round((currentPage / parsedTotalPages) * 100)
       setProgress(newProgress)
     }
-  }, [currentPage, module])
+  }, [currentPage, module, parsedTotalPages])
 
   useEffect(() => {
     // Reading time tracker
@@ -113,12 +122,55 @@ export default function ModuleViewerPage() {
     return () => clearInterval(timer)
   }, [])
 
+  // Loading state
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">Loading Module...</h2>
+            <p className="text-slate-600 dark:text-slate-400">Please wait while we fetch your content</p>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Error Loading Module</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">{error}</p>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => window.location.reload()}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/student/courses")}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Courses
+              </Button>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Module not found
   if (!module) {
     return (
       <StudentLayout>
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
           <div className="text-center">
+            <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-4">Module Not Found</h1>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">The module you're looking for doesn't exist or has been removed.</p>
             <Button onClick={() => router.push("/student/courses")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Courses
@@ -148,6 +200,26 @@ export default function ModuleViewerPage() {
     }
   }
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '-april Unknown size'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-april Unknown date'
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return '-april Invalid date'
+    }
+  }
+
   return (
     <StudentLayout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -167,11 +239,14 @@ export default function ModuleViewerPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/student/materials/${module.subjectId}`)}
+                onClick={() => module.subject_id
+                  ? router.push(`/student/materials/${module.subject_id}`)
+                  : router.push("/student/courses")
+                }
                 className="text-white hover:bg-white/20 backdrop-blur-sm"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to {module.subject}
+                Back to {fallback(module.subject?.subject_name, '-april Subject')}
               </Button>
             </div>
 
@@ -182,7 +257,7 @@ export default function ModuleViewerPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold">{module.title}</h1>
+                    <h1 className="text-3xl font-bold">{fallback(module.title, '-april Untitled Module')}</h1>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -192,35 +267,44 @@ export default function ModuleViewerPage() {
                       <Bookmark className={`w-5 h-5 ${isBookmarked ? "fill-current" : ""}`} />
                     </Button>
                   </div>
-                  <p className="text-blue-100 dark:text-blue-200 text-lg mb-3">{module.description}</p>
+                  <p className="text-blue-100 dark:text-blue-200 text-lg mb-3">
+                    {fallback(module.description, '-april No description available')}
+                  </p>
                   <div className="flex flex-wrap items-center gap-4 text-blue-100">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
-                      <span>{module.author}</span>
+                      <span>{fallback(module.uploader?.full_name, '-april Unknown Author')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      <span>{module.estimatedTime}</span>
+                      <span>{formatDate(module.updated_at)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4" />
-                      <span>{module.totalPages} pages</span>
+                      <span>{totalPages}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 fill-current text-yellow-400" />
-                      <span>{module.rating}</span>
+                      <Download className="w-4 h-4" />
+                      <span>{fallback(module.downloadStats?.totalDownloads?.toString(), '-april 0')} downloads</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Badge className={getDifficultyColor(module.difficulty)}>{module.difficulty}</Badge>
                     <Badge variant="outline" className="bg-white/20 text-white border-white/30">
-                      {module.type}
+                      {fallback(module.mime_type, '-april PDF')}
                     </Badge>
-                    {module.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="bg-white/10 text-white border-white/20">
-                        {tag}
+                    <Badge variant="outline" className="bg-white/10 text-white border-white/20">
+                      {formatFileSize(module.file_size_bytes)}
+                    </Badge>
+                    {module.subject && (
+                      <Badge variant="outline" className="bg-white/10 text-white border-white/20">
+                        {module.subject.subject_name}
                       </Badge>
-                    ))}
+                    )}
+                    {module.is_global && (
+                      <Badge variant="outline" className="bg-emerald-500/20 text-white border-emerald-400/30">
+                        Global Module
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -241,7 +325,7 @@ export default function ModuleViewerPage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">Reading Progress</span>
                 <span className="text-sm font-bold">
-                  Page {currentPage} of {module.totalPages}
+                  Page {currentPage} of {parsedTotalPages}
                 </span>
               </div>
               <div className="relative">
@@ -258,30 +342,65 @@ export default function ModuleViewerPage() {
         {/* Main Content */}
         <div className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Sidebar - Table of Contents */}
+            {/* Sidebar - Module Info */}
             <div className="lg:col-span-1">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-xl sticky top-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5" />
-                    Table of Contents
+                    <FileText className="w-5 h-5" />
+                    Module Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {module.chapters.map((chapter, index) => (
-                    <div
-                      key={chapter.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                        index === 0 ? "bg-primary text-white shadow-md" : "hover:bg-slate-100 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      <div className="font-medium text-sm line-clamp-2">{chapter.title}</div>
-                      <div className="flex items-center justify-between mt-1 text-xs opacity-75">
-                        <span>Pages {chapter.pages}</span>
-                        <span>{chapter.duration}</span>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Subject</div>
+                    <div className="font-medium">{fallback(module.subject?.subject_name, '-april No Subject')}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Uploaded By</div>
+                    <div className="font-medium">{fallback(module.uploader?.full_name, '-april Unknown')}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">File Size</div>
+                    <div className="font-medium">{formatFileSize(module.file_size_bytes)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Last Updated</div>
+                    <div className="font-medium">{formatDate(module.updated_at)}</div>
+                  </div>
+                  {module.downloadStats && (
+                    <>
+                      <div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Downloads</div>
+                        <div className="font-medium">
+                          {fallback(module.downloadStats.totalDownloads?.toString(), '-april 0')}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Success Rate</div>
+                        <div className="font-medium">
+                          {fallback(
+                            module.downloadStats.successRate
+                              ? `${(module.downloadStats.successRate * 100).toFixed(1)}%`
+                              : null,
+                            '-april N/A'
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {module.sections && module.sections.length > 0 && (
+                    <div>
+                      <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Sections</div>
+                      <div className="space-y-1">
+                        {module.sections.map((section) => (
+                          <Badge key={section.id} variant="outline" className="mr-1 mb-1">
+                            {section.name}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </CardContent>
               </Card>
 
@@ -291,15 +410,31 @@ export default function ModuleViewerPage() {
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button className="w-full bg-gradient-to-r from-primary to-accent text-white">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
+                  <Button
+                    className="w-full bg-gradient-to-r from-primary to-accent text-white"
+                    onClick={handleDownload}
+                    disabled={downloading || !module.file_url}
+                  >
+                    {downloading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Module
+                      </>
+                    )}
                   </Button>
-                  <Button variant="outline" className="w-full bg-transparent">
+                  {!module.file_url && (
+                    <p className="text-xs text-red-500 text-center">-april No file available</p>
+                  )}
+                  <Button variant="outline" className="w-full bg-transparent" disabled>
                     <Eye className="w-4 h-4 mr-2" />
                     Print Preview
                   </Button>
-                  <Button variant="outline" className="w-full bg-transparent">
+                  <Button variant="outline" className="w-full bg-transparent" disabled>
                     <Target className="w-4 h-4 mr-2" />
                     Take Notes
                   </Button>
@@ -356,7 +491,7 @@ export default function ModuleViewerPage() {
                             size="lg"
                             className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg"
                             onClick={() =>
-                              setCurrentPage(Math.max(1, Math.floor(module.totalPages * (progress / 100))))
+                              setCurrentPage(Math.max(1, Math.floor(parsedTotalPages * (progress / 100))))
                             }
                           >
                             <RotateCcw className="w-5 h-5 mr-2" />
@@ -380,17 +515,17 @@ export default function ModuleViewerPage() {
 
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-slate-600 dark:text-slate-400">
-                        Page {currentPage} of {module.totalPages}
+                        Page {currentPage} of {parsedTotalPages}
                       </span>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
                           min="1"
-                          max={module.totalPages}
+                          max={parsedTotalPages}
                           value={currentPage}
                           onChange={(e) =>
                             setCurrentPage(
-                              Math.min(module.totalPages, Math.max(1, Number.parseInt(e.target.value) || 1)),
+                              Math.min(parsedTotalPages, Math.max(1, Number.parseInt(e.target.value) || 1)),
                             )
                           }
                           className="w-16 px-2 py-1 text-sm border rounded text-center"
@@ -401,8 +536,8 @@ export default function ModuleViewerPage() {
 
                     <Button
                       variant="outline"
-                      onClick={() => setCurrentPage(Math.min(module.totalPages, currentPage + 1))}
-                      disabled={currentPage === module.totalPages}
+                      onClick={() => setCurrentPage(Math.min(parsedTotalPages, currentPage + 1))}
+                      disabled={currentPage === parsedTotalPages}
                     >
                       Next
                       <ChevronRight className="w-4 h-4 ml-2" />
@@ -455,7 +590,11 @@ export default function ModuleViewerPage() {
                       <Button
                         size="lg"
                         className="bg-gradient-to-r from-primary to-accent text-white"
-                        onClick={() => router.push(`/student/materials/${module.subjectId}`)}
+                        onClick={() =>
+                          module.subject_id
+                            ? router.push(`/student/materials/${module.subject_id}`)
+                            : router.push("/student/courses")
+                        }
                       >
                         <GraduationCap className="w-5 h-5 mr-2" />
                         Explore More Modules

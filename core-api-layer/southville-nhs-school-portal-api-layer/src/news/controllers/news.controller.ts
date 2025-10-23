@@ -111,7 +111,10 @@ export class NewsController {
   @ApiResponse({ status: 201, description: 'Article created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not a journalism member or invalid position' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not a journalism member or invalid position',
+  })
   async create(
     @Body() createDto: CreateNewsDto,
     @AuthUser('id') userId: string,
@@ -156,13 +159,16 @@ export class NewsController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - Invalid file type or upload failed' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid file type or upload failed',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not a journalism member' })
-  async uploadImage(
-    @Req() request: any,
-    @AuthUser('id') userId: string,
-  ) {
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not a journalism member',
+  })
+  async uploadImage(@Req() request: any, @AuthUser('id') userId: string) {
     try {
       this.logger.debug(`Processing image upload for user: ${userId}`);
 
@@ -325,8 +331,13 @@ export class NewsController {
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get all pending approval articles (Advisers only)' })
-  @ApiResponse({ status: 200, description: 'Pending articles retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get all pending approval articles (Advisers only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending articles retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an Adviser' })
   async getPendingArticles(@AuthUser('id') userId: string) {
@@ -361,7 +372,10 @@ export class NewsController {
   @ApiResponse({ status: 200, description: 'Article updated successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Cannot edit this article' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Cannot edit this article',
+  })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async update(
     @Param('id') id: string,
@@ -383,7 +397,10 @@ export class NewsController {
   @ApiOperation({ summary: 'Delete article (soft delete)' })
   @ApiResponse({ status: 204, description: 'Article deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Cannot delete this article' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Cannot delete this article',
+  })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async remove(@Param('id') id: string, @AuthUser('id') userId: string) {
     await this.newsService.remove(id, userId);
@@ -403,7 +420,10 @@ export class NewsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Submit article for approval' })
   @ApiResponse({ status: 200, description: 'Article submitted for approval' })
-  @ApiResponse({ status: 400, description: 'Bad request - Article not in draft status' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Article not in draft status',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not the author' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -425,7 +445,10 @@ export class NewsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Approve article (Advisers only)' })
   @ApiResponse({ status: 200, description: 'Article approved successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - Article not pending' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Article not pending',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an Adviser' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -447,7 +470,10 @@ export class NewsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Reject article (Advisers only)' })
   @ApiResponse({ status: 200, description: 'Article rejected successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - Article not pending or missing remarks' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Article not pending or missing remarks',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an Adviser' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -469,7 +495,10 @@ export class NewsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Publish article (Advisers only)' })
   @ApiResponse({ status: 200, description: 'Article published successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - Article not approved' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Article not approved',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an Adviser' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -486,7 +515,10 @@ export class NewsController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get approval history for article' })
-  @ApiResponse({ status: 200, description: 'Approval history retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Approval history retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getApprovalHistory(@Param('id') id: string) {
     return this.newsApprovalService.getApprovalHistory(id);
@@ -506,7 +538,10 @@ export class NewsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add co-author to article' })
   @ApiResponse({ status: 201, description: 'Co-author added successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - User not journalism member' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - User not journalism member',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Article not found' })

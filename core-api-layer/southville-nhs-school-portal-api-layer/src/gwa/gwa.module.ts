@@ -4,6 +4,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { AuthModule } from '../auth/auth.module';
 import { GwaService } from './gwa.service';
 import { GwaController } from './gwa.controller';
+import { GwaPublicController } from './gwa-public.controller';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { GwaController } from './gwa.controller';
     }),
     AuthModule,
   ],
-  controllers: [GwaController],
+  controllers: [GwaController, GwaPublicController],
   providers: [GwaService],
   exports: [GwaService],
 })

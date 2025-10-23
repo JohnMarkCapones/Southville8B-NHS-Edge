@@ -22,7 +22,10 @@ export class FolderService {
   /**
    * Get all folders (optionally including deleted)
    */
-  async findAll(includeDeleted = false, accessToken?: string): Promise<TeacherFolder[]> {
+  async findAll(
+    includeDeleted = false,
+    accessToken?: string,
+  ): Promise<TeacherFolder[]> {
     try {
       const client = accessToken
         ? this.supabaseService.getClientWithAuth(accessToken)
@@ -31,7 +34,7 @@ export class FolderService {
       let query = client
         .from('teacher_folders')
         .select('*')
-        .order('name', { ascending: true});
+        .order('name', { ascending: true });
 
       if (!includeDeleted) {
         query = query.eq('is_deleted', false);
@@ -118,9 +121,7 @@ export class FolderService {
   /**
    * Get folder with file count
    */
-  async findOneWithFileCount(
-    id: string,
-  ): Promise<TeacherFolderWithChildren> {
+  async findOneWithFileCount(id: string): Promise<TeacherFolderWithChildren> {
     const folder = await this.findOne(id);
 
     // Get file count

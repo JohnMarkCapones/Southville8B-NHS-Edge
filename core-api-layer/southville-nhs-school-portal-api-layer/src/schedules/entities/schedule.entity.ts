@@ -109,13 +109,20 @@ export class Schedule {
     roomNumber: string;
     capacity?: number;
     floorId: string;
+    floor?: {
+      id: string;
+      floorNumber: number;
+      building?: {
+        id: string;
+        name: string;
+      };
+    };
   };
 
   @ApiProperty({ description: 'Building information', required: false })
   building?: {
     id: string;
     name: string;
-    description?: string;
   };
 
   @ApiProperty({

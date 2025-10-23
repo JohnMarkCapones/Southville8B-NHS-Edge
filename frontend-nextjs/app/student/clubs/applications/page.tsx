@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Award,
   Users,
+  Loader2,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -30,11 +31,61 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { getUserClubFormResponses, generateClubSlug } from "@/lib/api/endpoints/clubs"
+import type { ClubFormResponse } from "@/lib/api/types/clubs"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MyApplicationsPage() {
-  // Mock application data
-  const myApplications = [
+  const { toast } = useToast()
+  const [myApplications, setMyApplications] = useState<ClubFormResponse[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch applications
+  useEffect(() => {
+    const fetchApplications = async () => {
+      setLoading(true)
+      try {
+        const response = await getUserClubFormResponses()
+        setMyApplications(response.data || [])
+      } catch (error) {
+        console.error('Error fetching applications:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load your applications.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchApplications()
+  }, [toast])
+
+  const stats = useMemo(() => ({
+    total: myApplications.length,
+    pending: myApplications.filter((app) => app.status === "pending").length,
+    approved: myApplications.filter((app) => app.status === "approved").length,
+    rejected: myApplications.filter((app) => app.status === "rejected").length,
+  }), [myApplications])
+
+  // Loading state
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-500" />
+            <p className="text-gray-600 dark:text-gray-400">Loading your applications...</p>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Keeping previous mock data structure for reference
+  const mockApplications = [
     {
       id: 1,
       clubName: "Drama Club",

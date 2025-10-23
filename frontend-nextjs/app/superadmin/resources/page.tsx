@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { useSuperadminResources } from "@/hooks/useSuperadminResources"
 import {
   Search,
   Upload,
@@ -320,21 +321,54 @@ export default function ResourcesPage() {
   const { toast } = useToast()
   const router = useRouter()
 
-  const [currentFolderId, setCurrentFolderId] = useState<string>("root")
+  // Local UI state (not managed by API)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["root", "1", "3"]))
   const [folderTreeVisible, setFolderTreeVisible] = useState(true)
 
-  // State management
-  const [resources, setResources] = useState(mockResources)
-  const [folders, setFolders] = useState(mockFolders)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedFileType, setSelectedFileType] = useState("all")
-  const [selectedVisibility, setSelectedVisibility] = useState("all")
-  const [sortBy, setSortBy] = useState("date")
+  // Real API integration
+  const {
+    folders,
+    files: resources,
+    currentFolder,
+    analytics,
+    loading,
+    error,
+    currentFolderId: apiCurrentFolderId,
+    setCurrentFolderId: setApiCurrentFolderId,
+    createFolder: apiCreateFolder,
+    updateFolder: apiUpdateFolder,
+    deleteFolder: apiDeleteFolder,
+    uploadFile: apiUploadFile,
+    updateFile: apiUpdateFile,
+    deleteFile: apiDeleteFile,
+    downloadFile: apiDownloadFile,
+    bulkDeleteFiles: apiBulkDeleteFiles,
+    bulkMoveFiles: apiBulkMoveFiles,
+    bulkUpdateVisibility: apiBulkUpdateVisibility,
+    searchQuery: apiSearchQuery,
+    setSearchQuery: setApiSearchQuery,
+    mimeTypeFilter: apiMimeTypeFilter,
+    setMimeTypeFilter: setApiMimeTypeFilter,
+    visibilityFilter: apiVisibilityFilter,
+    setVisibilityFilter: setApiVisibilityFilter,
+    sortBy: apiSortBy,
+    setSortBy: setApiSortBy,
+    sortOrder: apiSortOrder,
+    setSortOrder: setApiSortOrder,
+    pagination,
+    setPage: setApiPage,
+    setLimit: setApiLimit,
+    refetch,
+  } = useSuperadminResources({
+    initialFileParams: {
+      page: 1,
+      limit: 12,
+    },
+  })
+
+  // Local UI state (not managed by API)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(12)
 
   // Dialog states
   const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false)
@@ -362,7 +396,7 @@ export default function ResourcesPage() {
 
   // Form states for upload modal
   const [uploadFormData, setUploadFormData] = useState({
-    folder: currentFolderId,
+    folder: apiCurrentFolderId || "root",
     title: "",
     description: "",
     visibility: "Everyone",
@@ -373,17 +407,29 @@ export default function ResourcesPage() {
     name: "",
     description: "",
     color: "blue",
-    parentId: currentFolderId,
+    parentId: apiCurrentFolderId || "root",
   })
 
+  // Update form data when current folder changes
+  useEffect(() => {
+    setUploadFormData(prev => ({
+      ...prev,
+      folder: apiCurrentFolderId || "root",
+    }))
+    setCreateFolderFormData(prev => ({
+      ...prev,
+      parentId: apiCurrentFolderId || "root",
+    }))
+  }, [apiCurrentFolderId])
+
   // Debounced search (performance optimization)
-  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
+  const [debouncedSearch, setDebouncedSearch] = useState(apiSearchQuery)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
+      setDebouncedSearch(apiSearchQuery)
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery])
+  }, [apiSearchQuery])
 
   const getFolderPath = useCallback(
     (folderId: string): FolderType[] => {
@@ -424,87 +470,45 @@ export default function ResourcesPage() {
     })
   }, [])
 
-  const filteredResources = useMemo(() => {
-    const filtered = resources.filter((resource) => {
-      const matchesSearch =
-        resource.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        resource.description.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        resource.tags.some((tag) => tag.toLowerCase().includes(debouncedSearch.toLowerCase()))
+  // Resources are already filtered by the API, so we can use them directly
+  const filteredResources = resources
 
-      const matchesFolder = currentFolderId === "root" || resource.folderId === currentFolderId
-      const matchesFileType = selectedFileType === "all" || resource.fileType === selectedFileType
-      const matchesVisibility =
-        selectedVisibility === "all" || resource.visibility.toLowerCase().includes(selectedVisibility.toLowerCase())
-
-      return matchesSearch && matchesFolder && matchesFileType && matchesVisibility
-    })
-
-    // Sort resources
-    switch (sortBy) {
-      case "name":
-        filtered.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case "downloads":
-        filtered.sort((a, b) => b.downloads - a.downloads)
-        break
-      case "size":
-        filtered.sort((a, b) => Number.parseFloat(a.fileSize) - Number.parseFloat(b.fileSize))
-        break
-      case "date":
-      default:
-        filtered.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime())
-        break
-    }
-
-    return filtered
-  }, [resources, debouncedSearch, currentFolderId, selectedFileType, selectedVisibility, sortBy])
-
-  // Pagination
-  const totalPages = Math.ceil(filteredResources.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedResources = filteredResources.slice(startIndex, endIndex)
+  // Pagination is handled by the API
+  const paginatedResources = filteredResources
+  const totalPages = pagination?.totalPages || 1
+  const startIndex = pagination ? (pagination.page - 1) * pagination.limit : 0
+  const endIndex = pagination ? startIndex + pagination.limit : filteredResources.length
 
   const stats = useMemo(() => {
     const currentFolderResources =
-      currentFolderId === "root" ? resources : resources.filter((r) => r.folderId === currentFolderId)
+      apiCurrentFolderId === "root" || !apiCurrentFolderId ? resources : resources.filter((r) => r.folder_id === apiCurrentFolderId)
 
     return {
       totalFiles: currentFolderResources.length,
-      totalDownloads: currentFolderResources.reduce((sum, r) => sum + r.downloads, 0),
-      totalFolders: getSubfolders(currentFolderId).length,
-      totalStorage: currentFolderResources.reduce((sum, r) => sum + Number.parseFloat(r.fileSize), 0).toFixed(2),
+      totalDownloads: currentFolderResources.reduce((sum, r) => sum + (r.download_count || 0), 0),
+      totalFolders: getSubfolders(apiCurrentFolderId || "root").length,
+      totalStorage: currentFolderResources.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0).toFixed(2),
     }
-  }, [resources, currentFolderId, getSubfolders])
+  }, [resources, apiCurrentFolderId, getSubfolders])
 
-  // File type icon helper
-  const getFileIcon = (fileType: string) => {
-    switch (fileType.toLowerCase()) {
-      case "pdf":
-        return <FileText className="w-5 h-5 text-red-600" />
-      case "docx":
-      case "doc":
-        return <FileText className="w-5 h-5 text-blue-600" />
-      case "xlsx":
-      case "xls":
-        return <FileSpreadsheet className="w-5 h-5 text-green-600" />
-      case "pptx":
-      case "ppt":
-        return <FileText className="w-5 h-5 text-orange-600" />
-      case "zip":
-      case "rar":
-        return <FileArchive className="w-5 h-5 text-purple-600" />
-      case "jpg":
-      case "jpeg":
-      case "png":
-      case "gif":
-        return <FileImage className="w-5 h-5 text-pink-600" />
-      case "mp4":
-      case "avi":
-      case "mov":
-        return <FileVideo className="w-5 h-5 text-cyan-600" />
-      default:
-        return <File className="w-5 h-5 text-gray-600" />
+  // File type icon helper (works with MIME types from API)
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes('pdf')) {
+      return <FileText className="w-5 h-5 text-red-600" />
+    } else if (mimeType.includes('word') || mimeType.includes('document')) {
+      return <FileText className="w-5 h-5 text-blue-600" />
+    } else if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+      return <FileSpreadsheet className="w-5 h-5 text-green-600" />
+    } else if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+      return <FileText className="w-5 h-5 text-orange-600" />
+    } else if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('archive')) {
+      return <FileArchive className="w-5 h-5 text-purple-600" />
+    } else if (mimeType.includes('image')) {
+      return <FileImage className="w-5 h-5 text-pink-600" />
+    } else if (mimeType.includes('video')) {
+      return <FileVideo className="w-5 h-5 text-cyan-600" />
+    } else {
+      return <File className="w-5 h-5 text-gray-600" />
     }
   }
 
@@ -558,37 +562,59 @@ export default function ResourcesPage() {
   }, [])
 
   const handleDownload = useCallback(
-    (resource: any) => {
-      // TODO: Connect to database - Update download count
-      toast({
-        title: "📥 Download Started",
-        description: `Downloading ${resource.name}...`,
-        className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20",
-      })
+    async (resource: any) => {
+      try {
+        toast({
+          title: "📥 Download Started",
+          description: `Downloading ${resource.title || resource.name}...`,
+          className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20",
+        })
 
-      setResources((prev) => prev.map((r) => (r.id === resource.id ? { ...r, downloads: r.downloads + 1 } : r)))
+        await apiDownloadFile(resource.id)
+        
+        toast({
+          title: "✅ Download Complete",
+          description: `${resource.title || resource.name} downloaded successfully`,
+          className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
+        })
+      } catch (error) {
+        console.error('Download error:', error)
+        toast({
+          title: "❌ Download Failed",
+          description: "Failed to download file. Please try again.",
+          variant: "destructive",
+        })
+      }
     },
-    [toast],
+    [toast, apiDownloadFile],
   )
 
   const handleDelete = useCallback((resource: any) => {
     setDeleteConfirmation({ isOpen: true, resource })
   }, [])
 
-  const confirmDelete = useCallback(() => {
+  const confirmDelete = useCallback(async () => {
     if (deleteConfirmation.resource) {
-      // TODO: Connect to database - Delete resource
-      setResources((prev) => prev.filter((r) => r.id !== deleteConfirmation.resource.id))
+      try {
+        await apiDeleteFile(deleteConfirmation.resource.id)
+        
+        toast({
+          title: "✅ File Deleted",
+          description: `${deleteConfirmation.resource.title || deleteConfirmation.resource.name} has been permanently removed.`,
+          className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
+        })
 
-      toast({
-        title: "✅ File Deleted",
-        description: `${deleteConfirmation.resource.name} has been permanently removed.`,
-        className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
-      })
-
-      setDeleteConfirmation({ isOpen: false, resource: null })
+        setDeleteConfirmation({ isOpen: false, resource: null })
+      } catch (error) {
+        console.error('Delete error:', error)
+        toast({
+          title: "❌ Delete Failed",
+          description: "Failed to delete file. Please try again.",
+          variant: "destructive",
+        })
+      }
     }
-  }, [deleteConfirmation, toast])
+  }, [deleteConfirmation, toast, apiDeleteFile])
 
   const handleVisibilityChange = useCallback((resource: any, newVisibility: string) => {
     setVisibilityConfirmation({ isOpen: true, resource, newVisibility })
@@ -613,7 +639,7 @@ export default function ResourcesPage() {
     }
   }, [visibilityConfirmation, toast])
 
-  const handleCreateFolder = useCallback(() => {
+  const handleCreateFolder = useCallback(async () => {
     if (!createFolderFormData.name) {
       toast({
         title: "⚠️ Missing Information",
@@ -623,35 +649,35 @@ export default function ResourcesPage() {
       return
     }
 
-    const newFolder: FolderType = {
-      id: `folder-${Date.now()}`,
-      name: createFolderFormData.name,
-      description: createFolderFormData.description,
-      parentId: createFolderFormData.parentId,
-      color: createFolderFormData.color,
-      createdAt: new Date().toISOString().split("T")[0],
-      createdBy: "Admin User",
-      fileCount: 0,
-      totalSize: 0,
+    try {
+      const newFolder = await apiCreateFolder({
+        name: createFolderFormData.name,
+        description: createFolderFormData.description,
+        parent_id: createFolderFormData.parentId === "root" ? undefined : createFolderFormData.parentId,
+      })
+
+      toast({
+        title: "✅ Folder Created",
+        description: `${createFolderFormData.name} has been created successfully`,
+        className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
+      })
+
+      setCreateFolderDialogOpen(false)
+      setCreateFolderFormData({
+        name: "",
+        description: "",
+        color: "blue",
+        parentId: apiCurrentFolderId || "root",
+      })
+    } catch (error) {
+      console.error('Create folder error:', error)
+      toast({
+        title: "❌ Create Failed",
+        description: "Failed to create folder. Please try again.",
+        variant: "destructive",
+      })
     }
-
-    // TODO: Connect to database - Create folder
-    setFolders((prev) => [...prev, newFolder])
-
-    toast({
-      title: "✅ Folder Created",
-      description: `${newFolder.name} has been created successfully`,
-      className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
-    })
-
-    setCreateFolderDialogOpen(false)
-    setCreateFolderFormData({
-      name: "",
-      description: "",
-      color: "blue",
-      parentId: currentFolderId,
-    })
-  }, [createFolderFormData, currentFolderId, toast])
+  }, [createFolderFormData, apiCurrentFolderId, toast, apiCreateFolder])
 
   const handleMoveToFolder = useCallback(
     (targetFolderId: string) => {
@@ -774,7 +800,7 @@ export default function ResourcesPage() {
     fileInputRef.current?.click()
   }, [])
 
-  const handleUploadSubmit = useCallback(() => {
+  const handleUploadSubmit = useCallback(async () => {
     if (!uploadFormData.folder || !uploadFormData.title) {
       toast({
         title: "⚠️ Missing Information",
@@ -784,74 +810,58 @@ export default function ResourcesPage() {
       return
     }
 
-    // Simulate upload progress
-    uploadingFiles.forEach((file, index) => {
-      let progress = 0
-      const interval = setInterval(() => {
-        progress += 10
-        setUploadProgress((prev) => ({ ...prev, [file.name]: progress }))
+    try {
+      // Upload each file
+      for (const file of uploadingFiles) {
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+        
+        await apiUploadFile(file, {
+          folder_id: uploadFormData.folder,
+          title: uploadFormData.title,
+          description: uploadFormData.description,
+          visibility: uploadFormData.visibility,
+          tags: uploadFormData.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        })
+        
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }))
+      }
 
-        if (progress >= 100) {
-          clearInterval(interval)
+      toast({
+        title: "✅ Upload Complete",
+        description: `${uploadingFiles.length} file(s) uploaded successfully`,
+        className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
+      })
 
-          // After all files complete, add to resources
-          if (index === uploadingFiles.length - 1) {
-            setTimeout(() => {
-              const newResources = uploadingFiles.map((file, idx) => {
-                const fileExtension = file.name.split(".").pop()?.toLowerCase() || "file"
-                return {
-                  id: `new-${Date.now()}-${idx}`,
-                  name: uploadFormData.title || file.name,
-                  description: uploadFormData.description || "No description provided",
-                  folderId: uploadFormData.folder,
-                  fileType: fileExtension,
-                  fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-                  uploadDate: new Date().toISOString().split("T")[0],
-                  uploadedBy: "Admin User",
-                  downloads: 0,
-                  visibility: uploadFormData.visibility,
-                  tags: uploadFormData.tags
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean),
-                }
-              })
-
-              // TODO: Connect to database - Upload files
-              setResources((prev) => [...newResources, ...prev])
-
-              toast({
-                title: "✅ Upload Complete",
-                description: `${uploadingFiles.length} file(s) uploaded successfully`,
-                className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
-              })
-
-              // Reset states
-              setUploadModalOpen(false)
-              setUploadingFiles([])
-              setUploadProgress({})
-              setPdfPreview(null)
-              setUploadFormData({
-                folder: currentFolderId,
-                title: "",
-                description: "",
-                visibility: "Everyone",
-                tags: "",
-              })
-            }, 500)
-          }
-        }
-      }, 200)
-    })
-  }, [uploadingFiles, uploadFormData, toast, currentFolderId])
+      // Reset states
+      setUploadModalOpen(false)
+      setUploadingFiles([])
+      setUploadProgress({})
+      setPdfPreview(null)
+      setUploadFormData({
+        folder: apiCurrentFolderId || "root",
+        title: "",
+        description: "",
+        visibility: "Everyone",
+        tags: "",
+      })
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast({
+        title: "❌ Upload Failed",
+        description: "Failed to upload files. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }, [uploadingFiles, uploadFormData, toast, apiCurrentFolderId, apiUploadFile])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const FolderTreeItem = ({ folder, level = 0 }: { folder: FolderType; level?: number }) => {
-    const subfolders = getSubfolders(folder.id)
+  const FolderTreeItem = ({ folder, level = 0 }: { folder: any; level?: number }) => {
+    // Use the children array from the API response instead of filtering
+    const subfolders = folder.children || []
     const hasSubfolders = subfolders.length > 0
     const isExpanded = expandedFolders.has(folder.id)
-    const isActive = currentFolderId === folder.id
+    const isActive = apiCurrentFolderId === folder.id
 
     return (
       <div>
@@ -860,7 +870,7 @@ export default function ResourcesPage() {
             isActive ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground"
           }`}
           style={{ paddingLeft: `${level * 16 + 12}px` }}
-          onClick={() => setCurrentFolderId(folder.id)}
+          onClick={() => setApiCurrentFolderId(folder.id)}
         >
           {hasSubfolders && (
             <button
@@ -874,14 +884,13 @@ export default function ResourcesPage() {
             </button>
           )}
           {!hasSubfolders && <div className="w-5" />}
-          <Folder className={`w-4 h-4 ${folder.color ? `text-${folder.color}-600` : ""}`} />
+          <Folder className="w-4 h-4 text-blue-600" />
           <span className="text-sm flex-1 truncate">{folder.name}</span>
-          {folder.fileCount !== undefined && folder.fileCount > 0 && (
+          {folder.file_count !== undefined && folder.file_count > 0 && (
             <Badge variant="secondary" className="text-xs">
-              {folder.fileCount}
+              {folder.file_count}
             </Badge>
           )}
-          {folder.isStarred && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />}
         </div>
         {hasSubfolders && isExpanded && (
           <div>
@@ -950,7 +959,7 @@ export default function ResourcesPage() {
             </div>
             <Button
               onClick={() => {
-                setCreateFolderFormData({ ...createFolderFormData, parentId: currentFolderId })
+                setCreateFolderFormData({ ...createFolderFormData, parentId: apiCurrentFolderId || "root" })
                 setCreateFolderDialogOpen(true)
               }}
               className="w-full"
@@ -968,11 +977,11 @@ export default function ResourcesPage() {
                 <p className="text-xs font-semibold text-muted-foreground px-3 py-2">QUICK ACCESS</p>
                 <div
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
-                    currentFolderId === "root"
+                    apiCurrentFolderId === "root" || !apiCurrentFolderId
                       ? "bg-primary text-primary-foreground font-medium"
                       : "hover:bg-accent hover:text-accent-foreground"
                   }`}
-                  onClick={() => setCurrentFolderId("root")}
+                  onClick={() => setApiCurrentFolderId("root")}
                 >
                   <Home className="w-4 h-4" />
                   <span className="text-sm flex-1">All Files</span>
@@ -993,7 +1002,7 @@ export default function ResourcesPage() {
               {/* Folder Tree */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground px-3 py-2">FOLDERS</p>
-                {getSubfolders("root").map((folder) => (
+                {folders.filter(f => !f.parent_id).map((folder) => (
                   <FolderTreeItem key={folder.id} folder={folder} />
                 ))}
               </div>
@@ -1047,7 +1056,7 @@ export default function ResourcesPage() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setCreateFolderFormData({ ...createFolderFormData, parentId: currentFolderId })
+                    setCreateFolderFormData({ ...createFolderFormData, parentId: apiCurrentFolderId || "root" })
                     setCreateFolderDialogOpen(true)
                   }}
                 >
@@ -1065,11 +1074,11 @@ export default function ResourcesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Home className="w-4 h-4 text-muted-foreground" />
-                  {getFolderPath(currentFolderId).map((folder, index, array) => (
+                  {getFolderPath(apiCurrentFolderId || "root").map((folder, index, array) => (
                     <div key={folder.id} className="flex items-center gap-2">
                       {index > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                       <button
-                        onClick={() => setCurrentFolderId(folder.id)}
+                        onClick={() => setApiCurrentFolderId(folder.id)}
                         className={`hover:text-primary transition-colors ${
                           index === array.length - 1 ? "font-semibold text-foreground" : "text-muted-foreground"
                         }`}
@@ -1143,7 +1152,12 @@ export default function ResourcesPage() {
               </Card>
             </div>
 
-            {getSubfolders(currentFolderId).length > 0 && (
+            {(() => {
+              // Get current folder's children from the hierarchical structure
+              const currentFolder = folders.find(f => f.id === apiCurrentFolderId)
+              const childFolders = currentFolder?.children || folders.filter(f => f.parent_id === null)
+              return childFolders.length > 0
+            })() && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1153,11 +1167,15 @@ export default function ResourcesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-4 gap-4">
-                    {getSubfolders(currentFolderId).map((folder) => (
+                    {(() => {
+                      // Get current folder's children from the hierarchical structure
+                      const currentFolder = folders.find(f => f.id === apiCurrentFolderId)
+                      const childFolders = currentFolder?.children || folders.filter(f => f.parent_id === null)
+                      return childFolders.map((folder) => (
                       <div
                         key={folder.id}
                         className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg cursor-pointer"
-                        onClick={() => setCurrentFolderId(folder.id)}
+                        onClick={() => setApiCurrentFolderId(folder.id)}
                       >
                         <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30">
                           <div className="flex items-start justify-between mb-3">
@@ -1176,7 +1194,8 @@ export default function ResourcesPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      ))
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -1191,19 +1210,19 @@ export default function ResourcesPage() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Search files by name, description, or tags..."
-                        value={searchQuery}
+                        value={apiSearchQuery}
                         onChange={(e) => {
-                          setSearchQuery(e.target.value)
-                          setCurrentPage(1)
+                          setApiSearchQuery(e.target.value)
+                          setApiPage(1)
                         }}
                         className="pl-10"
                       />
                     </div>
                     <Select
-                      value={selectedFileType}
+                      value={apiMimeTypeFilter || "all"}
                       onValueChange={(value) => {
-                        setSelectedFileType(value)
-                        setCurrentPage(1)
+                        setApiMimeTypeFilter(value === "all" ? "" : value)
+                        setApiPage(1)
                       }}
                     >
                       <SelectTrigger className="w-[180px]">
@@ -1219,10 +1238,10 @@ export default function ResourcesPage() {
                       </SelectContent>
                     </Select>
                     <Select
-                      value={selectedVisibility}
+                      value={apiVisibilityFilter || "all"}
                       onValueChange={(value) => {
-                        setSelectedVisibility(value)
-                        setCurrentPage(1)
+                        setApiVisibilityFilter(value === "all" ? "" : value)
+                        setApiPage(1)
                       }}
                     >
                       <SelectTrigger className="w-[180px]">
@@ -1236,7 +1255,7 @@ export default function ResourcesPage() {
                         <SelectItem value="staff">Staff Only</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select value={sortBy} onValueChange={setSortBy}>
+                    <Select value={apiSortBy} onValueChange={setApiSortBy}>
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Sort by" />
                       </SelectTrigger>
@@ -1315,18 +1334,18 @@ export default function ResourcesPage() {
                   <div>
                     <CardTitle>Files</CardTitle>
                     <CardDescription>
-                      Showing {startIndex + 1}-{Math.min(endIndex, filteredResources.length)} of{" "}
-                      {filteredResources.length} files
+                      Showing {startIndex + 1}-{Math.min(endIndex, pagination?.total || 0)} of{" "}
+                      {pagination?.total || 0} files
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Show:</span>
                       <Select
-                        value={itemsPerPage.toString()}
+                        value={pagination?.limit?.toString() || "12"}
                         onValueChange={(value) => {
-                          setItemsPerPage(Number(value))
-                          setCurrentPage(1)
+                          setApiLimit(Number(value))
+                          setApiPage(1)
                         }}
                       >
                         <SelectTrigger className="w-[100px]">
@@ -1427,17 +1446,17 @@ export default function ResourcesPage() {
                           </div>
 
                           <div className="aspect-[4/3] relative overflow-hidden bg-muted flex items-center justify-center">
-                            <div className="w-20 h-20">{getFileIcon(resource.fileType)}</div>
+                            <div className="w-20 h-20">{getFileIcon(resource.mime_type)}</div>
                           </div>
 
                           <div className="p-3 bg-card">
-                            <h3 className="font-semibold text-sm mb-1 truncate">{resource.name}</h3>
+                            <h3 className="font-semibold text-sm mb-1 truncate">{resource.title}</h3>
                             <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
                             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                              <span>{resource.fileSize}</span>
+                              <span>{(resource.file_size_bytes / 1024 / 1024).toFixed(2)} MB</span>
                               <span className="flex items-center gap-1">
                                 <Download className="h-3 w-3" />
-                                {resource.downloads}
+                                {resource.download_count || 0}
                               </span>
                             </div>
                             <div className="flex items-center gap-1 flex-wrap">
@@ -1468,10 +1487,10 @@ export default function ResourcesPage() {
                             onCheckedChange={() => handleSelectResource(resource.id)}
                           />
                           <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                            {getFileIcon(resource.fileType)}
+                            {getFileIcon(resource.mime_type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold truncate">{resource.name}</h3>
+                            <h3 className="font-semibold truncate">{resource.title}</h3>
                             <p className="text-sm text-muted-foreground line-clamp-1">{resource.description}</p>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                               {folder && (
@@ -1480,14 +1499,14 @@ export default function ResourcesPage() {
                                   {folder.name}
                                 </span>
                               )}
-                              <span>{resource.fileSize}</span>
+                              <span>{(resource.file_size_bytes / 1024 / 1024).toFixed(2)} MB</span>
                               <span className="flex items-center gap-1">
                                 <Download className="h-3 w-3" />
-                                {resource.downloads} downloads
+                                {resource.download_count || 0} downloads
                               </span>
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {new Date(resource.uploadDate).toLocaleDateString()}
+                                {new Date(resource.created_at).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
@@ -1534,14 +1553,14 @@ export default function ResourcesPage() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-6 border-t">
                     <div className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
+                      Page {pagination?.page || 1} of {totalPages}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
+                        onClick={() => setApiPage((pagination?.page || 1) - 1)}
+                        disabled={(pagination?.page || 1) === 1}
                       >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Previous
@@ -1551,9 +1570,9 @@ export default function ResourcesPage() {
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
                           <Button
                             key={page}
-                            variant={currentPage === page ? "default" : "outline"}
+                            variant={(pagination?.page || 1) === page ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setCurrentPage(page)}
+                            onClick={() => setApiPage(page)}
                             className="w-9"
                           >
                             {page}
@@ -1563,9 +1582,9 @@ export default function ResourcesPage() {
                           <>
                             <span className="px-2 text-muted-foreground">...</span>
                             <Button
-                              variant={currentPage === totalPages ? "default" : "outline"}
+                              variant={(pagination?.page || 1) === totalPages ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setCurrentPage(totalPages)}
+                              onClick={() => setApiPage(totalPages)}
                               className="w-9"
                             >
                               {totalPages}
@@ -1577,8 +1596,8 @@ export default function ResourcesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setApiPage((pagination?.page || 1) + 1)}
+                        disabled={(pagination?.page || 1) === totalPages}
                       >
                         Next
                         <ChevronRight className="h-4 w-4 ml-1" />

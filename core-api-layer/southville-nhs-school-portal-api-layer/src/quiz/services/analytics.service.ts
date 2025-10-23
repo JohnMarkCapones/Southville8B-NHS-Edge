@@ -32,7 +32,9 @@ export class AnalyticsService {
       }
 
       if (quiz.teacher_id !== teacherId) {
-        throw new ForbiddenException('You can only view analytics for your own quizzes');
+        throw new ForbiddenException(
+          'You can only view analytics for your own quizzes',
+        );
       }
 
       // Get all completed attempts
@@ -91,12 +93,16 @@ export class AnalyticsService {
 
       // Calculate pass rate (assuming 75% is passing)
       const passingScore = quiz.total_points * 0.75;
-      const passedCount = scores.filter((score) => score >= passingScore).length;
+      const passedCount = scores.filter(
+        (score) => score >= passingScore,
+      ).length;
       const passRate =
         scores.length > 0 ? (passedCount / scores.length) * 100 : 0;
 
       // Calculate average time taken
-      const timesWithData = attempts.filter((a) => a.time_taken_seconds !== null);
+      const timesWithData = attempts.filter(
+        (a) => a.time_taken_seconds !== null,
+      );
       const averageTimeTaken =
         timesWithData.length > 0
           ? timesWithData.reduce((sum, a) => sum + a.time_taken_seconds!, 0) /
@@ -146,7 +152,9 @@ export class AnalyticsService {
       }
 
       if (quiz.teacher_id !== teacherId) {
-        throw new ForbiddenException('You can only view analytics for your own quizzes');
+        throw new ForbiddenException(
+          'You can only view analytics for your own quizzes',
+        );
       }
 
       // Get all questions
@@ -157,7 +165,9 @@ export class AnalyticsService {
 
       if (questionsError) {
         this.logger.error('Error fetching questions:', questionsError);
-        throw new InternalServerErrorException('Failed to fetch question analytics');
+        throw new InternalServerErrorException(
+          'Failed to fetch question analytics',
+        );
       }
 
       if (!questions || questions.length === 0) {
@@ -173,17 +183,20 @@ export class AnalyticsService {
 
       if (answersError) {
         this.logger.error('Error fetching answers:', answersError);
-        throw new InternalServerErrorException('Failed to fetch question analytics');
+        throw new InternalServerErrorException(
+          'Failed to fetch question analytics',
+        );
       }
 
       // Calculate stats per question
       const questionStats = questions.map((question) => {
-        const questionAnswers = answers?.filter(
-          (a) => a.question_id === question.question_id,
-        ) || [];
+        const questionAnswers =
+          answers?.filter((a) => a.question_id === question.question_id) || [];
 
         const totalAttempts = questionAnswers.length;
-        const correctCount = questionAnswers.filter((a) => a.is_correct === true).length;
+        const correctCount = questionAnswers.filter(
+          (a) => a.is_correct === true,
+        ).length;
         const incorrectCount = questionAnswers.filter(
           (a) => a.is_correct === false,
         ).length;
@@ -199,7 +212,8 @@ export class AnalyticsService {
             ? questionAnswers
                 .filter((a) => a.time_spent_seconds !== null)
                 .reduce((sum, a) => sum + (a.time_spent_seconds || 0), 0) /
-              questionAnswers.filter((a) => a.time_spent_seconds !== null).length
+              questionAnswers.filter((a) => a.time_spent_seconds !== null)
+                .length
             : 0;
 
         return {
@@ -226,17 +240,16 @@ export class AnalyticsService {
         throw error;
       }
       this.logger.error('Error fetching question analytics:', error);
-      throw new InternalServerErrorException('Failed to fetch question analytics');
+      throw new InternalServerErrorException(
+        'Failed to fetch question analytics',
+      );
     }
   }
 
   /**
    * Get student performance for a quiz
    */
-  async getStudentPerformance(
-    quizId: string,
-    teacherId: string,
-  ): Promise<any> {
+  async getStudentPerformance(quizId: string, teacherId: string): Promise<any> {
     try {
       const supabase = this.supabaseService.getClient();
 
@@ -252,7 +265,9 @@ export class AnalyticsService {
       }
 
       if (quiz.teacher_id !== teacherId) {
-        throw new ForbiddenException('You can only view analytics for your own quizzes');
+        throw new ForbiddenException(
+          'You can only view analytics for your own quizzes',
+        );
       }
 
       // Get all attempts grouped by student
@@ -330,7 +345,9 @@ export class AnalyticsService {
         throw error;
       }
       this.logger.error('Error fetching student performance:', error);
-      throw new InternalServerErrorException('Failed to fetch student performance');
+      throw new InternalServerErrorException(
+        'Failed to fetch student performance',
+      );
     }
   }
 }

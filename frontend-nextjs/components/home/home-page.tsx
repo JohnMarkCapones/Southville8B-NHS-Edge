@@ -691,7 +691,71 @@ export default function HomePage() {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          {/* content omitted for brevity (unchanged from original) */}
+          <div className={cn("text-center max-w-4xl mx-auto", ctaInView && "animate-fadeIn")}>
+            <Badge variant="secondary" className="mb-6 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Advanced Learning Platform
+            </Badge>
+            
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              Experience Our <span className="gradient-text">Advanced LMS Platform</span>
+            </h2>
+            
+            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+              Cutting-edge educational technology designed to enhance learning and streamline teaching. 
+              Our comprehensive platform provides everything students and educators need to succeed.
+            </p>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Interactive Learning</h3>
+                <p className="text-sm text-muted-foreground">Engaging digital content and interactive lessons</p>
+              </div>
+              
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Quiz System</h3>
+                <p className="text-sm text-muted-foreground">Interactive assessments and instant feedback</p>
+              </div>
+              
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Progress Tracking</h3>
+                <p className="text-sm text-muted-foreground">Real-time analytics and performance insights</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/guess/student">
+                <AnimatedButton 
+                  size="lg" 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <User className="w-5 h-5 mr-2" />
+                  Student Portal
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </AnimatedButton>
+              </Link>
+              
+              <Link href="/guess/teacher">
+                <AnimatedButton 
+                  variant="outline" 
+                  size="lg"
+                  className="border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white transition-all duration-300"
+                >
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Teacher Portal
+                </AnimatedButton>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 

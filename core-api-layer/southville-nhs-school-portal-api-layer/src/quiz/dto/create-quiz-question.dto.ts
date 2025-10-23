@@ -131,7 +131,8 @@ export class CreateQuizQuestionDto {
   @IsOptional()
   @ApiProperty({
     example: { pairs: [{ left: 'A', right: '1' }] },
-    description: 'Metadata for complex question types (matching, ordering, drag-drop, fill-in-blank)',
+    description:
+      'Metadata for complex question types (matching, ordering, drag-drop, fill-in-blank)',
     required: false,
   })
   metadata?: any;

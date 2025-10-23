@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AuthModule } from '../auth/auth.module';
+import { StudentsModule } from '../students/students.module';
 import { SchedulesService } from './schedules.service';
 import { SchedulesController } from './schedules.controller';
 
@@ -13,6 +14,7 @@ import { SchedulesController } from './schedules.controller';
       max: 1000, // Maximum number of items in cache
     }),
     AuthModule,
+    StudentsModule,
   ],
   controllers: [SchedulesController],
   providers: [SchedulesService],

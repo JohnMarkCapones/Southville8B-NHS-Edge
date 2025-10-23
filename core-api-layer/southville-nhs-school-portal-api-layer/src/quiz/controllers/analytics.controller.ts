@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  UseGuards,
-  Logger,
-} from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Logger } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -30,7 +24,9 @@ export class AnalyticsController {
 
   @Get('quiz/:quizId/overview')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get overall quiz analytics (scores, pass rate, etc.)' })
+  @ApiOperation({
+    summary: 'Get overall quiz analytics (scores, pass rate, etc.)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Quiz analytics retrieved successfully',

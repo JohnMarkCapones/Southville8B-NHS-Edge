@@ -1,323 +1,267 @@
-import {
-  Injectable,
-  Logger,
-  InternalServerErrorException,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
-import { Section } from './entities/section.entity';
+import { Section, SectionWithDetails } from './entities/section.entity';
 
 @Injectable()
 export class SectionsService {
-  private readonly logger = new Logger(SectionsService.name);
   private supabase: SupabaseClient;
 
-  constructor(private configService: ConfigService) {}
-
-  private getSupabaseClient(): SupabaseClient {
-    if (!this.supabase) {
-      const supabaseUrl = this.configService.get<string>('supabase.url');
-      const supabaseServiceKey = this.configService.get<string>(
-        'supabase.serviceRoleKey',
-      );
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase configuration is missing');
-      }
-
-      this.supabase = createClient(supabaseUrl, supabaseServiceKey);
+  constructor(private configService: ConfigService) {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase configuration is missing');
     }
-    return this.supabase;
+    
+    this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
   async create(createSectionDto: CreateSectionDto): Promise<Section> {
     try {
-      const supabase = this.getSupabaseClient();
+      // Check if section name already exists for this grade level
+      const { data: existingSection } = await this.supabase
+        .from('sections')
+        .select('id')
+        .eq('name', createSectionDto.name)
+        .eq('grade_level', createSectionDto.grade_level)
+        .single();
 
-      // Validate teacher exists if teacherId is provided
-      if (createSectionDto.teacherId) {
-        const { data: teacher, error: teacherError } = await supabase
-          .from('users')
-          .select('id, role:roles(name)')
-          .eq('id', createSectionDto.teacherId)
+      if (existingSection) {
+        throw new ConflictException(`Section ${createSectionDto.name} already exists for ${createSectionDto.grade_level}`);
+      }
+
+      // Check if teacher is already assigned to another section
+      if (createSectionDto.teacher_id) {
+        const { data: teacherSection } = await this.supabase
+          .from('sections')
+          .select('id, name')
+          .eq('teacher_id', createSectionDto.teacher_id)
           .single();
 
-        if (teacherError || !teacher) {
-          throw new BadRequestException('Teacher not found');
-        }
-
-        if ((teacher.role as any)?.name !== 'Teacher') {
-          throw new BadRequestException('User is not a teacher');
+        if (teacherSection) {
+          throw new ConflictException(`Teacher is already assigned to section ${teacherSection.name}`);
         }
       }
 
-      const { data: section, error } = await supabase
+      const { data, error } = await this.supabase
         .from('sections')
-        .insert({
-          name: createSectionDto.name,
-          grade_level: createSectionDto.gradeLevel,
-          teacher_id: createSectionDto.teacherId,
-          room_id: createSectionDto.roomId,
-          building_id: createSectionDto.buildingId,
-        })
-        .select(
-          `
-          *,
-          teacher:users(id, full_name, email)
-        `,
-        )
+        .insert(createSectionDto)
+        .select()
         .single();
 
       if (error) {
-        this.logger.error('Error creating section:', error);
-        throw new InternalServerErrorException(
-          `Failed to create section: ${error.message}`,
-        );
+        throw new Error(`Failed to create section: ${error.message}`);
       }
 
-      this.logger.log(`Section created successfully: ${section.name}`);
-      return section;
+      return data;
     } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
+      this.handleError(error);
+    }
+  }
+
+  async findAll(params?: {
+    page?: number;
+    limit?: number;
+    grade_level?: string;
+    status?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ data: SectionWithDetails[]; pagination: any }> {
+    try {
+      const page = params?.page || 1;
+      const limit = params?.limit || 20;
+      const offset = (page - 1) * limit;
+
+      let query = this.supabase
+        .from('sections_with_details')
+        .select('*');
+
+      // Apply filters
+      if (params?.grade_level) {
+        query = query.eq('grade_level', params.grade_level);
       }
-      this.logger.error('Error creating section:', error);
-      throw new InternalServerErrorException('Failed to create section');
+
+      if (params?.status) {
+        query = query.eq('status', params.status);
+      }
+
+      if (params?.search) {
+        query = query.or(`name.ilike.%${params.search}%,grade_level.ilike.%${params.search}%`);
+      }
+
+      // Apply sorting
+      const sortBy = params?.sortBy || 'created_at';
+      const sortOrder = params?.sortOrder || 'desc';
+      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        throw new Error(`Failed to fetch sections: ${error.message}`);
+      }
+
+      return {
+        data: data || [],
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          pages: Math.ceil((count || 0) / limit),
+        },
+      };
+    } catch (error) {
+      this.handleError(error);
     }
   }
 
-  async findAll(filters: any = {}): Promise<any> {
-    const supabase = this.getSupabaseClient();
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      gradeLevel,
-      teacherId,
-      sortBy = 'created_at',
-      sortOrder = 'desc',
-    } = filters;
-
-    let query = supabase.from('sections').select(
-      `
-      *,
-      teacher:users(id, full_name, email),
-      students:students(id, first_name, last_name, student_id)
-    `,
-      { count: 'exact' },
-    );
-
-    // Apply filters
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,grade_level.ilike.%${search}%`);
-    }
-    if (gradeLevel) {
-      query = query.eq('grade_level', gradeLevel);
-    }
-    if (teacherId) {
-      query = query.eq('teacher_id', teacherId);
-    }
-
-    // Apply sorting
-    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    const { data: sections, error, count } = await query;
-
-    if (error) {
-      this.logger.error('Error fetching sections:', error);
-      throw new InternalServerErrorException('Failed to fetch sections');
-    }
-
-    const totalPages = Math.ceil((count || 0) / limit);
-
-    return {
-      data: sections,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      },
-    };
-  }
-
-  async findOne(id: string): Promise<Section> {
-    const supabase = this.getSupabaseClient();
-
-    const { data: section, error } = await supabase
-      .from('sections')
-      .select(
-        `
-        *,
-        teacher:users(id, full_name, email),
-        students:students(id, first_name, last_name, student_id)
-      `,
-      )
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      this.logger.error('Error fetching section:', error);
-      throw new NotFoundException('Section not found');
-    }
-
-    return section;
-  }
-
-  async update(
-    id: string,
-    updateSectionDto: UpdateSectionDto,
-  ): Promise<Section> {
-    const supabase = this.getSupabaseClient();
-
-    // Validate teacher exists if teacherId is provided
-    if (updateSectionDto.teacherId) {
-      const { data: teacher, error: teacherError } = await supabase
-        .from('users')
-        .select('id, role:roles(name)')
-        .eq('id', updateSectionDto.teacherId)
+  async findOne(id: string): Promise<SectionWithDetails> {
+    try {
+      const { data, error } = await this.supabase
+        .from('sections_with_details')
+        .select('*')
+        .eq('id', id)
         .single();
 
-      if (teacherError || !teacher) {
-        throw new BadRequestException('Teacher not found');
+      if (error || !data) {
+        throw new NotFoundException(`Section with ID ${id} not found`);
       }
 
-      if ((teacher.role as any)?.name !== 'Teacher') {
-        throw new BadRequestException('User is not a teacher');
+      return data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async findByGradeLevel(gradeLevel: string): Promise<SectionWithDetails[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('sections_with_details')
+        .select('*')
+        .eq('grade_level', gradeLevel)
+        .order('name');
+
+      if (error) {
+        throw new Error(`Failed to fetch sections for grade ${gradeLevel}: ${error.message}`);
       }
+
+      return data || [];
+    } catch (error) {
+      this.handleError(error);
     }
+  }
 
-    const { data: section, error } = await supabase
-      .from('sections')
-      .update({
-        name: updateSectionDto.name,
-        grade_level: updateSectionDto.gradeLevel,
-        teacher_id: updateSectionDto.teacherId,
-        room_id: updateSectionDto.roomId,
-        building_id: updateSectionDto.buildingId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select(
-        `
-        *,
-        teacher:users(id, full_name, email)
-      `,
-      )
-      .single();
+  async update(id: string, updateSectionDto: UpdateSectionDto): Promise<Section> {
+    try {
+      // Check if section exists
+      const existingSection = await this.findOne(id);
 
-    if (error) {
-      this.logger.error('Error updating section:', error);
-      throw new InternalServerErrorException(
-        `Failed to update section: ${error.message}`,
-      );
+      // Check if section name already exists for this grade level (excluding current section)
+      if (updateSectionDto.name && updateSectionDto.name !== existingSection.name) {
+        const { data: duplicateSection } = await this.supabase
+          .from('sections')
+          .select('id')
+          .eq('name', updateSectionDto.name)
+          .eq('grade_level', updateSectionDto.grade_level || existingSection.grade_level)
+          .neq('id', id)
+          .single();
+
+        if (duplicateSection) {
+          throw new ConflictException(`Section ${updateSectionDto.name} already exists for this grade level`);
+        }
+      }
+
+      // Check if teacher is already assigned to another section
+      if (updateSectionDto.teacher_id && updateSectionDto.teacher_id !== existingSection.teacher_id) {
+        const { data: teacherSection } = await this.supabase
+          .from('sections')
+          .select('id, name')
+          .eq('teacher_id', updateSectionDto.teacher_id)
+          .neq('id', id)
+          .single();
+
+        if (teacherSection) {
+          throw new ConflictException(`Teacher is already assigned to section ${teacherSection.name}`);
+        }
+      }
+
+      const { data, error } = await this.supabase
+        .from('sections')
+        .update(updateSectionDto)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update section: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      this.handleError(error);
     }
-
-    if (!section) {
-      throw new NotFoundException('Section not found');
-    }
-
-    this.logger.log(`Section updated successfully: ${section.name}`);
-    return section;
   }
 
   async remove(id: string): Promise<void> {
-    const supabase = this.getSupabaseClient();
+    try {
+      const { error } = await this.supabase
+        .from('sections')
+        .delete()
+        .eq('id', id);
 
-    // Check if section has students
-    const { data: students, error: studentsError } = await supabase
-      .from('students')
-      .select('id')
-      .eq('section_id', id)
-      .limit(1);
-
-    if (studentsError) {
-      this.logger.error('Error checking students:', studentsError);
-      throw new InternalServerErrorException(
-        'Failed to check section students',
-      );
+      if (error) {
+        throw new Error(`Failed to delete section: ${error.message}`);
+      }
+    } catch (error) {
+      this.handleError(error);
     }
-
-    if (students && students.length > 0) {
-      throw new BadRequestException(
-        'Cannot delete section with assigned students',
-      );
-    }
-
-    const { error } = await supabase.from('sections').delete().eq('id', id);
-
-    if (error) {
-      this.logger.error('Error deleting section:', error);
-      throw new InternalServerErrorException(
-        `Failed to delete section: ${error.message}`,
-      );
-    }
-
-    this.logger.log(`Section deleted successfully: ${id}`);
   }
 
-  async getSectionsByTeacher(teacherId: string): Promise<Section[]> {
-    const supabase = this.getSupabaseClient();
+  async findByTeacherId(teacherId: string): Promise<SectionWithDetails[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('sections_with_details')
+        .select('*')
+        .eq('teacher_id', teacherId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
 
-    const { data: sections, error } = await supabase
-      .from('sections')
-      .select(
-        `
-        *,
-        teacher:users(id, full_name, email),
-        students:students(id, first_name, last_name, student_id)
-      `,
-      )
-      .eq('teacher_id', teacherId)
-      .order('name');
+      if (error) {
+        throw new Error(`Failed to fetch sections for teacher: ${error.message}`);
+      }
 
-    if (error) {
-      this.logger.error('Error fetching teacher sections:', error);
-      throw new InternalServerErrorException(
-        'Failed to fetch teacher sections',
-      );
+      return data || [];
+    } catch (error) {
+      this.handleError(error);
     }
-
-    return sections || [];
   }
 
-  async getSectionsByGradeLevel(gradeLevel: string): Promise<Section[]> {
-    const supabase = this.getSupabaseClient();
+  async getAvailableTeachers(): Promise<any[]> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_available_teachers');
 
-    const { data: sections, error } = await supabase
-      .from('sections')
-      .select(
-        `
-        *,
-        teacher:users(id, full_name, email),
-        students:students(id, first_name, last_name, student_id)
-      `,
-      )
-      .eq('grade_level', gradeLevel)
-      .order('name');
+      if (error) {
+        throw new Error(`Failed to fetch available teachers: ${error.message}`);
+      }
 
-    if (error) {
-      this.logger.error('Error fetching grade level sections:', error);
-      throw new InternalServerErrorException(
-        'Failed to fetch grade level sections',
-      );
+      return data || [];
+    } catch (error) {
+      this.handleError(error);
     }
+  }
 
-    return sections || [];
+  private handleError(error: any): never {
+    if (error instanceof NotFoundException || error instanceof ConflictException) {
+      throw error;
+    }
+    throw new Error(error.message || 'An unexpected error occurred');
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,29 +24,58 @@ import {
   ChevronRight,
   Download,
   Plus,
+  Loader2,
 } from "lucide-react"
-import { studentData } from "../data/student-data"
 import { StudentDetailPanel } from "../panels/student-detail-panel"
-
-// Grade distribution calculated from student data
-const gradeDistribution = [
-  { grade: "Grade 7", count: studentData.filter((s) => s.grade === "Grade 7").length, color: "bg-blue-500" },
-  { grade: "Grade 8", count: studentData.filter((s) => s.grade === "Grade 8").length, color: "bg-green-500" },
-  { grade: "Grade 9", count: studentData.filter((s) => s.grade === "Grade 9").length, color: "bg-yellow-500" },
-  { grade: "Grade 10", count: studentData.filter((s) => s.grade === "Grade 10").length, color: "bg-orange-500" },
-  { grade: "Grade 11", count: studentData.filter((s) => s.grade === "Grade 11").length, color: "bg-purple-500" },
-  { grade: "Grade 12", count: studentData.filter((s) => s.grade === "Grade 12").length, color: "bg-pink-500" },
-]
+import { useAllStudents, type Student } from "@/hooks/useAllStudents"
 
 export const StudentManagementSection = () => {
-  const [students, setStudents] = useState(studentData)
+  // ✅ Use API hook instead of mock data
   const [searchTerm, setSearchTerm] = useState("")
   const [gradeFilter, setGradeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
   const [selectedStudent, setSelectedStudent] = useState<any>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
+
+  // ✅ Fetch students from API with filters
+  const {
+    students,
+    pagination,
+    loading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    goToPage,
+    nextPage,
+    previousPage,
+    setFilters,
+  } = useAllStudents({
+    initialPage: 1,
+    limit: itemsPerPage,
+  })
+
+  // ✅ Update search query with debounce effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchTerm)
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timer)
+  }, [searchTerm, setSearchQuery])
+
+  // ✅ Update filters when grade or status filter changes
+  useEffect(() => {
+    setFilters({
+      gradeLevel: gradeFilter === 'all' ? undefined : gradeFilter,
+    })
+  }, [gradeFilter, setFilters])
+
+  // ✅ Update limit when itemsPerPage changes
+  useEffect(() => {
+    setFilters({ limit: itemsPerPage })
+  }, [itemsPerPage, setFilters])
 
   const openStudentPanel = useCallback((student: any) => {
     setSelectedStudent(student)
@@ -55,23 +84,47 @@ export const StudentManagementSection = () => {
 
   const closeStudentPanel = useCallback(() => {
     setIsPanelOpen(false)
-    setTimeout(() => setSelectedStudent(null), 500) // Increased delay for smoother animation
+    setTimeout(() => setSelectedStudent(null), 500)
   }, [])
 
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesGrade = gradeFilter === "all" || student.grade === gradeFilter
-    const matchesStatus = statusFilter === "all" || student.status.toLowerCase() === statusFilter.toLowerCase()
+  // ✅ Calculate stats from API data
+  const stats = useMemo(() => {
+    if (!pagination) return { total: 0, active: 0, inactive: 0, suspended: 0 }
 
-    return matchesSearch && matchesGrade && matchesStatus
-  })
+    // For now, use the data we have. Ideally we'd have dedicated count endpoints
+    const activeCount = students.filter(s => s.user?.status === 'Active').length
+    const inactiveCount = students.filter(s => s.user?.status === 'Inactive').length
+    const suspendedCount = students.filter(s => s.user?.status === 'Suspended').length
 
-  // Pagination
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage)
+    return {
+      total: pagination.total,
+      active: activeCount,
+      inactive: inactiveCount,
+      suspended: suspendedCount,
+    }
+  }, [students, pagination])
+
+  // ✅ Calculate grade distribution from API data
+  const gradeDistribution = useMemo(() => {
+    const distribution = [
+      { grade: "Grade 7", level: "7", count: 0, color: "bg-blue-500" },
+      { grade: "Grade 8", level: "8", count: 0, color: "bg-green-500" },
+      { grade: "Grade 9", level: "9", count: 0, color: "bg-yellow-500" },
+      { grade: "Grade 10", level: "10", count: 0, color: "bg-orange-500" },
+    ]
+
+    students.forEach((student) => {
+      const gradeLevel = student.grade_level || student.section?.grade_level
+      if (gradeLevel) {
+        const gradeItem = distribution.find(g => g.level === gradeLevel)
+        if (gradeItem) {
+          gradeItem.count++
+        }
+      }
+    })
+
+    return distribution
+  }, [students])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -86,7 +139,32 @@ export const StudentManagementSection = () => {
     }
   }
 
-  const maxCount = Math.max(...gradeDistribution.map((g) => g.count))
+  const maxCount = Math.max(...gradeDistribution.map((g) => g.count), 1) // Ensure at least 1 to avoid division by zero
+
+  // Show loading state
+  if (loading && students.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading students...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-4" />
+          <p className="text-destructive font-medium">Failed to load students</p>
+          <p className="text-sm text-muted-foreground mt-2">{error.message}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -108,14 +186,14 @@ export const StudentManagementSection = () => {
         </div>
       </div>
 
-      {/* Enhanced Stats Cards with Sparklines */}
+      {/* ✅ Enhanced Stats Cards - Using API Data */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800 shadow-lg">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">Total Students</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{students.length}</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -135,7 +213,7 @@ export const StudentManagementSection = () => {
               <div>
                 <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">Active</p>
                 <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-                  {students.filter((s) => s.status === "Active").length}
+                  {stats.active}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -156,7 +234,7 @@ export const StudentManagementSection = () => {
               <div>
                 <p className="text-orange-600 dark:text-orange-400 text-sm font-medium">Inactive</p>
                 <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                  {students.filter((s) => s.status === "Inactive").length}
+                  {stats.inactive}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center">
@@ -177,7 +255,7 @@ export const StudentManagementSection = () => {
               <div>
                 <p className="text-red-600 dark:text-red-400 text-sm font-medium">Suspended</p>
                 <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                  {students.filter((s) => s.status === "Suspended").length}
+                  {stats.suspended}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -216,7 +294,7 @@ export const StudentManagementSection = () => {
                     </div>
                   </div>
                   <div className="w-12 text-sm text-muted-foreground text-right">
-                    {Math.round((grade.count / students.length) * 100)}%
+                    {stats.total > 0 ? Math.round((grade.count / stats.total) * 100) : 0}%
                   </div>
                 </div>
               ))}
@@ -288,12 +366,10 @@ export const StudentManagementSection = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Grades</SelectItem>
-                  <SelectItem value="Grade 7">Grade 7</SelectItem>
-                  <SelectItem value="Grade 8">Grade 8</SelectItem>
-                  <SelectItem value="Grade 9">Grade 9</SelectItem>
-                  <SelectItem value="Grade 10">Grade 10</SelectItem>
-                  <SelectItem value="Grade 11">Grade 11</SelectItem>
-                  <SelectItem value="Grade 12">Grade 12</SelectItem>
+                  <SelectItem value="7">Grade 7</SelectItem>
+                  <SelectItem value="8">Grade 8</SelectItem>
+                  <SelectItem value="9">Grade 9</SelectItem>
+                  <SelectItem value="10">Grade 10</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -354,90 +430,103 @@ export const StudentManagementSection = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedStudents.map((student, index) => (
-                  <tr
-                    key={student.id}
-                    className={`border-b border-border/30 hover:bg-muted/30 transition-all duration-200 ${
-                      index % 2 === 0 ? "bg-background" : "bg-muted/10"
-                    }`}
-                  >
-                    <td className="p-4">
-                      <span className="font-mono text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                        {student.id}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-foreground">{student.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="font-medium text-foreground bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-sm">
-                        {student.grade}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                        {student.section}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(student.status)}`}
-                      >
-                        {student.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
-                          onClick={() => openStudentPanel(student)}
+                {students.map((student, index) => {
+                  // ✅ Map API student data to component format
+                  const fullName = student.user?.full_name || `${student.first_name} ${student.last_name}`
+                  const gradeLevel = student.grade_level || student.section?.grade_level
+                  const gradeDisplay = gradeLevel ? `Grade ${gradeLevel}` : '-'
+                  const sectionName = student.section?.name || '-'
+                  const status = student.user?.status || 'Unknown'
+
+                  return (
+                    <tr
+                      key={student.id}
+                      className={`border-b border-border/30 hover:bg-muted/30 transition-all duration-200 ${
+                        index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                      }`}
+                    >
+                      <td className="p-4">
+                        <span className="font-mono text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
+                          {student.student_id}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-foreground">{fullName}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="font-medium text-foreground bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-sm">
+                          {gradeDisplay}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                          {sectionName}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}
                         >
-                          <Eye className="h-4 w-4 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-full"
-                        >
-                          <Edit className="h-4 w-4 text-emerald-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {status}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
+                            onClick={() => openStudentPanel(student)}
+                          >
+                            <Eye className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-full"
+                          >
+                            <Edit className="h-4 w-4 text-emerald-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Enhanced Pagination */}
+      {/* ✅ Enhanced Pagination - Using API Pagination */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-muted/20 p-4 rounded-lg">
         <div className="text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">{startIndex + 1}</span> to{" "}
-          <span className="font-medium text-foreground">
-            {Math.min(startIndex + itemsPerPage, filteredStudents.length)}
-          </span>{" "}
-          of <span className="font-medium text-foreground">{filteredStudents.length}</span> students
+          {pagination && (
+            <>
+              Showing <span className="font-medium text-foreground">{((pagination.page - 1) * pagination.limit) + 1}</span> to{" "}
+              <span className="font-medium text-foreground">
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{" "}
+              of <span className="font-medium text-foreground">{pagination.total}</span> students
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
+            onClick={previousPage}
+            disabled={!pagination || currentPage === 1}
             className="border-border/50 hover:bg-muted"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -445,14 +534,14 @@ export const StudentManagementSection = () => {
           </Button>
 
           <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            {pagination && Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
               const pageNum = i + 1
               return (
                 <Button
                   key={pageNum}
                   variant={currentPage === pageNum ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
+                  onClick={() => goToPage(pageNum)}
                   className={
                     currentPage === pageNum
                       ? "bg-primary text-primary-foreground shadow-md"
@@ -463,20 +552,20 @@ export const StudentManagementSection = () => {
                 </Button>
               )
             })}
-            {totalPages > 5 && (
+            {pagination && pagination.totalPages > 5 && (
               <>
                 <span className="px-2 text-muted-foreground">...</span>
                 <Button
-                  variant={currentPage === totalPages ? "default" : "outline"}
+                  variant={currentPage === pagination.totalPages ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => goToPage(pagination.totalPages)}
                   className={
-                    currentPage === totalPages
+                    currentPage === pagination.totalPages
                       ? "bg-primary text-primary-foreground shadow-md"
                       : "border-border/50 hover:bg-muted"
                   }
                 >
-                  {totalPages}
+                  {pagination.totalPages}
                 </Button>
               </>
             )}
@@ -485,8 +574,8 @@ export const StudentManagementSection = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
+            onClick={nextPage}
+            disabled={!pagination || currentPage === pagination.totalPages}
             className="border-border/50 hover:bg-muted"
           >
             Next

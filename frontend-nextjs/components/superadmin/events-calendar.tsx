@@ -508,7 +508,7 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                   <div className="absolute left-full top-0 ml-1 min-w-[180px] rounded-lg border border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150 p-1.5 space-y-0.5">
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.status === "Upcoming" ? "bg-blue-500/10" : ""
+                        eventContextMenu.event?.status?.toLowerCase() === "upcoming" ? "bg-blue-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change status to Upcoming")
@@ -519,11 +519,26 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <CalendarCheck className="w-4 h-4 text-blue-600" />
                         <span>Upcoming</span>
                       </div>
-                      {eventContextMenu.event?.status === "Upcoming" && <Check className="w-4 h-4 text-blue-600" />}
+                      {eventContextMenu.event?.status?.toLowerCase() === "upcoming" && <Check className="w-4 h-4 text-blue-600" />}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.status === "Ongoing" ? "bg-green-500/10" : ""
+                        eventContextMenu.event?.status?.toLowerCase() === "published" ? "bg-emerald-500/10" : ""
+                      }`}
+                      onClick={() => {
+                        console.log("Change status to Published")
+                        closeContextMenus()
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        <span>Published</span>
+                      </div>
+                      {eventContextMenu.event?.status?.toLowerCase() === "published" && <Check className="w-4 h-4 text-emerald-600" />}
+                    </button>
+                    <button
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
+                        eventContextMenu.event?.status?.toLowerCase() === "ongoing" ? "bg-green-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change status to Ongoing")
@@ -534,11 +549,11 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <Clock className="w-4 h-4 text-green-600" />
                         <span>Ongoing</span>
                       </div>
-                      {eventContextMenu.event?.status === "Ongoing" && <Check className="w-4 h-4 text-green-600" />}
+                      {eventContextMenu.event?.status?.toLowerCase() === "ongoing" && <Check className="w-4 h-4 text-green-600" />}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.status === "Completed" ? "bg-gray-500/10" : ""
+                        eventContextMenu.event?.status?.toLowerCase() === "completed" ? "bg-purple-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change status to Completed")
@@ -546,14 +561,14 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                       }}
                     >
                       <div className="flex items-center gap-3">
-                        <CheckCircle className="w-4 h-4 text-gray-600" />
+                        <CheckCircle className="w-4 h-4 text-purple-600" />
                         <span>Completed</span>
                       </div>
-                      {eventContextMenu.event?.status === "Completed" && <Check className="w-4 h-4 text-gray-600" />}
+                      {eventContextMenu.event?.status?.toLowerCase() === "completed" && <Check className="w-4 h-4 text-purple-600" />}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.status === "Cancelled" ? "bg-red-500/10" : ""
+                        eventContextMenu.event?.status?.toLowerCase() === "cancelled" ? "bg-red-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change status to Cancelled")
@@ -564,7 +579,7 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <CalendarX className="w-4 h-4 text-red-600" />
                         <span>Cancelled</span>
                       </div>
-                      {eventContextMenu.event?.status === "Cancelled" && <Check className="w-4 h-4 text-red-600" />}
+                      {eventContextMenu.event?.status?.toLowerCase() === "cancelled" && <Check className="w-4 h-4 text-red-600" />}
                     </button>
                   </div>
                 )}
@@ -589,7 +604,7 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                   <div className="absolute left-full top-0 ml-1 min-w-[180px] rounded-lg border border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150 p-1.5 space-y-0.5">
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.visibility === "Public" ? "bg-green-500/10" : ""
+                        eventContextMenu.event?.visibility?.toLowerCase() === "public" ? "bg-green-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change visibility to Public")
@@ -600,11 +615,11 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <Users className="w-4 h-4 text-green-600" />
                         <span>Public</span>
                       </div>
-                      {eventContextMenu.event?.visibility === "Public" && <Check className="w-4 h-4 text-green-600" />}
+                      {eventContextMenu.event?.visibility?.toLowerCase() === "public" && <Check className="w-4 h-4 text-green-600" />}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.visibility === "Students Only" ? "bg-blue-500/10" : ""
+                        eventContextMenu.event?.visibility?.toLowerCase() === "students only" ? "bg-blue-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change visibility to Students Only")
@@ -615,13 +630,13 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <Users className="w-4 h-4 text-blue-600" />
                         <span>Students Only</span>
                       </div>
-                      {eventContextMenu.event?.visibility === "Students Only" && (
+                      {eventContextMenu.event?.visibility?.toLowerCase() === "students only" && (
                         <Check className="w-4 h-4 text-blue-600" />
                       )}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.visibility === "Teachers Only" ? "bg-purple-500/10" : ""
+                        eventContextMenu.event?.visibility?.toLowerCase() === "teachers only" ? "bg-purple-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change visibility to Teachers Only")
@@ -632,13 +647,13 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <Users className="w-4 h-4 text-purple-600" />
                         <span>Teachers Only</span>
                       </div>
-                      {eventContextMenu.event?.visibility === "Teachers Only" && (
+                      {eventContextMenu.event?.visibility?.toLowerCase() === "teachers only" && (
                         <Check className="w-4 h-4 text-purple-600" />
                       )}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        eventContextMenu.event?.visibility === "Parents Only" ? "bg-indigo-500/10" : ""
+                        eventContextMenu.event?.visibility?.toLowerCase() === "parents only" ? "bg-indigo-500/10" : ""
                       }`}
                       onClick={() => {
                         console.log("Change visibility to Parents Only")
@@ -649,7 +664,7 @@ export function EventsCalendar({ events, onEventClick }: EventsCalendarProps) {
                         <Users className="w-4 h-4 text-indigo-600" />
                         <span>Parents Only</span>
                       </div>
-                      {eventContextMenu.event?.visibility === "Parents Only" && (
+                      {eventContextMenu.event?.visibility?.toLowerCase() === "parents only" && (
                         <Check className="w-4 h-4 text-indigo-600" />
                       )}
                     </button>

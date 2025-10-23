@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useUser } from "@/hooks/useUser"
 import {
   Dialog,
   DialogContent,
@@ -59,14 +60,28 @@ export default function TeacherSettingsPage() {
   })
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false)
   const [showPasswordError, setShowPasswordError] = useState(false)
+
+  // Fetch current user data
+  const { data: user, isLoading, isError } = useUser()
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
+  }
+
   const [formData, setFormData] = useState({
-    firstName: "Maria",
-    lastName: "Santos",
-    email: "maria.santos@teacher.southville8b.edu",
-    phone: "+63 917 123 4567",
-    department: "Mathematics",
-    employeeId: "TCH-2024-001",
-    bio: "Passionate mathematics teacher with 8 years of experience in secondary education.",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    department: "",
+    employeeId: "",
+    bio: "",
     notifications: {
       assignments: true,
       grades: true,
@@ -90,6 +105,45 @@ export default function TeacherSettingsPage() {
       securityMode: "standard",
     },
   })
+
+  // Update form data when user data loads
+  useEffect(() => {
+    if (user) {
+      const firstName = user?.teacher?.first_name || user?.full_name?.split(' ')[0] || 'Teacher'
+      const lastName = user?.teacher?.last_name || user?.full_name?.split(' ').slice(-1)[0] || 'User'
+      const email = user?.email || 'teacher@southville8b.edu'
+      const phone = user?.teacher?.phone || user?.profile?.phone || '+63 917 000 0000'
+      const department = user?.teacher?.department || 'Education'
+      const employeeId = user?.teacher?.employee_id || user?.id || 'TCH-2024-000'
+      const bio = user?.teacher?.bio || user?.profile?.bio || 'Passionate educator dedicated to student success.'
+
+      setFormData(prev => ({
+        ...prev,
+        firstName,
+        lastName,
+        email,
+        phone,
+        department,
+        employeeId,
+        bio,
+      }))
+    }
+  }, [user])
+
+  // Computed teacher data for UI display
+  const teacherData = {
+    firstName: user?.teacher?.first_name || user?.full_name?.split(' ')[0] || 'Teacher',
+    lastName: user?.teacher?.last_name || user?.full_name?.split(' ').slice(-1)[0] || 'User',
+    fullName: user?.teacher
+      ? `${user.teacher.first_name} ${user.teacher.middle_name ? user.teacher.middle_name + ' ' : ''}${user.teacher.last_name}`.trim()
+      : user?.full_name || 'Teacher User',
+    email: user?.email || 'teacher@southville8b.edu',
+    phone: user?.teacher?.phone || user?.profile?.phone || '+63 917 000 0000',
+    department: user?.teacher?.department || 'Education',
+    employeeId: user?.teacher?.employee_id || user?.id || 'TCH-2024-000',
+    bio: user?.teacher?.bio || user?.profile?.bio || 'Passionate educator dedicated to student success.',
+    avatar: user?.profile?.avatar || '/teacher-avatar.png'
+  }
 
   const handlePasswordChangeClick = () => {
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -229,8 +283,8 @@ export default function TeacherSettingsPage() {
                   <div className="flex items-center space-x-6">
                     <div className="relative">
                       <Avatar className="w-24 h-24 border-4 border-green-200 dark:border-green-700">
-                        <AvatarImage src="/teacher-avatar.png" alt="Profile" />
-                        <AvatarFallback className="bg-green-600 text-white text-xl">MS</AvatarFallback>
+                        <AvatarImage src={teacherData.avatar} alt="Profile" />
+                        <AvatarFallback className="bg-green-600 text-white text-xl">{getInitials(teacherData.fullName)}</AvatarFallback>
                       </Avatar>
                       <Button
                         size="sm"
@@ -240,8 +294,8 @@ export default function TeacherSettingsPage() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Maria Santos</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Mathematics Teacher</p>
+                      <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{teacherData.fullName}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{teacherData.department} Teacher</p>
                       <div className="flex gap-2">
                         <Button
                           size="sm"

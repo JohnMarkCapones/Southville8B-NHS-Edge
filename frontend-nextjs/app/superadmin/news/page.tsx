@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { useAllNews, useDeleteNews, useRestoreNews } from "@/hooks"
 import {
   Search,
   Plus,
@@ -43,137 +44,70 @@ import {
   Info,
 } from "lucide-react"
 
-// Mock data for news articles
-const mockNewsArticles = [
-  {
-    id: "1",
-    title: "Annual Science Fair Winners Announced",
-    author: "Dr. Maria Santos",
-    category: "Academic",
-    status: "Published",
-    publishedDate: "2024-01-15",
-    views: 1250,
-    excerpt: "Congratulations to all participants in this year's science fair competition...",
-    featured: true,
-    visibility: "Public",
-  },
-  {
-    id: "2",
-    title: "Basketball Team Advances to Regional Finals",
-    author: "Coach Rodriguez",
-    category: "Sports",
-    status: "Published",
-    publishedDate: "2024-01-14",
-    views: 890,
-    excerpt: "Our varsity basketball team secured their spot in the regional finals...",
-    featured: false,
-    visibility: "Public",
-  },
-  {
-    id: "3",
-    title: "New Library Hours Effective Next Week",
-    author: "Admin Office",
-    category: "Announcements",
-    status: "Scheduled",
-    publishedDate: "2024-01-20",
-    views: 0,
-    excerpt: "Please note the updated library operating hours starting January 22nd...",
-    featured: false,
-    visibility: "Students Only",
-  },
-  {
-    id: "4",
-    title: "Teacher Professional Development Workshop",
-    author: "HR Department",
-    category: "Events",
-    status: "Draft",
-    publishedDate: "",
-    views: 0,
-    excerpt: "Join us for a comprehensive workshop on modern teaching methodologies...",
-    featured: false,
-    visibility: "Teachers Only",
-  },
-  {
-    id: "5",
-    title: "Student Council Election Results",
-    author: "Student Affairs",
-    category: "Student Life",
-    status: "Published",
-    publishedDate: "2024-01-12",
-    views: 2100,
-    excerpt: "The results of the student council elections are now official...",
-    featured: true,
-    visibility: "Public",
-  },
-]
-
-const mockArchivedArticles = [
-  {
-    id: "archived-1",
-    title: "Outdated School Policy Announcement",
-    author: "Admin Office",
-    category: "Announcements",
-    status: "Published",
-    publishedDate: "2023-06-15",
-    views: 450,
-    excerpt: "This policy has been superseded by new regulations...",
-    featured: false,
-    visibility: "Public",
-    deletedDate: "2024-01-10",
-    deletedBy: "John Admin",
-    deletionReason: "Outdated information",
-  },
-  {
-    id: "archived-2",
-    title: "Last Year's Sports Day Highlights",
-    author: "Coach Martinez",
-    category: "Sports",
-    status: "Published",
-    publishedDate: "2023-05-20",
-    views: 1200,
-    excerpt: "Recap of the amazing sports day event from last year...",
-    featured: false,
-    visibility: "Public",
-    deletedDate: "2024-01-08",
-    deletedBy: "Sarah Superadmin",
-    deletionReason: "Archived for historical purposes",
-  },
-  {
-    id: "archived-3",
-    title: "Cancelled Event Notice",
-    author: "Events Team",
-    category: "Events",
-    status: "Draft",
-    publishedDate: "",
-    views: 0,
-    excerpt: "This event was cancelled due to unforeseen circumstances...",
-    featured: false,
-    visibility: "Students Only",
-    deletedDate: "2024-01-05",
-    deletedBy: "John Admin",
-    deletionReason: "Event cancelled",
-  },
-]
-
 const NewsPage = () => {
   const { toast } = useToast()
   const router = useRouter()
-  const [articles, setArticles] = useState(mockNewsArticles)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [visibilityFilter, setVisibilityFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(20)
-  const [selectedArticles, setSelectedArticles] = useState<string[]>([])
 
-  const [archivedArticles, setArchivedArticles] = useState(mockArchivedArticles)
+  // API Hooks for active articles
+  const {
+    articles,
+    pagination,
+    loading,
+    error,
+    filters,
+    setFilters,
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    goToPage,
+    nextPage: handleNextPage,
+    previousPage: handlePreviousPage,
+    refetch,
+  } = useAllNews({
+    initialPage: 1,
+    limit: 20,
+    includeDeleted: false,
+  })
+
+  // API Hooks for archived articles
+  const {
+    articles: archivedArticles,
+    pagination: archivedPagination,
+    loading: archivedLoading,
+    error: archivedError,
+    filters: archivedFilters,
+    setFilters: setArchivedFilters,
+    searchQuery: archivedSearchQuery,
+    setSearchQuery: setArchivedSearchQuery,
+    currentPage: archivedCurrentPage,
+    goToPage: goToArchivedPage,
+    nextPage: handleArchivedNextPage,
+    previousPage: handleArchivedPreviousPage,
+    refetch: refetchArchived,
+  } = useAllNews({
+    initialPage: 1,
+    limit: 10,
+    includeDeleted: true, // Only fetch deleted articles
+  })
+
+  // Mutation hooks
+  const { mutateAsync: deleteNews } = useDeleteNews()
+  const { mutateAsync: restoreNews } = useRestoreNews()
+
+  // Local state
+  const [selectedArticles, setSelectedArticles] = useState<string[]>([])
   const [showArchivedSection, setShowArchivedSection] = useState(false)
-  const [archivedSearchTerm, setArchivedSearchTerm] = useState("")
-  const [archivedCategoryFilter, setArchivedCategoryFilter] = useState("all")
-  const [archivedCurrentPage, setArchivedCurrentPage] = useState(1)
-  const [archivedItemsPerPage, setArchivedItemsPerPage] = useState(10)
   const [selectedArchivedArticles, setSelectedArchivedArticles] = useState<string[]>([])
+  const [itemsPerPage, setItemsPerPage] = useState(20)
+
+  // Computed values for pagination display
+  const filteredArticles = articles || []
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedArticles = filteredArticles.slice(startIndex, endIndex)
+  
+  // Safety checks for undefined arrays
+  const safeArchivedArticles = archivedArticles || []
   const [restoreConfirmation, setRestoreConfirmation] = useState<{
     isOpen: boolean
     article: any
@@ -219,59 +153,47 @@ const NewsPage = () => {
     article: any
   }>({ isOpen: false, article: null })
 
-  const filteredArticles = articles.filter((article) => {
-    const matchesSearch =
-      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || article.category.toLowerCase() === categoryFilter
-    const matchesStatus = statusFilter === "all" || article.status.toLowerCase() === statusFilter
-    const matchesVisibility =
-      visibilityFilter === "all" || article.visibility.toLowerCase().includes(visibilityFilter.toLowerCase())
+  // Compute stats from API data
+  const stats = useMemo(() => {
+    if (!pagination) {
+      return { total: 0, published: 0, drafts: 0, scheduled: 0 }
+    }
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesVisibility
-  })
+    return {
+      total: pagination.total,
+      published: (articles || []).filter(a => a.status === 'Published').length,
+      drafts: (articles || []).filter(a => a.status === 'Draft').length,
+      scheduled: (articles || []).filter(a => a.status === 'Scheduled' || a.status === 'Pending Review').length,
+    }
+  }, [articles, pagination])
 
-  const filteredArchivedArticles = archivedArticles.filter((article) => {
-    const matchesSearch =
-      article.title.toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
-      article.author.toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
-      article.excerpt.toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
-      article.deletionReason?.toLowerCase().includes(archivedSearchTerm.toLowerCase())
-    const matchesCategory =
-      archivedCategoryFilter === "all" || article.category.toLowerCase() === archivedCategoryFilter
-
-    return matchesSearch && matchesCategory
-  })
-
-  const totalPages = Math.ceil(filteredArticles.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedArticles = filteredArticles.slice(startIndex, endIndex)
-
-  const archivedTotalPages = Math.ceil(filteredArchivedArticles.length / archivedItemsPerPage)
-  const archivedStartIndex = (archivedCurrentPage - 1) * archivedItemsPerPage
-  const archivedEndIndex = archivedStartIndex + archivedItemsPerPage
-  const paginatedArchivedArticles = filteredArchivedArticles.slice(archivedStartIndex, archivedEndIndex)
-
+  // Filter handlers - update API filters
   const handleFilterChange = (filterType: string, value: string) => {
-    setCurrentPage(1)
     switch (filterType) {
       case "category":
-        setCategoryFilter(value)
+        setFilters({ categoryId: value === "all" ? undefined : value })
         break
       case "status":
-        setStatusFilter(value)
+        setFilters({ status: value === "all" ? undefined : value })
         break
       case "visibility":
-        setVisibilityFilter(value)
+        setFilters({ visibility: value === "all" ? undefined : value })
         break
     }
   }
 
+  const handleArchivedFilterChange = (filterType: string, value: string) => {
+    switch (filterType) {
+      case "category":
+        setArchivedFilters({ categoryId: value === "all" ? undefined : value })
+        break
+    }
+  }
+
+  // Selection handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedArticles(paginatedArticles.map((article) => article.id))
+      setSelectedArticles((articles || []).map((article) => article.id))
     } else {
       setSelectedArticles([])
     }
@@ -287,7 +209,7 @@ const NewsPage = () => {
 
   const handleSelectAllArchived = (checked: boolean) => {
     if (checked) {
-      setSelectedArchivedArticles(paginatedArchivedArticles.map((article) => article.id))
+      setSelectedArchivedArticles(safeArchivedArticles.map((article) => article.id))
     } else {
       setSelectedArchivedArticles([])
     }
@@ -554,45 +476,49 @@ const NewsPage = () => {
     })
   }
 
-  const confirmDeleteArticle = () => {
+  const confirmDeleteArticle = async () => {
     if (deleteConfirmation.article) {
-      const articleToArchive = {
-        ...deleteConfirmation.article,
-        deletedDate: new Date().toISOString().split("T")[0],
-        deletedBy: "Current Admin",
-        deletionReason: "Archived by admin",
-      }
+      try {
+        await deleteNews(deleteConfirmation.article.id)
 
-      setArchivedArticles((prev) => [articleToArchive, ...prev])
-      setArticles((prev) => prev.filter((a) => a.id !== deleteConfirmation.article.id))
-
-      toast({
-        title: "✅ Article Archived Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              {deleteConfirmation.article.title} has been moved to archived articles.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                <Archive className="w-3 h-3" />
+        toast({
+          title: "✅ Article Archived Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">
+                {deleteConfirmation.article.title} has been moved to archived articles.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  <Archive className="w-3 h-3" />
+                </div>
+                <span>{deleteConfirmation.article.author}</span>
+                <span>•</span>
+                <span>{deleteConfirmation.article.category}</span>
               </div>
-              <span>{deleteConfirmation.article.author}</span>
-              <span>•</span>
-              <span>{deleteConfirmation.article.category}</span>
+              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
+                <CheckCircle className="w-3 h-3" />
+                <span>Article can be restored from archived section</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
-              <CheckCircle className="w-3 h-3" />
-              <span>Article can be restored from archived section</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 6000,
-        className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
-      })
+          ),
+          variant: "default",
+          duration: 6000,
+          className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
+        })
 
-      setDeleteConfirmation({ isOpen: false, article: null })
+        // Refetch both lists
+        await refetch()
+        await refetchArchived()
+      } catch (error) {
+        toast({
+          title: "❌ Error",
+          description: "Failed to archive article. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setDeleteConfirmation({ isOpen: false, article: null })
+      }
     }
   }
 
@@ -600,21 +526,19 @@ const NewsPage = () => {
     setRestoreConfirmation({ isOpen: true, article })
   }
 
-  const confirmRestoreArticle = () => {
+  const confirmRestoreArticle = async () => {
     if (restoreConfirmation.article) {
-      const { deletedDate, deletedBy, deletionReason, ...restoredArticle } = restoreConfirmation.article
+      try {
+        await restoreNews(restoreConfirmation.article.id)
 
-      setArticles((prev) => [restoredArticle, ...prev])
-      setArchivedArticles((prev) => prev.filter((a) => a.id !== restoreConfirmation.article.id))
-
-      toast({
-        title: "✅ Article Restored Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">{restoreConfirmation.article.title} has been restored.</p>
-            <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
-              <RotateCcw className="w-3 h-3" />
-              <span>Article is now active again</span>
+        toast({
+          title: "✅ Article Restored Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">{restoreConfirmation.article.title} has been restored.</p>
+              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
+                <RotateCcw className="w-3 h-3" />
+                <span>Article is now active again</span>
             </div>
           </div>
         ),
@@ -623,7 +547,18 @@ const NewsPage = () => {
         className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
       })
 
-      setRestoreConfirmation({ isOpen: false, article: null })
+        // Refetch both lists
+        await refetch()
+        await refetchArchived()
+      } catch (error) {
+        toast({
+          title: "❌ Error",
+          description: "Failed to restore article. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setRestoreConfirmation({ isOpen: false, article: null })
+      }
     }
   }
 
@@ -903,7 +838,7 @@ const NewsPage = () => {
               <FileText className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Total Articles</p>
-                <p className="text-2xl font-bold text-foreground">{articles.length}</p>
+                <p className="text-2xl font-bold text-foreground">{loading ? '...' : stats.total}</p>
               </div>
             </div>
           </CardContent>
@@ -914,9 +849,7 @@ const NewsPage = () => {
               <CheckCircle className="h-8 w-8 text-green-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Published</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {articles.filter((a) => a.status === "Published").length}
-                </p>
+                <p className="text-2xl font-bold text-foreground">{loading ? '...' : stats.published}</p>
               </div>
             </div>
           </CardContent>
@@ -926,10 +859,8 @@ const NewsPage = () => {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {articles.filter((a) => a.status === "Scheduled").length}
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">Drafts</p>
+                <p className="text-2xl font-bold text-foreground">{loading ? '...' : stats.drafts}</p>
               </div>
             </div>
           </CardContent>
@@ -941,7 +872,7 @@ const NewsPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Total Views</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {articles.reduce((sum, a) => sum + a.views, 0).toLocaleString()}
+                  {loading ? '...' : articles.reduce((sum, a) => sum + a.views, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -964,16 +895,13 @@ const NewsPage = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Search articles by title, author, or content..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value)
-                    setCurrentPage(1)
-                  }}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-background border-border text-foreground"
                 />
               </div>
             </div>
-            <Select value={categoryFilter} onValueChange={(value) => handleFilterChange("category", value)}>
+            <Select value={filters.categoryId || 'all'} onValueChange={(value) => handleFilterChange("category", value)}>
               <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
@@ -986,7 +914,7 @@ const NewsPage = () => {
                 <SelectItem value="student life">Student Life</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(value) => handleFilterChange("status", value)}>
+            <Select value={filters.status || 'all'} onValueChange={(value) => handleFilterChange("status", value)}>
               <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -997,7 +925,7 @@ const NewsPage = () => {
                 <SelectItem value="scheduled">Scheduled</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={visibilityFilter} onValueChange={(value) => handleFilterChange("visibility", value)}>
+            <Select value={filters.visibility || 'all'} onValueChange={(value) => handleFilterChange("visibility", value)}>
               <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
                 <SelectValue placeholder="Filter by visibility" />
               </SelectTrigger>
@@ -1017,7 +945,7 @@ const NewsPage = () => {
                 value={itemsPerPage.toString()}
                 onValueChange={(value) => {
                   setItemsPerPage(Number(value))
-                  setCurrentPage(1)
+                  goToPage(1)
                 }}
               >
                 <SelectTrigger className="w-[100px] bg-background border-border text-foreground">
@@ -1158,62 +1086,64 @@ const NewsPage = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages} ({filteredArticles.length} total articles)
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-                className="border-border bg-transparent"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Previous
-              </Button>
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = i + 1
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={currentPage === pageNum ? "" : "border-border bg-transparent"}
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                })}
-                {totalPages > 5 && (
-                  <>
-                    <span className="text-muted-foreground">...</span>
-                    <Button
-                      variant={currentPage === totalPages ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      className={currentPage === totalPages ? "" : "border-border bg-transparent"}
-                    >
-                      {totalPages}
-                    </Button>
-                  </>
-                )}
+          {pagination && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {pagination.totalPages} ({pagination.total} total articles)
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-                className="border-border bg-transparent"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={handlePreviousPage}
+                  className="border-border bg-transparent"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    const pageNum = i + 1
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(pageNum)}
+                        className={currentPage === pageNum ? "" : "border-border bg-transparent"}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                  {pagination.totalPages > 5 && (
+                    <>
+                      <span className="text-muted-foreground">...</span>
+                      <Button
+                        variant={currentPage === pagination.totalPages ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(pagination.totalPages)}
+                        className={currentPage === pagination.totalPages ? "" : "border-border bg-transparent"}
+                      >
+                        {pagination.totalPages}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === pagination.totalPages}
+                  onClick={handleNextPage}
+                  className="border-border bg-transparent"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1228,7 +1158,7 @@ const NewsPage = () => {
                 <CardTitle className="text-foreground flex items-center gap-2">
                   Archived Articles
                   <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-500/20">
-                    {archivedArticles.length}
+                    {safeArchivedArticles.length}
                   </Badge>
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
@@ -1285,17 +1215,17 @@ const NewsPage = () => {
                     value={archivedSearchTerm}
                     onChange={(e) => {
                       setArchivedSearchTerm(e.target.value)
-                      setArchivedCurrentPage(1)
+                      goToArchivedPage(1)
                     }}
                     className="pl-10 bg-background border-border text-foreground"
                   />
                 </div>
               </div>
               <Select
-                value={archivedCategoryFilter}
+                value={archivedFilters.categoryId || 'all'}
                 onValueChange={(value) => {
-                  setArchivedCategoryFilter(value)
-                  setArchivedCurrentPage(1)
+                  handleArchivedFilterChange("category", value)
+                  goToArchivedPage(1)
                 }}
               >
                 <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
@@ -1319,7 +1249,7 @@ const NewsPage = () => {
                   value={archivedItemsPerPage.toString()}
                   onValueChange={(value) => {
                     setArchivedItemsPerPage(Number(value))
-                    setArchivedCurrentPage(1)
+                    goToArchivedPage(1)
                   }}
                 >
                   <SelectTrigger className="w-[100px] bg-background border-border text-foreground">
@@ -1463,7 +1393,7 @@ const NewsPage = () => {
                     variant="outline"
                     size="sm"
                     disabled={archivedCurrentPage === 1}
-                    onClick={() => setArchivedCurrentPage(archivedCurrentPage - 1)}
+                    onClick={() => goToArchivedPage(archivedCurrentPage - 1)}
                     className="border-border bg-transparent"
                   >
                     <ChevronLeft className="w-4 h-4 mr-1" />
@@ -1477,7 +1407,7 @@ const NewsPage = () => {
                           key={pageNum}
                           variant={archivedCurrentPage === pageNum ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setArchivedCurrentPage(pageNum)}
+                          onClick={() => goToArchivedPage(pageNum)}
                           className={archivedCurrentPage === pageNum ? "" : "border-border bg-transparent"}
                         >
                           {pageNum}
@@ -1490,7 +1420,7 @@ const NewsPage = () => {
                         <Button
                           variant={archivedCurrentPage === archivedTotalPages ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setArchivedCurrentPage(archivedTotalPages)}
+                          onClick={() => goToArchivedPage(archivedTotalPages)}
                           className={archivedCurrentPage === archivedTotalPages ? "" : "border-border bg-transparent"}
                         >
                           {archivedTotalPages}
@@ -1502,7 +1432,7 @@ const NewsPage = () => {
                     variant="outline"
                     size="sm"
                     disabled={archivedCurrentPage === archivedTotalPages}
-                    onClick={() => setArchivedCurrentPage(archivedCurrentPage + 1)}
+                    onClick={() => goToArchivedPage(archivedCurrentPage + 1)}
                     className="border-border bg-transparent"
                   >
                     Next

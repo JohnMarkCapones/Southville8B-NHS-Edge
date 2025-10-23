@@ -90,7 +90,9 @@ export interface Event {
   is_featured?: boolean; // Featured event flag
   createdAt: string;
   updatedAt: string;
-  
+  deletedAt?: string; // Soft delete timestamp
+  deletedBy?: string; // UUID of user who archived the event
+
   // Relations
   organizer?: EventOrganizer;
   tags?: EventTag[];
@@ -110,9 +112,7 @@ export interface EventListResponse {
     page: number;
     limit: number;
     total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
+    pages: number; // Changed from totalPages to match API response
   };
 }
 

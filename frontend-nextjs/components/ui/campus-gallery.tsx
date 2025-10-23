@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -19,73 +19,16 @@ import {
   Share2,
 } from "lucide-react"
 import Link from "next/link"
+import { getCampusGalleryItems } from "@/lib/api/endpoints/gallery"
+import type { FrontendGalleryItem } from "@/lib/api/types/gallery"
 
 interface GalleryItem {
-  id: number
+  id: string
   title: string
   category: string
   image: string
   description: string
 }
-
-const galleryItems: GalleryItem[] = [
-  {
-    id: 1,
-    title: "Science Fair 2024 Winners",
-    category: "Academic",
-    image: "/placeholder.svg?height=400&width=600&text=Science+Fair+2024+Winners",
-    description: "Students showcased innovative projects in STEM fields",
-  },
-  {
-    id: 2,
-    title: "Basketball Championship",
-    category: "Sports",
-    image: "/placeholder.svg?height=300&width=400&text=Basketball+Championship",
-    description: "Eagles win state championship",
-  },
-  {
-    id: 3,
-    title: "Art Exhibition",
-    category: "Arts",
-    image: "/placeholder.svg?height=300&width=400&text=Art+Exhibition",
-    description: "Student artwork displayed in gallery",
-  },
-  {
-    id: 4,
-    title: "Drama Performance",
-    category: "Arts",
-    image: "/placeholder.svg?height=300&width=400&text=Drama+Performance",
-    description: "Annual spring musical production",
-  },
-  {
-    id: 5,
-    title: "Community Service",
-    category: "Events",
-    image: "/placeholder.svg?height=300&width=400&text=Community+Service",
-    description: "Students volunteering in local community",
-  },
-  {
-    id: 6,
-    title: "Math Olympiad",
-    category: "Academic",
-    image: "/placeholder.svg?height=300&width=400&text=Math+Olympiad",
-    description: "Students compete in mathematics competition",
-  },
-  {
-    id: 7,
-    title: "Soccer Tournament",
-    category: "Sports",
-    image: "/placeholder.svg?height=300&width=400&text=Soccer+Tournament",
-    description: "Annual inter-school soccer championship",
-  },
-  {
-    id: 8,
-    title: "Campus Festival",
-    category: "Campus Life",
-    image: "/placeholder.svg?height=300&width=400&text=Campus+Festival",
-    description: "Annual campus celebration with food and activities",
-  },
-]
 
 const categories = [
   { name: "All", icon: <Users className="w-4 h-4" /> },
@@ -102,6 +45,50 @@ export function CampusGallery() {
   const [lightboxImage, setLightboxImage] = useState<GalleryItem | null>(null)
   const [isLightboxLoading, setIsLightboxLoading] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch gallery items from API
+  useEffect(() => {
+    async function fetchGalleryItems() {
+      try {
+        setIsLoading(true)
+        const items = await getCampusGalleryItems(8) // Fetch 8 items for the landing page
+
+        console.log('[CampusGallery] Fetched items from API:', items)
+        console.log('[CampusGallery] Number of items:', items.length)
+
+        // Transform FrontendGalleryItem to GalleryItem
+        const transformedItems: GalleryItem[] = items.map(item => {
+          console.log('[CampusGallery] Transforming item:', {
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            image: item.image,
+            thumbnail: item.thumbnail,
+          })
+
+          return {
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            image: item.thumbnail || item.image, // Use thumbnail if available, fallback to full image
+            description: item.description,
+          }
+        })
+
+        console.log('[CampusGallery] Transformed items:', transformedItems)
+        setGalleryItems(transformedItems)
+      } catch (error) {
+        console.error('[CampusGallery] Error fetching campus gallery items:', error)
+        // Keep empty array on error - component will handle gracefully
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchGalleryItems()
+  }, [])
 
   const filteredItems =
     activeCategory === "All" ? galleryItems : galleryItems.filter((item) => item.category === activeCategory)
@@ -130,6 +117,35 @@ export function CampusGallery() {
 
   const toggleLike = () => {
     setIsLiked(!isLiked)
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-center items-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-muted-foreground">Loading gallery...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show empty state if no items
+  if (galleryItems.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <Camera className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-semibold mb-2">No Gallery Items Yet</h3>
+            <p className="text-muted-foreground">Check back soon for photos from school events!</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -55,11 +55,15 @@ export class AccessControlService {
       }
 
       if (quiz.teacher_id !== dto.teacherId) {
-        throw new ForbiddenException('You can only create access links for your own quizzes');
+        throw new ForbiddenException(
+          'You can only create access links for your own quizzes',
+        );
       }
 
       if (quiz.status !== 'published') {
-        throw new BadRequestException('Quiz must be published to generate access links');
+        throw new BadRequestException(
+          'Quiz must be published to generate access links',
+        );
       }
 
       // Generate secure token
@@ -160,7 +164,10 @@ export class AccessControlService {
       }
 
       // Check max uses
-      if (accessRecord.max_uses && accessRecord.use_count >= accessRecord.max_uses) {
+      if (
+        accessRecord.max_uses &&
+        accessRecord.use_count >= accessRecord.max_uses
+      ) {
         return {
           isValid: false,
           reason: 'Access link usage limit reached',
@@ -168,7 +175,10 @@ export class AccessControlService {
       }
 
       // Check access code if required
-      if (accessRecord.access_code && accessRecord.access_code !== dto.accessCode) {
+      if (
+        accessRecord.access_code &&
+        accessRecord.access_code !== dto.accessCode
+      ) {
         return {
           isValid: false,
           reason: 'Invalid access code',
@@ -225,7 +235,9 @@ export class AccessControlService {
       await supabase
         .from('quiz_access_links')
         .update({
-          use_count: supabase.rpc('increment', { row_id: accessRecord.link_id }),
+          use_count: supabase.rpc('increment', {
+            row_id: accessRecord.link_id,
+          }),
           last_used_at: new Date().toISOString(),
         })
         .eq('link_id', accessRecord.link_id);
@@ -239,7 +251,9 @@ export class AccessControlService {
         metadata,
       });
 
-      this.logger.log(`Access recorded for token ${token} by student ${studentId}`);
+      this.logger.log(
+        `Access recorded for token ${token} by student ${studentId}`,
+      );
     } catch (error) {
       this.logger.error('Error recording access usage:', error);
       // Don't throw - this is logging only
@@ -265,7 +279,9 @@ export class AccessControlService {
       }
 
       if (accessRecord.created_by !== teacherId) {
-        throw new ForbiddenException('You can only revoke your own access links');
+        throw new ForbiddenException(
+          'You can only revoke your own access links',
+        );
       }
 
       // Revoke the link
@@ -314,7 +330,9 @@ export class AccessControlService {
       }
 
       if (quiz.teacher_id !== teacherId) {
-        throw new ForbiddenException('You can only view access links for your own quizzes');
+        throw new ForbiddenException(
+          'You can only view access links for your own quizzes',
+        );
       }
 
       // Get all access links
@@ -336,7 +354,8 @@ export class AccessControlService {
             .select('student_id')
             .eq('link_id', link.link_id);
 
-          const uniqueUsers = new Set(usageLogs?.map(log => log.student_id)).size;
+          const uniqueUsers = new Set(usageLogs?.map((log) => log.student_id))
+            .size;
 
           return {
             ...link,

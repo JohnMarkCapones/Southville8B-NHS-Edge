@@ -44,6 +44,9 @@ export class Student {
   @ApiProperty({ description: 'Birthday', required: false })
   birthday?: string;
 
+  @ApiProperty({ description: 'Soft delete timestamp', required: false })
+  deleted_at?: string;
+
   // Related data
   @ApiProperty({ description: 'Section', required: false })
   section?: {

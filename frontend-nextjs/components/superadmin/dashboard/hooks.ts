@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { DashboardData } from "./types"
 import { DashboardService } from "./data-service"
+import { useUserCounts } from "@/hooks/useUserCounts"
+import { useEntityCounts } from "@/hooks/useEntityCounts"
 
 export function useDashboardData() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -10,15 +12,69 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Fetch real user counts from API
+  const { counts: userCounts, loading: userCountsLoading, error: userCountsError } = useUserCounts({
+    enabled: true,
+    refetchInterval: 2 * 60 * 1000, // Refresh every 2 minutes for more accurate data
+    enableCache: true,
+  });
+
+  // Fetch real entity counts from API
+  const { counts: entityCounts, loading: entityCountsLoading, error: entityCountsError } = useEntityCounts({
+    enabled: true,
+    refetchInterval: 2 * 60 * 1000, // Refresh every 2 minutes for more accurate data
+    enableCache: true,
+  });
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
+
+        // Wait for all counts to be loaded
+        if (userCountsLoading || entityCountsLoading) {
+          return;
+        }
+
+        // Prepare real counts for KPI data
+        const realCounts = {
+          students: userCounts.students ? {
+            total: userCounts.students.total,
+            active: userCounts.students.active,
+            inactive: userCounts.students.inactive,
+          } : undefined,
+          teachers: userCounts.teachers ? {
+            total: userCounts.teachers.total,
+            active: userCounts.teachers.active,
+            inactive: userCounts.teachers.inactive,
+          } : undefined,
+          departments: entityCounts.departments ? {
+            total: entityCounts.departments.total,
+            active: entityCounts.departments.active,
+          } : undefined,
+          clubs: entityCounts.clubs ? {
+            total: entityCounts.clubs.total,
+            active: entityCounts.clubs.active,
+          } : undefined,
+          sections: entityCounts.sections ? {
+            total: entityCounts.sections.total,
+          } : undefined,
+          modules: entityCounts.modules ? {
+            total: entityCounts.modules.total,
+            active: entityCounts.modules.active, // global modules
+          } : undefined,
+          events: entityCounts.events ? {
+            total: entityCounts.events.total,
+            active: entityCounts.events.active, // published events
+            inactive: entityCounts.events.inactive, // upcoming events
+          } : undefined,
+        };
+
         const [dashboardData, kpiMetrics] = await Promise.all([
           DashboardService.getDashboardData(),
-          DashboardService.getKPIData()
+          DashboardService.getKPIData(realCounts)
         ])
-        
+
         setData(dashboardData)
         setKpiData(kpiMetrics)
         setError(null)
@@ -30,32 +86,18 @@ export function useDashboardData() {
     }
 
     fetchData()
-  }, [])
+  }, [userCountsLoading, entityCountsLoading, userCounts, entityCounts])
 
   return {
     data,
     kpiData,
-    loading,
-    error,
-    refresh: () => {
+    loading: loading || userCountsLoading || entityCountsLoading,
+    error: error || (userCountsError?.message ?? null) || (entityCountsError?.message ?? null),
+    refresh: async () => {
       setLoading(true)
       setError(null)
-      // Re-trigger the effect by updating a dependency
-      fetchData()
+      // Data will auto-refresh via useEffect when dependencies change
     }
-  }
-}
-
-async function fetchData() {
-  try {
-    const [dashboardData, kpiMetrics] = await Promise.all([
-      DashboardService.getDashboardData(),
-      DashboardService.getKPIData()
-    ])
-    
-    return { dashboardData, kpiMetrics }
-  } catch (err) {
-    throw err
   }
 }
 

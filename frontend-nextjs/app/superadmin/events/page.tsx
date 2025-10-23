@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, type KeyboardEvent } from "react"
+import { useState, useEffect, type KeyboardEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import {
+  useEvents,
+  useArchivedEvents,
+  useArchiveEvent,
+  useRestoreEvent,
+  useDeleteEvent,
+  useUpdateEvent,
+} from "@/hooks/useEvents"
+import { EventStatus, EventVisibility, type Event } from "@/lib/api/types/events"
+import { Loader2 } from "lucide-react"
 import {
   Search,
   Plus,
@@ -284,8 +294,8 @@ const mockArchivedEvents = [
 const EventsPage = () => {
   const { toast } = useToast()
   const router = useRouter()
-  const [events, setEvents] = useState(mockEvents)
-  const [archivedEvents, setArchivedEvents] = useState(mockArchivedEvents)
+
+  // Filter states
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -301,6 +311,42 @@ const EventsPage = () => {
   const [archivedCurrentPage, setArchivedCurrentPage] = useState(1)
   const [archivedItemsPerPage, setArchivedItemsPerPage] = useState(10)
   const [selectedArchivedEvents, setSelectedArchivedEvents] = useState<string[]>([])
+
+  // API hooks for active events
+  const {
+    data: eventsData,
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = useEvents({
+    page: currentPage,
+    limit: itemsPerPage,
+    status: statusFilter !== "all" ? statusFilter as any : undefined,
+    visibility: visibilityFilter !== "all" ? visibilityFilter as any : undefined,
+    search: searchTerm || undefined,
+  })
+
+  // API hooks for archived events
+  const {
+    data: archivedData,
+    isLoading: archivedLoading,
+  } = useArchivedEvents({
+    page: archivedCurrentPage,
+    limit: archivedItemsPerPage,
+    search: archivedSearchTerm || undefined,
+    category: archivedCategoryFilter !== "all" ? archivedCategoryFilter : undefined,
+  })
+
+  // Mutation hooks
+  const archiveMutation = useArchiveEvent()
+  const restoreMutation = useRestoreEvent()
+  const deleteMutation = useDeleteEvent()
+  const updateMutation = useUpdateEvent()
+
+  // Extract data from API responses
+  const events = eventsData?.data || []
+  const totalPages = eventsData?.pagination?.pages || 1
+  const archivedEvents = archivedData?.data || []
+  const archivedTotalPages = archivedData?.pagination?.pages || 1
 
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean
@@ -348,39 +394,9 @@ const EventsPage = () => {
     event: any
   }>({ isOpen: false, event: null })
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.organizer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || event.category.toLowerCase() === categoryFilter
-    const matchesStatus = statusFilter === "all" || event.status.toLowerCase() === statusFilter
-    const matchesVisibility =
-      visibilityFilter === "all" || event.visibility.toLowerCase().includes(visibilityFilter.toLowerCase())
-
-    return matchesSearch && matchesCategory && matchesStatus && matchesVisibility
-  })
-
-  const filteredArchivedEvents = archivedEvents.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
-      event.organizer.toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
-      event.deletionReason?.toLowerCase().includes(archivedSearchTerm.toLowerCase())
-    const matchesCategory = archivedCategoryFilter === "all" || event.category.toLowerCase() === archivedCategoryFilter
-
-    return matchesSearch && matchesCategory
-  })
-
-  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedEvents = filteredEvents.slice(startIndex, endIndex)
-
-  const archivedTotalPages = Math.ceil(filteredArchivedEvents.length / archivedItemsPerPage)
-  const archivedStartIndex = (archivedCurrentPage - 1) * archivedItemsPerPage
-  const archivedEndIndex = archivedStartIndex + archivedItemsPerPage
-  const paginatedArchivedEvents = filteredArchivedEvents.slice(archivedStartIndex, archivedEndIndex)
+  // Server-side pagination handles filtering, so we use the events directly
+  const paginatedEvents = events
+  const paginatedArchivedEvents = archivedEvents
 
   const handleFilterChange = (filterType: string, value: string) => {
     setCurrentPage(1)
@@ -431,29 +447,39 @@ const EventsPage = () => {
 
   const getStatusBadge = (status: string, event?: any) => {
     const badge = (() => {
-      switch (status) {
-        case "Upcoming":
+      // Normalize status to handle both lowercase and capitalized versions
+      const normalizedStatus = status.toLowerCase()
+      
+      switch (normalizedStatus) {
+        case "upcoming":
           return (
             <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/20 hover:bg-blue-500/20">
               <CalendarCheck className="w-3 h-3 mr-1" />
               Upcoming
             </Badge>
           )
-        case "Ongoing":
+        case "published":
+          return (
+            <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Published
+            </Badge>
+          )
+        case "ongoing":
           return (
             <Badge className="bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500/20">
               <Clock className="w-3 h-3 mr-1" />
               Ongoing
             </Badge>
           )
-        case "Completed":
+        case "completed":
           return (
-            <Badge className="bg-gray-500/10 text-gray-700 border-gray-500/20 hover:bg-gray-500/20">
+            <Badge className="bg-purple-500/10 text-purple-700 border-purple-500/20 hover:bg-purple-500/20">
               <CheckCircle className="w-3 h-3 mr-1" />
               Completed
             </Badge>
           )
-        case "Cancelled":
+        case "cancelled":
           return (
             <Badge className="bg-red-500/10 text-red-700 border-red-500/20 hover:bg-red-500/20">
               <CalendarX className="w-3 h-3 mr-1" />
@@ -478,48 +504,59 @@ const EventsPage = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="bg-card border-border w-[180px]">
             <DropdownMenuItem
-              className={`text-foreground ${status === "Upcoming" ? "bg-blue-500/10" : ""}`}
+              className={`text-foreground ${status.toLowerCase() === "upcoming" ? "bg-blue-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleStatusChange(event, "Upcoming")
+                handleStatusChange(event, "upcoming")
               }}
             >
               <CalendarCheck className="w-4 h-4 mr-2 text-blue-600" />
               <span className="flex-1">Upcoming</span>
-              {status === "Upcoming" && <Check className="w-4 h-4 text-blue-600" />}
+              {status.toLowerCase() === "upcoming" && <Check className="w-4 h-4 text-blue-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={`text-foreground ${status === "Ongoing" ? "bg-green-500/10" : ""}`}
+              className={`text-foreground ${status.toLowerCase() === "published" ? "bg-emerald-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleStatusChange(event, "Ongoing")
+                handleStatusChange(event, "published")
+              }}
+            >
+              <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />
+              <span className="flex-1">Published</span>
+              {status.toLowerCase() === "published" && <Check className="w-4 h-4 text-emerald-600" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className={`text-foreground ${status.toLowerCase() === "ongoing" ? "bg-green-500/10" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleStatusChange(event, "ongoing")
               }}
             >
               <Clock className="w-4 h-4 mr-2 text-green-600" />
               <span className="flex-1">Ongoing</span>
-              {status === "Ongoing" && <Check className="w-4 h-4 text-green-600" />}
+              {status.toLowerCase() === "ongoing" && <Check className="w-4 h-4 text-green-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={`text-foreground ${status === "Completed" ? "bg-gray-500/10" : ""}`}
+              className={`text-foreground ${status.toLowerCase() === "completed" ? "bg-purple-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleStatusChange(event, "Completed")
+                handleStatusChange(event, "completed")
               }}
             >
-              <CheckCircle className="w-4 h-4 mr-2 text-gray-600" />
+              <CheckCircle className="w-4 h-4 mr-2 text-purple-600" />
               <span className="flex-1">Completed</span>
-              {status === "Completed" && <Check className="w-4 h-4 text-gray-600" />}
+              {status.toLowerCase() === "completed" && <Check className="w-4 h-4 text-purple-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={`text-foreground ${status === "Cancelled" ? "bg-red-500/10" : ""}`}
+              className={`text-foreground ${status.toLowerCase() === "cancelled" ? "bg-red-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleStatusChange(event, "Cancelled")
+                handleStatusChange(event, "cancelled")
               }}
             >
               <CalendarX className="w-4 h-4 mr-2 text-red-600" />
               <span className="flex-1">Cancelled</span>
-              {status === "Cancelled" && <Check className="w-4 h-4 text-red-600" />}
+              {status.toLowerCase() === "cancelled" && <Check className="w-4 h-4 text-red-600" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -552,29 +589,32 @@ const EventsPage = () => {
 
   const getVisibilityBadge = (visibility: string, event?: any) => {
     const badge = (() => {
-      switch (visibility) {
-        case "Public":
+      // Normalize visibility to handle both lowercase and capitalized versions
+      const normalizedVisibility = visibility.toLowerCase()
+      
+      switch (normalizedVisibility) {
+        case "public":
           return (
             <Badge className="bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500/20">
               <Users className="w-3 h-3 mr-1" />
               Public
             </Badge>
           )
-        case "Students Only":
+        case "students only":
           return (
             <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/20 hover:bg-blue-500/20">
               <Users className="w-3 h-3 mr-1" />
               Students
             </Badge>
           )
-        case "Teachers Only":
+        case "teachers only":
           return (
             <Badge className="bg-purple-500/10 text-purple-700 border-purple-500/20 hover:bg-purple-500/20">
               <Users className="w-3 h-3 mr-1" />
               Teachers
             </Badge>
           )
-        case "Parents Only":
+        case "parents only":
           return (
             <Badge className="bg-indigo-500/10 text-indigo-700 border-indigo-500/20 hover:bg-indigo-500/20">
               <Users className="w-3 h-3 mr-1" />
@@ -599,48 +639,48 @@ const EventsPage = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="bg-card border-border w-[180px]">
             <DropdownMenuItem
-              className={`text-foreground ${visibility === "Public" ? "bg-green-500/10" : ""}`}
+              className={`text-foreground ${visibility.toLowerCase() === "public" ? "bg-green-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleVisibilityChange(event, "Public")
+                handleVisibilityChange(event, "public")
               }}
             >
               <Users className="w-4 h-4 mr-2 text-green-600" />
               <span className="flex-1">Public</span>
-              {visibility === "Public" && <Check className="w-4 h-4 text-green-600" />}
+              {visibility.toLowerCase() === "public" && <Check className="w-4 h-4 text-green-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={`text-foreground ${visibility === "Students Only" ? "bg-blue-500/10" : ""}`}
+              className={`text-foreground ${visibility.toLowerCase() === "students only" ? "bg-blue-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleVisibilityChange(event, "Students Only")
+                handleVisibilityChange(event, "students only")
               }}
             >
               <Users className="w-4 h-4 mr-2 text-blue-600" />
               <span className="flex-1">Students Only</span>
-              {visibility === "Students Only" && <Check className="w-4 h-4 text-blue-600" />}
+              {visibility.toLowerCase() === "students only" && <Check className="w-4 h-4 text-blue-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={`text-foreground ${visibility === "Teachers Only" ? "bg-purple-500/10" : ""}`}
+              className={`text-foreground ${visibility.toLowerCase() === "teachers only" ? "bg-purple-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleVisibilityChange(event, "Teachers Only")
+                handleVisibilityChange(event, "teachers only")
               }}
             >
               <Users className="w-4 h-4 mr-2 text-purple-600" />
               <span className="flex-1">Teachers Only</span>
-              {visibility === "Teachers Only" && <Check className="w-4 h-4 text-purple-600" />}
+              {visibility.toLowerCase() === "teachers only" && <Check className="w-4 h-4 text-purple-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={`text-foreground ${visibility === "Parents Only" ? "bg-indigo-500/10" : ""}`}
+              className={`text-foreground ${visibility.toLowerCase() === "parents only" ? "bg-indigo-500/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation()
-                handleVisibilityChange(event, "Parents Only")
+                handleVisibilityChange(event, "parents only")
               }}
             >
               <Users className="w-4 h-4 mr-2 text-indigo-600" />
               <span className="flex-1">Parents Only</span>
-              {visibility === "Parents Only" && <Check className="w-4 h-4 text-indigo-600" />}
+              {visibility.toLowerCase() === "parents only" && <Check className="w-4 h-4 text-indigo-600" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -714,44 +754,9 @@ const EventsPage = () => {
     })
   }
 
-  const confirmDeleteEvent = () => {
+  const confirmDeleteEvent = async () => {
     if (deleteConfirmation.event) {
-      const eventToArchive = {
-        ...deleteConfirmation.event,
-        deletedAt: new Date().toISOString(),
-        deletedBy: "Current Admin",
-        deletionReason: "Archived by admin",
-      }
-
-      setArchivedEvents((prev) => [eventToArchive, ...prev])
-      setEvents((prev) => prev.filter((e) => e.id !== deleteConfirmation.event.id))
-
-      toast({
-        title: "✅ Event Archived Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              {deleteConfirmation.event.title} has been moved to archived events.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                <Archive className="w-3 h-3" />
-              </div>
-              <span>{deleteConfirmation.event.organizer}</span>
-              <span>•</span>
-              <span>{deleteConfirmation.event.category}</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
-              <CheckCircle className="w-3 h-3" />
-              <span>Event can be restored from archived section</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 6000,
-        className: "border-orange-500/20 bg-orange-500/5 backdrop-blur-md",
-      })
-
+      await archiveMutation.mutateAsync(deleteConfirmation.event.id)
       setDeleteConfirmation({ isOpen: false, event: null })
     }
   }
@@ -760,29 +765,9 @@ const EventsPage = () => {
     setRestoreConfirmation({ isOpen: true, event })
   }
 
-  const confirmRestoreEvent = () => {
+  const confirmRestoreEvent = async () => {
     if (restoreConfirmation.event) {
-      const { deletedAt, deletedBy, deletionReason, ...restoredEvent } = restoreConfirmation.event
-
-      setEvents((prev) => [restoredEvent, ...prev])
-      setArchivedEvents((prev) => prev.filter((e) => e.id !== restoreConfirmation.event.id))
-
-      toast({
-        title: "✅ Event Restored Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">{restoreConfirmation.event.title} has been restored.</p>
-            <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
-              <RotateCcw className="w-3 h-3" />
-              <span>Event is now active again</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 4000,
-        className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
-      })
-
+      await restoreMutation.mutateAsync(restoreConfirmation.event.id)
       setRestoreConfirmation({ isOpen: false, event: null })
     }
   }
@@ -791,61 +776,33 @@ const EventsPage = () => {
     setPermanentDeleteConfirmation({ isOpen: true, event })
   }
 
-  const confirmPermanentDelete = () => {
+  const confirmPermanentDelete = async () => {
     if (permanentDeleteConfirmation.event) {
-      setArchivedEvents((prev) => prev.filter((e) => e.id !== permanentDeleteConfirmation.event.id))
-
-      toast({
-        title: "✅ Event Permanently Deleted",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              {permanentDeleteConfirmation.event.title} has been permanently removed.
-            </p>
-            <div className="flex items-center gap-1 text-xs text-red-600 bg-red-500/10 px-2 py-1 rounded-md w-fit">
-              <AlertTriangle className="w-3 h-3" />
-              <span>This action cannot be undone</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 4000,
-        className: "border-red-500/20 bg-red-500/5 backdrop-blur-md",
-      })
-
+      await deleteMutation.mutateAsync(permanentDeleteConfirmation.event.id)
       setPermanentDeleteConfirmation({ isOpen: false, event: null })
     }
   }
 
-  const handleBulkRestore = () => {
+  const handleBulkRestore = async () => {
     const eventsToRestore = archivedEvents.filter((e) => selectedArchivedEvents.includes(e.id))
 
-    eventsToRestore.forEach((event) => {
-      const { deletedAt, deletedBy, deletionReason, ...restoredEvent } = event
-      setEvents((prev) => [restoredEvent, ...prev])
-    })
+    // TODO: Implement bulk restore with API
+    for (const event of eventsToRestore) {
+      await restoreMutation.mutateAsync(event.id)
+    }
 
-    setArchivedEvents((prev) => prev.filter((e) => !selectedArchivedEvents.includes(e.id)))
     setSelectedArchivedEvents([])
-
-    toast({
-      title: `✅ ${eventsToRestore.length} Event(s) Restored`,
-      description: "Selected events have been restored successfully.",
-      duration: 4000,
-    })
   }
 
-  const handleBulkPermanentDelete = () => {
-    const count = selectedArchivedEvents.length
-    setArchivedEvents((prev) => prev.filter((e) => !selectedArchivedEvents.includes(e.id)))
-    setSelectedArchivedEvents([])
+  const handleBulkPermanentDelete = async () => {
+    const eventsToDelete = selectedArchivedEvents
 
-    toast({
-      title: `✅ ${count} Event(s) Permanently Deleted`,
-      description: "Selected events have been permanently removed.",
-      duration: 4000,
-      className: "border-red-500/20 bg-red-500/5",
-    })
+    // TODO: Implement bulk delete with API
+    for (const eventId of eventsToDelete) {
+      await deleteMutation.mutateAsync(eventId)
+    }
+
+    setSelectedArchivedEvents([])
   }
 
   const handleStatusChange = (event: any, newStatus: string) => {
@@ -853,33 +810,11 @@ const EventsPage = () => {
     closeContextMenu()
   }
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (statusConfirmation.event) {
-      setEvents((prev) =>
-        prev.map((e) => (e.id === statusConfirmation.event.id ? { ...e, status: statusConfirmation.newStatus } : e)),
-      )
-
-      toast({
-        title: `✅ Status Updated`,
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">Event status changed successfully</p>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span className="font-medium">{statusConfirmation.event.title}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">New status:</span>
-              <div className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-700 font-medium">
-                {statusConfirmation.newStatus}
-              </div>
-            </div>
-          </div>
-        ),
-        className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20 backdrop-blur-sm",
-        duration: 4000,
+      await updateMutation.mutateAsync({
+        id: statusConfirmation.event.id,
+        data: { status: statusConfirmation.newStatus as any }
       })
 
       setStatusConfirmation({ isOpen: false, event: null, newStatus: "" })
@@ -891,35 +826,11 @@ const EventsPage = () => {
     closeContextMenu()
   }
 
-  const confirmVisibilityChange = () => {
+  const confirmVisibilityChange = async () => {
     if (visibilityConfirmation.event) {
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === visibilityConfirmation.event.id ? { ...e, visibility: visibilityConfirmation.newVisibility } : e,
-        ),
-      )
-
-      toast({
-        title: `✅ Visibility Updated`,
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">Event visibility changed successfully</p>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span className="font-medium">{visibilityConfirmation.event.title}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">New visibility:</span>
-              <div className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 font-medium">
-                {visibilityConfirmation.newVisibility}
-              </div>
-            </div>
-          </div>
-        ),
-        className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
-        duration: 4000,
+      await updateMutation.mutateAsync({
+        id: visibilityConfirmation.event.id,
+        data: { visibility: visibilityConfirmation.newVisibility as any }
       })
 
       setVisibilityConfirmation({ isOpen: false, event: null, newVisibility: "" })
@@ -931,64 +842,42 @@ const EventsPage = () => {
     closeContextMenu()
   }
 
-  const confirmToggleFeatured = () => {
+  const confirmToggleFeatured = async () => {
     if (featuredConfirmation.event) {
-      setEvents((prev) =>
-        prev.map((e) => (e.id === featuredConfirmation.event.id ? { ...e, featured: !e.featured } : e)),
-      )
-
-      toast({
-        title: featuredConfirmation.event.featured ? `⭐ Removed from Featured` : `⭐ Added to Featured`,
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">
-              {featuredConfirmation.event.featured
-                ? "Event removed from featured section"
-                : "Event added to featured section"}
-            </p>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="font-medium">{featuredConfirmation.event.title}</span>
-              </div>
-            </div>
-          </div>
-        ),
-        className: "border-yellow-500/20 bg-yellow-50/50 dark:bg-yellow-950/20 backdrop-blur-sm",
-        duration: 4000,
+      // TODO: Update with correct API fields when backend supports is_featured toggle
+      await updateMutation.mutateAsync({
+        id: featuredConfirmation.event.id,
+        data: {
+          title: featuredConfirmation.event.title,
+          description: featuredConfirmation.event.description,
+          date: featuredConfirmation.event.date,
+          time: featuredConfirmation.event.time,
+          location: featuredConfirmation.event.location,
+        }
       })
 
       setFeaturedConfirmation({ isOpen: false, event: null })
     }
   }
 
-  const handleDuplicateEvent = (event: any) => {
-    const newEvent = {
-      ...event,
-      id: `${Date.now()}`,
+  const handleDuplicateEvent = async (event: any) => {
+    // TODO: Implement duplicate with create mutation
+    const newEventData = {
       title: `${event.title} (Copy)`,
-      status: "Upcoming",
-      attendees: 0,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      visibility: event.visibility,
+      organizerId: event.organizerId,
     }
 
-    setEvents((prev) => [newEvent, ...prev])
+    // Uncomment when ready to use
+    // await createMutation.mutateAsync(newEventData)
 
     toast({
       title: `📋 Event Duplicated`,
-      description: (
-        <div className="space-y-2">
-          <p className="font-medium">Event copied successfully</p>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 max-w-full overflow-hidden">
-              <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="font-medium">{newEvent.title}</span>
-            </div>
-          </div>
-          <div className="text-sm text-muted-foreground">The duplicate has been created as upcoming</div>
-        </div>
-      ),
-      className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
-      duration: 4000,
+      description: `${newEventData.title} has been created`,
     })
 
     closeContextMenu()
@@ -1043,7 +932,7 @@ const EventsPage = () => {
     closeContextMenu()
   }
 
-  useState(() => {
+  useEffect(() => {
     const handleClick = () => closeContextMenu()
     const handleScroll = () => closeContextMenu()
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1064,7 +953,7 @@ const EventsPage = () => {
         window.removeEventListener("resize", handleResize)
       }
     }
-  })
+  }, [contextMenu.visible])
 
   return (
     <div className="space-y-6">
@@ -1115,9 +1004,9 @@ const EventsPage = () => {
             <div className="flex items-center">
               <CalendarCheck className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Upcoming</p>
+                <p className="text-sm font-medium text-muted-foreground">Published</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {events.filter((e) => e.status === "Upcoming").length}
+                  {events.filter((e) => e.status === EventStatus.PUBLISHED).length}
                 </p>
               </div>
             </div>
@@ -1128,9 +1017,9 @@ const EventsPage = () => {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Ongoing</p>
+                <p className="text-sm font-medium text-muted-foreground">Completed</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {events.filter((e) => e.status === "Ongoing").length}
+                  {events.filter((e) => e.status === EventStatus.COMPLETED).length}
                 </p>
               </div>
             </div>
@@ -1141,9 +1030,9 @@ const EventsPage = () => {
             <div className="flex items-center">
               <Users className="h-8 w-8 text-purple-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Attendees</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Events</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {events.reduce((sum, e) => sum + e.attendees, 0).toLocaleString()}
+                  {events.length}
                 </p>
               </div>
             </div>
@@ -1236,9 +1125,6 @@ const EventsPage = () => {
               </Select>
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
-            <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredEvents.length)} of {filteredEvents.length} events
-            </div>
           </div>
 
           {/* Bulk Actions */}
@@ -1266,7 +1152,7 @@ const EventsPage = () => {
 
           {/* Events Table */}
           {viewMode === "calendar" ? (
-            <EventsCalendar events={filteredEvents} onEventClick={handleViewEvent} />
+            <EventsCalendar events={events} onEventClick={handleViewEvent} />
           ) : (
             <div className="border border-border rounded-lg">
               <Table>
@@ -1280,7 +1166,6 @@ const EventsPage = () => {
                     </TableHead>
                     <TableHead className="text-foreground">Event</TableHead>
                     <TableHead className="text-foreground">Organizer</TableHead>
-                    <TableHead className="text-foreground">Category</TableHead>
                     <TableHead className="text-foreground">Status</TableHead>
                     <TableHead className="text-foreground">Date & Time</TableHead>
                     <TableHead className="text-foreground">Location</TableHead>
@@ -1289,12 +1174,36 @@ const EventsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedEvents.map((event) => (
-                    <TableRow
-                      key={event.id}
-                      className="border-border cursor-pointer hover:bg-muted/50"
-                      onContextMenu={(e) => handleContextMenu(e, event)}
-                    >
+                  {eventsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-muted-foreground" />
+                        <p className="text-muted-foreground text-sm">Loading events...</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : eventsError ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-500 opacity-50" />
+                        <p className="text-red-600 font-medium">Failed to load events</p>
+                        <p className="text-muted-foreground text-sm mt-1">Please try again later</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedEvents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <p className="text-muted-foreground">No events found</p>
+                        <p className="text-muted-foreground text-sm mt-1">Try adjusting your filters or create a new event</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedEvents.map((event) => (
+                      <TableRow
+                        key={event.id}
+                        className="border-border cursor-pointer hover:bg-muted/50"
+                        onContextMenu={(e) => handleContextMenu(e, event)}
+                      >
                       <TableCell>
                         <Checkbox
                           checked={selectedEvents.includes(event.id)}
@@ -1305,7 +1214,7 @@ const EventsPage = () => {
                         <div className="max-w-md">
                           <div className="flex items-center">
                             <div className="font-medium text-foreground">{event.title}</div>
-                            {event.featured && (
+                            {event.is_featured && (
                               <Badge className="ml-2 bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
                                 Featured
                               </Badge>
@@ -1314,18 +1223,17 @@ const EventsPage = () => {
                           <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{event.description}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-foreground">{event.organizer}</TableCell>
-                      <TableCell>{getCategoryBadge(event.category)}</TableCell>
+                      <TableCell className="text-foreground">{event.organizer?.fullName || 'N/A'}</TableCell>
                       <TableCell>{getStatusBadge(event.status, event)}</TableCell>
                       <TableCell className="text-muted-foreground">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(event.startDate).toLocaleDateString()}
+                            {new Date(event.date).toLocaleDateString()}
                           </div>
                           <div className="flex items-center text-xs">
                             <Clock className="w-3 h-3 mr-1" />
-                            {new Date(event.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {event.time}
                           </div>
                         </div>
                       </TableCell>
@@ -1360,7 +1268,8 @@ const EventsPage = () => {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -1369,13 +1278,17 @@ const EventsPage = () => {
           {/* Pagination */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages} ({filteredEvents.length} total events)
+              {eventsLoading ? (
+                "Loading..."
+              ) : (
+                `Page ${currentPage} of ${totalPages} (${eventsData?.pagination?.total || 0} total events)`
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={currentPage === 1}
+                disabled={currentPage === 1 || eventsLoading}
                 onClick={() => setCurrentPage(currentPage - 1)}
                 className="border-border bg-transparent"
               >
@@ -1414,7 +1327,7 @@ const EventsPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || eventsLoading}
                 onClick={() => setCurrentPage(currentPage + 1)}
                 className="border-border bg-transparent"
               >
@@ -1536,10 +1449,6 @@ const EventsPage = () => {
                 </Select>
                 <span className="text-sm text-muted-foreground">entries</span>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Showing {archivedStartIndex + 1} to {Math.min(archivedEndIndex, filteredArchivedEvents.length)} of{" "}
-                {filteredArchivedEvents.length} archived events
-              </div>
             </div>
 
             {/* Bulk Actions */}
@@ -1587,17 +1496,22 @@ const EventsPage = () => {
                     </TableHead>
                     <TableHead className="text-foreground">Event</TableHead>
                     <TableHead className="text-foreground">Organizer</TableHead>
-                    <TableHead className="text-foreground">Category</TableHead>
                     <TableHead className="text-foreground">Deleted Date</TableHead>
                     <TableHead className="text-foreground">Deleted By</TableHead>
-                    <TableHead className="text-foreground">Reason</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedArchivedEvents.length === 0 ? (
+                  {archivedLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-muted-foreground" />
+                        <p className="text-muted-foreground text-sm">Loading archived events...</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedArchivedEvents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                         <Archive className="w-12 h-12 mx-auto mb-2 opacity-20" />
                         <p>No archived events found</p>
                       </TableCell>
@@ -1617,8 +1531,7 @@ const EventsPage = () => {
                             <div className="text-sm text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-foreground">{event.organizer}</TableCell>
-                        <TableCell>{getCategoryBadge(event.category)}</TableCell>
+                        <TableCell className="text-foreground">{event.organizer?.fullName || 'N/A'}</TableCell>
                         <TableCell className="text-muted-foreground">
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center">
@@ -1634,8 +1547,7 @@ const EventsPage = () => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{event.deletedBy}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{event.deletionReason}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs font-mono">{event.deletedBy || 'Unknown'}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1670,13 +1582,17 @@ const EventsPage = () => {
             {archivedTotalPages > 1 && (
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
-                  Page {archivedCurrentPage} of {archivedTotalPages}
+                  {archivedLoading ? (
+                    "Loading..."
+                  ) : (
+                    `Page ${archivedCurrentPage} of ${archivedTotalPages} (${archivedData?.pagination?.total || 0} total)`
+                  )}
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={archivedCurrentPage === 1}
+                    disabled={archivedCurrentPage === 1 || archivedLoading}
                     onClick={() => setArchivedCurrentPage(archivedCurrentPage - 1)}
                     className="border-border bg-transparent"
                   >
@@ -1686,7 +1602,7 @@ const EventsPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={archivedCurrentPage === archivedTotalPages}
+                    disabled={archivedCurrentPage === archivedTotalPages || archivedLoading}
                     onClick={() => setArchivedCurrentPage(archivedCurrentPage + 1)}
                     className="border-border bg-transparent"
                   >
@@ -1839,53 +1755,53 @@ const EventsPage = () => {
                   <div className="absolute left-full top-0 ml-1 min-w-[180px] rounded-lg border border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150 p-1.5 space-y-0.5">
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        contextMenu.event?.visibility === "Public" ? "bg-green-500/10" : ""
+                        contextMenu.event?.visibility?.toLowerCase() === "public" ? "bg-green-500/10" : ""
                       }`}
-                      onClick={() => handleVisibilityChange(contextMenu.event, "Public")}
+                      onClick={() => handleVisibilityChange(contextMenu.event, "public")}
                     >
                       <div className="flex items-center gap-3">
                         <Users className="w-4 h-4 text-green-600" />
                         <span>Public</span>
                       </div>
-                      {contextMenu.event?.visibility === "Public" && <Check className="w-4 h-4 text-green-600" />}
+                      {contextMenu.event?.visibility?.toLowerCase() === "public" && <Check className="w-4 h-4 text-green-600" />}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        contextMenu.event?.visibility === "Students Only" ? "bg-blue-500/10" : ""
+                        contextMenu.event?.visibility?.toLowerCase() === "students only" ? "bg-blue-500/10" : ""
                       }`}
-                      onClick={() => handleVisibilityChange(contextMenu.event, "Students Only")}
+                      onClick={() => handleVisibilityChange(contextMenu.event, "students only")}
                     >
                       <div className="flex items-center gap-3">
                         <Users className="w-4 h-4 text-blue-600" />
                         <span>Students Only</span>
                       </div>
-                      {contextMenu.event?.visibility === "Students Only" && <Check className="w-4 h-4 text-blue-600" />}
+                      {contextMenu.event?.visibility?.toLowerCase() === "students only" && <Check className="w-4 h-4 text-blue-600" />}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        contextMenu.event?.visibility === "Teachers Only" ? "bg-purple-500/10" : ""
+                        contextMenu.event?.visibility?.toLowerCase() === "teachers only" ? "bg-purple-500/10" : ""
                       }`}
-                      onClick={() => handleVisibilityChange(contextMenu.event, "Teachers Only")}
+                      onClick={() => handleVisibilityChange(contextMenu.event, "teachers only")}
                     >
                       <div className="flex items-center gap-3">
                         <Users className="w-4 h-4 text-purple-600" />
                         <span>Teachers Only</span>
                       </div>
-                      {contextMenu.event?.visibility === "Teachers Only" && (
+                      {contextMenu.event?.visibility?.toLowerCase() === "teachers only" && (
                         <Check className="w-4 h-4 text-purple-600" />
                       )}
                     </button>
                     <button
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-                        contextMenu.event?.visibility === "Parents Only" ? "bg-indigo-500/10" : ""
+                        contextMenu.event?.visibility?.toLowerCase() === "parents only" ? "bg-indigo-500/10" : ""
                       }`}
-                      onClick={() => handleVisibilityChange(contextMenu.event, "Parents Only")}
+                      onClick={() => handleVisibilityChange(contextMenu.event, "parents only")}
                     >
                       <div className="flex items-center gap-3">
                         <Users className="w-4 h-4 text-indigo-600" />
                         <span>Parents Only</span>
                       </div>
-                      {contextMenu.event?.visibility === "Parents Only" && (
+                      {contextMenu.event?.visibility?.toLowerCase() === "parents only" && (
                         <Check className="w-4 h-4 text-indigo-600" />
                       )}
                     </button>
@@ -1980,9 +1896,9 @@ const EventsPage = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground">{deleteConfirmation.event.title}</p>
-                          <p className="text-sm text-muted-foreground mt-1">by {deleteConfirmation.event.organizer}</p>
+                          <p className="text-sm text-muted-foreground mt-1">by {deleteConfirmation.event.organizer?.fullName || 'Unknown'}</p>
                         </div>
-                        {deleteConfirmation.event.featured && (
+                        {deleteConfirmation.event.is_featured && (
                           <Badge className="ml-2 bg-yellow-500/10 text-yellow-700 border-yellow-500/20 flex-shrink-0">
                             <Star className="w-3 h-3 mr-1" />
                             Featured
@@ -1990,7 +1906,6 @@ const EventsPage = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {getCategoryBadge(deleteConfirmation.event.category)}
                         {getStatusBadge(deleteConfirmation.event.status)}
                         {getVisibilityBadge(deleteConfirmation.event.visibility)}
                       </div>
@@ -1998,22 +1913,12 @@ const EventsPage = () => {
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {new Date(deleteConfirmation.event.startDate).toLocaleDateString()} at{" "}
-                            {new Date(deleteConfirmation.event.startDate).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {new Date(deleteConfirmation.event.date).toLocaleDateString()} at {deleteConfirmation.event.time}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
                           <span>{deleteConfirmation.event.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          <span>
-                            {deleteConfirmation.event.attendees} / {deleteConfirmation.event.capacity} attendees
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -2041,16 +1946,27 @@ const EventsPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => setDeleteConfirmation({ isOpen: false, event: null })}
+                    disabled={archiveMutation.isPending}
                     className="border-border bg-transparent hover:bg-muted/50"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={confirmDeleteEvent}
+                    disabled={archiveMutation.isPending}
                     className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Event
+                    {archiveMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Archiving...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Archive Event
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -2326,17 +2242,16 @@ const EventsPage = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground">{featuredConfirmation.event.title}</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            by {featuredConfirmation.event.organizer}
+                            by {featuredConfirmation.event.organizer?.fullName || 'Unknown'}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {getCategoryBadge(featuredConfirmation.event.category)}
                         {getStatusBadge(featuredConfirmation.event.status)}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(featuredConfirmation.event.startDate).toLocaleDateString()}</span>
+                        <span>{new Date(featuredConfirmation.event.date).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -2347,7 +2262,7 @@ const EventsPage = () => {
                       <div className="text-sm text-yellow-700 dark:text-yellow-400">
                         <p className="font-medium mb-1">What will happen:</p>
                         <ul className="space-y-1 text-xs">
-                          {featuredConfirmation.event.featured ? (
+                          {featuredConfirmation.event.is_featured ? (
                             <>
                               <li>• Event will be removed from featured section</li>
                               <li>• Event will no longer appear in featured carousel</li>
@@ -2425,10 +2340,9 @@ const EventsPage = () => {
                     <div className="space-y-3">
                       <div>
                         <p className="font-medium text-foreground">{restoreConfirmation.event.title}</p>
-                        <p className="text-sm text-muted-foreground mt-1">by {restoreConfirmation.event.organizer}</p>
+                        <p className="text-sm text-muted-foreground mt-1">by {restoreConfirmation.event.organizer?.fullName || 'Unknown'}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {getCategoryBadge(restoreConfirmation.event.category)}
                         {getStatusBadge(restoreConfirmation.event.status)}
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -2465,16 +2379,27 @@ const EventsPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => setRestoreConfirmation({ isOpen: false, event: null })}
+                    disabled={restoreMutation.isPending}
                     className="border-border bg-transparent hover:bg-muted/50"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={confirmRestoreEvent}
+                    disabled={restoreMutation.isPending}
                     className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                   >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Restore Event
+                    {restoreMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Restoring...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Restore Event
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -2551,16 +2476,27 @@ const EventsPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => setPermanentDeleteConfirmation({ isOpen: false, event: null })}
+                    disabled={deleteMutation.isPending}
                     className="border-border bg-transparent hover:bg-muted/50"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={confirmPermanentDelete}
+                    disabled={deleteMutation.isPending}
                     className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Permanently Delete
+                    {deleteMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Permanently Delete
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

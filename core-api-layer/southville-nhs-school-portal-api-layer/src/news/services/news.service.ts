@@ -428,7 +428,10 @@ export class NewsService {
     }
 
     if (filters?.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+      query = query.range(
+        filters.offset,
+        filters.offset + (filters.limit || 10) - 1,
+      );
     }
 
     const { data, error } = await query;
@@ -573,8 +576,7 @@ export class NewsService {
 
     // Verify all users are journalism members
     for (const userId of userIds) {
-      const isMember =
-        await this.newsAccessService.isJournalismMember(userId);
+      const isMember = await this.newsAccessService.isJournalismMember(userId);
       if (!isMember) {
         throw new BadRequestException(
           `User ${userId} is not a journalism team member`,
@@ -666,7 +668,9 @@ export class NewsService {
       );
     }
 
-    this.logger.log(`Co-author added to article ${newsId}: ${addCoAuthorDto.userId}`);
+    this.logger.log(
+      `Co-author added to article ${newsId}: ${addCoAuthorDto.userId}`,
+    );
   }
 
   /**
@@ -704,7 +708,9 @@ export class NewsService {
       );
     }
 
-    this.logger.log(`Co-author removed from article ${newsId}: ${coAuthorUserId}`);
+    this.logger.log(
+      `Co-author removed from article ${newsId}: ${coAuthorUserId}`,
+    );
   }
 
   /**

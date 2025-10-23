@@ -42,6 +42,88 @@ import type {
 import { EventStatus } from '../types/events';
 
 // ========================================
+// DATA TRANSFORMATION FUNCTIONS
+// ========================================
+
+/**
+ * Transform backend event data to frontend format
+ * Handles snake_case to camelCase conversion and data mapping
+ */
+function transformBackendEventToFrontend(backendEvent: any): Event {
+  return {
+    id: backendEvent.id,
+    title: backendEvent.title,
+    slug: backendEvent.slug,
+    description: backendEvent.description,
+    date: backendEvent.date,
+    time: backendEvent.time,
+    location: backendEvent.location,
+    organizerId: backendEvent.organizer_id,
+    eventImage: backendEvent.event_image,
+    status: backendEvent.status,
+    visibility: backendEvent.visibility,
+    is_featured: backendEvent.is_featured,
+    createdAt: backendEvent.created_at,
+    updatedAt: backendEvent.updated_at,
+    deletedAt: backendEvent.deleted_at,
+    deletedBy: backendEvent.deleted_by,
+    
+    // Transform organizer data
+    organizer: backendEvent.organizer ? {
+      id: backendEvent.organizer.id,
+      fullName: backendEvent.organizer.full_name, // Convert snake_case to camelCase
+      email: backendEvent.organizer.email,
+      role: backendEvent.organizer.role
+    } : undefined,
+    
+    // Transform other relations if they exist
+    tags: backendEvent.tags?.map((tag: any) => ({
+      id: tag.tag?.id || tag.id,
+      name: tag.tag?.name || tag.name,
+      color: tag.tag?.color || tag.color
+    })) || [],
+    
+    additionalInfo: backendEvent.additionalInfo?.map((info: any) => ({
+      id: info.id,
+      title: info.title,
+      content: info.content,
+      orderIndex: info.order_index
+    })) || [],
+    
+    highlights: backendEvent.highlights?.map((highlight: any) => ({
+      id: highlight.id,
+      title: highlight.title,
+      content: highlight.content,
+      imageUrl: highlight.image_url,
+      orderIndex: highlight.order_index
+    })) || [],
+    
+    schedule: backendEvent.schedule?.map((item: any) => ({
+      id: item.id,
+      activityTime: item.activity_time,
+      activityDescription: item.activity_description,
+      orderIndex: item.order_index
+    })) || [],
+    
+    faq: backendEvent.faq?.map((faq: any) => ({
+      id: faq.id,
+      question: faq.question,
+      answer: faq.answer
+    })) || []
+  };
+}
+
+/**
+ * Transform backend event list response to frontend format
+ */
+function transformBackendEventListToFrontend(backendResponse: any): EventListResponse {
+  return {
+    data: backendResponse.data?.map(transformBackendEventToFrontend) || [],
+    pagination: backendResponse.pagination
+  };
+}
+
+// ========================================
 // MAIN EVENT CRUD OPERATIONS
 // ========================================
 
@@ -82,7 +164,8 @@ export async function getEvents(
   const queryString = queryParams.toString();
   const endpoint = `/events${queryString ? `?${queryString}` : ''}`;
 
-  return apiClient.get<EventListResponse>(endpoint, { requiresAuth: false });
+  const backendResponse = await apiClient.get<any>(endpoint, { requiresAuth: false });
+  return transformBackendEventListToFrontend(backendResponse);
 }
 
 /**
@@ -128,7 +211,8 @@ export async function getEventsByOrganizer(
   const queryString = queryParams.toString();
   const endpoint = `/events/organizer/${organizerId}${queryString ? `?${queryString}` : ''}`;
 
-  return apiClient.get<EventListResponse>(endpoint);
+  const backendResponse = await apiClient.get<any>(endpoint);
+  return transformBackendEventListToFrontend(backendResponse);
 }
 
 /**
@@ -143,7 +227,8 @@ export async function getEventsByOrganizer(
  * ```
  */
 export async function getEventById(id: string): Promise<Event> {
-  return apiClient.get<Event>(`/events/${id}`);
+  const backendResponse = await apiClient.get<any>(`/events/${id}`);
+  return transformBackendEventToFrontend(backendResponse);
 }
 
 /**
@@ -161,9 +246,14 @@ export async function getEventBySlug(slug: string): Promise<Event | null> {
   try {
     // Try to get from upcoming events first (public endpoint)
     const upcomingResult = await getUpcomingEvents();
+    const upcomingList: Event[] = Array.isArray(upcomingResult)
+      ? upcomingResult
+      : Array.isArray((upcomingResult as any)?.data)
+        ? (upcomingResult as any).data
+        : []
 
     // Collect all upcoming events that match the slug and pick the one with most related content
-    const matchingUpcoming = upcomingResult.data.filter(ev => {
+    const matchingUpcoming = upcomingList.filter((ev: Event) => {
       const generatedSlug = (ev.slug || ev.title)
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
@@ -179,7 +269,7 @@ export async function getEventBySlug(slug: string): Promise<Event | null> {
       (ev.faq?.length || 0) +
       (ev.additionalInfo?.length || 0);
 
-    let event = matchingUpcoming.sort((a, b) => scoreEvent(b) - scoreEvent(a))[0];
+    let event = matchingUpcoming.sort((a: Event, b: Event) => scoreEvent(b) - scoreEvent(a))[0];
     
     // If not found in upcoming events, try to get from all events (requires auth)
     if (!event) {
@@ -189,7 +279,7 @@ export async function getEventBySlug(slug: string): Promise<Event | null> {
           limit: 100 // Get more events to search through
         });
         // Among all published events, filter by slug and pick the richest one
-        const matchingAll = eventsResult.data.filter(ev => {
+        const matchingAll = eventsResult.data.filter((ev: Event) => {
           const generatedSlug = (ev.slug || ev.title)
             .toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
@@ -199,7 +289,7 @@ export async function getEventBySlug(slug: string): Promise<Event | null> {
           return generatedSlug === slug;
         });
 
-        event = matchingAll.sort((a, b) => scoreEvent(b) - scoreEvent(a))[0];
+        event = matchingAll.sort((a: Event, b: Event) => scoreEvent(b) - scoreEvent(a))[0];
       } catch (authError) {
         console.log('Auth required for full events list, using upcoming events only');
       }
@@ -237,7 +327,8 @@ export async function getEventBySlug(slug: string): Promise<Event | null> {
 export async function createEvent(
   data: CreateEventRequest
 ): Promise<Event> {
-  return apiClient.post<Event>('/events', data);
+  const backendResponse = await apiClient.post<any>('/events', data);
+  return transformBackendEventToFrontend(backendResponse);
 }
 
 /**
@@ -265,13 +356,13 @@ export async function updateEvent(
 }
 
 /**
- * Delete an event
- * 
+ * Delete an event (PERMANENT - use for archived events only)
+ *
  * **Permissions**: Admin only
- * 
+ *
  * @param id - Event UUID
  * @returns Success message
- * 
+ *
  * @example
  * ```ts
  * const result = await deleteEvent('event-uuid-123');
@@ -280,6 +371,73 @@ export async function updateEvent(
  */
 export async function deleteEvent(id: string): Promise<DeleteResponse> {
   return apiClient.delete<DeleteResponse>(`/events/${id}`);
+}
+
+/**
+ * Archive an event (soft delete - moves to archived)
+ *
+ * **Permissions**: Admin only
+ *
+ * @param id - Event UUID
+ * @returns Success message
+ *
+ * @example
+ * ```ts
+ * const result = await archiveEvent('event-uuid-123');
+ * ```
+ */
+export async function archiveEvent(id: string): Promise<DeleteResponse> {
+  return apiClient.post<DeleteResponse>(`/events/${id}/archive`, {});
+}
+
+/**
+ * Get archived (soft-deleted) events
+ *
+ * **Permissions**: Admin only
+ *
+ * @param params - Query parameters for filtering and pagination
+ * @returns Paginated list of archived events
+ *
+ * @example
+ * ```ts
+ * const archivedEvents = await getArchivedEvents({
+ *   page: 1,
+ *   limit: 10,
+ *   search: 'science fair'
+ * });
+ * ```
+ */
+export async function getArchivedEvents(
+  params?: { page?: number; limit?: number; search?: string; category?: string }
+): Promise<EventListResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.search) queryParams.append('search', params.search);
+  if (params?.category) queryParams.append('category', params.category);
+
+  const queryString = queryParams.toString();
+  const endpoint = `/events/archived${queryString ? `?${queryString}` : ''}`;
+
+  return apiClient.get<EventListResponse>(endpoint);
+}
+
+/**
+ * Restore an archived event
+ *
+ * **Permissions**: Admin only
+ *
+ * @param id - Event UUID
+ * @returns Restored event
+ *
+ * @example
+ * ```ts
+ * const restoredEvent = await restoreEvent('event-uuid-123');
+ * ```
+ */
+export async function restoreEvent(id: string): Promise<Event> {
+  return apiClient.patch<Event>(`/events/${id}/restore`, {});
 }
 
 // ========================================
@@ -691,21 +849,123 @@ export function getDaysUntilEvent(event: Event): number | null {
  */
 export function formatEventDateTime(event: Event): string {
   const eventDate = new Date(`${event.date}T${event.time}`);
-  
+
   const dateOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   };
-  
+
   const timeOptions: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   };
-  
+
   const dateStr = eventDate.toLocaleDateString('en-US', dateOptions);
   const timeStr = eventDate.toLocaleTimeString('en-US', timeOptions);
-  
+
   return `${dateStr} at ${timeStr}`;
+}
+
+/**
+ * Generate URL-friendly slug from event title
+ *
+ * @param title - Event title
+ * @returns URL-friendly slug
+ *
+ * @example
+ * ```ts
+ * const slug = generateSlug("Science Fair 2024");
+ * console.log(slug); // "science-fair-2024"
+ * ```
+ */
+export function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim()
+}
+
+/**
+ * Format date string for display
+ *
+ * @param dateString - Date string (YYYY-MM-DD)
+ * @returns Formatted date string
+ *
+ * @example
+ * ```ts
+ * const formatted = formatDate("2024-04-20");
+ * console.log(formatted); // "Apr 20, 2024"
+ * ```
+ */
+export function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return dateString
+    }
+    const options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }
+    return date.toLocaleDateString('en-US', options)
+  } catch {
+    return dateString
+  }
+}
+
+/**
+ * Get category badge color based on category name or tags
+ *
+ * @param event - Event object
+ * @returns CSS class string for category color
+ */
+export function getCategoryColor(event: Event): string {
+  // Try to determine category from tags
+  const tagNames = event.tags?.map(t => t.name.toLowerCase()) || []
+
+  if (tagNames.some(t => t.includes('academic') || t.includes('science') || t.includes('math'))) {
+    return 'bg-blue-100 text-blue-700 border-blue-200'
+  }
+  if (tagNames.some(t => t.includes('sport') || t.includes('athletic') || t.includes('basketball'))) {
+    return 'bg-green-100 text-green-700 border-green-200'
+  }
+  if (tagNames.some(t => t.includes('cultural') || t.includes('art') || t.includes('music') || t.includes('performance'))) {
+    return 'bg-purple-100 text-purple-700 border-purple-200'
+  }
+  if (tagNames.some(t => t.includes('social') || t.includes('community'))) {
+    return 'bg-orange-100 text-orange-700 border-orange-200'
+  }
+
+  // Default color
+  return 'bg-gray-100 text-gray-700 border-gray-200'
+}
+
+/**
+ * Get category name from event tags (best guess)
+ *
+ * @param event - Event object
+ * @returns Category name
+ */
+export function getCategoryName(event: Event): string {
+  const tagNames = event.tags?.map(t => t.name.toLowerCase()) || []
+
+  if (tagNames.some(t => t.includes('academic') || t.includes('science') || t.includes('math'))) {
+    return 'Academic'
+  }
+  if (tagNames.some(t => t.includes('sport') || t.includes('athletic') || t.includes('basketball'))) {
+    return 'Sports'
+  }
+  if (tagNames.some(t => t.includes('cultural') || t.includes('art') || t.includes('music') || t.includes('performance'))) {
+    return 'Cultural'
+  }
+  if (tagNames.some(t => t.includes('social') || t.includes('community'))) {
+    return 'Social'
+  }
+
+  return 'Special Event'
 }

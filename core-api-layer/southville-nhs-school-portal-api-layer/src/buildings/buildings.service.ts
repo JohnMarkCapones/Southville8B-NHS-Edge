@@ -96,7 +96,7 @@ export class BuildingsService {
     let query = supabase.from('buildings').select(
       `
       *,
-      floors(id, name, number),
+      floors(id, name, number, rooms(id, name, room_number, capacity, status)),
       floors_count:floors(count)
     `,
       { count: 'exact' },
@@ -124,10 +124,38 @@ export class BuildingsService {
       throw new InternalServerErrorException('Failed to fetch buildings');
     }
 
+    // Transform database fields to API response format
+    const transformedBuildings = buildings?.map(building => ({
+      id: building.id,
+      buildingName: building.building_name,
+      code: building.code,
+      capacity: building.capacity,
+      createdAt: building.created_at,
+      updatedAt: building.updated_at,
+      floors: building.floors?.map(floor => ({
+        id: floor.id,
+        name: floor.name,
+        number: floor.number,
+        buildingId: floor.building_id,
+        createdAt: floor.created_at,
+        updatedAt: floor.updated_at,
+        rooms: floor.rooms?.map(room => ({
+          id: room.id,
+          name: room.name,
+          roomNumber: room.room_number,
+          capacity: room.capacity,
+          status: room.status,
+          floorId: room.floor_id,
+          createdAt: room.created_at,
+          updatedAt: room.updated_at,
+        }))
+      }))
+    })) || [];
+
     const totalPages = Math.ceil((count || 0) / limit);
 
     return {
-      data: buildings,
+      data: transformedBuildings,
       pagination: {
         page,
         limit,
@@ -163,7 +191,33 @@ export class BuildingsService {
       throw new NotFoundException('Building not found');
     }
 
-    return building;
+    // Transform database fields to API response format
+    return {
+      id: building.id,
+      buildingName: building.building_name,
+      code: building.code,
+      capacity: building.capacity,
+      createdAt: building.created_at,
+      updatedAt: building.updated_at,
+      floors: building.floors?.map(floor => ({
+        id: floor.id,
+        name: floor.name,
+        number: floor.number,
+        buildingId: floor.building_id,
+        createdAt: floor.created_at,
+        updatedAt: floor.updated_at,
+        rooms: floor.rooms?.map(room => ({
+          id: room.id,
+          name: room.name,
+          roomNumber: room.room_number,
+          capacity: room.capacity,
+          status: room.status,
+          floorId: room.floor_id,
+          createdAt: room.created_at,
+          updatedAt: room.updated_at,
+        }))
+      }))
+    };
   }
 
   async update(

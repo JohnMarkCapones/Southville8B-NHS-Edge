@@ -44,6 +44,23 @@ interface Event {
   slug?: string
 }
 
+// Helper function to validate and sanitize image URL
+function validateImageUrl(url: string | undefined): string {
+  if (!url) {
+    return "/placeholder.svg?height=200&width=300&text=Event+Image"
+  }
+  
+  try {
+    // Try to construct a URL to validate it
+    new URL(url)
+    return url
+  } catch (error) {
+    // If URL is invalid, return placeholder
+    console.warn('Invalid image URL detected:', url)
+    return "/placeholder.svg?height=200&width=300&text=Event+Image"
+  }
+}
+
 // Helper function to map API event to component format
 function mapApiEventToComponent(apiEvent: ApiEvent): Event {
   // Generate slug from title if not provided
@@ -66,7 +83,7 @@ function mapApiEventToComponent(apiEvent: ApiEvent): Event {
     maxRegistration: undefined,
     isInterested: false, // Default state
     isRegistered: false, // Default state
-    image: apiEvent.eventImage || "/placeholder.svg?height=200&width=300&text=Event+Image",
+    image: validateImageUrl(apiEvent.eventImage),
     tags: apiEvent.tags?.map(tag => tag.name) || [],
     organizer: apiEvent.organizer?.fullName || "Event Organizer",
     price: undefined,
@@ -102,7 +119,7 @@ export function EventSystem() {
         
         const response = await getEvents({
           page: 1,
-          limit: 50,
+          limit: 6,
           status: EventStatus.PUBLISHED,
           visibility: EventVisibility.PUBLIC
         })
@@ -342,6 +359,11 @@ export function EventSystem() {
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                 priority={false}
+                onError={(e) => {
+                  // Fallback to placeholder if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/placeholder.svg?height=200&width=300&text=Event+Image";
+                }}
               />
               <div className="absolute top-3 left-3">
                 <Badge variant="outline" className="bg-white/90 text-gray-900 border-white/50">

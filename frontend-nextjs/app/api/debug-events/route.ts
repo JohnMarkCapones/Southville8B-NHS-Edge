@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUpcomingEvents, getEvents } from '@/lib/api/endpoints/events';
+import { EventStatus } from '@/lib/api/types/events';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Debug: Testing events API...');
-    
+
     // Test upcoming events
     console.log('📡 Testing getUpcomingEvents...');
     const upcomingResult = await getUpcomingEvents();
@@ -22,8 +23,8 @@ export async function GET(request: NextRequest) {
 
     // Test all events
     console.log('📡 Testing getEvents...');
-    const allEventsResult = await getEvents({ 
-      status: 'published',
+    const allEventsResult = await getEvents({
+      status: EventStatus.PUBLISHED,
       limit: 10
     });
     console.log('✅ All events result:', {

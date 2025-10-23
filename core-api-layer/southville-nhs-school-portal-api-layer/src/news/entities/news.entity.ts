@@ -53,7 +53,13 @@ export class News {
     default: 'draft',
     nullable: false,
   })
-  status: 'draft' | 'pending_approval' | 'approved' | 'published' | 'rejected' | 'archived';
+  status:
+    | 'draft'
+    | 'pending_approval'
+    | 'approved'
+    | 'published'
+    | 'rejected'
+    | 'archived';
 
   @Column({
     type: 'varchar',
