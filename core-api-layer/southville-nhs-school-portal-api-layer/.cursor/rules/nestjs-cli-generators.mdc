@@ -1,7 +1,6 @@
 ---
 alwaysApply: true
 ---
-
 # NestJS CLI Generator Rules
 
 ## 🎯 **Always Use CLI Generators**

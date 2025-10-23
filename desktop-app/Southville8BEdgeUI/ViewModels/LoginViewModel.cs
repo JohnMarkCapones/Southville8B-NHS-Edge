@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Southville8BEdgeUI.Services;
 
 namespace Southville8BEdgeUI.ViewModels;
@@ -15,19 +16,25 @@ public partial class LoginViewModel : ViewModelBase
     private readonly IRoleValidationService _roleValidationService;
 
     [ObservableProperty]
-    private string? _email;
+    private string _email = string.Empty;
 
     [ObservableProperty]
-    private string? _password;
+    private string _password = string.Empty;
 
     [ObservableProperty]
-    private bool _rememberMe;
+    private bool _rememberMe = false;
 
     [ObservableProperty]
-    private bool _showPassword; // controls password masking
+    private bool _showPassword = false; // controls password masking
 
     [ObservableProperty]
-    private bool _isLoading;
+    private bool _isLoading = false;
+
+    [ObservableProperty]
+    private string? _errorMessage;
+
+    [ObservableProperty]
+    private bool _hasError = false;
 
     // This action can be set by the parent view model to handle navigation.
     public Action<ViewModelBase>? NavigateTo { get; set; }
@@ -49,13 +56,16 @@ public partial class LoginViewModel : ViewModelBase
         if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
         {
             System.Diagnostics.Debug.WriteLine("Login failed: Missing email or password");
-            _toastService.Warning("Please enter both email and password.");
+            SetError("Please enter both email and password.");
+            IsLoading = false; // Ensure loading state is reset
             return;
         }
 
         try
         {
             IsLoading = true;
+            System.Diagnostics.Debug.WriteLine($"IsLoading set to: {IsLoading}");
+            ClearError(); // Clear any previous errors
             System.Diagnostics.Debug.WriteLine("Starting login process...");
 
             var response = await _authService.LoginAsync(Email, Password);
@@ -84,12 +94,28 @@ public partial class LoginViewModel : ViewModelBase
                 var roleLower = role?.ToLowerInvariant();
                 switch (roleLower)
                 {
-                    case "admin":
-                        NavigateTo?.Invoke(new AdminShellViewModel());
-                        break;
-                    case "teacher":
-                        NavigateTo?.Invoke(new TeacherShellViewModel());
-                        break;
+                case "admin":
+                    var sseService = ServiceLocator.Services.GetRequiredService<ISseService>();
+                    var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+                    var tokenStorage = ServiceLocator.Services.GetRequiredService<ITokenStorageService>();
+                    var accessToken = response.Session?.AccessToken ?? string.Empty;
+                    
+                    // Set the access token on the API client
+                    apiClient.SetAccessToken(accessToken);
+                    
+                    NavigateTo?.Invoke(new AdminShellViewModel(sseService, apiClient, tokenStorage, response.User, accessToken));
+                    break;
+                case "teacher":
+                    var teacherSseService = ServiceLocator.Services.GetRequiredService<ISseService>();
+                    var teacherApiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+                    var teacherTokenStorage = ServiceLocator.Services.GetRequiredService<ITokenStorageService>();
+                    var teacherAccessToken = response.Session?.AccessToken ?? string.Empty;
+                    
+                    // Set the access token on the API client
+                    teacherApiClient.SetAccessToken(teacherAccessToken);
+                    
+                    NavigateTo?.Invoke(new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, response.User, teacherAccessToken));
+                    break;
                     default:
                         _toastService.Warning($"Unknown role: {response.User.Role}");
                         break;
@@ -98,33 +124,53 @@ public partial class LoginViewModel : ViewModelBase
             else
             {
                 var errorMessage = response?.Message ?? "Login failed. Please check your credentials.";
-                _toastService.Error(errorMessage);
+                SetError(errorMessage);
             }
         }
-        catch (UnauthorizedException)
+        catch (UnauthorizedException ex)
         {
-            _toastService.Error("Invalid email or password. Please try again.");
+            SetError(ex.Message);
         }
-        catch (TooManyRequestsException)
+        catch (TooManyRequestsException ex)
         {
-            _toastService.Warning("Too many login attempts. Please wait before trying again.");
+            SetError(ex.Message);
         }
-        catch (ServerException)
+        catch (ServerException ex)
         {
-            _toastService.Error("Server error occurred. Please try again later.");
+            SetError(ex.Message);
+        }
+        catch (BadRequestException ex)
+        {
+            // Provide more user-friendly error messages for common validation errors
+            var errorMessage = ex.Message;
+            if (errorMessage.Contains("valid email address"))
+            {
+                errorMessage = "Please enter a valid email address.";
+            }
+            else if (errorMessage.Contains("password"))
+            {
+                errorMessage = "Please check your password and try again.";
+            }
+            else if (errorMessage.Contains("required"))
+            {
+                errorMessage = "Please fill in all required fields.";
+            }
+            
+            SetError(errorMessage);
         }
         catch (ApiException ex)
         {
-            _toastService.Error($"Login failed: {ex.Message}");
+            SetError(ex.Message);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Unexpected login error: {ex.Message}");
-            _toastService.Error("An unexpected error occurred. Please try again.");
+            SetError("An unexpected error occurred. Please try again.");
         }
         finally
         {
             IsLoading = false;
+            System.Diagnostics.Debug.WriteLine($"IsLoading set to: {IsLoading}");
         }
     }
 
@@ -133,5 +179,33 @@ public partial class LoginViewModel : ViewModelBase
     {
         // Logic for the forgot password flow
         _toastService.Info("Forgot password functionality not yet implemented.");
+    }
+
+    [RelayCommand]
+    private void FillAdminCredentials()
+    {
+        Email = "superadmin@gmail.com";
+        Password = "skadoosh";
+        ClearError();
+    }
+
+    [RelayCommand]
+    private void FillTeacherCredentials()
+    {
+        Email = "johnmarkcapones93@gmail.com";
+        Password = "skadoosh";
+        ClearError();
+    }
+
+    private void SetError(string message)
+    {
+        ErrorMessage = message;
+        HasError = true;
+    }
+
+    private void ClearError()
+    {
+        ErrorMessage = null;
+        HasError = false;
     }
 }

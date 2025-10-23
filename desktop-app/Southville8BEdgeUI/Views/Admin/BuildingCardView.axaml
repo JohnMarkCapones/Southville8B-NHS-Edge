@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+             x:Class="Southville8BEdgeUI.Views.Admin.BuildingCardView"
+             x:DataType="vm:BuildingCardViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+    <UserControl.Styles>
+        <!-- Card Styles -->
+        <Style Selector="Border.building-card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #10000000"/>
+            <Setter Property="Margin" Value="0,0,20,20"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.building-card:pointerover">
+            <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
+            <Setter Property="RenderTransform" Value="translate(-1px)"/>
+        </Style>
+
+        <!-- Text Styles -->
+        <Style Selector="TextBlock.building-title">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.building-subtitle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.stat-label">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.stat-value">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Border x:Name="BuildingCard" Classes="building-card">
+        <StackPanel Spacing="16">
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="BuildingNameText" Text="{Binding BuildingName}" Classes="building-title"/>
+                    <TextBlock x:Name="BuildingCodeText" Text="{Binding Code}" Classes="building-subtitle"/>
+                </StackPanel>
+                <Border Grid.Column="1" Width="40" Height="40" Background="{DynamicResource IndigoSoftBrush}" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ic:FluentIcon Icon="Building" IconSize="Size20" Foreground="{DynamicResource IndigoBrush}"/>
+                </Border>
+            </Grid>
+
+            <!-- Stats Grid -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
+                    <TextBlock Text="Floors" Classes="stat-label"/>
+                    <TextBlock x:Name="TotalFloorsText" Text="{Binding TotalFloors}" Classes="stat-value"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
+                    <TextBlock Text="Rooms" Classes="stat-label"/>
+                    <TextBlock x:Name="TotalRoomsText" Text="{Binding TotalRooms}" Classes="stat-value"/>
+                </StackPanel>
+                <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4">
+                    <TextBlock Text="Capacity" Classes="stat-label"/>
+                    <TextBlock x:Name="TotalCapacityText" Text="{Binding TotalCapacity}" Classes="stat-value"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Grid.Row="1" Spacing="4">
+                    <TextBlock Text="Status" Classes="stat-label"/>
+                    <TextBlock x:Name="StatusText" Text="Active" Classes="stat-value" FontSize="14"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Action Buttons -->
+            <Grid ColumnDefinitions="*,Auto">
+                <Button Grid.Column="0" 
+                        x:Name="ToggleExpandButton"
+                        Content="View Details" 
+                        Classes="secondary"
+                        Command="{Binding ToggleExpandCommand}"/>
+                <Button Grid.Column="1" 
+                        x:Name="EditButton"
+                        Content="Edit" 
+                        Classes="primary"
+                        Command="{Binding EditBuildingCommand}"
+                        Margin="8,0,0,0"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

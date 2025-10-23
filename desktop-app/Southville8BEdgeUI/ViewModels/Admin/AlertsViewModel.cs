@@ -6,11 +6,15 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
+using Southville8BEdgeUI.Models.Api;
+using Southville8BEdgeUI.Services;
+using System.Threading.Tasks;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class AlertsViewModel : ViewModelBase
 {
+    private readonly IApiClient? _apiClient;
     [ObservableProperty] private ObservableCollection<AlertItemViewModel> _alerts = new();
 
     // Form fields
@@ -38,10 +42,12 @@ public partial class AlertsViewModel : ViewModelBase
     public int ActiveCount => Alerts.Count(a => a.IsActive);
     public IEnumerable<AlertItemViewModel> ActiveAlerts => Alerts.Where(a => a.IsActive).OrderByDescending(a => a.Priority).ThenBy(a => a.ExpiresAt);
 
-    public AlertsViewModel()
+    public AlertsViewModel() { InitializeMockAlerts(); UpdateComputed(); }
+
+    public AlertsViewModel(IApiClient apiClient)
     {
-        InitializeMockAlerts();
-        UpdateComputed();
+        _apiClient = apiClient;
+        _ = LoadAlertsAsync();
     }
 
     private void InitializeMockAlerts()
@@ -92,6 +98,41 @@ public partial class AlertsViewModel : ViewModelBase
         Alerts.Add(a3);
     }
 
+    private async Task LoadAlertsAsync()
+    {
+        if (_apiClient == null)
+        {
+            InitializeMockAlerts();
+            UpdateComputed();
+            return;
+        }
+
+        var resp = await _apiClient.GetAlertsAsync(page: 1, limit: 100);
+        Alerts.Clear();
+        if (resp?.Data != null)
+        {
+            foreach (var a in resp.Data)
+            {
+                Alerts.Add(new AlertItemViewModel
+                {
+                    Id = a.Id,
+                    Type = MapType(a.Type),
+                    Title = a.Title,
+                    Message = a.Message,
+                    CreatedAt = a.CreatedAt.LocalDateTime,
+                    ExpiresAt = a.ExpiresAt.LocalDateTime,
+                    Priority = "Medium",
+                    TargetAudience = a.RecipientId == null ? "all_school" : "user",
+                    Parent = this
+                });
+            }
+        }
+        UpdateComputed();
+    }
+
+    private static string MapType(string type)
+        => type switch { "warning" => "Weather", "error" => "Emergency", "system" => "System", _ => "Announcement" };
+
     private static string ToTargetAudience(string scope, string grade, string section)
     {
         return scope switch
@@ -118,7 +159,7 @@ public partial class AlertsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CreateAlert()
+    private async void CreateAlert()
     {
         var expiresDate = NewExpiresDate?.Date ?? DateTimeOffset.Now.Date;
         var expiresTime = NewExpiresTime ?? new TimeSpan(23, 59, 0);
@@ -142,26 +183,48 @@ public partial class AlertsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(alert.Title) || string.IsNullOrWhiteSpace(alert.Message))
             return;
 
+        if (_apiClient != null)
+        {
+            var dto = new CreateAlertDto
+            {
+                Type = MapCreateType(NewType),
+                Title = alert.Title,
+                Message = alert.Message,
+                RecipientId = NewTargetScope == "Whole School" ? null : (string.IsNullOrWhiteSpace(NewSection) ? null : NewSection)
+            };
+            var created = await _apiClient.CreateAlertAsync(dto);
+            if (created != null)
+            {
+                // Refresh from server to ensure we reflect server-side defaults (e.g., expiresAt)
+                await LoadAlertsAsync();
+                ClearForm();
+                return;
+            }
+        }
         Alerts.Insert(0, alert);
         UpdateComputed();
         ClearForm();
-        // TODO: Persist to Supabase/MySQL via a repository/service
     }
 
+    private static string MapCreateType(string uiType)
+        => uiType switch { "Weather" => "warning", "Emergency" => "error", "System" => "system", _ => "info" };
+
     [RelayCommand]
-    private void DeleteAlert(AlertItemViewModel alert)
+    private async void DeleteAlert(AlertItemViewModel alert)
     {
+        if (_apiClient != null)
+            await _apiClient.DeleteAlertAsync(alert.Id);
         Alerts.Remove(alert);
         UpdateComputed();
-        // TODO: Delete from database
     }
 
     [RelayCommand]
-    private void ExpireAlert(AlertItemViewModel alert)
+    private async void ExpireAlert(AlertItemViewModel alert)
     {
         alert.ExpiresAt = DateTime.Now;
+        if (_apiClient != null)
+            await _apiClient.UpdateAlertAsync(alert.Id, new UpdateAlertDto { ExpiresAt = DateTimeOffset.Now });
         UpdateComputed();
-        // TODO: Update database
     }
 
     [RelayCommand]
@@ -171,7 +234,6 @@ public partial class AlertsViewModel : ViewModelBase
         foreach (var a in expired)
             Alerts.Remove(a);
         UpdateComputed();
-        // TODO: Batch-delete in database
     }
 
     [RelayCommand]
@@ -191,9 +253,10 @@ public partial class AlertsViewModel : ViewModelBase
 
     // Optional: call this from a timer to auto-refresh Active/Expired UI if desired
     [RelayCommand]
-    private void RefreshComputed()
+    private async void RefreshComputed()
     {
         UpdateComputed();
+        if (_apiClient != null) await LoadAlertsAsync();
     }
 }
 

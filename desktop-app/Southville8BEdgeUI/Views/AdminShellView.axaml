@@ -11,6 +11,7 @@
 
     <UserControl.Resources>
         <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        <converters:ConnectionStatusToColorConverter x:Key="ConnectionStatusToColorConverter"/>
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -251,10 +252,11 @@
                       BorderThickness="0,0,0,1"
                       Background="{DynamicResource CardBackgroundBrush}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                  <Border Background="#DC5B5B" Width="32" Height="32" CornerRadius="8">
-                    <TextBlock Text="A8" Foreground="White" FontWeight="Bold" FontSize="14"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                  </Border>
+                  <Image Source="avares://Southville8BEdgeUI/Assets/Images/southville-8b-logo.png"
+                         Width="80"
+                         Height="80"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Center"/>
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Southville 8B NHIS" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="Admin Portal" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
@@ -295,12 +297,21 @@
                       <TextBlock Text="User Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  <Button Classes="nav-item" Command="{Binding NavigateToRoomManagementCommand}" Classes.active="{Binding IsRoomManagementActive}">
+                  <Button Classes="nav-item" Command="{Binding NavigateToBuildingManagementCommand}" Classes.active="{Binding IsBuildingManagementActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <ic:FluentIcon Icon="Building" IconSize="Size16"/>
-                      <TextBlock Text="Room Management" VerticalAlignment="Center"/>
+                      <TextBlock Text="Building Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
+                  <!-- Class Schedules - HIDDEN FOR NOW -->
+                  <!--
+                  <Button Classes="nav-item" Command="{Binding NavigateToClassSchedulesCommand}" Classes.active="{Binding IsClassSchedulesActive}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <TextBlock Text="📅" FontSize="16" VerticalAlignment="Center"/>
+                      <TextBlock Text="Class Schedules" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
+                  -->
 
                   <TextBlock Text="CONTENT" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToEventsDashboardCommand}" Classes.active="{Binding IsEventsDashboardActive}">
@@ -309,12 +320,15 @@
                       <TextBlock Text="Events Dashboard" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
+                  <!-- E-Library Management - HIDDEN FOR NOW -->
+                  <!--
                   <Button Classes="nav-item" Command="{Binding NavigateToELibraryCommand}" Classes.active="{Binding IsELibraryActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
                       <TextBlock Text="E-Library Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
+                  -->
 
                   <TextBlock Text="COMMUNICATION" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToAlertsCommand}" Classes.active="{Binding IsAlertsActive}">
@@ -323,12 +337,15 @@
                       <TextBlock Text="Alerts" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
+                  <!-- Chat - HIDDEN FOR NOW -->
+                  <!--
                   <Button Classes="nav-item" Command="{Binding NavigateToChatCommand}" Classes.active="{Binding IsChatActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
                       <TextBlock Text="Chat" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
+                  -->
                 </StackPanel>
               </ScrollViewer>
             </DockPanel>
@@ -533,7 +550,7 @@
                                             </Border>
                                             <TextBlock Text="Events" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="120" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="{Binding EventsCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
                                         <TextBlock Text="Approved Events" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
@@ -548,10 +565,10 @@
                                                       Stretch="Uniform"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <TextBlock Text="Clicks" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text="Teachers" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="22k" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
-                                        <TextBlock Text="+12% Last Week" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{Binding TeachersCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="Active Teachers" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
 
@@ -567,7 +584,7 @@
                                             </Border>
                                             <TextBlock Text="Students" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="1512" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="{Binding StudentsCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
                                         <TextBlock Text="Registered Students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
@@ -584,11 +601,19 @@
                                             </Border>
                                             <TextBlock Text="Sections" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="144" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="{Binding SectionsCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
                                         <TextBlock Text="+10% Last Week" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
+                        </Border>
+
+                        <!-- Connection Status Indicator -->
+                        <Border Padding="16,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="{Binding ConnectionStatus, Converter={StaticResource ConnectionStatusToColorConverter}}"/>
+                                <TextBlock Text="{Binding ConnectionStatus}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
                         </Border>
 
                         <!-- Event Schedule (modified to dynamic calendar + rotating today classes) -->
@@ -640,43 +665,27 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Rotating Today Event -->
+                                <!-- Current / Next Event (no animation) -->
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" Padding="12,8">
                                     <StackPanel>
                                         <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                         <Border Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                                                <Border Grid.Column="0" Width="4" Height="40" Background="{DynamicResource SuccessBrush}" CornerRadius="2" Margin="0,0,12,0"/>
-                                                <TransitioningContentControl Grid.Column="1" Content="{Binding CurrentTodayClass}" VerticalAlignment="Center">
-                                                    <TransitioningContentControl.PageTransition>
-                                                      <CompositePageTransition>
-                                                        <PageSlide Duration="0:0:0.35" />
-                                                        <CrossFade Duration="0:0:0.25" />
-                                                      </CompositePageTransition>
-                                                    </TransitioningContentControl.PageTransition>
-                                                    <TransitioningContentControl.ContentTemplate>
-                                                        <DataTemplate DataType="vm:TodayClassItem">
-                                                            <StackPanel VerticalAlignment="Center">
-                                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4" IsVisible="{Binding CurrentEvent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
                                                                     <Border Background="{DynamicResource SuccessBrush}" CornerRadius="3" Padding="4,2">
-                                                                        <TextBlock Text="{Binding Subject}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
-                                                                    </Border>
-                                                                    <Border Background="{DynamicResource InfoBrush}" CornerRadius="3" Padding="4,2">
-                                                                        <TextBlock Text="{Binding Room}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
+                                                        <TextBlock Text="Current" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
                                                                     </Border>
                                                                 </StackPanel>
-                                                                <TextBlock Text="{Binding Grade}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                                <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                <StackPanel IsVisible="{Binding CurrentEvent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
+                                                    <TextBlock Text="{Binding CurrentEvent.Title}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding CurrentEvent.Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <Button Content="Mark as Complete" Command="{Binding MarkCurrentEventCompletedCommand}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                                                </StackPanel>
+                                                <TextBlock Text="No event currently" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding CurrentEvent, Converter={x:Static converters:ObjectConverters.IsNull}}"/>
                                                             </StackPanel>
-                                                        </DataTemplate>
-                                                    </TransitioningContentControl.ContentTemplate>
-                                                </TransitioningContentControl>
-                                                <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Width="32" Height="40" HorizontalAlignment="Right" VerticalAlignment="Center" Command="{Binding NextTodayClassCommand}" IsVisible="{Binding HasMultipleTodayClasses}">
-                                                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                </Button>
-                                            </Grid>
                                         </Border>
-                                        <Button Content="View more..." Background="Transparent" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"/>
+
+                                        <Button Content="View more..." Background="Transparent" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4" Command="{Binding ViewMoreEventsCommand}"/>
                                     </StackPanel>
                                 </Border>
 
@@ -684,12 +693,35 @@
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
                                     <StackPanel>
                                         <TextBlock Text="Next" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                        <Border Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Opacity="0.15">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding NextClassSubject}" FontSize="11" Foreground="{DynamicResource WarningBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="{Binding NextClassTime}" FontSize="10" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
+                                        <Grid>
+                                            <!-- faded background + border only -->
+                                            <Border Background="{DynamicResource WarningBrush}"
+                                                    CornerRadius="8"
+                                                    Opacity="0.15"/>
+                                            <Border BorderBrush="{DynamicResource WarningBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Opacity="0.4"/>
+                                            <!-- opaque content -->
+                                            <StackPanel Margin="12">
+                                                <TextBlock Text="{Binding NextEvent.Title}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           FontWeight="SemiBold"
+                                                           HorizontalAlignment="Center"
+                                                           IsVisible="{Binding NextEvent, Converter={x:Static converters:ObjectConverters.IsNotNull}}"/>
+                                                <TextBlock Text="{Binding NextEvent.Time}"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           IsVisible="{Binding NextEvent, Converter={x:Static converters:ObjectConverters.IsNotNull}}"/>
+                                                <TextBlock Text="No upcoming event"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           IsVisible="{Binding NextEvent, Converter={x:Static converters:ObjectConverters.IsNull}}"/>
                                             </StackPanel>
-                                        </Border>
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

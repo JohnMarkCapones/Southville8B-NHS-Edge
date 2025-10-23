@@ -306,8 +306,7 @@ export class StudentsService {
           userType: 'student',
           status: 'Active',
         },
-        student,
-        temporaryPassword: password,
+        specificRecord: student,
         message: 'Student created successfully',
       };
     } catch (error) {

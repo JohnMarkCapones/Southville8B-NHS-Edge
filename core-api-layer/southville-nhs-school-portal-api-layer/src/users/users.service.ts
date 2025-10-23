@@ -16,6 +16,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import { ImportUsersDto } from './dto/import-users.dto';
 import {
+  ImportStudentsCsvDto,
+  CsvStudentRowDto,
+  BulkImportResultDto,
+} from './dto/import-students-csv.dto';
+import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
@@ -63,20 +68,115 @@ export class UsersService {
   }
 
   /**
+   * Generate password from birthday (YYYYMMDD format)
+   * Used for student accounts
+   */
+  private generatePasswordFromBirthday(birthday: string): string {
+    const date = new Date(birthday);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+
+  /**
    * Validate email uniqueness across auth.users and public.users
    */
   private async validateEmailUniqueness(email: string): Promise<void> {
     const supabase = this.getSupabaseClient();
 
     // Check public.users table
-    const { data: publicUser } = await supabase
+    const { data: publicUser, error } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating email uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate email uniqueness',
+      );
+    }
 
     if (publicUser) {
       throw new ConflictException('Email already exists');
+    }
+  }
+
+  /**
+   * Validate teacher uniqueness by email and birthday
+   * Prevents creating duplicate teachers with same email AND birthday
+   */
+  private async validateTeacherUniqueness(
+    email: string,
+    birthday: string,
+  ): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Single query to check if teacher with same email and birthday exists
+    const { data: existingTeacher, error } = await supabase
+      .from('teachers')
+      .select(
+        `
+        id,
+        user_id,
+        first_name,
+        last_name,
+        birthday,
+        user:users!user_id(
+          id,
+          email
+        )
+      `,
+      )
+      .eq('birthday', birthday)
+      .eq('user.email', email)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating teacher uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate teacher uniqueness',
+      );
+    }
+
+    if (existingTeacher) {
+      throw new ConflictException(
+        `Teacher with email '${email}' and birthday '${birthday}' already exists`,
+      );
+    }
+  }
+
+  /**
+   * Validate student uniqueness by LRN and birthday
+   * Prevents creating duplicate students with same LRN AND birthday
+   */
+  private async validateStudentUniqueness(
+    lrnId: string,
+    birthday: string,
+  ): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Check if student with same LRN and birthday exists
+    const { data: existingStudent, error } = await supabase
+      .from('students')
+      .select('id, lrn_id, first_name, last_name, birthday')
+      .eq('lrn_id', lrnId)
+      .eq('birthday', birthday)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating student uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate student uniqueness',
+      );
+    }
+
+    if (existingStudent) {
+      throw new ConflictException(
+        `Student with LRN '${lrnId}' and birthday '${birthday}' already exists`,
+      );
     }
   }
 
@@ -227,6 +327,39 @@ export class UsersService {
   }
 
   /**
+   * Create emergency contact record
+   */
+  private async createEmergencyContactRecord(
+    studentId: string,
+    contactData: any,
+  ): Promise<any> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: contact, error } = await supabase
+      .from('emergency_contacts')
+      .insert({
+        student_id: studentId,
+        guardian_name: contactData.guardianName,
+        relationship: contactData.relationship,
+        phone_number: contactData.phoneNumber,
+        email: contactData.email,
+        address: contactData.address,
+        is_primary: contactData.isPrimary,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error creating emergency contact record:', error);
+      throw new InternalServerErrorException(
+        `Failed to create emergency contact record: ${error.message}`,
+      );
+    }
+
+    return contact;
+  }
+
+  /**
    * Create student record
    */
   private async createStudentRecord(
@@ -267,7 +400,10 @@ export class UsersService {
   /**
    * Main user creation method
    */
-  async createUser(userData: CreateUserDto, createdBy: string): Promise<any> {
+  async createUser(
+    userData: CreateUserDto & { birthday?: string },
+    createdBy: string,
+  ): Promise<any> {
     let authUserId: string | null = null;
     let publicUserId: string | null = null;
 
@@ -275,14 +411,37 @@ export class UsersService {
       // Validate email uniqueness
       await this.validateEmailUniqueness(userData.email);
 
+      // Validate teacher-specific uniqueness
+      if (userData.userType === UserType.TEACHER && userData.birthday) {
+        await this.validateTeacherUniqueness(userData.email, userData.birthday);
+      }
+
+      // Validate student-specific uniqueness
+      if (userData.userType === UserType.STUDENT && userData.birthday) {
+        const studentData = userData as any;
+        if (studentData.lrnId) {
+          await this.validateStudentUniqueness(
+            studentData.lrnId,
+            userData.birthday,
+          );
+        }
+      }
+
       // Get role ID
       const roleId = await this.getRoleIdByName(userData.role);
       if (!roleId) {
         throw new BadRequestException(`Role '${userData.role}' does not exist`);
       }
 
-      // Generate secure password
-      const password = this.generateSecurePassword();
+      // Generate password based on user type
+      // Students and Teachers use birthday-based passwords (YYYYMMDD)
+      // Admins use secure random passwords
+      const password =
+        (userData.userType === UserType.STUDENT ||
+          userData.userType === UserType.TEACHER) &&
+        userData.birthday
+          ? this.generatePasswordFromBirthday(userData.birthday)
+          : this.generateSecurePassword();
 
       // Step 1: Create user in Supabase Auth
       const authUser = await this.createAuthUser(userData, password);
@@ -319,7 +478,7 @@ export class UsersService {
         `User created successfully: ${userData.email} (${userData.userType})`,
       );
 
-      return {
+      const response: any = {
         success: true,
         user: {
           id: authUser.id,
@@ -330,9 +489,15 @@ export class UsersService {
           status: 'Active',
         },
         specificRecord,
-        temporaryPassword: password,
         message: `${userData.userType} created successfully`,
       };
+
+      // Only include temporaryPassword for admins (students/teachers use predictable birthday-based passwords)
+      if (userData.userType === UserType.ADMIN) {
+        response.temporaryPassword = password;
+      }
+
+      return response;
     } catch (error) {
       // Rollback: Clean up created records
       const supabase = this.getSupabaseClient();
@@ -369,6 +534,11 @@ export class UsersService {
   }
 
   async createTeacher(dto: CreateTeacherDto, createdBy: string) {
+    // Validate teacher-specific uniqueness before creating user
+    if (dto.birthday) {
+      await this.validateTeacherUniqueness(dto.email, dto.birthday);
+    }
+
     // Convert CreateTeacherDto to CreateUserDto format
     const userData: any = {
       // Include all original teacher fields for the specific record creation
@@ -399,6 +569,11 @@ export class UsersService {
   }
 
   async createStudent(dto: CreateStudentRequestDto, createdBy: string) {
+    // Validate student-specific uniqueness before creating user
+    if (dto.birthday && dto.lrnId) {
+      await this.validateStudentUniqueness(dto.lrnId, dto.birthday);
+    }
+
     // Convert CreateStudentRequestDto to CreateUserDto format
     const userData: any = {
       email: `${dto.lrnId}@student.local`, // Auto-generate email
@@ -409,7 +584,27 @@ export class UsersService {
       ...dto,
     };
 
-    return this.createUser(userData, createdBy);
+    const result = await this.createUser(userData, createdBy);
+
+    // Create emergency contacts if provided
+    if (dto.emergencyContacts && dto.emergencyContacts.length > 0) {
+      const emergencyContacts: any[] = [];
+      for (const contact of dto.emergencyContacts) {
+        try {
+          const contactRecord: any = await this.createEmergencyContactRecord(
+            result.specificRecord.id,
+            contact,
+          );
+          emergencyContacts.push(contactRecord);
+        } catch (error) {
+          this.logger.error('Error creating emergency contact:', error);
+          // Continue with other contacts even if one fails
+        }
+      }
+      (result as any).emergencyContacts = emergencyContacts;
+    }
+
+    return result;
   }
 
   async createBulkUsers(dtos: BulkCreateUsersDto, createdBy: string) {
@@ -466,29 +661,51 @@ export class UsersService {
       sortOrder = 'desc',
     } = filters;
 
+    // Cap limit at reasonable maximum (1000 for admin interfaces)
+    const effectiveLimit = Math.min(limit, 1000);
+
     let query = supabase.from('users').select(
       `
         *,
-        role:roles(name),
-        teacher:teachers(*, subject_specialization:subjects(*), department:departments(*)),
-        admin:admins(*),
-        student:students(*)
+        role:roles!role_id(id, name),
+        teacher:teachers!user_id(*, department:departments!department_id(id, department_name)),
+        admin:admins!user_id(*),
+        student:students!user_id(*)
       `,
       { count: 'exact' },
     );
 
     // Apply filters
     if (role) {
-      // Get role ID from role name first
-      const { data: roleData } = await supabase
+      // Resolve role name to role_id first (PostgREST doesn't support filtering on joined aliases)
+      const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select('id')
         .eq('name', role)
-        .single();
+        .maybeSingle();
 
-      if (roleData) {
-        query = query.eq('role_id', roleData.id);
+      if (roleError) {
+        this.logger.error('Error fetching role:', roleError);
+        throw new InternalServerErrorException(
+          'Failed to fetch role information',
+        );
       }
+
+      if (!roleData) {
+        // Role name doesn't exist, return empty result
+        this.logger.warn(`Role '${role}' not found, returning empty user list`);
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit: effectiveLimit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      query = query.eq('role_id', roleData.id);
     }
     if (status) {
       query = query.eq('status', status);
@@ -500,10 +717,13 @@ export class UsersService {
     // Apply sorting
     query = query.order(sortBy, { ascending: sortOrder === 'asc' });
 
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
+    // Apply pagination only if limit is reasonable
+    if (effectiveLimit < 1000) {
+      const from = (page - 1) * effectiveLimit;
+      const to = from + effectiveLimit - 1;
+      query = query.range(from, to);
+    }
+    // For limit >= 1000, don't apply range to get all records
 
     const { data, error, count } = await query;
 
@@ -512,13 +732,60 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch users');
     }
 
+    // Transform the data to match UserDto structure
+    const transformedData =
+      data?.map((user: any) => {
+        const baseUser = {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role?.name || '',
+          status: user.status,
+          createdAt: user.created_at,
+          lastLogin: user.last_login || null,
+          phoneNumber: null as string | null,
+          department: null as string | null,
+          studentId: null as string | null,
+          gradeLevel: null as string | null,
+          employeeId: null as string | null,
+          subjectSpecialization: null as string | null,
+        };
+
+        // Map Student-specific fields
+        if (user.student) {
+          baseUser.studentId = user.student.student_id;
+          baseUser.gradeLevel = user.student.grade_level;
+          baseUser.phoneNumber = user.student.phone_number;
+        }
+
+        // Map Teacher-specific fields
+        if (user.teacher) {
+          baseUser.employeeId = user.teacher.id;
+          baseUser.phoneNumber = user.teacher.phone_number;
+          baseUser.department =
+            user.teacher.department?.department_name || null;
+          baseUser.subjectSpecialization =
+            user.teacher.subject_specialization_id;
+        }
+
+        // Map Admin-specific fields
+        if (user.admin) {
+          baseUser.employeeId = user.admin.id;
+          baseUser.phoneNumber = user.admin.phone_number;
+          baseUser.department = 'Administration';
+        }
+
+        return baseUser;
+      }) || [];
+
     return {
       data: data || [],
       pagination: {
         page,
-        limit,
+        limit: effectiveLimit,
         total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages:
+          effectiveLimit < 1000 ? Math.ceil((count || 0) / effectiveLimit) : 1,
       },
     };
   }
@@ -531,7 +798,15 @@ export class UsersService {
     // First, let's try a simple query to get the basic user data
     const { data: basicUser, error: basicError } = await supabase
       .from('users')
-      .select('*')
+      .select(
+        `
+        *,
+        role:roles(name),
+        teacher:teachers(*),
+        admin:admins(*),
+        student:students(*)
+      `,
+      )
       .eq('id', id)
       .single();
 
@@ -1040,6 +1315,173 @@ export class UsersService {
       this.logger.error(
         `Unexpected error syncing last login for user ${userId}:`,
         error,
+   * Parse phone number from scientific notation to proper format
+   */
+  private parsePhoneNumber(value: string): string {
+    // Check if scientific notation
+    if (value.includes('E+') || value.includes('e+')) {
+      const num = parseFloat(value);
+      return '+' + num.toString();
+    }
+    return value;
+  }
+
+  /**
+   * Find section by name and grade level
+   */
+  private async findOrThrowSection(
+    sectionName: string,
+    gradeLevel: string,
+  ): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    // Try to find existing section
+    const { data: section, error } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('name', sectionName)
+      .eq('grade_level', gradeLevel)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching section:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch section information',
+      );
+    }
+
+    // If section exists, return its ID
+    if (section) {
+      return section.id;
+    }
+
+    // Section doesn't exist - create it
+    this.logger.log(`Creating new section: ${sectionName} for ${gradeLevel}`);
+
+    const { data: newSection, error: createError } = await supabase
+      .from('sections')
+      .insert({
+        name: sectionName,
+        grade_level: gradeLevel,
+        // Optional fields are nullable, so we don't need to provide them
+        teacher_id: null,
+        room_id: null,
+        building_id: null,
+      })
+      .select('id')
+      .single();
+
+    if (createError) {
+      this.logger.error('Error creating section:', createError);
+      throw new InternalServerErrorException(
+        `Failed to create section '${sectionName}' for grade '${gradeLevel}'`,
+      );
+    }
+
+    return newSection.id;
+  }
+
+  /**
+   * Parse CSV student rows and group by student (LRN)
+   */
+  private parseCsvStudentRows(rows: CsvStudentRowDto[]): Map<string, any> {
+    const studentMap = new Map<string, any>();
+
+    for (const row of rows) {
+      const lrnId = row.lrn_id;
+
+      if (!studentMap.has(lrnId)) {
+        // First occurrence of this student
+        studentMap.set(lrnId, {
+          student: {
+            firstName: row.first_name,
+            lastName: row.last_name,
+            middleName: row.middle_name,
+            lrnId: row.lrn_id,
+            birthday: row.birthday,
+            gradeLevel: row.grade_level,
+            enrollmentYear: row.enrollment,
+            age: row.age,
+            section: row.section,
+          },
+          emergencyContacts: [],
+        });
+      }
+
+      // Add emergency contact
+      const studentData = studentMap.get(lrnId);
+      studentData.emergencyContacts.push({
+        guardianName: row.guardian_name,
+        relationship: row.relationship,
+        phoneNumber: this.parsePhoneNumber(row.phone_number),
+        email: row.email,
+        address: row.address,
+        isPrimary: studentData.emergencyContacts.length === 0, // First contact is primary
+      });
+    }
+
+    return studentMap;
+  }
+
+  /**
+   * Import students from CSV data
+   */
+  async importStudentsFromCsv(
+    importDto: ImportStudentsCsvDto,
+    createdBy: string,
+  ): Promise<BulkImportResultDto> {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    try {
+      // Parse and group CSV rows by student
+      const studentMap = this.parseCsvStudentRows(importDto.students);
+
+      for (const [lrnId, studentData] of studentMap) {
+        try {
+          // Find section ID
+          const sectionId = await this.findOrThrowSection(
+            studentData.student.section,
+            studentData.student.gradeLevel,
+          );
+
+          // Create student DTO
+          const studentDto: CreateStudentRequestDto = {
+            firstName: studentData.student.firstName,
+            lastName: studentData.student.lastName,
+            middleName: studentData.student.middleName,
+            studentId: `STU-${Date.now()}`, // Auto-generate student ID
+            lrnId: studentData.student.lrnId,
+            birthday: studentData.student.birthday,
+            gradeLevel: studentData.student.gradeLevel,
+            enrollmentYear: studentData.student.enrollmentYear,
+            age: studentData.student.age,
+            sectionId: sectionId,
+            emergencyContacts: studentData.emergencyContacts,
+          };
+
+          // Create student (this will handle auth user, public user, student record, and emergency contacts)
+          const result = await this.createStudent(studentDto, createdBy);
+          results.push(result);
+        } catch (error) {
+          errors.push({
+            lrnId: lrnId,
+            studentName: `${studentData.student.firstName} ${studentData.student.lastName}`,
+            error: error.message,
+          });
+        }
+      }
+
+      return {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+    } catch (error) {
+      this.logger.error('Error importing students from CSV:', error);
+      throw new InternalServerErrorException(
+        'Failed to import students from CSV',
       );
     }
   }

@@ -1,704 +1,327 @@
 import {
   Injectable,
   Logger,
-  InternalServerErrorException,
   NotFoundException,
-  ConflictException,
   ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateGwaDto } from './dto/create-gwa.dto';
 import { UpdateGwaDto } from './dto/update-gwa.dto';
-import { QueryGwaDto } from './dto/query-gwa.dto';
-import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
-import { Gwa, HonorStatus } from './entities/gwa.entity';
+
+export interface StudentGwaDto {
+  id?: string;
+  student_id: string;
+  student_name: string;
+  student_number: string;
+  gwa?: number;
+  remarks?: string;
+  honor_status: string;
+  gwa_id?: string; // null if no GWA entry exists yet
+}
+
+export interface StudentGwaListResponse {
+  students: StudentGwaDto[];
+  section_name: string;
+  grade_level: string;
+}
 
 @Injectable()
 export class GwaService {
   private readonly logger = new Logger(GwaService.name);
-  private supabase: SupabaseClient | null = null;
+  private supabase: SupabaseClient;
 
-  constructor(private configService: ConfigService) {}
-
-  private getSupabaseClient(): SupabaseClient {
-    if (!this.supabase) {
-      const supabaseUrl = this.configService.get<string>('supabase.url');
-      const supabaseServiceKey = this.configService.get<string>(
-        'supabase.serviceRoleKey',
-      );
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase configuration is missing');
-      }
-
-      this.supabase = createClient(supabaseUrl, supabaseServiceKey);
-    }
-    return this.supabase;
-  }
-
-  /**
-   * Calculate honor status based on GWA
-   */
-  private calculateHonorStatus(gwa: number): HonorStatus {
-    if (gwa >= 98) return HonorStatus.WITH_HIGHEST_HONORS;
-    if (gwa >= 95) return HonorStatus.WITH_HIGH_HONORS;
-    if (gwa >= 90) return HonorStatus.WITH_HONORS;
-    return HonorStatus.NONE;
-  }
-
-  /**
-   * Generate predefined remarks based on GWA
-   */
-  private generateRemarks(gwa: number): string {
-    if (gwa >= 95) return 'Excellent Performance';
-    if (gwa >= 85) return 'Very Satisfactory';
-    if (gwa >= 75) return 'Satisfactory';
-    return 'Needs Improvement';
-  }
-
-  /**
-   * Validate if teacher can manage GWA for this student
-   */
-  private async validateTeacherAccess(
-    teacherId: string,
-    studentId: string,
-  ): Promise<boolean> {
-    const supabase = this.getSupabaseClient();
-
-    const { data, error } = await supabase
-      .from('teachers')
-      .select(
-        `
-        id,
-        advisory_section_id,
-        advisory_section:sections(
-          id,
-          students!inner(id)
-        )
-      `,
-      )
-      .eq('id', teacherId)
-      .eq('advisory_section.students.id', studentId)
-      .single();
-
-    if (error) {
-      this.logger.error('Error validating teacher access:', error);
-      return false;
-    }
-
-    return !!data;
-  }
-
-  /**
-   * Check if user is admin
-   */
-  private async isAdmin(userId: string): Promise<boolean> {
-    const supabase = this.getSupabaseClient();
-
-    const { data, error } = await supabase
-      .from('users')
-      .select(
-        `
-        id,
-        role:roles(name)
-      `,
-      )
-      .eq('id', userId)
-      .eq('role.name', 'Admin')
-      .single();
-
-    if (error) {
-      this.logger.error('Error checking admin status:', error);
-      return false;
-    }
-
-    return !!data;
-  }
-
-  /**
-   * Create a new GWA record
-   */
-  async create(createGwaDto: CreateGwaDto, recordedBy: string): Promise<Gwa> {
-    try {
-      const supabase = this.getSupabaseClient();
-
-      // Check if user is admin first
-      const isUserAdmin = await this.isAdmin(recordedBy);
-      let teacherId: string;
-
-      if (isUserAdmin) {
-        // Admin: fetch advisory teacher by student's section_id
-        const { data: student, error: studentError } = await supabase
-          .from('students')
-          .select('section_id')
-          .eq('id', createGwaDto.studentId)
-          .single();
-
-        if (studentError || !student) {
-          throw new NotFoundException('Student not found');
-        }
-
-        const { data: advisoryTeacher, error: teacherError } = await supabase
-          .from('teachers')
-          .select('id')
-          .eq('advisory_section_id', student.section_id)
-          .single();
-
-        if (teacherError || !advisoryTeacher) {
-          throw new InternalServerErrorException(
-            'No advisory teacher found for student section',
-          );
-        }
-
-        teacherId = advisoryTeacher.id;
-      } else {
-        // Teacher: validate access and use their own ID
-        const { data: teacher, error: teacherError } = await supabase
-          .from('teachers')
-          .select('id')
-          .eq('user_id', recordedBy)
-          .single();
-
-        if (teacherError || !teacher) {
-          throw new ForbiddenException(
-            'Teacher record not found for this user',
-          );
-        }
-
-        const hasAccess = await this.validateTeacherAccess(
-          teacher.id,
-          createGwaDto.studentId,
-        );
-        if (!hasAccess) {
-          throw new ForbiddenException(
-            'You can only create GWA records for students in your advisory section',
-          );
-        }
-
-        teacherId = teacher.id;
-      }
-
-      // Check if student exists
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('id, section_id')
-        .eq('id', createGwaDto.studentId)
-        .single();
-
-      if (studentError || !student) {
-        throw new NotFoundException('Student not found');
-      }
-
-      // Check for duplicate GWA record for same period and year
-      const { data: existingGwa, error: duplicateError } = await supabase
-        .from('students_gwa')
-        .select('id')
-        .eq('student_id', createGwaDto.studentId)
-        .eq('grading_period', createGwaDto.gradingPeriod)
-        .eq('school_year', createGwaDto.schoolYear)
-        .single();
-
-      if (existingGwa) {
-        throw new ConflictException(
-          `GWA record already exists for student in ${createGwaDto.gradingPeriod} ${createGwaDto.schoolYear}`,
-        );
-      }
-
-      // Calculate honor status and generate remarks if not provided
-      const honorStatus = this.calculateHonorStatus(createGwaDto.gwa);
-      const remarks =
-        createGwaDto.remarks || this.generateRemarks(createGwaDto.gwa);
-
-      // Create GWA record
-      const { data: gwa, error: gwaError } = await supabase
-        .from('students_gwa')
-        .insert({
-          student_id: createGwaDto.studentId,
-          gwa: createGwaDto.gwa,
-          grading_period: createGwaDto.gradingPeriod,
-          school_year: createGwaDto.schoolYear,
-          remarks: remarks,
-          honor_status: honorStatus,
-          recorded_by: teacherId,
-        })
-        .select(
-          `
-          *,
-          student:students(
-            id,
-            first_name,
-            last_name,
-            middle_name,
-            student_id,
-            lrn_id,
-            grade_level,
-            section:sections(
-              id,
-              name,
-              grade_level
-            )
-          ),
-          teacher:teachers(
-            id,
-            first_name,
-            last_name,
-            middle_name,
-            advisory_section:sections(
-              id,
-              name,
-              grade_level
-            )
-          )
-        `,
-        )
-        .single();
-
-      if (gwaError) {
-        this.logger.error('Error creating GWA record:', gwaError);
-        // 23505 = unique_violation (Postgres) — Supabase exposes in error.code
-        if ((gwaError as any).code === '23505') {
-          throw new ConflictException(
-            `GWA record already exists for student in ${createGwaDto.gradingPeriod} ${createGwaDto.schoolYear}`,
-          );
-        }
-        throw new InternalServerErrorException('Failed to create GWA record');
-      }
-
-      this.logger.log(
-        `GWA record created successfully for student ${createGwaDto.studentId}`,
-      );
-      return gwa;
-    } catch (error) {
-      if (
-        error instanceof ForbiddenException ||
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      this.logger.error('Error creating GWA record:', error);
-      throw new InternalServerErrorException('Failed to create GWA record');
-    }
-  }
-
-  /**
-   * Find all GWA records with filters and pagination
-   */
-  async findAll(queryDto: QueryGwaDto): Promise<any> {
-    const supabase = this.getSupabaseClient();
-    const {
-      page = 1,
-      limit = 10,
-      studentId,
-      gradingPeriod,
-      schoolYear,
-      sortBy = 'created_at',
-      sortOrder = 'desc',
-    } = queryDto;
-
-    let query = supabase.from('students_gwa').select(
-      `
-        *,
-        student:students(
-          id,
-          first_name,
-          last_name,
-          middle_name,
-          student_id,
-          lrn_id,
-          grade_level,
-          section:sections(
-            id,
-            name,
-            grade_level
-          )
-        ),
-        teacher:teachers(
-          id,
-          first_name,
-          last_name,
-          middle_name,
-          advisory_section:sections(
-            id,
-            name,
-            grade_level
-          )
-        )
-      `,
-      { count: 'exact' },
+  constructor(private configService: ConfigService) {
+    const supabaseUrl = this.configService.get<string>('supabase.url');
+    const serviceRoleKey = this.configService.get<string>(
+      'supabase.serviceRoleKey',
     );
 
-    // Apply filters
-    if (studentId) {
-      query = query.eq('student_id', studentId);
-    }
-    if (gradingPeriod) {
-      query = query.eq('grading_period', gradingPeriod);
-    }
-    if (schoolYear) {
-      query = query.eq('school_year', schoolYear);
-    }
-
-    // Apply sorting
-    query = query.order(sortBy, { ascending: sortOrder === 'ASC' });
-
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      this.logger.error('Error fetching GWA records:', error);
-      throw new InternalServerErrorException('Failed to fetch GWA records');
-    }
-
-    return {
-      data,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
-      },
-    };
+    this.supabase = createClient(supabaseUrl!, serviceRoleKey!);
   }
 
-  /**
-   * Find a single GWA record by ID
-   */
-  async findOne(id: string): Promise<Gwa> {
-    const supabase = this.getSupabaseClient();
-
-    const { data: gwa, error } = await supabase
-      .from('students_gwa')
-      .select(
-        `
-        *,
-        student:students(
-          id,
-          first_name,
-          last_name,
-          middle_name,
-          student_id,
-          lrn_id,
-          grade_level,
-          section:sections(
-            id,
-            name,
-            grade_level
-          )
-        ),
-        teacher:teachers(
-          id,
-          first_name,
-          last_name,
-          middle_name,
-          advisory_section:sections(
-            id,
-            name,
-            grade_level
-          )
-        )
-      `,
-      )
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundException('GWA record not found');
-      }
-      this.logger.error('Error fetching GWA record:', error);
-      throw new InternalServerErrorException('Failed to fetch GWA record');
-    }
-
-    return gwa;
-  }
-
-  /**
-   * Update a GWA record
-   */
-  async update(
-    id: string,
-    updateGwaDto: UpdateGwaDto,
-    updatedBy: string,
-  ): Promise<Gwa> {
+  async getAdvisoryStudentsWithGwa(
+    teacherId: string,
+    gradingPeriod: string,
+    schoolYear: string,
+  ): Promise<StudentGwaListResponse> {
     try {
-      const supabase = this.getSupabaseClient();
+      this.logger.log(
+        `Getting advisory students for teacher: ${teacherId}, period: ${gradingPeriod}, year: ${schoolYear}`,
+      );
 
-      // Get existing GWA record first
-      const { data: existingGwa, error: fetchError } = await supabase
-        .from('students_gwa')
-        .select('student_id, recorded_by, grading_period, school_year')
-        .eq('id', id)
+      // First, get the teacher's advisory section
+      const { data: teacher, error: teacherError } = await this.supabase
+        .from('teachers')
+        .select('advisory_section_id')
+        .eq('user_id', teacherId)
         .single();
 
-      if (fetchError || !existingGwa) {
-        throw new NotFoundException('GWA record not found');
-      }
-
-      // Check if user is admin first
-      const isUserAdmin = await this.isAdmin(updatedBy);
-      if (!isUserAdmin) {
-        // Only fetch teacher record for non-admin users
-        const { data: teacher, error: teacherError } = await supabase
-          .from('teachers')
-          .select('id')
-          .eq('user_id', updatedBy)
-          .single();
-
-        if (teacherError || !teacher) {
-          throw new ForbiddenException(
-            'Teacher record not found for this user',
-          );
-        }
-
-        const hasAccess = await this.validateTeacherAccess(
-          teacher.id,
-          existingGwa.student_id,
+      if (teacherError || !teacher?.advisory_section_id) {
+        this.logger.error('Teacher not found or no advisory section assigned');
+        throw new NotFoundException(
+          'Teacher not found or no advisory section assigned',
         );
-        if (!hasAccess) {
-          throw new ForbiddenException(
-            'You can only update GWA records for students in your advisory section',
-          );
-        }
       }
 
-      // Prepare update data
-      const updateData: any = {};
+      // Get section details
+      const { data: section, error: sectionError } = await this.supabase
+        .from('sections')
+        .select('name, grade_level')
+        .eq('id', teacher.advisory_section_id)
+        .single();
 
-      if (updateGwaDto.gwa !== undefined) {
-        updateData.gwa = updateGwaDto.gwa;
-        updateData.honor_status = this.calculateHonorStatus(updateGwaDto.gwa);
-        // Update remarks if not provided and GWA changed
-        if (!updateGwaDto.remarks) {
-          updateData.remarks = this.generateRemarks(updateGwaDto.gwa);
-        }
+      if (sectionError || !section) {
+        this.logger.error('Section not found');
+        throw new NotFoundException('Section not found');
       }
 
-      if (updateGwaDto.gradingPeriod !== undefined) {
-        updateData.grading_period = updateGwaDto.gradingPeriod;
-      }
-
-      if (updateGwaDto.schoolYear !== undefined) {
-        updateData.school_year = updateGwaDto.schoolYear;
-      }
-
-      if (updateGwaDto.remarks !== undefined) {
-        updateData.remarks = updateGwaDto.remarks;
-      }
-
-      // Check for duplicate if grading period or school year changed
-      if (updateGwaDto.gradingPeriod || updateGwaDto.schoolYear) {
-        const { data: duplicateGwa, error: duplicateError } = await supabase
-          .from('students_gwa')
-          .select('id')
-          .eq('student_id', existingGwa.student_id)
-          .eq(
-            'grading_period',
-            updateGwaDto.gradingPeriod || existingGwa.grading_period,
-          )
-          .eq('school_year', updateGwaDto.schoolYear || existingGwa.school_year)
-          .neq('id', id)
-          .single();
-
-        if (duplicateGwa) {
-          throw new ConflictException(
-            `GWA record already exists for student in ${updateGwaDto.gradingPeriod || existingGwa.grading_period} ${updateGwaDto.schoolYear || existingGwa.school_year}`,
-          );
-        }
-      }
-
-      // Update GWA record
-      const { data: gwa, error: updateError } = await supabase
-        .from('students_gwa')
-        .update({
-          ...updateData,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select(
-          `
-          *,
-          student:students(
+      // Get students in the advisory section with their GWA records
+      const { data: studentsWithGwa, error: studentsError } =
+        await this.supabase
+          .from('students')
+          .select(
+            `
+          id,
+          student_id,
+          first_name,
+          last_name,
+          students_gwa!left(
             id,
-            first_name,
-            last_name,
-            middle_name,
-            student_id,
-            lrn_id,
-            grade_level,
-            section:sections(
-              id,
-              name,
-              grade_level
-            )
-          ),
-          teacher:teachers(
-            id,
-            first_name,
-            last_name,
-            middle_name,
-            advisory_section:sections(
-              id,
-              name,
-              grade_level
-            )
+            gwa,
+            remarks,
+            honor_status
           )
         `,
-        )
-        .single();
+          )
+          .eq('section_id', teacher.advisory_section_id)
+          .eq('students_gwa.grading_period', gradingPeriod)
+          .eq('students_gwa.school_year', schoolYear);
 
-      if (updateError) {
-        this.logger.error('Error updating GWA record:', updateError);
-        throw new InternalServerErrorException('Failed to update GWA record');
+      if (studentsError) {
+        this.logger.error('Error fetching students with GWA:', studentsError);
+        throw new Error(`Failed to fetch students: ${studentsError.message}`);
       }
 
-      this.logger.log(`GWA record updated successfully: ${id}`);
-      return gwa;
+      const students: StudentGwaDto[] =
+        studentsWithGwa?.map((student: any) => ({
+          student_id: student.id,
+          student_name: `${student.first_name} ${student.last_name}`,
+          student_number: student.student_id,
+          gwa: student.students_gwa?.[0]?.gwa,
+          remarks: student.students_gwa?.[0]?.remarks,
+          honor_status: student.students_gwa?.[0]?.honor_status || 'None',
+          gwa_id: student.students_gwa?.[0]?.id,
+        })) || [];
+
+      this.logger.log(
+        `Found ${students.length} students in advisory section: ${section.name}`,
+      );
+
+      return {
+        students,
+        section_name: section.name,
+        grade_level: section.grade_level,
+      };
     } catch (error) {
-      if (
-        error instanceof ForbiddenException ||
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      this.logger.error('Error updating GWA record:', error);
-      throw new InternalServerErrorException('Failed to update GWA record');
+      this.logger.error('Error in getAdvisoryStudentsWithGwa:', error);
+      throw error;
     }
   }
 
-  /**
-   * Remove a GWA record (Admin only)
-   */
-  async remove(id: string, deletedBy: string): Promise<void> {
+  async createGwaEntry(dto: CreateGwaDto, recordedBy: string): Promise<any> {
     try {
-      const supabase = this.getSupabaseClient();
+      this.logger.log(`Creating GWA entry for student: ${dto.student_id}`);
 
-      // Check if user is admin
-      const isUserAdmin = await this.isAdmin(deletedBy);
-      if (!isUserAdmin) {
-        throw new ForbiddenException(
-          'Only administrators can delete GWA records',
-        );
+      // Validate that the teacher is the advisor of the student's section
+      await this.validateTeacherPermission(dto.student_id, recordedBy);
+
+      // Get teacher.id from user.id (recordedBy is user.id from auth)
+      const { data: teacher, error: teacherError } = await this.supabase
+        .from('teachers')
+        .select('id')
+        .eq('user_id', recordedBy)
+        .single();
+
+      if (teacherError || !teacher) {
+        this.logger.error('Teacher not found for user:', recordedBy);
+        throw new NotFoundException('Teacher not found');
       }
 
-      // Check if GWA record exists
-      const { data: existingGwa, error: fetchError } = await supabase
+      const { data, error } = await this.supabase
         .from('students_gwa')
+        .insert({
+          student_id: dto.student_id,
+          gwa: dto.gwa,
+          grading_period: dto.grading_period,
+          school_year: dto.school_year,
+          remarks: dto.remarks,
+          honor_status: dto.honor_status,
+          recorded_by: teacher.id, // Use teachers.id, not users.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Error creating GWA entry:', error);
+        throw new Error(`Failed to create GWA entry: ${error.message}`);
+      }
+
+      this.logger.log(`GWA entry created successfully: ${data.id}`);
+      return data;
+    } catch (error) {
+      this.logger.error('Error in createGwaEntry:', error);
+      throw error;
+    }
+  }
+
+  async updateGwaEntry(
+    id: string,
+    dto: UpdateGwaDto,
+    teacherUserId: string, // This is actually user.id from auth
+  ): Promise<any> {
+    try {
+      this.logger.log(`Updating GWA entry: ${id}`);
+
+      // Get teacher.id from user.id (teacherUserId is user.id from auth)
+      const { data: teacher, error: teacherError } = await this.supabase
+        .from('teachers')
         .select('id')
+        .eq('user_id', teacherUserId)
+        .single();
+
+      if (teacherError || !teacher) {
+        this.logger.error('Teacher not found for user:', teacherUserId);
+        throw new NotFoundException('Teacher not found');
+      }
+
+      // Validate ownership
+      const { data: existingEntry, error: fetchError } = await this.supabase
+        .from('students_gwa')
+        .select('recorded_by')
         .eq('id', id)
         .single();
 
-      if (fetchError || !existingGwa) {
-        throw new NotFoundException('GWA record not found');
+      if (fetchError || !existingEntry) {
+        throw new NotFoundException('GWA entry not found');
       }
 
-      // Delete GWA record
-      const { error: deleteError } = await supabase
+      if (existingEntry.recorded_by !== teacher.id) {
+        throw new ForbiddenException(
+          'You can only update GWA entries you created',
+        );
+      }
+
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (dto.gwa !== undefined) updateData.gwa = dto.gwa;
+      if (dto.remarks !== undefined) updateData.remarks = dto.remarks;
+      if (dto.honor_status !== undefined)
+        updateData.honor_status = dto.honor_status;
+
+      const { data, error } = await this.supabase
+        .from('students_gwa')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Error updating GWA entry:', error);
+        throw new Error(`Failed to update GWA entry: ${error.message}`);
+      }
+
+      this.logger.log(`GWA entry updated successfully: ${id}`);
+      return data;
+    } catch (error) {
+      this.logger.error('Error in updateGwaEntry:', error);
+      throw error;
+    }
+  }
+
+  async deleteGwaEntry(id: string, teacherUserId: string): Promise<void> {
+    try {
+      this.logger.log(`Deleting GWA entry: ${id}`);
+
+      // Get teacher.id from user.id (teacherUserId is user.id from auth)
+      const { data: teacher, error: teacherError } = await this.supabase
+        .from('teachers')
+        .select('id')
+        .eq('user_id', teacherUserId)
+        .single();
+
+      if (teacherError || !teacher) {
+        this.logger.error('Teacher not found for user:', teacherUserId);
+        throw new NotFoundException('Teacher not found');
+      }
+
+      // Validate ownership
+      const { data: existingEntry, error: fetchError } = await this.supabase
+        .from('students_gwa')
+        .select('recorded_by')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !existingEntry) {
+        throw new NotFoundException('GWA entry not found');
+      }
+
+      if (existingEntry.recorded_by !== teacher.id) {
+        throw new ForbiddenException(
+          'You can only delete GWA entries you created',
+        );
+      }
+
+      const { error } = await this.supabase
         .from('students_gwa')
         .delete()
         .eq('id', id);
 
-      if (deleteError) {
-        this.logger.error('Error deleting GWA record:', deleteError);
-        throw new InternalServerErrorException('Failed to delete GWA record');
+      if (error) {
+        this.logger.error('Error deleting GWA entry:', error);
+        throw new Error(`Failed to delete GWA entry: ${error.message}`);
       }
 
-      this.logger.log(`GWA record deleted successfully: ${id}`);
+      this.logger.log(`GWA entry deleted successfully: ${id}`);
     } catch (error) {
-      if (
-        error instanceof ForbiddenException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
-      this.logger.error('Error deleting GWA record:', error);
-      throw new InternalServerErrorException('Failed to delete GWA record');
+      this.logger.error('Error in deleteGwaEntry:', error);
+      throw error;
     }
   }
 
-  /**
-   * Get GWA history for a specific student
-   */
-  async findByStudent(
+  private async validateTeacherPermission(
     studentId: string,
-    requester: SupabaseUser,
-  ): Promise<Gwa[]> {
-    const supabase = this.getSupabaseClient();
+    teacherId: string,
+  ): Promise<void> {
+    // Get student's section
+    const { data: student, error: studentError } = await this.supabase
+      .from('students')
+      .select('section_id')
+      .eq('id', studentId)
+      .single();
 
-    // AuthZ: admins and teachers can view any; students can view only their own
-    const isUserAdmin = await this.isAdmin(requester.id);
-    if (!isUserAdmin) {
-      const { data: teacher, error: teacherError } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('user_id', requester.id)
-        .single();
-      const isTeacher = !teacherError && !!teacher;
-      if (!isTeacher) {
-        const { data: studentProfile, error: studentErr } = await supabase
-          .from('students')
-          .select('id')
-          .eq('user_id', requester.id)
-          .single();
-        if (studentErr || !studentProfile || studentProfile.id !== studentId) {
-          throw new ForbiddenException(
-            'You can only view your own GWA history',
-          );
-        }
-      }
+    if (studentError || !student) {
+      throw new NotFoundException('Student not found');
     }
 
-    const { data: gwaRecords, error } = await supabase
-      .from('students_gwa')
-      .select(
-        `
-        *,
-        student:students(
-          id,
-          first_name,
-          last_name,
-          middle_name,
-          student_id,
-          lrn_id,
-          grade_level,
-          section:sections(
-            id,
-            name,
-            grade_level
-          )
-        ),
-        teacher:teachers(
-          id,
-          first_name,
-          last_name,
-          middle_name,
-          advisory_section:sections(
-            id,
-            name,
-            grade_level
-          )
-        )
-      `,
-      )
-      .eq('student_id', studentId)
-      .order('school_year', { ascending: false })
-      .order('grading_period', { ascending: true });
+    // Check if teacher is the advisor of this section
+    const { data: teacher, error: teacherError } = await this.supabase
+      .from('teachers')
+      .select('advisory_section_id')
+      .eq('user_id', teacherId)
+      .single();
 
-    if (error) {
-      this.logger.error('Error fetching student GWA history:', error);
-      throw new InternalServerErrorException(
-        'Failed to fetch student GWA history',
+    if (teacherError || !teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
+
+    if (teacher.advisory_section_id !== student.section_id) {
+      throw new ForbiddenException(
+        'You can only enter GWA for students in your advisory section',
       );
     }
-
-    return gwaRecords || [];
   }
 
   /**

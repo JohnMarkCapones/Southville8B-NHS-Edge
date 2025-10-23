@@ -241,6 +241,16 @@ export class R2StorageService {
   }
 
   /**
+   * Get presigned URL for downloading a file (convenience method)
+   */
+  async getPresignedUrl(
+    key: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
+    return this.generatePresignedUrl(key, 'getObject', expiresIn);
+  }
+
+  /**
    * Delete a file from R2
    */
   async deleteFile(key: string): Promise<FileUploadResult> {

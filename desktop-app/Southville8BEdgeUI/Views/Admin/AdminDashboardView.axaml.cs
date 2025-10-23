@@ -40,8 +40,8 @@ public partial class AdminDashboardView : UserControl
             StudentsSubtext,
             ActiveTeachersValue,
             TeachersSubtext,
-            OnlineUsersValue,
-            OnlineUsersSubtext,
+            TotalSectionsValue,
+            SectionsSubtext,
             RoomUtilizationValue,
             SystemUptimeValue,
             UptimeSubtext,
@@ -89,7 +89,7 @@ public partial class AdminDashboardView : UserControl
         {
             StudentsIcon,
             TeachersIcon,
-            OnlineIcon,
+            SectionsIcon,
             RoomIcon,
             UptimeIcon
         });

@@ -177,15 +177,10 @@ export class SchedulesService {
   async findAll(
     filters: SearchSchedulesDto,
   ): Promise<{ data: Schedule[]; pagination: any }> {
-    const cacheKey = `schedules:all:${JSON.stringify(filters)}`;
+    try {
+      console.log('FindAll schedules query:', JSON.stringify(filters));
 
-    // Try to get from cache
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      this.logger.log(`Cache hit for ${cacheKey}`);
-      return cached as { data: Schedule[]; pagination: any };
-    }
-    this.logger.log(`Cache miss for ${cacheKey}`);
+      const cacheKey = `schedules:all:${JSON.stringify(filters)}`;
 
     const supabase = this.getSupabaseClient();
     const {
@@ -248,24 +243,77 @@ export class SchedulesService {
     if (semester) {
       query = query.eq('semester', semester);
     }
+      // Try to get from cache
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger.log(`Cache hit for ${cacheKey}`);
+        return cached as { data: Schedule[]; pagination: any };
+      }
+      this.logger.log(`Cache miss for ${cacheKey}`);
 
-    // Apply search
-    if (search) {
-      query = query.or(
-        `teacher.first_name.ilike.%${search}%,teacher.last_name.ilike.%${search}%,subject.subject_name.ilike.%${search}%,section.name.ilike.%${search}%`,
+      const supabase = this.getSupabaseClient();
+      const {
+        page = 1,
+        limit = 10,
+        sectionId,
+        teacherId,
+        dayOfWeek,
+        schoolYear,
+        semester,
+        search,
+      } = filters;
+
+      let query = supabase.from('schedules').select(
+        `
+        id,
+        subject_id,
+        teacher_id,
+        section_id,
+        room_id,
+        building_id,
+        day_of_week,
+        start_time,
+        end_time,
+        school_year,
+        semester,
+        created_at,
+        updated_at,
+        subject:subjects(id, subject_name, description, grade_level, color_hex),
+        teacher:teachers(id, first_name, last_name, middle_name),
+        section:sections(id, name, grade_level, teacher_id),
+        room:rooms(id, room_number, capacity, floor_id),
+        building:buildings(id, building_name)
+      `,
+        { count: 'exact' },
       );
-    }
 
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit - 1;
+      // Apply filters
+      if (sectionId) {
+        query = query.eq('section_id', sectionId);
+      }
+      if (teacherId) {
+        query = query.eq('teacher_id', teacherId);
+      }
+      if (dayOfWeek) {
+        query = query.eq('day_of_week', dayOfWeek);
+      }
+      if (schoolYear) {
+        query = query.eq('school_year', schoolYear);
+      }
+      if (semester) {
+        query = query.eq('semester', semester);
+      }
 
-    const { data, error, count } = await query.range(startIndex, endIndex);
+      // Apply search
+      if (search) {
+        query = query.or(
+          `teacher.first_name.ilike.%${search}%,teacher.last_name.ilike.%${search}%,subject.subject_name.ilike.%${search}%,section.name.ilike.%${search}%`,
+        );
+      }
 
-    if (error) {
-      this.logger.error('Error fetching schedules:', error);
-      throw new InternalServerErrorException('Failed to fetch schedules');
-    }
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit - 1;
 
     // Transform the data
     const transformedData =
@@ -343,21 +391,101 @@ export class SchedulesService {
           : undefined,
       })) || [];
 
-    const pagination = {
-      total: count,
-      page,
-      limit,
-      pages: Math.ceil((count || 0) / limit),
-    };
+      const { data, error, count } = await query.range(startIndex, endIndex);
 
-    // Cache the result
-    await this.cacheManager.set(
-      cacheKey,
-      { data: transformedData, pagination },
-      this.CACHE_TTL,
-    );
+      if (error) {
+        console.error('Supabase error in findAll:', error);
+        this.logger.error('Error fetching schedules:', error);
+        throw new InternalServerErrorException(
+          `Failed to fetch schedules: ${error.message}`,
+        );
+      }
 
-    return { data: transformedData, pagination };
+      console.log(
+        'FindAll schedules success. Count:',
+        count,
+        'Data length:',
+        data?.length,
+      );
+
+      // Transform the data
+      const transformedData =
+        data?.map((schedule: any) => ({
+          id: schedule.id,
+          subjectId: schedule.subject_id,
+          teacherId: schedule.teacher_id,
+          sectionId: schedule.section_id,
+          roomId: schedule.room_id,
+          buildingId: schedule.building_id,
+          dayOfWeek: schedule.day_of_week,
+          startTime: schedule.start_time,
+          endTime: schedule.end_time,
+          schoolYear: schedule.school_year,
+          semester: schedule.semester,
+          createdAt: schedule.created_at,
+          updatedAt: schedule.updated_at,
+          subject: schedule.subject
+            ? {
+                id: schedule.subject.id,
+                subjectName: schedule.subject.subject_name,
+                description: schedule.subject.description,
+                gradeLevel: schedule.subject.grade_level,
+                colorHex: schedule.subject.color_hex,
+              }
+            : undefined,
+          teacher: schedule.teacher
+            ? {
+                id: schedule.teacher.id,
+                firstName: schedule.teacher.first_name,
+                lastName: schedule.teacher.last_name,
+                middleName: schedule.teacher.middle_name,
+              }
+            : undefined,
+          section: schedule.section
+            ? {
+                id: schedule.section.id,
+                name: schedule.section.name,
+                gradeLevel: schedule.section.grade_level,
+                teacherId: schedule.section.teacher_id,
+              }
+            : undefined,
+          room: schedule.room
+            ? {
+                id: schedule.room.id,
+                roomNumber: schedule.room.room_number,
+                capacity: schedule.room.capacity,
+                floorId: schedule.room.floor_id,
+              }
+            : undefined,
+          building: schedule.building
+            ? {
+                id: schedule.building.id,
+                buildingName: schedule.building.building_name,
+              }
+            : undefined,
+        })) || [];
+
+      const pagination = {
+        total: count,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit),
+      };
+
+      // Cache the result
+      await this.cacheManager.set(
+        cacheKey,
+        { data: transformedData, pagination },
+        this.CACHE_TTL,
+      );
+
+      console.log('FindAll schedules completed successfully. Returning data.');
+      return { data: transformedData, pagination };
+    } catch (error) {
+      console.error('Error in findAll schedules:', error);
+      this.logger.error('Error in findAll schedules:', error);
+      throw error;
+    }
   }
 
   async findOne(id: string): Promise<Schedule> {
@@ -748,7 +876,7 @@ export class SchedulesService {
       .from('student_schedule')
       .select(
         `
-        schedule:schedules!inner(
+        schedule:schedules(
           id,
           subject_id,
           teacher_id,
@@ -1082,5 +1210,82 @@ export class SchedulesService {
     ];
 
     await Promise.all(commonKeys.map((key) => this.cacheManager.del(key)));
+  }
+
+  async getTeacherTodaySchedules(
+    teacherId: string,
+    dayOfWeek: string,
+  ): Promise<Schedule[]> {
+    const supabase = this.getSupabaseClient();
+    const cacheKey = `schedules:teacher:today:${teacherId}:${dayOfWeek}`;
+
+    try {
+      // Check cache first
+      const cached = await this.cacheManager.get<Schedule[]>(cacheKey);
+      if (cached) {
+        this.logger.log(`Cache hit for teacher today schedules: ${teacherId}`);
+        return cached;
+      }
+
+      this.logger.log(
+        `Fetching today's schedules for teacher: ${teacherId}, day: ${dayOfWeek}`,
+      );
+
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(
+          `
+          *,
+          subject:subjects(id, name, code),
+          section:sections(id, name, grade_level),
+          room:rooms(id, name, room_number),
+          building:buildings(id, building_name)
+        `,
+        )
+        .eq('teacher_id', teacherId)
+        .eq('day_of_week', dayOfWeek)
+        .eq('status', 'Active')
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        this.logger.error('Error fetching teacher today schedules:', error);
+        throw new InternalServerErrorException(
+          `Failed to fetch today's schedules: ${error.message}`,
+        );
+      }
+
+      const schedules =
+        data?.map((item: any) => ({
+          id: item.id,
+          subjectId: item.subject_id,
+          teacherId: item.teacher_id,
+          sectionId: item.section_id,
+          roomId: item.room_id,
+          buildingId: item.building_id,
+          dayOfWeek: item.day_of_week,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          schoolYear: item.school_year,
+          semester: item.semester,
+          status: item.status,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          subject: item.subject,
+          section: item.section,
+          room: item.room,
+          building: item.building,
+        })) || [];
+
+      // Cache the result
+      await this.cacheManager.set(cacheKey, schedules, this.CACHE_TTL * 1000);
+
+      this.logger.log(
+        `Found ${schedules.length} schedules for teacher ${teacherId} on ${dayOfWeek}`,
+      );
+      return schedules;
+    } catch (error) {
+      this.logger.error('Error in getTeacherTodaySchedules:', error);
+      throw error;
+    }
   }
 }

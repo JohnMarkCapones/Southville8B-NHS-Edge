@@ -21,7 +21,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import sanitizeHtml from 'sanitize-html';
+import * as sanitizeHtml from 'sanitize-html';
 import { IsSafeUrl } from '../../common';
 
 export enum EventStatus {
@@ -317,12 +317,12 @@ export class CreateEventDto {
   organizerId: string;
 
   @IsOptional()
-  @IsSafeUrl()
+  @IsString()
   @MaxLength(500)
   @ApiProperty({
     required: false,
-    example: 'https://example.com/event-banner.jpg',
-    description: 'Event image URL',
+    example: 'events/images/filename.jpg',
+    description: 'Event image file key or URL',
     maxLength: 500,
   })
   eventImage?: string;

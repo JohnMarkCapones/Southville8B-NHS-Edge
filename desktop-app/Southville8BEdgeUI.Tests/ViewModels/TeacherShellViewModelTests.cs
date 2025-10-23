@@ -2,13 +2,42 @@ using System;
 using System.Linq;
 using Southville8BEdgeUI.ViewModels;
 using Southville8BEdgeUI.ViewModels.Teacher;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 using Xunit;
+using Moq;
 
 namespace Southville8BEdgeUI.Tests.ViewModels;
 
 public class TeacherShellViewModelTests
 {
-    private TeacherShellViewModel CreateVm() => new(enableRotation: false, enableTimeUpdater: false);
+    private TeacherShellViewModel CreateVm()
+    {
+        // Create mock services
+        var mockSseService = new Mock<ISseService>();
+        var mockApiClient = new Mock<IApiClient>();
+        var mockTokenStorage = new Mock<ITokenStorageService>();
+        var mockToastService = new Mock<IToastService>();
+
+        // Create mock user
+        var mockUser = new UserDto
+        {
+            Id = "test-teacher-id",
+            Email = "teacher@test.com",
+            Role = "teacher"
+        };
+
+        return new TeacherShellViewModel(
+            mockSseService.Object,
+            mockApiClient.Object,
+            mockTokenStorage.Object,
+            mockToastService.Object,
+            mockUser,
+            "test-access-token",
+            enableRotation: false,
+            enableTimeUpdater: false
+        );
+    }
 
     [Fact]
     public void Constructor_SetsInitialDashboardState()
@@ -16,10 +45,16 @@ public class TeacherShellViewModelTests
         var vm = CreateVm();
         Assert.Equal("Dashboard", vm.CurrentPage);
         Assert.IsType<TeacherDashboardViewModel>(vm.CurrentContent);
-        Assert.NotEmpty(vm.TodayClasses);
+        // TodayClasses might be empty initially due to async loading, so we'll check it's not null
+        Assert.NotNull(vm.TodayClasses);
         Assert.NotEmpty(vm.CalendarDays);
         Assert.NotEmpty(vm.FirstWeekDays);
         Assert.True(vm.IsDashboardActive);
+        
+        // Check that user data is initialized
+        Assert.Equal("teacher@test.com", vm.UserEmail);
+        Assert.Equal("Teacher", vm.UserRole);
+        Assert.Equal("T", vm.UserInitials);
     }
 
     [Fact]
@@ -141,8 +176,17 @@ public class TeacherShellViewModelTests
     public void NextTodayClass_Advances_WhenMultiple()
     {
         var vm = CreateVm();
+        
+        // Add some mock classes for testing since async loading might not have populated them yet
+        if (vm.TodayClasses.Count == 0)
+        {
+            vm.TodayClasses.Add(new TodayClassItem { Subject = "Math", Grade = "Grade 8-A", Time = "08:00 AM - 09:30 AM", Room = "Room 101" });
+            vm.TodayClasses.Add(new TodayClassItem { Subject = "Science", Grade = "Grade 8-B", Time = "10:00 AM - 11:30 AM", Room = "Lab 2" });
+        }
+        
         if (vm.TodayClasses.Count <= 1)
             return; // nothing to test
+        
         var current = vm.CurrentClassSubject;
         vm.NextTodayClassCommand.Execute(null);
         Assert.NotEqual(current, vm.CurrentClassSubject);

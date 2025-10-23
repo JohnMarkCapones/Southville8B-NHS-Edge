@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Southville8BEdgeUI.ViewModels.Teacher;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
@@ -10,10 +12,13 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System.Globalization;
 
 namespace Southville8BEdgeUI.ViewModels;
 
-public partial class TeacherShellViewModel : ViewModelBase
+public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 {
     [ObservableProperty]
     private ViewModelBase _currentContent;
@@ -97,21 +102,71 @@ public partial class TeacherShellViewModel : ViewModelBase
     private readonly bool _enableRotation;
     private readonly bool _enableTimeUpdater;
 
+    // Services
+    private readonly ISseService _sseService;
+    private readonly IApiClient _apiClient;
+    private readonly ITokenStorageService _tokenStorage;
+    private readonly IToastService _toastService;
+    private string? _userId;
+    private readonly string? _accessToken;
+
+    // Flag to suppress applying a theme while initializing (so we respect OS/default app theme)
+    private bool _suppressThemeApply = true;
+
     // Added optional parameters to disable timers for unit tests.
-    public TeacherShellViewModel(bool enableRotation = true, bool enableTimeUpdater = true)
+    public TeacherShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, IToastService toastService, UserDto? user = null, string? accessToken = null, bool enableRotation = true, bool enableTimeUpdater = true)
     {
+        _sseService = sseService;
+        _apiClient = apiClient;
+        _tokenStorage = tokenStorage;
+        _toastService = toastService;
+        _accessToken = accessToken;
         _enableRotation = enableRotation;
         _enableTimeUpdater = enableTimeUpdater;
+
+        // Set the access token on the API client immediately
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            _apiClient.SetAccessToken(accessToken);
+            // Store token in background for future sessions (fire-and-forget)
+            _ = StoreAccessTokenAsync(accessToken);
+        }
+
+        // Initialize with basic data from login
+        if (user != null)
+        {
+            _userId = user.Id;
+            UserEmail = user.Email ?? "teacher@southville.edu.ph";
+            UserRole = FormatRoleName(user.Role);
+            UserInitials = GetInitialsFromEmail(user.Email);
+            
+            // Fetch full profile asynchronously
+            _ = LoadUserProfileAsync();
+        }
+
         // Set the default page to the dashboard
         _currentContent = CreateDashboardViewModel();
-        InitializeRecentActivities();
-        InitializeTodayClasses();
-        GenerateCalendarDays();
-        if (_enableRotation) StartTodayClassRotation();
         UpdateColumnWidths();
 
-        // Initialize based on current theme (system/default)
-        IsDarkMode = Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
+        // Initialize theme without triggering change
+        if (Application.Current is not null)
+        {
+            _isDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+            OnPropertyChanged(nameof(IsDarkMode));
+        }
+        _suppressThemeApply = false;
+
+        GenerateCalendarDays();
+        
+        // Load real data asynchronously
+        _ = LoadTodaySchedulesAsync();
+        _ = LoadRecentActivitiesAsync();
+        _ = LoadTodayEventsAsync();
+
+        if (_enableRotation) StartTodayClassRotation();
+
+        // Initialize SSE connection
+        InitializeSseConnection();
 
         if (_enableTimeUpdater)
             StartTimeUpdater();
@@ -123,27 +178,295 @@ public partial class TeacherShellViewModel : ViewModelBase
         CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     }
 
-    private void InitializeRecentActivities()
+    private static string FormatRoleName(string? role)
     {
-        RecentActivities = new ObservableCollection<TeacherActivityItem>
+        if (string.IsNullOrEmpty(role)) return "Teacher";
+        
+        return role.ToLowerInvariant() switch
         {
-            new() { StudentName = "John Smith",  StudentInitials = "JS", Activity = "Submitted Assignment #3",      TimeAgo = "1hr ago"},
-            new() { StudentName = "Maria Garcia",StudentInitials = "MG", Activity = "Asked question in Math class", TimeAgo = "2hrs ago"},
-            new() { StudentName = "Anna Lee",    StudentInitials = "AL", Activity = "Completed quiz successfully",  TimeAgo = "3hrs ago"}
+            "admin" => "Administrator",
+            "teacher" => "Teacher",
+            "student" => "Student",
+            _ => role
         };
     }
 
-    private void InitializeTodayClasses()
+    private static string GetInitialsFromEmail(string? email)
     {
-        TodayClasses = new ObservableCollection<TodayClassItem>
+        if (string.IsNullOrWhiteSpace(email))
+            return "T";
+        
+        var username = email.Split('@')[0];
+        if (username.Length > 0)
+            return username[0].ToString().ToUpper();
+        
+        return "T";
+    }
+
+    private static string GetInitialsFromName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "T";
+        
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "T";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        
+        // First and last name initials
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+
+    private async Task LoadUserProfileAsync()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        
+        try
         {
-            new() { Subject="Mathematics", Grade="Grade 8-A Mathematics", Time="08:00 AM - 09:30 AM", Room="Room 101" },
-            new() { Subject="Science",     Grade="Grade 8-B Science",      Time="10:00 AM - 11:30 AM", Room="Laboratory 2" },
-            new() { Subject="English",     Grade="Grade 8-C English",      Time="01:00 PM - 02:30 PM", Room="Room 203" },
-            new() { Subject="Advisory",    Grade="Advisory Period",        Time="03:00 PM - 03:30 PM", Room="Faculty Hall" }
-        };
-        _currentTodayClassIndex = 0;
-        ApplyCurrentTodayClass();
+            var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+            
+            // Use the token if available (from login), otherwise rely on storage
+            UserProfile? profile;
+            if (!string.IsNullOrEmpty(_accessToken))
+            {
+                profile = await apiClient.GetUserProfileAsync(_userId, _accessToken);
+            }
+            else
+            {
+                profile = await apiClient.GetUserProfileAsync(_userId);
+            }
+            
+            if (profile != null)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    UserName = profile.FullName ?? "Teacher";
+                    UserEmail = profile.Email;
+                    UserRole = FormatRoleName(profile.Role?.Name);
+                    UserInitials = GetInitialsFromName(profile.FullName);
+                    
+                    System.Diagnostics.Debug.WriteLine($"User profile loaded: {UserName} ({UserRole})");
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load user profile: {ex.Message}");
+            // Keep the default values from login response
+        }
+    }
+
+    private async Task LoadRecentActivitiesAsync()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        
+        try
+        {
+            var activities = await _apiClient.GetTeacherRecentActivitiesAsync(_userId);
+            if (activities != null)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    RecentActivities.Clear();
+                    foreach (var activity in activities)
+                    {
+                        RecentActivities.Add(new TeacherActivityItem
+                        {
+                            StudentName = activity.StudentName,
+                            StudentInitials = activity.StudentInitials,
+                            Activity = activity.Activity,
+                            TimeAgo = activity.TimeAgo
+                        });
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load recent activities: {ex.Message}");
+            // Fallback to mock data
+            Dispatcher.UIThread.Post(() =>
+            {
+                RecentActivities = new ObservableCollection<TeacherActivityItem>
+                {
+                    new() { StudentName = "John Smith",  StudentInitials = "JS", Activity = "Submitted Assignment #3",      TimeAgo = "1hr ago"},
+                    new() { StudentName = "Maria Garcia",StudentInitials = "MG", Activity = "Asked question in Math class", TimeAgo = "2hrs ago"},
+                    new() { StudentName = "Anna Lee",    StudentInitials = "AL", Activity = "Completed quiz successfully",  TimeAgo = "3hrs ago"}
+                };
+            });
+        }
+    }
+
+    private async Task LoadTodaySchedulesAsync()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        
+        try
+        {
+            var schedules = await _apiClient.GetTeacherTodaySchedulesAsync(_userId);
+            if (schedules != null)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    TodayClasses.Clear();
+                    foreach (var schedule in schedules)
+                    {
+                        var subjectName = schedule.Subject?.SubjectName ?? "Unknown Subject";
+                        var sectionName = schedule.Section?.Name ?? "Unknown Section";
+                        var roomName = schedule.Room?.RoomNumber ?? "TBD";
+                        
+                        // Format time from "08:00" to "08:00 AM"
+                        var startTime = FormatTime(schedule.StartTime);
+                        var endTime = FormatTime(schedule.EndTime);
+                        var timeRange = $"{startTime} - {endTime}";
+                        
+                        TodayClasses.Add(new TodayClassItem
+                        {
+                            Subject = subjectName,
+                            Grade = $"{sectionName}",
+                            Time = timeRange,
+                            Room = roomName
+                        });
+                    }
+                    
+                    _currentTodayClassIndex = 0;
+                    ApplyCurrentTodayClass();
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load today's schedules: {ex.Message}");
+            // Fallback to mock data
+            Dispatcher.UIThread.Post(() =>
+            {
+                TodayClasses = new ObservableCollection<TodayClassItem>
+                {
+                    new() { Subject="Mathematics", Grade="Grade 8-A Mathematics", Time="08:00 AM - 09:30 AM", Room="Room 101" },
+                    new() { Subject="Science",     Grade="Grade 8-B Science",      Time="10:00 AM - 11:30 AM", Room="Laboratory 2" },
+                    new() { Subject="English",     Grade="Grade 8-C English",      Time="01:00 PM - 02:30 PM", Room="Room 203" },
+                    new() { Subject="Advisory",    Grade="Advisory Period",        Time="03:00 PM - 03:30 PM", Room="Faculty Hall" }
+                };
+                _currentTodayClassIndex = 0;
+                ApplyCurrentTodayClass();
+            });
+        }
+    }
+
+    private static string FormatTime(string time)
+    {
+        if (string.IsNullOrEmpty(time)) return "TBD";
+        
+        if (TimeSpan.TryParse(time, out var timeSpan))
+        {
+            var hour = timeSpan.Hours;
+            var minute = timeSpan.Minutes;
+            var period = hour >= 12 ? "PM" : "AM";
+            
+            if (hour == 0) hour = 12;
+            else if (hour > 12) hour -= 12;
+            
+            return $"{hour:D2}:{minute:D2} {period}";
+        }
+        
+        return time; // Return as-is if parsing fails
+    }
+
+    private void InitializeSseConnection()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        
+        // Subscribe to SSE events
+        _sseService.TeacherMetricsUpdated += OnTeacherMetricsUpdated;
+        _sseService.ConnectionStatusChanged += OnConnectionStatusChanged;
+
+        // Start SSE connection
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _sseService.StartAsync("desktop-sidebar/teacher/kpi/stream");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to start SSE connection: {ex.Message}");
+            }
+        });
+    }
+
+    private void OnTeacherMetricsUpdated(object? sender, TeacherSidebarMetrics metrics)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            TotalClasses = metrics.TotalClasses;
+            PendingAssignments = metrics.PendingAssignments;
+            TotalStudents = metrics.TotalStudents;
+            UnreadMessages = metrics.UnreadMessages;
+        });
+    }
+
+    private void OnConnectionStatusChanged(object? sender, string status)
+    {
+        System.Diagnostics.Debug.WriteLine($"SSE Connection Status: {status}");
+    }
+
+    private async Task LoadTodayEventsAsync()
+    {
+        try
+        {
+            var today = DateTime.Now.Date;
+            var end = today.AddDays(7);
+            var startStr = today.ToString("yyyy-MM-dd");
+            var endStr = end.ToString("yyyy-MM-dd");
+
+            // Fetch published events within range using generic GET to pass date filters
+            var endpoint = $"events?page=1&limit=50&status=published&startDate={startStr}&endDate={endStr}";
+            var response = await _apiClient.GetAsync<EventListResponse>(endpoint);
+            if (response?.Data == null)
+            {
+                return;
+            }
+
+            var events = response.Data;
+            var todayStr = today.ToString("yyyy-MM-dd");
+
+            // Find today's events
+            var todayEvents = events
+                .Where(e => string.Equals(e.Date, todayStr, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (todayEvents.Any())
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    // Update next class info with today's first event if no classes scheduled
+                    if (TodayClasses.Count == 0 && todayEvents.Count > 0)
+                    {
+                        var firstEvent = todayEvents.First();
+                        NextClassSubject = firstEvent.Title;
+                        NextClassTime = FormatTime(firstEvent.Time);
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load today's events: {ex.Message}");
+        }
+    }
+
+    private async Task StoreAccessTokenAsync(string accessToken)
+    {
+        try
+        {
+            // Calculate expiration time (typically JWT tokens expire in 1 hour)
+            var expiresAt = DateTime.UtcNow.AddHours(1);
+            await _tokenStorage.SaveTokensAsync(accessToken, string.Empty, expiresAt);
+            System.Diagnostics.Debug.WriteLine("Access token stored successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to store access token: {ex.Message}");
+        }
     }
 
     private void ApplyCurrentTodayClass()
@@ -394,7 +717,7 @@ public partial class TeacherShellViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToGradeEntry()
     {
-        CurrentContent = new GradeEntryViewModel();
+        CurrentContent = new GradeEntryViewModel(_apiClient, _toastService);
         CurrentPage = "Grade Entry";
     }
 
@@ -450,6 +773,49 @@ public partial class TeacherShellViewModel : ViewModelBase
         if (Application.Current is not null)
             Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
         IsUserDropdownVisible = false;
+    }
+
+    private void DisposeCurrentContent()
+    {
+        if (_currentContent is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            // Unsubscribe from SSE events
+            _sseService.TeacherMetricsUpdated -= OnTeacherMetricsUpdated;
+            _sseService.ConnectionStatusChanged -= OnConnectionStatusChanged;
+
+            // Stop SSE connection
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _sseService.StopAsync();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error stopping SSE connection: {ex.Message}");
+                }
+            });
+
+            // Dispose current content
+            DisposeCurrentContent();
+
+            // Stop timers
+            _todayClassRotationTimer?.Stop();
+        }
     }
 }
 
