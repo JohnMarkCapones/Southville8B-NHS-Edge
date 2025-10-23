@@ -3,11 +3,13 @@ import {
   Logger,
   NotFoundException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateGwaDto } from './dto/create-gwa.dto';
 import { UpdateGwaDto } from './dto/update-gwa.dto';
+import { Gwa } from './entities/gwa.entity';
 
 export interface StudentGwaDto {
   id?: string;
@@ -38,6 +40,10 @@ export class GwaService {
     );
 
     this.supabase = createClient(supabaseUrl!, serviceRoleKey!);
+  }
+
+  private getSupabaseClient(): SupabaseClient {
+    return this.supabase;
   }
 
   async getAdvisoryStudentsWithGwa(

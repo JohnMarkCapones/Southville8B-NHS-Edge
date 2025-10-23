@@ -105,13 +105,14 @@ export class GalleryItemsService {
   private async getOrCreateDefaultAlbum(userId: string): Promise<string> {
     try {
       // Try to find existing default album
-      const { data: existingAlbum, error: findError } = await this.supabaseService
-        .getServiceClient()
-        .from('gallery_albums')
-        .select('id')
-        .eq('slug', 'default-gallery')
-        .eq('is_deleted', false)
-        .single();
+      const { data: existingAlbum, error: findError } =
+        await this.supabaseService
+          .getServiceClient()
+          .from('gallery_albums')
+          .select('id')
+          .eq('slug', 'default-gallery')
+          .eq('is_deleted', false)
+          .single();
 
       if (existingAlbum && !findError) {
         return existingAlbum.id;

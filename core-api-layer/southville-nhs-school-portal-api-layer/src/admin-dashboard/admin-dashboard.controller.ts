@@ -56,8 +56,7 @@ export class AdminDashboardController {
     return await this.adminDashboardService.triggerMetricsUpdate();
   }
 
-
-@Sse('metrics/stream')
+  @Sse('metrics/stream')
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Get real-time desktop admin dashboard metrics stream',

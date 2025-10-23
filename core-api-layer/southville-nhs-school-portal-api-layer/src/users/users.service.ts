@@ -601,7 +601,7 @@ export class UsersService {
           // Continue with other contacts even if one fails
         }
       }
-      (result as any).emergencyContacts = emergencyContacts;
+      result.emergencyContacts = emergencyContacts;
     }
 
     return result;
@@ -1315,6 +1315,11 @@ export class UsersService {
       this.logger.error(
         `Unexpected error syncing last login for user ${userId}:`,
         error,
+      );
+    }
+  }
+
+  /**
    * Parse phone number from scientific notation to proper format
    */
   private parsePhoneNumber(value: string): string {

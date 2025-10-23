@@ -15,15 +15,15 @@ export interface SectionWithDetails extends Section {
   // Teacher details
   teacher_full_name?: string;
   teacher_email?: string;
-  
+
   // Building details
   building_name?: string;
   building_code?: string;
-  
+
   // Floor details
   floor_name?: string;
   floor_number?: number;
-  
+
   // Room details
   room_number?: string;
   room_name?: string;

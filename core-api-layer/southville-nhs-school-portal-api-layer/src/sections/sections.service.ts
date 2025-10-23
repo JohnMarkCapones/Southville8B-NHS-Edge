@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateSectionDto } from './dto/create-section.dto';
@@ -12,11 +16,11 @@ export class SectionsService {
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-    
+
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Supabase configuration is missing');
     }
-    
+
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
@@ -31,7 +35,9 @@ export class SectionsService {
         .single();
 
       if (existingSection) {
-        throw new ConflictException(`Section ${createSectionDto.name} already exists for ${createSectionDto.grade_level}`);
+        throw new ConflictException(
+          `Section ${createSectionDto.name} already exists for ${createSectionDto.grade_level}`,
+        );
       }
 
       // Check if teacher is already assigned to another section
@@ -43,7 +49,9 @@ export class SectionsService {
           .single();
 
         if (teacherSection) {
-          throw new ConflictException(`Teacher is already assigned to section ${teacherSection.name}`);
+          throw new ConflictException(
+            `Teacher is already assigned to section ${teacherSection.name}`,
+          );
         }
       }
 
@@ -77,9 +85,7 @@ export class SectionsService {
       const limit = params?.limit || 20;
       const offset = (page - 1) * limit;
 
-      let query = this.supabase
-        .from('sections_with_details')
-        .select('*');
+      let query = this.supabase.from('sections_with_details').select('*');
 
       // Apply filters
       if (params?.grade_level) {
@@ -91,7 +97,9 @@ export class SectionsService {
       }
 
       if (params?.search) {
-        query = query.or(`name.ilike.%${params.search}%,grade_level.ilike.%${params.search}%`);
+        query = query.or(
+          `name.ilike.%${params.search}%,grade_level.ilike.%${params.search}%`,
+        );
       }
 
       // Apply sorting
@@ -149,7 +157,9 @@ export class SectionsService {
         .order('name');
 
       if (error) {
-        throw new Error(`Failed to fetch sections for grade ${gradeLevel}: ${error.message}`);
+        throw new Error(
+          `Failed to fetch sections for grade ${gradeLevel}: ${error.message}`,
+        );
       }
 
       return data || [];
@@ -158,28 +168,42 @@ export class SectionsService {
     }
   }
 
-  async update(id: string, updateSectionDto: UpdateSectionDto): Promise<Section> {
+  async update(
+    id: string,
+    updateSectionDto: UpdateSectionDto,
+  ): Promise<Section> {
     try {
       // Check if section exists
       const existingSection = await this.findOne(id);
 
       // Check if section name already exists for this grade level (excluding current section)
-      if (updateSectionDto.name && updateSectionDto.name !== existingSection.name) {
+      if (
+        updateSectionDto.name &&
+        updateSectionDto.name !== existingSection.name
+      ) {
         const { data: duplicateSection } = await this.supabase
           .from('sections')
           .select('id')
           .eq('name', updateSectionDto.name)
-          .eq('grade_level', updateSectionDto.grade_level || existingSection.grade_level)
+          .eq(
+            'grade_level',
+            updateSectionDto.grade_level || existingSection.grade_level,
+          )
           .neq('id', id)
           .single();
 
         if (duplicateSection) {
-          throw new ConflictException(`Section ${updateSectionDto.name} already exists for this grade level`);
+          throw new ConflictException(
+            `Section ${updateSectionDto.name} already exists for this grade level`,
+          );
         }
       }
 
       // Check if teacher is already assigned to another section
-      if (updateSectionDto.teacher_id && updateSectionDto.teacher_id !== existingSection.teacher_id) {
+      if (
+        updateSectionDto.teacher_id &&
+        updateSectionDto.teacher_id !== existingSection.teacher_id
+      ) {
         const { data: teacherSection } = await this.supabase
           .from('sections')
           .select('id, name')
@@ -188,7 +212,9 @@ export class SectionsService {
           .single();
 
         if (teacherSection) {
-          throw new ConflictException(`Teacher is already assigned to section ${teacherSection.name}`);
+          throw new ConflictException(
+            `Teacher is already assigned to section ${teacherSection.name}`,
+          );
         }
       }
 
@@ -234,7 +260,9 @@ export class SectionsService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        throw new Error(`Failed to fetch sections for teacher: ${error.message}`);
+        throw new Error(
+          `Failed to fetch sections for teacher: ${error.message}`,
+        );
       }
 
       return data || [];
@@ -245,8 +273,7 @@ export class SectionsService {
 
   async getAvailableTeachers(): Promise<any[]> {
     try {
-      const { data, error } = await this.supabase
-        .rpc('get_available_teachers');
+      const { data, error } = await this.supabase.rpc('get_available_teachers');
 
       if (error) {
         throw new Error(`Failed to fetch available teachers: ${error.message}`);
@@ -259,7 +286,10 @@ export class SectionsService {
   }
 
   private handleError(error: any): never {
-    if (error instanceof NotFoundException || error instanceof ConflictException) {
+    if (
+      error instanceof NotFoundException ||
+      error instanceof ConflictException
+    ) {
       throw error;
     }
     throw new Error(error.message || 'An unexpected error occurred');

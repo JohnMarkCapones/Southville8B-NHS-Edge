@@ -9,7 +9,14 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { SectionsService } from './sections.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
@@ -32,7 +39,10 @@ export class SectionsController {
   @ApiResponse({ status: 201, description: 'Section created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 409, description: 'Section already exists' })
-  create(@Body() createSectionDto: CreateSectionDto, @AuthUser() _user: SupabaseUser) {
+  create(
+    @Body() createSectionDto: CreateSectionDto,
+    @AuthUser() _user: SupabaseUser,
+  ) {
     return this.sectionsService.create(createSectionDto);
   }
 
@@ -55,7 +65,7 @@ export class SectionsController {
     @Query('status') status?: string,
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
-    @Query('sortOrder') sortOrder?: 'asc' | 'desc'
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     return this.sectionsService.findAll({
       page,
@@ -70,8 +80,13 @@ export class SectionsController {
 
   @Get('teachers/available')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Get available teachers (not assigned to any section)' })
-  @ApiResponse({ status: 200, description: 'Available teachers retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get available teachers (not assigned to any section)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Available teachers retrieved successfully',
+  })
   getAvailableTeachers(@AuthUser() _user: SupabaseUser) {
     return this.sectionsService.getAvailableTeachers();
   }
@@ -80,9 +95,15 @@ export class SectionsController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Get sections by teacher ID' })
   @ApiParam({ name: 'teacherId', description: 'Teacher user ID' })
-  @ApiResponse({ status: 200, description: 'Teacher sections retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Teacher sections retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Teacher not found' })
-  getSectionsByTeacher(@Param('teacherId') teacherId: string, @AuthUser() _user: SupabaseUser) {
+  getSectionsByTeacher(
+    @Param('teacherId') teacherId: string,
+    @AuthUser() _user: SupabaseUser,
+  ) {
     return this.sectionsService.findByTeacherId(teacherId);
   }
 
@@ -90,7 +111,10 @@ export class SectionsController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Get sections by grade level' })
   @ApiResponse({ status: 200, description: 'Sections retrieved successfully' })
-  findByGradeLevel(@Param('gradeLevel') gradeLevel: string, @AuthUser() _user: SupabaseUser) {
+  findByGradeLevel(
+    @Param('gradeLevel') gradeLevel: string,
+    @AuthUser() _user: SupabaseUser,
+  ) {
     return this.sectionsService.findByGradeLevel(gradeLevel);
   }
 
@@ -109,7 +133,11 @@ export class SectionsController {
   @ApiResponse({ status: 200, description: 'Section updated successfully' })
   @ApiResponse({ status: 404, description: 'Section not found' })
   @ApiResponse({ status: 409, description: 'Section name or teacher conflict' })
-  update(@Param('id') id: string, @Body() updateSectionDto: UpdateSectionDto, @AuthUser() _user: SupabaseUser) {
+  update(
+    @Param('id') id: string,
+    @Body() updateSectionDto: UpdateSectionDto,
+    @AuthUser() _user: SupabaseUser,
+  ) {
     return this.sectionsService.update(id, updateSectionDto);
   }
 

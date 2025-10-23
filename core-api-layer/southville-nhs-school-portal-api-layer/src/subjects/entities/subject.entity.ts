@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export interface Subject {
   id: string;
   code: string;
@@ -12,21 +14,18 @@ export interface Subject {
   updated_at: string;
 }
 
-
-
-
-
-
-
-
-import { ApiProperty } from '@nestjs/swagger';
-
-export class Subject {
+export class SubjectEntity {
   @ApiProperty({
     description: 'Subject UUID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   id: string;
+
+  @ApiProperty({
+    description: 'Subject code',
+    example: 'MATH-8A',
+  })
+  code: string;
 
   @ApiProperty({
     description: 'Subject name',
@@ -41,18 +40,32 @@ export class Subject {
   description?: string;
 
   @ApiProperty({
-    description: 'Grade level',
-    required: false,
-    example: 10,
-  })
-  grade_level?: number;
-
-  @ApiProperty({
     description: 'Department ID',
     required: false,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   department_id?: string;
+
+  @ApiProperty({
+    description: 'Grade levels',
+    example: ['Grade 7', 'Grade 8'],
+    type: [String],
+  })
+  grade_levels: string[];
+
+  @ApiProperty({
+    description: 'Subject status',
+    example: 'active',
+    enum: ['active', 'inactive', 'archived'],
+  })
+  status: 'active' | 'inactive' | 'archived';
+
+  @ApiProperty({
+    description: 'Subject visibility',
+    example: 'public',
+    enum: ['public', 'students', 'restricted'],
+  })
+  visibility: 'public' | 'students' | 'restricted';
 
   @ApiProperty({
     description: 'Color hex code',
@@ -64,12 +77,12 @@ export class Subject {
   @ApiProperty({
     description: 'Created timestamp',
   })
-  created_at: Date;
+  created_at: string;
 
   @ApiProperty({
     description: 'Updated timestamp',
   })
-  updated_at: Date;
+  updated_at: string;
 
   // Join relation
   @ApiProperty({

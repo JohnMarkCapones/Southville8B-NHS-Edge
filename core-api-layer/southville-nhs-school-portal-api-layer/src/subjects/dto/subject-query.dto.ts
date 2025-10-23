@@ -23,6 +23,11 @@ export class SubjectQueryDto {
   @IsUUID()
   departmentId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by department ID (alternative naming)' })
+  @IsOptional()
+  @IsUUID()
+  department_id?: string;
+
   @ApiPropertyOptional({ description: 'Filter by grade level' })
   @IsOptional()
   @Type(() => Number)
@@ -33,4 +38,19 @@ export class SubjectQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by status' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Sort by field' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ description: 'Sort order' })
+  @IsOptional()
+  @IsString()
+  sortOrder?: string;
 }

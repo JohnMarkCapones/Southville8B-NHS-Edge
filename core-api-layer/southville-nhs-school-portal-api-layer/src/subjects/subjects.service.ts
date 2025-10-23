@@ -3,20 +3,15 @@ import {
   Logger,
   InternalServerErrorException,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 import { Subject } from './entities/subject.entity';
-} from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
-import { Subject } from './entities/subject.entity';
 import { SubjectQueryDto } from './dto/subject-query.dto';
 
-interface PaginatedResult {
+export interface PaginatedResult {
   data: Subject[];
   total: number;
   page: number;
@@ -27,126 +22,6 @@ interface PaginatedResult {
 @Injectable()
 export class SubjectsService {
   private readonly logger = new Logger(SubjectsService.name);
-  private supabase: SupabaseClient;
-
-  constructor(private configService: ConfigService) {}
-
-  private getSupabaseClient(): SupabaseClient {
-    if (!this.supabase) {
-      const supabaseUrl = this.configService.get<string>('supabase.url');
-      const supabaseServiceKey = this.configService.get<string>(
-        'supabase.serviceRoleKey',
-      );
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase configuration is missing');
-      }
-
-      this.supabase = createClient(
-        supabaseUrl,
-        supabaseServiceKey,
-      ) as SupabaseClient;
-    }
-    return this.supabase;
-  }
-
-  async create(createSubjectDto: CreateSubjectDto): Promise<Subject> {
-    try {
-      const supabase = this.getSupabaseClient();
-
-      // Check if subject code already exists
-      const { data: existingSubject } = await supabase
-        .from('subjects')
-        .select('id')
-        .eq('code', createSubjectDto.code)
-        .single();
-
-      if (existingSubject) {
-        throw new ConflictException('Subject code already exists');
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { data: subject, error } = await supabase
-        .from('subjects')
-        .insert({
-          code: createSubjectDto.code,
-          subject_name: createSubjectDto.subject_name,
-          description: createSubjectDto.description,
-          department_id: createSubjectDto.department_id,
-          grade_levels: createSubjectDto.grade_levels,
-          status: createSubjectDto.status || 'inactive',
-          visibility: createSubjectDto.visibility || 'public',
-        })
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error('Error creating subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to create subject: ${error.message}`,
-        );
-      }
-
-      return subject as Subject;
-    } catch (error) {
-      this.handleError(error, 'create subject');
-    }
-  }
-
-  async findAll(params: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ data: Subject[]; pagination: any }> {
-    try {
-      const supabase = this.getSupabaseClient();
-      const {
-        page = 1,
-        limit = 10,
-        search,
-        sortBy = 'created_at',
-        sortOrder = 'desc',
-      } = params;
-
-      let query = supabase.from('subjects').select('*', { count: 'exact' });
-
-      // Apply search filter
-      if (search) {
-        query = query.or(
-          `code.ilike.%${search}%,subject_name.ilike.%${search}%,description.ilike.%${search}%`,
-        );
-      }
-
-      // Apply sorting
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-
-      // Apply pagination
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
-      query = query.range(from, to);
-
-      const { data: subjects, error, count } = await query;
-
-      if (error) {
-        this.logger.error('Error fetching subjects:', error);
-        throw new InternalServerErrorException(
-          `Failed to fetch subjects: ${error.message}`,
-        );
-      }
-
-      return {
-        data: (subjects || []) as Subject[],
-        pagination: {
-          page,
-          limit,
-          total: count || 0,
-          pages: Math.ceil((count || 0) / limit),
-        },
-      };
-    } catch (error) {
-      this.handleError(error, 'fetch subjects');
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
@@ -156,134 +31,119 @@ export class SubjectsService {
 
   async findAll(query: SubjectQueryDto): Promise<PaginatedResult> {
     try {
-      const { page = 1, limit = 10, departmentId, gradeLevel, search } = query;
-      const offset = (page - 1) * limit;
+      const { page = 1, limit = 10, search, status, departmentId, department_id } = query;
+      const supabase = this.getSupabaseClient();
 
-      let supabaseQuery = this.getSupabaseClient()
+      let queryBuilder = supabase
         .from('subjects')
-        .select(
-          `
-          *,
-          department:department_id(id, department_name, description)
-        `,
-          { count: 'exact' },
-        )
-        .order('subject_name', { ascending: true });
-
-      // Apply filters
-      if (departmentId) {
-        supabaseQuery = supabaseQuery.eq('department_id', departmentId);
-      }
-
-      if (gradeLevel !== undefined && gradeLevel !== null) {
-        supabaseQuery = supabaseQuery.eq('grade_level', gradeLevel);
-      }
+        .select('*', { count: 'exact' })
+        .eq('is_deleted', false);
 
       if (search) {
-        supabaseQuery = supabaseQuery.ilike('subject_name', `%${search}%`);
+        queryBuilder = queryBuilder.or(
+          `subject_name.ilike.%${search}%,code.ilike.%${search}%`,
+        );
       }
 
-      // Apply pagination
-      supabaseQuery = supabaseQuery.range(offset, offset + limit - 1);
+      if (status) {
+        queryBuilder = queryBuilder.eq('status', status);
+      }
 
-      const { data, error, count } = await supabaseQuery;
+      if (departmentId || department_id) {
+        queryBuilder = queryBuilder.eq('department_id', departmentId || department_id);
+      }
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit - 1;
+
+      const { data, error, count } = await queryBuilder
+        .order('created_at', { ascending: false })
+        .range(startIndex, endIndex);
 
       if (error) {
         this.logger.error('Error fetching subjects:', error);
         throw new InternalServerErrorException('Failed to fetch subjects');
       }
 
-      const totalPages = Math.ceil((count || 0) / limit);
-
       return {
-        data: data || [],
+        data: (data || []) as Subject[],
         total: count || 0,
         page,
         limit,
-        totalPages,
+        totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
-      this.logger.error('Error fetching subjects:', error);
-      throw new InternalServerErrorException('Failed to fetch subjects');
+      this.handleError(error, 'fetch subjects');
     }
   }
 
   async findOne(id: string): Promise<Subject> {
     try {
       const supabase = this.getSupabaseClient();
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { data: subject, error } = await supabase
+      const { data, error } = await supabase
         .from('subjects')
         .select('*')
         .eq('id', id)
+        .eq('is_deleted', false)
         .single();
 
       if (error) {
         if (error.code === 'PGRST116') {
-          throw new NotFoundException('Subject not found');
+          this.logger.warn(`Subject with id ${id} not found`);
+          throw new NotFoundException(`Subject with ID ${id} not found`);
         }
         this.logger.error('Error fetching subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to fetch subject: ${error.message}`,
-        );
+        throw new InternalServerErrorException('Failed to fetch subject');
       }
 
-      return subject as Subject;
+      return data;
     } catch (error) {
       this.handleError(error, 'fetch subject');
     }
   }
 
-  async update(
-    id: string,
-    updateSubjectDto: UpdateSubjectDto,
-  ): Promise<Subject> {
+  async create(createSubjectDto: CreateSubjectDto): Promise<Subject> {
     try {
       const supabase = this.getSupabaseClient();
-
-      // Check if subject exists
-      const existingSubject = await this.findOne(id);
-      if (!existingSubject) {
-        throw new NotFoundException('Subject not found');
-      }
-
-      // Check if code is being updated and if it already exists
-      if (
-        updateSubjectDto.code &&
-        updateSubjectDto.code !== existingSubject.code
-      ) {
-        const { data: codeExists } = await supabase
-          .from('subjects')
-          .select('id')
-          .eq('code', updateSubjectDto.code)
-          .neq('id', id)
-          .single();
-
-        if (codeExists) {
-          throw new ConflictException('Subject code already exists');
-        }
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { data: subject, error } = await supabase
+      const { data, error } = await supabase
         .from('subjects')
-        .update({
-          ...updateSubjectDto,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
+        .insert(createSubjectDto)
         .select()
         .single();
 
       if (error) {
-        this.logger.error('Error updating subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to update subject: ${error.message}`,
-        );
+        this.logger.error('Error creating subject:', error);
+        throw new InternalServerErrorException('Failed to create subject');
       }
 
-      return subject as Subject;
+      this.logger.log(`Subject created with ID: ${data.id}`);
+      return data;
+    } catch (error) {
+      this.handleError(error, 'create subject');
+    }
+  }
+
+  async update(id: string, updateSubjectDto: UpdateSubjectDto): Promise<Subject> {
+    try {
+      const supabase = this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from('subjects')
+        .update(updateSubjectDto)
+        .eq('id', id)
+        .eq('is_deleted', false)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          throw new NotFoundException(`Subject with ID ${id} not found`);
+        }
+        this.logger.error('Error updating subject:', error);
+        throw new InternalServerErrorException('Failed to update subject');
+      }
+
+      this.logger.log(`Subject updated with ID: ${id}`);
+      return data;
     } catch (error) {
       this.handleError(error, 'update subject');
     }
@@ -292,61 +152,28 @@ export class SubjectsService {
   async remove(id: string): Promise<void> {
     try {
       const supabase = this.getSupabaseClient();
-
-      // Check if subject exists
-      await this.findOne(id);
-
-      const { error } = await supabase.from('subjects').delete().eq('id', id);
+      const { error } = await supabase
+        .from('subjects')
+        .update({ is_deleted: true })
+        .eq('id', id);
 
       if (error) {
         this.logger.error('Error deleting subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to delete subject: ${error.message}`,
-        );
+        throw new InternalServerErrorException('Failed to delete subject');
       }
+
+      this.logger.log(`Subject soft deleted with ID: ${id}`);
     } catch (error) {
       this.handleError(error, 'delete subject');
     }
   }
 
   private handleError(error: any, operation: string): never {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof ConflictException ||
-      error instanceof BadRequestException
-    ) {
+    if (error instanceof NotFoundException || error instanceof BadRequestException) {
       throw error;
     }
 
-    this.logger.error(`Error in ${operation}:`, error);
-    throw new InternalServerErrorException(
-      `An error occurred while ${operation}`,
-    );
-      const { data, error } = await this.getSupabaseClient()
-        .from('subjects')
-        .select(
-          `
-          *,
-          department:department_id(id, department_name, description)
-        `,
-        )
-        .eq('id', id)
-        .maybeSingle();
-
-      if (error) {
-        this.logger.error('Error fetching subject:', error);
-        throw new InternalServerErrorException('Failed to fetch subject');
-      }
-
-      if (!data) {
-        this.logger.warn(`Subject with id ${id} not found`);
-        throw new NotFoundException('Subject not found');
-      }
-
-      return data;
-    } catch (error) {
-      this.logger.error('Error fetching subject:', error);
-      throw new InternalServerErrorException('Failed to fetch subject');
-    }
+    this.logger.error(`Error during ${operation}:`, error);
+    throw new InternalServerErrorException(`Failed to ${operation}`);
   }
 }
