@@ -1,0 +1,102 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CreateClubDomainDto = exports.CreateDomainDto = void 0;
+const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
+class CreateDomainDto {
+    type;
+    name;
+}
+exports.CreateDomainDto = CreateDomainDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Domain type',
+        example: 'club',
+        enum: ['club', 'event', 'project'],
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateDomainDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Domain name',
+        example: 'Math Club',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateDomainDto.prototype, "name", void 0);
+class CreateClubDomainDto {
+    name;
+    description;
+    president_id;
+    vp_id;
+    secretary_id;
+    advisor_id;
+}
+exports.CreateClubDomainDto = CreateClubDomainDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Club name',
+        example: 'Math Club',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateClubDomainDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Club description',
+        example: 'A club for mathematics enthusiasts',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateClubDomainDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'President user ID',
+        example: 'e1caec49-f61d-4158-bac7-1dd456e9976b',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateClubDomainDto.prototype, "president_id", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Vice President user ID',
+        example: 'e1caec49-f61d-4158-bac7-1dd456e9976b',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateClubDomainDto.prototype, "vp_id", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Secretary user ID',
+        example: 'e1caec49-f61d-4158-bac7-1dd456e9976b',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateClubDomainDto.prototype, "secretary_id", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Advisor user ID',
+        example: 'e1caec49-f61d-4158-bac7-1dd456e9976b',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateClubDomainDto.prototype, "advisor_id", void 0);
+//# sourceMappingURL=create-domain.dto.js.map

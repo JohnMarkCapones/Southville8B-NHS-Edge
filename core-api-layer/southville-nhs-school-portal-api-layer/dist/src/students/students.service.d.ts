@@ -1,0 +1,50 @@
+import { SupabaseService } from '../supabase/supabase.service';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { Student } from './entities/student.entity';
+import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
+import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
+import { EmergencyContact } from './entities/emergency-contact.entity';
+import { CreateStudentRankingDto } from './dto/create-student-ranking.dto';
+import { UpdateStudentRankingDto } from './dto/update-student-ranking.dto';
+import { StudentRanking } from './entities/student-ranking.entity';
+export declare class StudentsService {
+    private readonly supabaseService;
+    private readonly logger;
+    constructor(supabaseService: SupabaseService);
+    private generatePasswordFromBirthday;
+    private validateEmailUniqueness;
+    private getRoleIdByName;
+    private getStudentIdByUserId;
+    create(createStudentDto: CreateStudentDto): Promise<any>;
+    findAll(filters?: any): Promise<any>;
+    findOne(id: string): Promise<Student>;
+    update(id: string, updateStudentDto: UpdateStudentDto): Promise<Student>;
+    remove(id: string): Promise<void>;
+    private mapEmergencyContactDbToDto;
+    private createEmergencyContacts;
+    getEmergencyContacts(studentUserId: string): Promise<EmergencyContact[]>;
+    addEmergencyContact(studentUserId: string, contactDto: CreateEmergencyContactDto): Promise<EmergencyContact>;
+    updateEmergencyContact(contactId: string, updateDto: UpdateEmergencyContactDto): Promise<EmergencyContact>;
+    deleteEmergencyContact(contactId: string): Promise<void>;
+    createRanking(createDto: CreateStudentRankingDto): Promise<StudentRanking>;
+    findAllRankings(filters?: {
+        page?: number;
+        limit?: number;
+        gradeLevel?: string;
+        quarter?: string;
+        schoolYear?: string;
+        topN?: number;
+    }): Promise<{
+        data: StudentRanking[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
+    findRankingById(id: string): Promise<StudentRanking>;
+    findRankingsByStudent(studentId: string): Promise<StudentRanking[]>;
+    updateRanking(id: string, updateDto: UpdateStudentRankingDto): Promise<StudentRanking>;
+    deleteRanking(id: string): Promise<void>;
+    private syncStudentRankToMainTable;
+}

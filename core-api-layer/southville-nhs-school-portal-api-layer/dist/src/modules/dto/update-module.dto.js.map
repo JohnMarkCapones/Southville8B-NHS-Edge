@@ -1,0 +1,1 @@
+{"version":3,"file":"update-module.dto.js","sourceRoot":"","sources":["../../../../src/modules/dto/update-module.dto.ts"],"names":[],"mappings":";;;;;;;;;;;;AAAA,uDAAmD;AACnD,2DAAsD;AACtD,6CAAsD;AAEtD,MAAa,eAAgB,SAAQ,IAAA,0BAAW,EAAC,mCAAe,CAAC;IAK/D,WAAW,GAAa,KAAK,CAAC;CAC/B;AAND,0CAMC;AADC;IAJC,IAAA,6BAAmB,EAAC;QACnB,WAAW,EAAE,sCAAsC;QACnD,OAAO,EAAE,KAAK;KACf,CAAC;;oDAC4B"}

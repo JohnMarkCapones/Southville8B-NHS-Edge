@@ -1,0 +1,64 @@
+import { ConfigService } from '@nestjs/config';
+import { Cache } from 'cache-manager';
+import { Event } from './entities/event.entity';
+import { EventAdditionalInfo } from './entities/event-additional-info.entity';
+import { EventHighlight } from './entities/event-highlight.entity';
+import { EventSchedule } from './entities/event-schedule.entity';
+import { EventFaq } from './entities/event-faq.entity';
+import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateEventAdditionalInfoDto } from './dto/create-event.dto';
+import { UpdateEventAdditionalInfoDto } from './dto/update-event-additional-info.dto';
+import { CreateEventHighlightDto } from './dto/create-event.dto';
+import { UpdateEventHighlightDto } from './dto/update-event-highlight.dto';
+import { CreateEventScheduleDto } from './dto/create-event.dto';
+import { UpdateEventScheduleDto } from './dto/update-event-schedule.dto';
+import { CreateEventFaqDto } from './dto/create-event.dto';
+import { UpdateEventFaqDto } from './dto/update-event-faq.dto';
+import { ReorderEventItemsDto } from './dto/reorder-event-items.dto';
+import { EventStatisticsDto } from './dto/event-statistics.dto';
+import { TagDto } from './dto/tag.dto';
+export declare class EventsService {
+    private configService;
+    private cacheManager;
+    private readonly logger;
+    private readonly CACHE_TTL;
+    private readonly UPCOMING_CACHE_TTL;
+    private supabase;
+    constructor(configService: ConfigService, cacheManager: Cache);
+    private getSupabaseClient;
+    create(dto: CreateEventDto, userId: string): Promise<Event>;
+    findAll(filters: any): Promise<{
+        data: Event[];
+        pagination: any;
+    }>;
+    findOne(id: string): Promise<Event>;
+    findUpcoming(): Promise<{
+        data: Event[];
+        pagination: any;
+    }>;
+    findByOrganizer(organizerId: string, filters?: any): Promise<{
+        data: Event[];
+        pagination: any;
+    }>;
+    update(id: string, dto: UpdateEventDto, userId: string, userRole: string): Promise<Event>;
+    remove(id: string): Promise<void>;
+    addAdditionalInfo(eventId: string, dto: CreateEventAdditionalInfoDto): Promise<EventAdditionalInfo>;
+    updateAdditionalInfo(eventId: string, infoId: string, dto: UpdateEventAdditionalInfoDto): Promise<EventAdditionalInfo>;
+    removeAdditionalInfo(eventId: string, infoId: string): Promise<void>;
+    addHighlight(eventId: string, dto: CreateEventHighlightDto): Promise<EventHighlight>;
+    updateHighlight(eventId: string, highlightId: string, dto: UpdateEventHighlightDto): Promise<EventHighlight>;
+    removeHighlight(eventId: string, highlightId: string): Promise<void>;
+    addScheduleItem(eventId: string, dto: CreateEventScheduleDto): Promise<EventSchedule>;
+    updateScheduleItem(eventId: string, scheduleId: string, dto: UpdateEventScheduleDto): Promise<EventSchedule>;
+    removeScheduleItem(eventId: string, scheduleId: string): Promise<void>;
+    addFaq(eventId: string, dto: CreateEventFaqDto): Promise<EventFaq>;
+    updateFaq(eventId: string, faqId: string, dto: UpdateEventFaqDto): Promise<EventFaq>;
+    removeFaq(eventId: string, faqId: string): Promise<void>;
+    reorderItems(eventId: string, entityType: string, dto: ReorderEventItemsDto): Promise<void>;
+    private validateOrganizer;
+    private validateTagIds;
+    getTags(): Promise<TagDto[]>;
+    getStatistics(): Promise<EventStatisticsDto>;
+    private invalidateEventCaches;
+}

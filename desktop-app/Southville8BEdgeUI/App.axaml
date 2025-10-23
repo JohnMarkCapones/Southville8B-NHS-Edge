@@ -12,12 +12,4 @@
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
-
-    <Application.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Southville8BEdgeUI/Styles/ThemeColors.axaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Application.Resources>
 </Application>
