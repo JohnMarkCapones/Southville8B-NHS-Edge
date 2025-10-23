@@ -7,6 +7,7 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 import helmet from '@fastify/helmet';
 import compression from '@fastify/compress';
+import multipart from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -31,8 +32,18 @@ async function bootstrap() {
     },
   });
 
-  // Compression middleware
-  await app.register(compression);
+  // Compression middleware with optimized settings
+  await app.register(compression, {
+    encodings: ['gzip', 'deflate', 'br'], // Brotli compression for better performance
+    threshold: 1024, // Compress responses larger than 1KB
+  });
+
+  // Multipart support for file uploads
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  });
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -43,7 +54,8 @@ async function bootstrap() {
     }),
   );
 
-  // Enable API versioning
+  // Enable API versioning with global prefix
+  app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
@@ -54,6 +66,14 @@ async function bootstrap() {
     origin:
       process.env.NODE_ENV === 'production' ? ['https://yourdomain.com'] : true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-CSRF-Token',
+      'x-csrf-token',
+    ],
   });
 
   // Swagger documentation

@@ -2,6 +2,9 @@
 /dist
 /node_modules
 /build
+npm-global/
+Usersmerlynnpm-global/
+*.jar
 
 # Logs
 logs

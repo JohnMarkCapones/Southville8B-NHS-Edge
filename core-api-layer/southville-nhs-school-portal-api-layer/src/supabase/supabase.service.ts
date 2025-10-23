@@ -47,6 +47,7 @@ export class SupabaseService {
 
   /**
    * Gets the regular Supabase client (lazy initialization)
+   * For RLS to work, use getClientWithAuth() instead when user context is needed
    */
   getClient(): SupabaseClient {
     if (!this.supabase) {
@@ -58,6 +59,27 @@ export class SupabaseService {
       this.supabase = createClient(supabaseUrl!, anonKey!);
     }
     return this.supabase;
+  }
+
+  /**
+   * Gets a Supabase client with user authentication (for RLS)
+   * @param accessToken - JWT token from Authorization header
+   */
+  getClientWithAuth(accessToken: string): SupabaseClient {
+    this.validateConfig();
+
+    const supabaseUrl = this.configService.get<string>('supabase.url');
+    const anonKey = this.configService.get<string>('supabase.anonKey');
+
+    const client = createClient(supabaseUrl!, anonKey!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    });
+
+    return client;
   }
 
   /**
