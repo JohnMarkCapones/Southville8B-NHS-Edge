@@ -1,13 +1,19 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.IO;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 using Avalonia; // For Application.Current
 using Avalonia.Media; // For IBrush
 using Avalonia.Styling; // Theme variant
+using Avalonia.Threading; // For Dispatcher.UIThread
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Teacher;
 
@@ -23,19 +29,27 @@ internal static class GradeColorProvider
 
 public partial class GradeEntryViewModel : ViewModelBase
 {
-    [ObservableProperty] private int _pendingGradesCount = 24;
-    [ObservableProperty] private int _completedTodayCount = 8;
-    [ObservableProperty] private double _classAverageGrade = 87.5;
-    [ObservableProperty] private int _assignmentsDueCount = 5;
-    [ObservableProperty] private string _selectedClass = "";
-    [ObservableProperty] private ObservableCollection<string> _classes = new();
-    [ObservableProperty] private ObservableCollection<StudentGradeViewModel> _studentGrades = new();
-    [ObservableProperty] private ObservableCollection<GradeDistributionItemViewModel> _gradeDistribution = new();
-    [ObservableProperty] private ObservableCollection<RecentGradeEntryViewModel> _recentGradeEntries = new();
-    [ObservableProperty] private bool _hasUnsavedChanges; // tracks if any grade was edited locally
+    private readonly IApiClient _apiClient;
+    private readonly IToastService _toastService;
+    private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(1, 1);
+    private int _semaphoreReleased = 0;
 
-    public GradeEntryViewModel()
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private string _selectedGradingPeriod = "";
+    [ObservableProperty] private string _selectedSchoolYear = "";
+    [ObservableProperty] private ObservableCollection<string> _gradingPeriods = new();
+    [ObservableProperty] private ObservableCollection<string> _schoolYears = new();
+    [ObservableProperty] private string _sectionName = "";
+    [ObservableProperty] private string _gradeLevel = "";
+    [ObservableProperty] private ObservableCollection<StudentGradeViewModel> _studentGrades = new();
+
+    public string DebugInfo => $"StudentGrades: Count={StudentGrades.Count}, HashCode={StudentGrades.GetHashCode()}";
+    [ObservableProperty] private bool _hasUnsavedChanges;
+
+    public GradeEntryViewModel(IApiClient apiClient, IToastService toastService)
     {
+        _apiClient = apiClient;
+        _toastService = toastService;
         InitializeData();
         HookStudentGradesCollection();
 
@@ -63,29 +77,12 @@ public partial class GradeEntryViewModel : ViewModelBase
         GradeColorProvider.Neutral = ResolveBrush("TextSecondaryBrush");
 
         // Update existing collections
-        foreach (var sg in StudentGrades)
-            sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
-
-        foreach (var dist in GradeDistribution)
+        if (StudentGrades != null)
         {
-            dist.Color = dist.Grade switch
+            foreach (var sg in StudentGrades)
             {
-                "A" => GradeColorProvider.Success,
-                "B" => GradeColorProvider.Info,
-                "C" => GradeColorProvider.Warning,
-                "D" => GradeColorProvider.Danger,
-                "F" => GradeColorProvider.Neutral,
-                _ => GradeColorProvider.Neutral
-            };
-        }
-
-        foreach (var recent in RecentGradeEntries)
-        {
-            // Attempt to parse numeric portion; fallback neutral
-            if (recent.Grade is { Length: >0 } g && g.TrimEnd('%') is string raw && double.TryParse(raw, out var val))
-                recent.GradeColor = GradeColorProvider.GetFor(val);
-            else
-                recent.GradeColor = GradeColorProvider.Neutral;
+                sg.GradeColor = GradeColorProvider.GetFor((double)(sg.Gwa ?? 0));
+            }
         }
     }
 
@@ -94,62 +91,86 @@ public partial class GradeEntryViewModel : ViewModelBase
         // Initialize theme colors first
         RefreshThemeColors();
 
-        Classes = new ObservableCollection<string> { "Grade 8A - Math", "Grade 8B - Science", "Grade 9A - Math" };
-        SelectedClass = Classes[0];
-
-        StudentGrades = new ObservableCollection<StudentGradeViewModel>
+        // Initialize grading periods and school years
+        GradingPeriods = new ObservableCollection<string>
         {
-            new() { StudentName = "John Smith", QuizGrade = "85", AssignmentGrade = "92", ExamGrade = "88", FinalGrade = 88.3 },
-            new() { StudentName = "Maria Garcia", QuizGrade = "90", AssignmentGrade = "87", ExamGrade = "91", FinalGrade = 89.3 },
+            "Q1",
+            "Q2", 
+            "Q3",
+            "Q4"
         };
 
-        GradeDistribution = new ObservableCollection<GradeDistributionItemViewModel>
+        SchoolYears = new ObservableCollection<string>
         {
-            new() { Grade = "A", Count = 12, Percentage = 40, Color = GradeColorProvider.Success },
-            new() { Grade = "B", Count = 8, Percentage = 26.7, Color = GradeColorProvider.Info },
-            new() { Grade = "C", Count = 6, Percentage = 20, Color = GradeColorProvider.Warning },
-            new() { Grade = "D", Count = 3, Percentage = 10, Color = GradeColorProvider.Danger },
-            new() { Grade = "F", Count = 1, Percentage = 3.3, Color = GradeColorProvider.Neutral }
+            "2024-2025",
+            "2025-2026",
+            "2026-2027"
         };
 
-        RecentGradeEntries = new ObservableCollection<RecentGradeEntryViewModel>
+        // Set default selections
+        if (GradingPeriods.Count > 0)
         {
-            new() { StudentName = "John Smith", AssignmentName = "Quiz #3", Grade = "85%", Timestamp = "2 mins ago", GradeColor = GradeColorProvider.Info },
-            new() { StudentName = "Maria Garcia", AssignmentName = "Assignment #2", Grade = "92%", Timestamp = "5 mins ago", GradeColor = GradeColorProvider.Success }
+            SelectedGradingPeriod = GradingPeriods[0];
+        }
+        
+        if (SchoolYears.Count > 0)
+        {
+            SelectedSchoolYear = SchoolYears[0];
+        }
+
+        // Load students when selections change
+        PropertyChanged += async (_, e) =>
+        {
+            if (e.PropertyName == nameof(SelectedGradingPeriod) || e.PropertyName == nameof(SelectedSchoolYear))
+            {
+                if (!string.IsNullOrEmpty(SelectedGradingPeriod) && !string.IsNullOrEmpty(SelectedSchoolYear))
+                {
+                    System.Diagnostics.Debug.WriteLine($"PropertyChanged: {e.PropertyName} changed to {(e.PropertyName == nameof(SelectedGradingPeriod) ? SelectedGradingPeriod : SelectedSchoolYear)}");
+                    await LoadStudentsAsync();
+                }
+            }
         };
+
+        // Load initial data
+        _ = LoadStudentsAsync();
     }
 
     private void HookStudentGradesCollection()
     {
+        if (StudentGrades == null)
+        {
+            return;
+        }
+
         foreach (var sg in StudentGrades)
         {
             sg.PropertyChanged += (_, args) =>
             {
-                if (args.PropertyName == nameof(StudentGradeViewModel.FinalGrade))
+                if (args.PropertyName == nameof(StudentGradeViewModel.Gwa))
                 {
-                    sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
+                    sg.GradeColor = GradeColorProvider.GetFor((double)(sg.Gwa ?? 0));
                 }
                 MarkDirty();
             };
-            sg.GradeColor = GradeColorProvider.GetFor(sg.FinalGrade);
+            sg.GradeColor = GradeColorProvider.GetFor((double)(sg.Gwa ?? 0));
         }
+        
         StudentGrades.CollectionChanged += (_, args) =>
         {
             if (args.NewItems != null)
             {
                 foreach (var item in args.NewItems.OfType<StudentGradeViewModel>())
                 {
-                    item.GradeColor = GradeColorProvider.GetFor(item.FinalGrade);
+                    item.GradeColor = GradeColorProvider.GetFor((double)(item.Gwa ?? 0));
                     item.PropertyChanged += (_, ev) =>
                     {
-                        if (ev.PropertyName == nameof(StudentGradeViewModel.FinalGrade))
-                            item.GradeColor = GradeColorProvider.GetFor(item.FinalGrade);
+                        if (ev.PropertyName == nameof(StudentGradeViewModel.Gwa))
+                            item.GradeColor = GradeColorProvider.GetFor((double)(item.Gwa ?? 0));
                         MarkDirty();
                     };
                 }
             }
             MarkDirty();
-            ExportGradesCommand.NotifyCanExecuteChanged();
             SaveAllGradesCommand.NotifyCanExecuteChanged();
         };
     }
@@ -160,70 +181,348 @@ public partial class GradeEntryViewModel : ViewModelBase
         SaveAllGradesCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanExportGrades() => StudentGrades?.Count > 0;
-    private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades?.Count > 0;
-
-    [RelayCommand(CanExecute = nameof(CanExportGrades))]
-    private void ExportGrades()
-    {
-        // Simple CSV export to temp folder (placeholder implementation)
-        var sb = new StringBuilder();
-        sb.AppendLine("Student,Quiz,Assignment,Exam,Final");
-        foreach (var s in StudentGrades)
-        {
-            sb.AppendLine($"{Escape(s.StudentName)},{Escape(s.QuizGrade)},{Escape(s.AssignmentGrade)},{Escape(s.ExamGrade)},{s.FinalGrade:F2}");
-        }
-        try
-        {
-            var fileName = $"grades_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-            var path = Path.Combine(Path.GetTempPath(), fileName);
-            File.WriteAllText(path, sb.ToString());
-            // TODO: surface success toast via a service / messenger
-        }
-        catch
-        {
-            // TODO: surface error toast
-        }
-    }
+    private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades != null && StudentGrades.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanSaveAllGrades))]
-    private void SaveAllGrades()
+    private async void SaveAllGrades()
     {
-        // Placeholder: simulate persistence
-        HasUnsavedChanges = false;
-        SaveAllGradesCommand.NotifyCanExecuteChanged();
-        // TODO: persist to backend / repository and raise notifications
+        if (StudentGrades == null || StudentGrades.Count == 0)
+        {
+            System.Diagnostics.Debug.WriteLine("SaveAllGrades: No students to save");
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            foreach (var student in StudentGrades.Where(s => s.IsDirty))
+            {
+                // Validate GWA range before sending to API
+                if (student.Gwa.HasValue && (student.Gwa.Value < 50 || student.Gwa.Value > 100))
+                {
+                    // Skip this student and show error
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(student.GwaId))
+                {
+                    // Create new entry
+                    var createDto = new CreateGwaDto
+                    {
+                        StudentId = student.StudentId,
+                        Gwa = student.Gwa ?? 0,
+                        GradingPeriod = SelectedGradingPeriod,
+                        SchoolYear = SelectedSchoolYear,
+                        Remarks = student.Remarks,
+                        HonorStatus = student.HonorStatus
+                    };
+
+                    var result = await _apiClient.CreateGwaEntryAsync(createDto);
+                    if (result != null)
+                    {
+                        student.GwaId = result.GwaId ?? "";
+                        student.IsDirty = false;
+                    }
+                }
+                else
+                {
+                    // Update existing entry
+                    var updateDto = new UpdateGwaDto
+                    {
+                        Gwa = student.Gwa,
+                        Remarks = student.Remarks,
+                        HonorStatus = student.HonorStatus
+                    };
+
+                    var result = await _apiClient.UpdateGwaEntryAsync(student.GwaId, updateDto);
+                    if (result != null)
+                    {
+                        student.IsDirty = false;
+                    }
+                }
+            }
+
+            HasUnsavedChanges = false;
+            SaveAllGradesCommand.NotifyCanExecuteChanged();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error saving grades: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    private static string Escape(string? value) => string.IsNullOrEmpty(value) ? "" : value.Contains(',') ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
+    private async Task LoadStudentsAsync()
+    {
+        // Use semaphore to prevent race conditions
+        if (!await _loadingSemaphore.WaitAsync(0))
+        {
+            System.Diagnostics.Debug.WriteLine("LoadStudentsAsync: Already loading, skipping...");
+            return;
+        }
+
+        try
+        {
+            if (string.IsNullOrEmpty(SelectedGradingPeriod) || string.IsNullOrEmpty(SelectedSchoolYear))
+            {
+                System.Diagnostics.Debug.WriteLine("LoadStudentsAsync: Period or year not selected");
+                return;
+            }
+
+            IsLoading = true;
+            System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: Fetching students for {SelectedGradingPeriod} {SelectedSchoolYear}");
+            
+            var response = await _apiClient.GetAdvisoryStudentsWithGwaAsync(SelectedGradingPeriod, SelectedSchoolYear);
+            
+            System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: Response is null? {response == null}");
+            
+            if (response != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: Got {response.Students?.Count ?? 0} students");
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: Section={response.SectionName}, Grade={response.GradeLevel}");
+                
+                // Capture response data before UI thread dispatch
+                var studentsToAdd = response.Students?.ToList() ?? new List<StudentGwaDto>();
+                var sectionName = response.SectionName;
+                var gradeLevel = response.GradeLevel;
+                
+                // UPDATE UI ON UI THREAD - ConfigureAwait(true) to ensure we return to UI thread
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    SectionName = sectionName;
+                    GradeLevel = gradeLevel;
+                    
+                    if (StudentGrades != null)
+                    {
+                        StudentGrades.Clear();
+                    }
+                    
+                    foreach (var student in studentsToAdd)
+                    {
+                        var studentGrade = new StudentGradeViewModel(_apiClient, _toastService, SelectedGradingPeriod, SelectedSchoolYear)
+                        {
+                            StudentId = student.StudentId,
+                            StudentName = student.StudentName,
+                            StudentNumber = student.StudentNumber,
+                            Gwa = student.Gwa,
+                            Remarks = student.Remarks ?? "",
+                            HonorStatus = student.HonorStatus,
+                            GwaId = student.GwaId ?? "",
+                            IsDirty = false
+                        };
+
+                        studentGrade.PropertyChanged += (_, args) =>
+                        {
+                            if (args.PropertyName == nameof(StudentGradeViewModel.Gwa) ||
+                                args.PropertyName == nameof(StudentGradeViewModel.Remarks) ||
+                                args.PropertyName == nameof(StudentGradeViewModel.HonorStatus))
+                            {
+                                studentGrade.IsDirty = true;
+                                MarkDirty();
+                            }
+                        };
+
+                        if (StudentGrades != null)
+                        {
+                            StudentGrades.Add(studentGrade);
+                        }
+                    }
+                    
+                    // Force property change notification
+                    OnPropertyChanged(nameof(StudentGrades));
+                }, DispatcherPriority.Normal); // Explicitly set priority
+                
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: After UI update - StudentGrades.Count = {StudentGrades.Count}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: Response was null for {SelectedGradingPeriod} {SelectedSchoolYear}");
+                
+                // Clear on null response
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    StudentGrades.Clear();
+                    SectionName = "";
+                    GradeLevel = "";
+                }, DispatcherPriority.Normal);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: ERROR - {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            IsLoading = false;
+            if (Interlocked.CompareExchange(ref _semaphoreReleased, 1, 0) == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: FINALLY - About to release semaphore");
+                _loadingSemaphore.Release();
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: FINALLY - Semaphore released");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: FINALLY - Semaphore already released, skipping");
+            }
+            _semaphoreReleased = 0; // Reset for next call
+        }
+    }
 }
 
 public partial class StudentGradeViewModel : ViewModelBase
 {
+    private readonly IApiClient _apiClient;
+    private readonly IToastService _toastService;
+    private readonly string _gradingPeriod;
+    private readonly string _schoolYear;
+
+    [ObservableProperty] private string _studentId = "";
     [ObservableProperty] private string _studentName = "";
-    [ObservableProperty] private string _quizGrade = "";
-    [ObservableProperty] private string _assignmentGrade = "";
-    [ObservableProperty] private string _examGrade = "";
-    [ObservableProperty] private double _finalGrade;
+    [ObservableProperty] private string _studentNumber = "";
+    [ObservableProperty] private string _gwaId = ""; // empty if new entry
+    [ObservableProperty] private decimal? _gwa;
+    [ObservableProperty] private string _remarks = "";
+    [ObservableProperty] private string _honorStatus = "None";
+    [ObservableProperty] private ObservableCollection<string> _honorStatusOptions = new() { 
+        "None", "With Honors", "High Honors", "Highest Honors" 
+    };
+    [ObservableProperty] private bool _isDirty; // tracks if edited
     [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed grade color
 
-    [RelayCommand] private void SaveGrade() { }
+    public StudentGradeViewModel(IApiClient apiClient, IToastService toastService, string gradingPeriod, string schoolYear)
+    {
+        _apiClient = apiClient;
+        _toastService = toastService;
+        _gradingPeriod = gradingPeriod;
+        _schoolYear = schoolYear;
+    }
+
+    partial void OnGwaChanged(decimal? value)
+    {
+        // Update grade color
+        GradeColor = GradeColorProvider.GetFor((double)(value ?? 0));
+    }
+
+    [RelayCommand]
+    private async Task SaveGrade()
+    {
+        System.Diagnostics.Debug.WriteLine($"=== SaveGrade() called for {StudentName} ===");
+        System.Diagnostics.Debug.WriteLine($"StudentId: {StudentId}");
+        System.Diagnostics.Debug.WriteLine($"Gwa: {Gwa}");
+        System.Diagnostics.Debug.WriteLine($"GwaId: {GwaId}");
+        System.Diagnostics.Debug.WriteLine($"Remarks: {Remarks}");
+        System.Diagnostics.Debug.WriteLine($"HonorStatus: {HonorStatus}");
+        System.Diagnostics.Debug.WriteLine($"IsDirty: {IsDirty}");
+        System.Diagnostics.Debug.WriteLine($"GradingPeriod: {_gradingPeriod}");
+        System.Diagnostics.Debug.WriteLine($"SchoolYear: {_schoolYear}");
+        
+        try
+        {
+            // Validate GWA range
+            if (!Gwa.HasValue || Gwa.Value < 50 || Gwa.Value > 100)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Invalid GWA value: {Gwa}. Must be between 50-100.");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"✅ GWA validation passed: {Gwa}");
+
+            if (string.IsNullOrEmpty(GwaId))
+            {
+                System.Diagnostics.Debug.WriteLine($"📝 Creating NEW GWA entry for {StudentName}");
+                
+                // Create new entry
+                var createDto = new CreateGwaDto
+                {
+                    StudentId = StudentId,
+                    Gwa = Gwa.Value,
+                    GradingPeriod = _gradingPeriod,
+                    SchoolYear = _schoolYear,
+                    Remarks = Remarks,
+                    HonorStatus = HonorStatus
+                };
+
+                System.Diagnostics.Debug.WriteLine($"📤 Sending CREATE request to API...");
+                var result = await _apiClient.CreateGwaEntryAsync(createDto);
+                
+                if (result != null)
+                {
+                    GwaId = result.GwaId ?? "";
+                    IsDirty = false;
+                    System.Diagnostics.Debug.WriteLine($"✅ Successfully created GWA entry for {StudentName}. New GwaId: {GwaId}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ Failed to create GWA entry for {StudentName} - API returned null");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"📝 Updating EXISTING GWA entry for {StudentName} (ID: {GwaId})");
+                
+                // Update existing entry
+                var updateDto = new UpdateGwaDto
+                {
+                    Gwa = Gwa,
+                    Remarks = Remarks,
+                    HonorStatus = HonorStatus
+                };
+
+                System.Diagnostics.Debug.WriteLine($"📤 Sending PATCH request to API...");
+                var result = await _apiClient.UpdateGwaEntryAsync(GwaId, updateDto);
+                
+                if (result != null)
+                {
+                    IsDirty = false;
+                    System.Diagnostics.Debug.WriteLine($"✅ Successfully updated GWA entry for {StudentName}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ Failed to update GWA entry for {StudentName} - API returned null");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"💥 Error saving grade for {StudentName}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"💥 Stack trace: {ex.StackTrace}");
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"=== SaveGrade() completed for {StudentName} ===");
+    }
+
+    [RelayCommand]
+    private async Task DeleteGrade()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(GwaId))
+            {
+                System.Diagnostics.Debug.WriteLine($"No GWA entry to delete for {StudentName}");
+                return;
+            }
+
+            // Note: DeleteGwaAsync method doesn't exist in IApiClient yet
+            // For now, we'll just clear the local data
+            // TODO: Implement actual delete API call when endpoint is available
+            
+            GwaId = "";
+            Gwa = null;
+            Remarks = "";
+            HonorStatus = "None";
+            IsDirty = false;
+            
+            System.Diagnostics.Debug.WriteLine($"Cleared GWA entry for {StudentName}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting grade for {StudentName}: {ex.Message}");
+        }
+    }
+
     [RelayCommand] private void EditNotes() { }
-}
-
-public partial class GradeDistributionItemViewModel : ViewModelBase
-{
-    [ObservableProperty] private string _grade = "";
-    [ObservableProperty] private int _count;
-    [ObservableProperty] private double _percentage;
-    [ObservableProperty] private IBrush _color = Brushes.Transparent; // Themed color
-}
-
-public partial class RecentGradeEntryViewModel : ViewModelBase
-{
-    [ObservableProperty] private string _studentName = "";
-    [ObservableProperty] private string _assignmentName = "";
-    [ObservableProperty] private string _grade = "";
-    [ObservableProperty] private string _timestamp = "";
-    [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed color
 }

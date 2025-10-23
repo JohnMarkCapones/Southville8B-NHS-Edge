@@ -99,11 +99,23 @@ public partial class LoginViewModel : ViewModelBase
                     var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
                     var tokenStorage = ServiceLocator.Services.GetRequiredService<ITokenStorageService>();
                     var accessToken = response.Session?.AccessToken ?? string.Empty;
+                    
+                    // Set the access token on the API client
+                    apiClient.SetAccessToken(accessToken);
+                    
                     NavigateTo?.Invoke(new AdminShellViewModel(sseService, apiClient, tokenStorage, response.User, accessToken));
                     break;
-                    case "teacher":
-                        NavigateTo?.Invoke(new TeacherShellViewModel());
-                        break;
+                case "teacher":
+                    var teacherSseService = ServiceLocator.Services.GetRequiredService<ISseService>();
+                    var teacherApiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+                    var teacherTokenStorage = ServiceLocator.Services.GetRequiredService<ITokenStorageService>();
+                    var teacherAccessToken = response.Session?.AccessToken ?? string.Empty;
+                    
+                    // Set the access token on the API client
+                    teacherApiClient.SetAccessToken(teacherAccessToken);
+                    
+                    NavigateTo?.Invoke(new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, response.User, teacherAccessToken));
+                    break;
                     default:
                         _toastService.Warning($"Unknown role: {response.User.Role}");
                         break;

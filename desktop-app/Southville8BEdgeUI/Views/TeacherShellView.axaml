@@ -230,40 +230,52 @@
                             </Button>
 
                             <TextBlock Text="CLASSROOM" Classes="section-header"/>
+                            <!-- Schedule Planner - HIDDEN FOR NOW -->
+                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToSchedulePlannerCommand}" Classes.active="{Binding IsSchedulePlannerActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Calendar" IconSize="Size16"/>
                                     <TextBlock Text="Schedule Planner" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            -->
                             <Button Classes="nav-item" Command="{Binding NavigateToGradeEntryCommand}" Classes.active="{Binding IsGradeEntryActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
                                     <TextBlock Text="Grade Entry" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            <!-- Student Management - HIDDEN FOR NOW -->
+                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToStudentManagementCommand}" Classes.active="{Binding IsStudentManagementActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Person" IconSize="Size16"/>
                                     <TextBlock Text="Student Management" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            -->
 
                             <TextBlock Text="CONTENT" Classes="section-header"/>
+                            <!-- My Announcements - HIDDEN FOR NOW -->
+                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToMyAnnouncementsCommand}" Classes.active="{Binding IsMyAnnouncementsActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
                                     <TextBlock Text="My Announcements" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            -->
 
                             <TextBlock Text="COMMUNICATION" Classes="section-header"/>
+                            <!-- Messaging/Chat - HIDDEN FOR NOW -->
+                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToMessagingCommand}" Classes.active="{Binding IsMessagingActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
                                     <TextBlock Text="Messaging" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            -->
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
@@ -351,12 +363,14 @@
                                             <Border Width="40" Height="40" Background="{DynamicResource BorderBrush}" CornerRadius="20">
                                                 <TextBlock Text="{Binding UserInitials}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                             </Border>
-                                            <StackPanel VerticalAlignment="Center">
+                                            <StackPanel VerticalAlignment="Center" MaxWidth="140">
                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" 
+                                                               TextTrimming="CharacterEllipsis" MaxWidth="120"/>
                                                     <ic:FluentIcon Icon="ChevronDown" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                <TextBlock Text="{Binding UserRole}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" 
+                                                           TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Button>

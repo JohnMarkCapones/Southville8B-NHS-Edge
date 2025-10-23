@@ -536,6 +536,17 @@ public partial class AdminShellViewModel : ViewModelBase
         CurrentPage = "Building Management"; 
         CloseUserDropdown(); 
     }
+    [RelayCommand] private void NavigateToClassSchedules() 
+    { 
+        DisposeCurrentContent();
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var vm = new ClassSchedulesViewModel(_apiClient, toastService); 
+        vm.NavigateTo = inner => CurrentContent = inner; 
+        vm.NavigateBack = () => NavigateToDashboard(); 
+        CurrentContent = vm; 
+        CurrentPage = "Class Schedules"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToEventsDashboard() { var vm = new EventDashboardViewModel(_apiClient); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToELibrary() { CurrentContent = new ELibraryManagementViewModel(); CurrentPage = "E-Library Management"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToUserManagement() 
@@ -624,6 +635,7 @@ public partial class AdminShellViewModel : ViewModelBase
     // Existing active-page flags
     public bool IsDashboardActive => CurrentPage == "Dashboard";
     public bool IsBuildingManagementActive => CurrentPage == "Building Management";
+    public bool IsClassSchedulesActive => CurrentPage == "Class Schedules";
     public bool IsRoomManagementActive => CurrentPage == "Room Management";
     public bool IsEventsDashboardActive => CurrentPage == "Events Dashboard";
     public bool IsELibraryActive => CurrentPage == "E-Library Management";
@@ -639,6 +651,7 @@ public partial class AdminShellViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsDashboardActive));
         OnPropertyChanged(nameof(IsBuildingManagementActive));
+        OnPropertyChanged(nameof(IsClassSchedulesActive));
         OnPropertyChanged(nameof(IsRoomManagementActive));
         OnPropertyChanged(nameof(IsEventsDashboardActive));
         OnPropertyChanged(nameof(IsELibraryActive));

@@ -32,7 +32,7 @@ public class ApiClient : IApiClient
 
         // Configure HttpClient
         var apiSettings = _configuration.GetSection("ApiSettings");
-        var baseUrl = apiSettings["BaseUrl"] ?? "http://localhost:3000/api";
+        var baseUrl = apiSettings["BaseUrl"] ?? "http://localhost:3000/api/v1";
         
         // Ensure base URL ends with a slash for proper URL combination
         if (!baseUrl.EndsWith("/"))
@@ -855,6 +855,351 @@ public class ApiClient : IApiClient
         {
             Debug.WriteLine($"Error deleting alert: {ex.Message}");
             return false;
+        }
+    }
+
+    // Teacher-specific API methods
+    public async Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId)
+    {
+        try
+        {
+            return await GetAsync<TeacherSidebarMetrics>($"desktop-sidebar/teacher/kpi");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting teacher metrics: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<ScheduleDto>?> GetTeacherTodaySchedulesAsync(string teacherId)
+    {
+        try
+        {
+            return await GetAsync<List<ScheduleDto>>($"schedules/teacher/today");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting teacher today schedules: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<TeacherActivityDto>?> GetTeacherRecentActivitiesAsync(string teacherId)
+    {
+        try
+        {
+            return await GetAsync<List<TeacherActivityDto>>($"teacher-activity/recent");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting teacher recent activities: {ex.Message}");
+            return null;
+        }
+    }
+
+    // GWA Management Methods
+    public async Task<StudentGwaListResponse?> GetAdvisoryStudentsWithGwaAsync(string gradingPeriod, string schoolYear)
+    {
+        try
+        {
+            var endpoint = $"gwa/teacher/advisory-students?grading_period={Uri.EscapeDataString(gradingPeriod)}&school_year={Uri.EscapeDataString(schoolYear)}";
+            Debug.WriteLine($"GetAdvisoryStudentsWithGwaAsync: Calling endpoint: {endpoint}");
+            
+            var result = await GetAsync<StudentGwaListResponse>(endpoint);
+            
+            Debug.WriteLine($"GetAdvisoryStudentsWithGwaAsync: Result is null? {result == null}");
+            if (result != null)
+            {
+                Debug.WriteLine($"GetAdvisoryStudentsWithGwaAsync: Students count: {result.Students?.Count ?? 0}");
+                Debug.WriteLine($"GetAdvisoryStudentsWithGwaAsync: Section: {result.SectionName}");
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"GetAdvisoryStudentsWithGwaAsync: Exception - {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<StudentGwaDto?> CreateGwaEntryAsync(CreateGwaDto dto)
+    {
+        try
+        {
+            Debug.WriteLine($"CreateGwaEntryAsync: Creating GWA entry for student {dto.StudentId}");
+            Debug.WriteLine($"CreateGwaEntryAsync: GWA={dto.Gwa}, Period={dto.GradingPeriod}, Year={dto.SchoolYear}");
+            Debug.WriteLine($"CreateGwaEntryAsync: Remarks={dto.Remarks}, HonorStatus={dto.HonorStatus}");
+            
+            var result = await PostAsync<StudentGwaDto>("gwa", dto);
+            
+            if (result != null)
+            {
+                Debug.WriteLine($"CreateGwaEntryAsync: ✅ Success - Created GWA entry with ID: {result.GwaId}");
+            }
+            else
+            {
+                Debug.WriteLine($"CreateGwaEntryAsync: ❌ Failed - API returned null");
+            }
+            
+            return result;
+        }
+        catch (ApiException)
+        {
+            // Re-throw ApiException to preserve the error message
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"CreateGwaEntryAsync: 💥 Exception - {ex.Message}");
+            Debug.WriteLine($"CreateGwaEntryAsync: 💥 Stack trace - {ex.StackTrace}");
+            return null;
+        }
+    }
+
+    public async Task<StudentGwaDto?> UpdateGwaEntryAsync(string id, UpdateGwaDto dto)
+    {
+        try
+        {
+            Debug.WriteLine($"UpdateGwaEntryAsync: Updating GWA entry {id} with PATCH method");
+            return await PatchAsync<StudentGwaDto>($"gwa/{id}", dto);
+        }
+        catch (ApiException)
+        {
+            // Re-throw ApiException to preserve the error message
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error updating GWA entry: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> DeleteGwaEntryAsync(string id)
+    {
+        try
+        {
+            return await DeleteAsync($"gwa/{id}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error deleting GWA entry: {ex.Message}");
+            return false;
+        }
+    }
+
+    // Schedule Management Methods
+    public async Task<ScheduleListResponse?> GetSchedulesAsync(int page = 1, int limit = 20, string? sectionId = null, string? teacherId = null, string? dayOfWeek = null, string? schoolYear = null, string? semester = null)
+    {
+        try
+        {
+            var queryParams = new List<string>();
+            queryParams.Add($"page={page}");
+            queryParams.Add($"limit={limit}");
+            
+            if (!string.IsNullOrEmpty(sectionId))
+                queryParams.Add($"sectionId={Uri.EscapeDataString(sectionId)}");
+            if (!string.IsNullOrEmpty(teacherId))
+                queryParams.Add($"teacherId={Uri.EscapeDataString(teacherId)}");
+            if (!string.IsNullOrEmpty(dayOfWeek))
+                queryParams.Add($"dayOfWeek={Uri.EscapeDataString(dayOfWeek)}");
+            if (!string.IsNullOrEmpty(schoolYear))
+                queryParams.Add($"schoolYear={Uri.EscapeDataString(schoolYear)}");
+            if (!string.IsNullOrEmpty(semester))
+                queryParams.Add($"semester={Uri.EscapeDataString(semester)}");
+
+            var endpoint = $"schedules?{string.Join("&", queryParams)}";
+            return await GetAsync<ScheduleListResponse>(endpoint);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting schedules: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<ScheduleDto?> GetScheduleByIdAsync(string scheduleId)
+    {
+        try
+        {
+            return await GetAsync<ScheduleDto>($"schedules/{scheduleId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting schedule by ID: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<ScheduleDto?> CreateScheduleAsync(CreateScheduleDto dto)
+    {
+        try
+        {
+            return await PostAsync<ScheduleDto>("schedules", dto);
+        }
+        catch (ApiException)
+        {
+            throw; // Re-throw ApiException to preserve error details
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error creating schedule: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<ScheduleDto?> UpdateScheduleAsync(string scheduleId, UpdateScheduleDto dto)
+    {
+        try
+        {
+            return await PatchAsync<ScheduleDto>($"schedules/{scheduleId}", dto);
+        }
+        catch (ApiException)
+        {
+            throw; // Re-throw ApiException to preserve error details
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error updating schedule: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> DeleteScheduleAsync(string scheduleId)
+    {
+        try
+        {
+            return await DeleteAsync($"schedules/{scheduleId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error deleting schedule: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<List<ScheduleDto>?> BulkCreateSchedulesAsync(List<CreateScheduleDto> schedules)
+    {
+        try
+        {
+            return await PostAsync<List<ScheduleDto>>("schedules/bulk", schedules);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error bulk creating schedules: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> AssignStudentsToScheduleAsync(string scheduleId, AssignStudentsDto dto)
+    {
+        try
+        {
+            return await PostAsync($"schedules/{scheduleId}/assign-students", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error assigning students to schedule: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> RemoveStudentsFromScheduleAsync(string scheduleId, List<string> studentIds)
+    {
+        try
+        {
+            var dto = new AssignStudentsDto { StudentIds = studentIds };
+            return await PostAsync($"schedules/{scheduleId}/remove-students", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error removing students from schedule: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<ConflictCheckResult?> CheckScheduleConflictsAsync(CreateScheduleDto dto)
+    {
+        try
+        {
+            return await PostAsync<ConflictCheckResult>("schedules/conflict-check", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error checking schedule conflicts: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<Subject>?> GetSubjectsAsync()
+    {
+        try
+        {
+            var response = await GetAsync<SubjectsResponse>("subjects");
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting subjects: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<SectionDto>?> GetSectionsAsync()
+    {
+        try
+        {
+            var response = await GetAsync<SectionListResponse>("sections?limit=100");
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting sections: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<UserDto>?> GetTeachersAsync()
+    {
+        try
+        {
+            var response = await GetAsync<UserListResponse>("users?role=teacher&limit=100");
+            return response?.Users;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting teachers: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<RoomDto>?> GetRoomsAsync()
+    {
+        try
+        {
+            var response = await GetAsync<RoomListResponse>("rooms?limit=100");
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting rooms: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<BuildingDto>?> GetBuildingsAsync()
+    {
+        try
+        {
+            var response = await GetAsync<BuildingListResponse>("buildings?limit=100");
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting buildings: {ex.Message}");
+            return null;
         }
     }
 }

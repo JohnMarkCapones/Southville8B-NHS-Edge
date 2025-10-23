@@ -11,5 +11,6 @@ public interface ISseService
     bool IsConnected { get; }
     event EventHandler<SidebarMetrics>? MetricsUpdated;
     event EventHandler<AdminDashboardMetrics>? DashboardMetricsUpdated;
+    event EventHandler<TeacherSidebarMetrics>? TeacherMetricsUpdated;
     event EventHandler<string>? ConnectionStatusChanged;
 }

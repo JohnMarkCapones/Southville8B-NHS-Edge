@@ -20,6 +20,7 @@ public class SseService : ISseService
     public bool IsConnected => _isConnected;
     public event EventHandler<SidebarMetrics>? MetricsUpdated;
     public event EventHandler<AdminDashboardMetrics>? DashboardMetricsUpdated;
+    public event EventHandler<TeacherSidebarMetrics>? TeacherMetricsUpdated;
     public event EventHandler<string>? ConnectionStatusChanged;
 
     public SseService(HttpClient httpClient, IConfiguration configuration)
@@ -87,25 +88,45 @@ public class SseService : ISseService
                             {
                                 System.Diagnostics.Debug.WriteLine($"Parsed sidebar metrics: Events={sidebarMetrics.Events}, Teachers={sidebarMetrics.Teachers}, Students={sidebarMetrics.Students}, Sections={sidebarMetrics.Sections}");
                                 MetricsUpdated?.Invoke(this, sidebarMetrics);
+                                continue;
                             }
                         }
                         catch (JsonException)
                         {
+                            // Continue to next parsing attempt
+                        }
+
+                        try
+                        {
+                            // Try parsing as TeacherSidebarMetrics
+                            var teacherMetrics = JsonSerializer.Deserialize<TeacherSidebarMetrics>(json);
+                            if (teacherMetrics != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Parsed teacher metrics: Classes={teacherMetrics.TotalClasses}, Assignments={teacherMetrics.PendingAssignments}, Students={teacherMetrics.TotalStudents}, Messages={teacherMetrics.UnreadMessages}");
+                                TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                continue;
+                            }
+                        }
+                        catch (JsonException)
+                        {
+                            // Continue to next parsing attempt
+                        }
+
+                        try
+                        {
                             // Try parsing as AdminDashboardMetrics
-                            try
+                            var dashboardMetrics = JsonSerializer.Deserialize<AdminDashboardMetrics>(json);
+                            if (dashboardMetrics != null)
                             {
-                                var dashboardMetrics = JsonSerializer.Deserialize<AdminDashboardMetrics>(json);
-                                if (dashboardMetrics != null)
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"Parsed dashboard metrics: Students={dashboardMetrics.TotalStudents}, Teachers={dashboardMetrics.ActiveTeachers}, Sections={dashboardMetrics.TotalSections}");
-                                    DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
-                                }
+                                System.Diagnostics.Debug.WriteLine($"Parsed dashboard metrics: Students={dashboardMetrics.TotalStudents}, Teachers={dashboardMetrics.ActiveTeachers}, Sections={dashboardMetrics.TotalSections}");
+                                DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
+                                continue;
                             }
-                            catch (JsonException ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Error parsing SSE data: {ex.Message}");
-                                System.Diagnostics.Debug.WriteLine($"Raw JSON: {json}");
-                            }
+                        }
+                        catch (JsonException ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error parsing SSE data: {ex.Message}");
+                            System.Diagnostics.Debug.WriteLine($"Raw JSON: {json}");
                         }
                         
                         // Clear the buffer after processing
