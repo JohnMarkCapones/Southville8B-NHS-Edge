@@ -27,11 +27,7 @@ import {
  * Supports journalism domain with position-based permissions
  */
 @Module({
-  imports: [
-    SupabaseModule,
-    AuthModule,
-    StorageModule,
-  ],
+  imports: [SupabaseModule, AuthModule, StorageModule],
   controllers: [
     NewsController,
     NewsCategoriesController,

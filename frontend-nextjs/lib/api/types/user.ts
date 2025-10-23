@@ -57,6 +57,18 @@ export interface Admin {
   phone_number?: string;
 }
 
+// Section data (joined from sections table)
+export interface Section {
+  id: string;
+  name: string;
+  grade_level?: string;
+  teacher_id?: string;
+  room_id?: string;
+  building_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Student extended data
 export interface Student {
   id: string;
@@ -73,6 +85,8 @@ export interface Student {
   section_id?: string;
   age?: number;
   birthday?: string;
+  // Joined relations
+  sections?: Section; // Note: Supabase returns singular when joining on FK
 }
 
 // User Profile

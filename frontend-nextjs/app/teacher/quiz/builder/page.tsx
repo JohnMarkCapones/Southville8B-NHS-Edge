@@ -35,6 +35,8 @@ import { Database, Search, BookOpen } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { useToast } from "@/hooks/use-toast"
+import { useQuizBuilderAPI } from "@/lib/hooks/useQuizBuilderAPI"
+import { type UIQuestionBankItem } from "@/lib/api/helpers/quiz-converters"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -103,25 +105,11 @@ interface QuizDetails {
   showResults: boolean
 }
 
-// Placeholder for questionBankData and related functions
-// In a real app, these would be fetched from an API or context.
-interface QuestionBankItem {
-  id: string
-  type: string
-  question: string
-  subject: string
-  difficulty: string
-  points: number
-  tags: string[]
-  usedIn: number
-  createdAt: string
-  options?: string[]
-  correctAnswer?: string | string[] | boolean
-  explanation?: string
-}
+// Question bank items are now loaded from API
+// Type is imported from quiz-converters.ts as UIQuestionBankItem
 
-// Mock question bank data (replace with actual data fetching)
-const questionBankData: QuestionBankItem[] = [
+// Mock question bank data (no longer used - kept for reference only)
+const questionBankDataMock: any[] = [
   {
     id: "qb-1",
     type: "Multiple Choice",
@@ -224,8 +212,10 @@ export default function QuizBuilderPage() {
   const [quizDetails, setQuizDetails] = useState<QuizDetails | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [isPreviewMode, setIsPreviewMode] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+  // API Integration Hook
+  const quizBuilderAPI = useQuizBuilderAPI({ quizDetails, questions })
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null)
   const questionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
@@ -268,6 +258,9 @@ export default function QuizBuilderPage() {
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all")
   const [filterSubject, setFilterSubject] = useState<string>("all")
   const [previewQuestion, setPreviewQuestion] = useState<any>(null)
+
+  // Question Bank Data from API (replaces mock data)
+  const [questionBankData, setQuestionBankData] = useState<UIQuestionBankItem[]>([])
 
   // Derived state for question bank filtering
   const uniqueSubjects = useMemo(() => {
@@ -327,7 +320,10 @@ export default function QuizBuilderPage() {
   }, 0)
 
   useEffect(() => {
-    // Load quiz details from localStorage
+    // Initialize API (load from server if editing)
+    quizBuilderAPI.initializeQuiz()
+
+    // Load quiz details from localStorage (fallback for new quizzes)
     const savedDetails = localStorage.getItem("quizDetails")
     if (savedDetails) {
       setQuizDetails(JSON.parse(savedDetails))
@@ -341,7 +337,7 @@ export default function QuizBuilderPage() {
     if (savedQuestions) {
       setQuestions(JSON.parse(savedQuestions))
     }
-  }, [router])
+  }, [router, quizBuilderAPI])
 
   useEffect(() => {
     const hasAutoGraded = questions.some(
@@ -366,25 +362,24 @@ export default function QuizBuilderPage() {
     }
   }, [questions])
 
-  // Auto-save functionality
-  const autoSave = useCallback(async () => {
-    if (quizDetails && questions.length > 0) {
-      // Only save if quizDetails exist
-      setIsSaving(true)
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
+  // Auto-save is now handled by useQuizBuilderAPI hook
+  // The hook automatically saves to API when quizDetails or questions change (3-second debounce)
 
-      localStorage.setItem("quizQuestions", JSON.stringify(questions))
-      localStorage.setItem("quizDetails", JSON.stringify(quizDetails)) // Also save quiz details
-      setLastSaved(new Date())
-      setIsSaving(false)
-    }
-  }, [questions, quizDetails])
-
+  // Load question bank from API when dialog opens
   useEffect(() => {
-    const autoSaveTimer = setTimeout(autoSave, 3000) // Increased interval to 3 seconds
-    return () => clearTimeout(autoSaveTimer)
-  }, [questions, quizDetails, autoSave])
+    const loadQuestionBankData = async () => {
+      if (showQuestionBankDialog) {
+        const data = await quizBuilderAPI.loadQuestionBank({
+          type: filterType,
+          difficulty: filterDifficulty,
+          search: searchQuery,
+        })
+        setQuestionBankData(data)
+      }
+    }
+
+    loadQuestionBankData()
+  }, [showQuestionBankDialog, filterType, filterDifficulty, searchQuery, quizBuilderAPI])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -636,6 +631,7 @@ export default function QuizBuilderPage() {
       description: "",
       options: ["", "", "", ""],
       points: 1,
+      required: false,
       estimatedTime: getDefaultEstimatedTime("multiple-choice"), // Add default estimated time
     }
     setQuestions([...questions, newQuestion])
@@ -817,65 +813,22 @@ export default function QuizBuilderPage() {
   }
 
   const saveQuiz = async () => {
-    setIsSaving(true)
-    const completeQuiz = {
-      ...quizDetails,
-      questions,
-      createdAt: new Date().toISOString(),
-      id: `quiz-${Date.now()}`,
-    }
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    console.log("Saving quiz:", completeQuiz)
-
-    toast({
-      title: "Quiz Saved Successfully!",
-      description: `"${quizDetails?.title}" has been saved with ${questions.length} question${questions.length !== 1 ? "s" : ""} and is ready for students.`,
-      variant: "success",
-      duration: 5000,
-    })
-
-    // Clear localStorage and redirect
-    localStorage.removeItem("quizDetails")
-    localStorage.removeItem("quizQuestions")
-    setIsSaving(false)
-    router.push("/teacher/quiz")
+    // Now using API integration
+    await quizBuilderAPI.saveQuiz()
   }
 
   const publishQuiz = async () => {
-    setIsSaving(true)
-    const completeQuiz = {
-      ...quizDetails,
-      questions,
-      publishSettings,
-      gradingType,
-      createdAt: new Date().toISOString(),
-      publishedAt: new Date().toISOString(),
-      id: `quiz-${Date.now()}`,
-      status: "published",
+    // Now using API integration
+    try {
+      const { link, qrCode } = await quizBuilderAPI.publishQuiz(publishSettings, gradingType)
+
+      setQuizLink(link)
+      setShowPublishModal(false)
+      setShowLinkModal(true)
+    } catch (error) {
+      // Error already handled by the hook
+      console.error('Publish failed:', error)
     }
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Generate quiz link
-    const generatedLink = `${window.location.origin}/quiz/take/${completeQuiz.id}`
-    setQuizLink(generatedLink)
-
-    console.log("Publishing quiz:", completeQuiz)
-
-    toast({
-      title: "Quiz Published Successfully!",
-      description: `"${quizDetails?.title}" is now live and ready for students.`,
-      variant: "success",
-      duration: 5000,
-    })
-
-    setIsSaving(false)
-    setShowPublishModal(false)
-    setShowLinkModal(true)
   }
 
   const copyQuizLink = async () => {
@@ -957,15 +910,15 @@ export default function QuizBuilderPage() {
 
         {/* Auto-save status */}
         <div className="flex items-center gap-2 mb-4 text-xs text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 rounded-lg px-3 py-2">
-          {isSaving ? (
+          {quizBuilderAPI.isSaving ? (
             <>
               <Clock className="w-3 h-3 animate-spin text-blue-500" />
               <span>Saving...</span>
             </>
-          ) : lastSaved ? (
+          ) : quizBuilderAPI.lastSaved ? (
             <>
               <Check className="w-3 h-3 text-green-500" />
-              <span>Saved {lastSaved.toLocaleTimeString()}</span>
+              <span>Saved {quizBuilderAPI.lastSaved.toLocaleTimeString()}</span>
             </>
           ) : (
             <span>No changes to save</span>
@@ -978,7 +931,7 @@ export default function QuizBuilderPage() {
             onClick={() => setShowPublishModal(true)}
             size="sm"
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:scale-105 transition-all duration-200 text-white"
-            disabled={questions.length === 0 || isSaving}
+            disabled={questions.length === 0 || quizBuilderAPI.isSaving}
           >
             <Share className="w-4 h-4 mr-2" />
             Publish Quiz
@@ -1001,10 +954,10 @@ export default function QuizBuilderPage() {
             onClick={saveQuiz}
             size="sm"
             className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:scale-105 transition-all duration-200"
-            disabled={questions.length === 0 || isSaving}
+            disabled={questions.length === 0 || quizBuilderAPI.isSaving}
           >
             <Save className="w-4 h-4 mr-2" />
-            {isSaving ? "Saving..." : "Save"}
+            {quizBuilderAPI.isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>
@@ -1242,7 +1195,7 @@ export default function QuizBuilderPage() {
                   onClick={() => setShowPublishModal(true)}
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
-                  disabled={questions.length === 0 || isSaving}
+                  disabled={questions.length === 0 || quizBuilderAPI.isSaving}
                 >
                   <Share className="w-4 h-4 mr-2" />
                   Publish
@@ -1252,7 +1205,7 @@ export default function QuizBuilderPage() {
                     onClick={saveQuiz}
                     size="sm"
                     className="bg-blue-600 hover:bg-blue-700"
-                    disabled={questions.length === 0 || isSaving}
+                    disabled={questions.length === 0 || quizBuilderAPI.isSaving}
                   >
                     <Save className="w-4 h-4 mr-2" />
                     Save
@@ -1558,10 +1511,10 @@ export default function QuizBuilderPage() {
             <Button
               onClick={publishQuiz}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-              disabled={isSaving}
+              disabled={quizBuilderAPI.isPublishing}
             >
               <Share className="w-4 h-4 mr-2" />
-              {isSaving ? "Publishing..." : "Publish Quiz"}
+              {quizBuilderAPI.isPublishing ? "Publishing..." : "Publish Quiz"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1589,6 +1542,23 @@ export default function QuizBuilderPage() {
                 </Button>
               </div>
             </div>
+
+            {/* QR Code Display */}
+            {quizBuilderAPI.qrCodeData && (
+              <div className="space-y-2">
+                <Label className="font-medium">QR Code</Label>
+                <div className="flex justify-center p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <img
+                    src={quizBuilderAPI.qrCodeData}
+                    alt="Quiz QR Code"
+                    className="w-48 h-48"
+                  />
+                </div>
+                <p className="text-sm text-center text-slate-600 dark:text-slate-400">
+                  Students can scan this QR code to access the quiz
+                </p>
+              </div>
+            )}
 
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
               <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Quick Stats</h4>
@@ -1633,7 +1603,7 @@ export default function QuizBuilderPage() {
       </Dialog>
 
       <Dialog
-        open={blankContextMenu && blankContextMenu.visible}
+        open={!!(blankContextMenu && blankContextMenu.visible)}
         onOpenChange={(visible) => !visible && setBlankContextMenu(null)}
       >
         <div
@@ -1804,7 +1774,12 @@ export default function QuizBuilderPage() {
             {/* Questions List */}
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-3">
-                {filteredQuestions.length === 0 ? (
+                {quizBuilderAPI.isLoadingQuestionBank ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p className="ml-3 text-slate-600 dark:text-slate-400">Loading questions...</p>
+                  </div>
+                ) : filteredQuestions.length === 0 ? (
                   <div className="text-center py-12">
                     <Search className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
                     <p className="text-slate-600 dark:text-slate-400">No questions found matching your filters.</p>
@@ -1856,10 +1831,6 @@ export default function QuizBuilderPage() {
                                 <Badge className={getDifficultyColor(question.difficulty)}>{question.difficulty}</Badge>
                                 <Badge variant="secondary">{question.subject}</Badge>
                                 <span className="text-slate-600 dark:text-slate-400">{question.points} pts</span>
-                                <span className="text-slate-500 dark:text-slate-500">•</span>
-                                <span className="text-slate-600 dark:text-slate-400">
-                                  Used in {question.usedIn} quizzes
-                                </span>
                                 {isInQuiz && (
                                   <>
                                     <span className="text-slate-500 dark:text-slate-500">•</span>
@@ -2114,9 +2085,10 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
 
   const addCorrectAnswer = (answer: number) => {
     const currentCorrectAnswers = question.correctAnswers || []
-    const newCorrectAnswers = currentCorrectAnswers.includes(answer)
-      ? currentCorrectAnswers.filter((a) => a !== answer)
-      : [...currentCorrectAnswers, answer]
+    const answerStr = String(answer)
+    const newCorrectAnswers = currentCorrectAnswers.includes(answerStr)
+      ? currentCorrectAnswers.filter((a) => a !== answerStr)
+      : [...currentCorrectAnswers, answerStr]
     onUpdate({ correctAnswers: newCorrectAnswers })
   }
 
@@ -2405,7 +2377,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 <div key={index} className="flex items-center gap-3 group">
                   <input
                     type="checkbox"
-                    checked={question.correctAnswers?.includes(index) || false}
+                    checked={question.correctAnswers?.includes(String(index)) || false}
                     onChange={() => addCorrectAnswer(index)}
                     className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                   />
@@ -2414,7 +2386,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     value={option}
                     onChange={(e) => updateOption(index, e.target.value)}
                     className={`flex-1 transition-all duration-200 hover:shadow-sm ${
-                      question.correctAnswers?.includes(index)
+                      question.correctAnswers?.includes(String(index))
                         ? "border-green-300 bg-green-50 dark:bg-green-900/20 shadow-sm"
                         : "hover:border-blue-300 dark:hover:border-blue-600 focus:border-blue-500 dark:focus:border-blue-400"
                     }`}

@@ -137,6 +137,12 @@ export class AuthService {
         confirmed_at: data.user.confirmed_at,
       };
 
+      // ✅ Sync last login to users table
+      await this.syncLastLoginToUsersTable(
+        data.user.id,
+        data.user.last_sign_in_at,
+      );
+
       return { user, session: data.session };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -457,6 +463,44 @@ export class AuthService {
     } catch (error) {
       console.error('Error in getUserRoleFromDatabase:', error);
       return null;
+    }
+  }
+
+  /**
+   * Sync last login timestamp to users table
+   * This is called after successful authentication to keep track of user logins
+   * @param userId - User UUID
+   * @param lastSignInAt - Last sign in timestamp from Supabase Auth
+   */
+  private async syncLastLoginToUsersTable(
+    userId: string,
+    lastSignInAt: string | undefined,
+  ): Promise<void> {
+    if (!lastSignInAt) {
+      return;
+    }
+
+    try {
+      const supabase = this.getServiceClient();
+
+      const { error } = await supabase
+        .from('users')
+        .update({ last_login_at: lastSignInAt })
+        .eq('id', userId);
+
+      if (error) {
+        this.logger.error(
+          `Error updating last_login_at for user ${userId}:`,
+          error,
+        );
+      } else {
+        this.logger.log(`Synced last login for user ${userId}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error syncing last login for user ${userId}:`,
+        error,
+      );
     }
   }
 }

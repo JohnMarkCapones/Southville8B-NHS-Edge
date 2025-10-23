@@ -1,4 +1,16 @@
-import { Controller, Get, Query, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+  Logger,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,49 +19,132 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { SubjectsService } from './subjects.service';
-import { SubjectQueryDto } from './dto/subject-query.dto';
+import { CreateSubjectDto } from './dto/create-subject.dto';
+import { UpdateSubjectDto } from './dto/update-subject.dto';
+// import { Subject } from './entities/subject.entity';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { PoliciesGuard } from '../auth/guards/policies.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthUser } from '../auth/auth-user.decorator';
+import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 import { UserRole } from '../users/dto/create-user.dto';
-import { Subject } from './entities/subject.entity';
-
-interface PaginatedResult {
-  data: Subject[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 @ApiTags('Subjects')
 @Controller('subjects')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class SubjectsController {
+  private readonly logger = new Logger(SubjectsController.name);
   constructor(private readonly subjectsService: SubjectsService) {}
 
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new subject (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Subject created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - Subject code already exists',
+  })
+  async create(
+    @Body() createSubjectDto: CreateSubjectDto,
+    @AuthUser() _user: SupabaseUser, // eslint-disable-line @typescript-eslint/no-unused-vars
+  ) {
+    this.logger.log('Creating subject for admin user');
+    return this.subjectsService.create(createSubjectDto);
+  }
+
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @ApiOperation({ summary: 'Get all subjects' })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Get all subjects with pagination and filtering' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'departmentId', required: false, type: String })
-  @ApiQuery({ name: 'gradeLevel', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: ['created_at', 'subject_name', 'code'],
+  })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   @ApiResponse({ status: 200, description: 'Subjects retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll(@Query() query: SubjectQueryDto): Promise<PaginatedResult> {
-    return this.subjectsService.findAll(query);
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async findAll(
+    @AuthUser() user: SupabaseUser,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy: string = 'created_at',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
+  ) {
+    return this.subjectsService.findAll({
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+    });
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Get subject by ID' })
   @ApiResponse({ status: 200, description: 'Subject retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   @ApiResponse({ status: 404, description: 'Subject not found' })
-  async findOne(@Param('id') id: string): Promise<Subject> {
+  async findOne(@Param('id') id: string, @AuthUser() user: SupabaseUser) {
+    console.log(`Fetching subject ${id} for user: ${user.email} (${user.id})`);
     return this.subjectsService.findOne(id);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update subject by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Subject updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Subject not found' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - Subject code already exists',
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() updateSubjectDto: UpdateSubjectDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    console.log(`Updating subject ${id} for user: ${user.email} (${user.id})`);
+    return this.subjectsService.update(id, updateSubjectDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete subject by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Subject deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Subject not found' })
+  async remove(@Param('id') id: string, @AuthUser() user: SupabaseUser) {
+    console.log(`Deleting subject ${id} for user: ${user.email} (${user.id})`);
+    await this.subjectsService.remove(id);
+    return { message: 'Subject deleted successfully' };
   }
 }

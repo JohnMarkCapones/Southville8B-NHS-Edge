@@ -23,8 +23,10 @@ export class CreateNewsDto {
   title: string;
 
   @ApiPropertyOptional({
-    description: 'Article description/excerpt (auto-generated from content if empty)',
-    example: 'Congratulations to all participants in this year\'s science fair competition',
+    description:
+      'Article description/excerpt (auto-generated from content if empty)',
+    example:
+      "Congratulations to all participants in this year's science fair competition",
     maxLength: 500,
   })
   @IsOptional()
@@ -33,7 +35,8 @@ export class CreateNewsDto {
   description?: string;
 
   @ApiProperty({
-    description: 'Article content in ProseMirror JSON format (from Tiptap editor)',
+    description:
+      'Article content in ProseMirror JSON format (from Tiptap editor)',
     example: { type: 'doc', content: [] },
   })
   @IsObject()
@@ -57,7 +60,7 @@ export class CreateNewsDto {
   categoryId?: string;
 
   @ApiPropertyOptional({
-    description: 'Tags (will be auto-created if they don\'t exist)',
+    description: "Tags (will be auto-created if they don't exist)",
     example: ['science', 'competition', 'students'],
     type: [String],
   })
@@ -95,7 +98,8 @@ export class CreateNewsDto {
   coAuthorIds?: string[];
 
   @ApiPropertyOptional({
-    description: 'Featured image URL (from R2 storage, optional if article has images)',
+    description:
+      'Featured image URL (from R2 storage, optional if article has images)',
     example: 'https://r2.../news/featured/abc123.jpg',
   })
   @IsOptional()

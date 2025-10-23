@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { R2StorageService } from '../../storage/r2-storage/r2-storage.service';
-import { TeacherFile, TeacherFileWithDetails } from '../entities/teacher-file.entity';
+import {
+  TeacherFile,
+  TeacherFileWithDetails,
+} from '../entities/teacher-file.entity';
 import { UpdateFileDto } from '../dto/update-file.dto';
 import { FileQueryDto } from '../dto/file-query.dto';
 import * as crypto from 'crypto';
@@ -276,14 +279,13 @@ export class FileStorageService {
 
       // Validate new folder if being changed
       if (updateFileDto.folder_id) {
-        const { data: folder, error: folderError } =
-          await this.supabaseService
-            .getClient()
-            .from('teacher_folders')
-            .select('id')
-            .eq('id', updateFileDto.folder_id)
-            .eq('is_deleted', false)
-            .single();
+        const { data: folder, error: folderError } = await this.supabaseService
+          .getClient()
+          .from('teacher_folders')
+          .select('id')
+          .eq('id', updateFileDto.folder_id)
+          .eq('is_deleted', false)
+          .single();
 
         if (folderError || !folder) {
           throw new NotFoundException(
@@ -399,7 +401,10 @@ export class FileStorageService {
       if (error) {
         // Rollback: Delete new file and keep old file
         await this.r2StorageService.deleteFile(newR2Key);
-        this.logger.error('Error updating file record after replacement:', error);
+        this.logger.error(
+          'Error updating file record after replacement:',
+          error,
+        );
         throw new InternalServerErrorException(
           'Failed to update file record: ' + error.message,
         );
@@ -450,7 +455,7 @@ export class FileStorageService {
    */
   async restore(id: string): Promise<TeacherFile> {
     try {
-      const { data: file, error: fetchError} = await this.supabaseService
+      const { data: file, error: fetchError } = await this.supabaseService
         .getClient()
         .from('teacher_files')
         .select('*')

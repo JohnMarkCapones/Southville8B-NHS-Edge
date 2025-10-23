@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { StudentLayout } from "@/components/student/student-layout"
+import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { formatDate } from "@/lib/utils/dateUtils"
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "@/lib/i18n"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
@@ -45,7 +48,9 @@ const priorityColors = {
 }
 
 export default function TodoPage() {
-  const [todos, setTodos] = useState<Todo[]>([])
+  const { t } = useTranslation()
+  // Use reliable localStorage hook
+  const [todos, setTodos] = useLocalStorage<Todo[]>("student-todos-v2", [])
   const [filteredTodos, setFilteredTodos] = useState<Todo[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -66,20 +71,9 @@ export default function TodoPage() {
     subtasks: [] as { id: string; title: string; completed: boolean }[],
   })
 
+  // Initialize with sample data only if no todos exist
   useEffect(() => {
-    const savedTodos = localStorage.getItem("student-todos")
-    if (savedTodos) {
-      const parsedTodos = JSON.parse(savedTodos).map((todo: any) => ({
-        ...todo,
-        createdAt: new Date(todo.createdAt),
-        dueDate: todo.dueDate ? new Date(todo.dueDate) : undefined,
-        tags: todo.tags || [],
-        subtasks: todo.subtasks || [],
-        estimatedTime: todo.estimatedTime || 30,
-        actualTime: todo.actualTime || 0,
-      }))
-      setTodos(parsedTodos)
-    } else {
+    if (todos.length === 0) {
       const sampleTodos: Todo[] = [
         {
           id: "1",
@@ -126,12 +120,25 @@ export default function TodoPage() {
         },
       ]
       setTodos(sampleTodos)
+    } else {
+      // Ensure all dates are properly converted to Date objects
+      const todosWithProperDates = todos.map(todo => ({
+        ...todo,
+        createdAt: todo.createdAt instanceof Date ? todo.createdAt : new Date(todo.createdAt),
+        dueDate: todo.dueDate ? (todo.dueDate instanceof Date ? todo.dueDate : new Date(todo.dueDate)) : undefined,
+      }))
+      
+      // Only update if dates were actually converted
+      const needsUpdate = todos.some(todo => 
+        !(todo.createdAt instanceof Date) || 
+        (todo.dueDate && !(todo.dueDate instanceof Date))
+      )
+      
+      if (needsUpdate) {
+        setTodos(todosWithProperDates)
+      }
     }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem("student-todos", JSON.stringify(todos))
-  }, [todos])
+  }, [todos.length, setTodos])
 
   useEffect(() => {
     let filtered = todos
@@ -305,31 +312,31 @@ export default function TodoPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Todo List
+                {t('productivity.todo.title')}
               </h1>
-              <p className="text-gray-600 mt-1">Organize and track your tasks efficiently</p>
+              <p className="text-gray-600 mt-1">{t('student.readyToAchieve')}</p>
             </div>
 
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Task
+                  {t('productivity.todo.addTask')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingTodo ? "Edit Task" : "Add New Task"}</DialogTitle>
+                  <DialogTitle>{editingTodo ? t('productivity.todo.editTask') : t('productivity.todo.addTask')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <Input
-                    placeholder="Task title"
+                    placeholder={t('productivity.todo.taskTitle')}
                     value={newTodo.title}
                     onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
                     className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                   />
                   <Textarea
-                    placeholder="Description (optional)"
+                    placeholder={t('productivity.todo.taskDescription')}
                     value={newTodo.description}
                     onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
                     rows={3}
@@ -358,9 +365,9 @@ export default function TodoPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="low">Low Priority</SelectItem>
-                        <SelectItem value="medium">Medium Priority</SelectItem>
-                        <SelectItem value="high">High Priority</SelectItem>
+                        <SelectItem value="low">{t('productivity.todo.low')}</SelectItem>
+                        <SelectItem value="medium">{t('productivity.todo.medium')}</SelectItem>
+                        <SelectItem value="high">{t('productivity.todo.high')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -395,7 +402,7 @@ export default function TodoPage() {
                         className="w-full justify-start text-left font-normal bg-transparent hover:bg-gray-50 transition-all duration-200"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {newTodo.dueDate ? format(newTodo.dueDate, "PPP") : "Set due date (optional)"}
+                        {newTodo.dueDate ? format(newTodo.dueDate, "PPP") : t('productivity.todo.dueDate')}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -412,7 +419,7 @@ export default function TodoPage() {
                       onClick={editingTodo ? updateTodo : addTodo}
                       className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
                     >
-                      {editingTodo ? "Update Task" : "Add Task"}
+                      {editingTodo ? t('productivity.todo.editTask') : t('productivity.todo.addTask')}
                     </Button>
                     <Button
                       variant="outline"
@@ -432,7 +439,7 @@ export default function TodoPage() {
                       }}
                       className="hover:bg-gray-50 transition-all duration-200"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </div>
                 </div>
@@ -511,7 +518,7 @@ export default function TodoPage() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search tasks..."
+                    placeholder={t('productivity.todo.searchTasks')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
@@ -662,7 +669,7 @@ export default function TodoPage() {
                                     }`}
                                   >
                                     <CalendarIcon className="w-3 h-3 mr-1" />
-                                    {format(todo.dueDate, "MMM dd")}
+                                    {formatDate(todo.dueDate, { month: "short", day: "2-digit" })}
                                   </Badge>
                                 )}
                                 {todo.tags.map((tag) => (

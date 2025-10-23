@@ -41,7 +41,10 @@ import {
   TeacherFolder,
   TeacherFolderWithChildren,
 } from './entities/teacher-folder.entity';
-import { TeacherFile, TeacherFileWithDetails } from './entities/teacher-file.entity';
+import {
+  TeacherFile,
+  TeacherFileWithDetails,
+} from './entities/teacher-file.entity';
 
 @ApiTags('Teacher Files')
 @Controller('teacher-files')
@@ -60,7 +63,8 @@ export class TeacherFilesController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({
     summary: 'Get folder tree',
-    description: 'Get hierarchical folder structure. Admins can include deleted folders.',
+    description:
+      'Get hierarchical folder structure. Admins can include deleted folders.',
   })
   @ApiQuery({
     name: 'includeDeleted',
@@ -78,7 +82,10 @@ export class TeacherFilesController {
     @Query() query: FolderQueryDto,
     @Req() request: any,
   ): Promise<TeacherFolderWithChildren[]> {
-    return this.folderService.getFolderTree(query.includeDeleted, request.accessToken);
+    return this.folderService.getFolderTree(
+      query.includeDeleted,
+      request.accessToken,
+    );
   }
 
   @Get('folders/:id')
@@ -114,7 +121,10 @@ export class TeacherFilesController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   async createFolder(
     @Body() createFolderDto: CreateFolderDto,
     @AuthUser() user: any,
@@ -136,7 +146,10 @@ export class TeacherFilesController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'Folder not found' })
   async updateFolder(
     @Param('id', ParseUUIDPipe) id: string,
@@ -157,7 +170,10 @@ export class TeacherFilesController {
   @ApiResponse({ status: 204, description: 'Folder deleted successfully' })
   @ApiResponse({ status: 400, description: 'Folder has children' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'Folder not found' })
   async deleteFolder(
     @Param('id', ParseUUIDPipe) id: string,
@@ -179,7 +195,10 @@ export class TeacherFilesController {
     type: TeacherFolder,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'Folder not found' })
   async restoreFolder(
     @Param('id', ParseUUIDPipe) id: string,
@@ -231,7 +250,10 @@ export class TeacherFilesController {
     schema: {
       type: 'object',
       properties: {
-        files: { type: 'array', items: { $ref: '#/components/schemas/TeacherFile' } },
+        files: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/TeacherFile' },
+        },
         total: { type: 'number' },
         page: { type: 'number' },
         limit: { type: 'number' },
@@ -303,9 +325,15 @@ export class TeacherFilesController {
     description: 'File uploaded successfully',
     type: TeacherFile,
   })
-  @ApiResponse({ status: 400, description: 'Bad request - validation or file error' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - validation or file error',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   async uploadFile(
     @Req() request: any,
     @AuthUser() user: any,
@@ -359,9 +387,7 @@ export class TeacherFilesController {
         fields.description,
       );
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to upload file: ${error.message}`,
-      );
+      throw new BadRequestException(`Failed to upload file: ${error.message}`);
     }
   }
 
@@ -379,7 +405,10 @@ export class TeacherFilesController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'File not found' })
   async updateFile(
     @Param('id', ParseUUIDPipe) id: string,
@@ -418,7 +447,10 @@ export class TeacherFilesController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - file error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'File not found' })
   async replaceFile(
     @Param('id', ParseUUIDPipe) id: string,
@@ -457,9 +489,7 @@ export class TeacherFilesController {
         user.id,
       );
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to replace file: ${error.message}`,
-      );
+      throw new BadRequestException(`Failed to replace file: ${error.message}`);
     }
   }
 
@@ -473,7 +503,10 @@ export class TeacherFilesController {
   @ApiParam({ name: 'id', description: 'File ID' })
   @ApiResponse({ status: 204, description: 'File deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'File not found' })
   async deleteFile(
     @Param('id', ParseUUIDPipe) id: string,
@@ -495,7 +528,10 @@ export class TeacherFilesController {
     type: TeacherFile,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'File not found' })
   async restoreFile(
     @Param('id', ParseUUIDPipe) id: string,
@@ -566,7 +602,10 @@ export class TeacherFilesController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   async getOverviewAnalytics() {
     return this.fileDownloadLoggerService.getOverallStats();
   }
@@ -598,7 +637,10 @@ export class TeacherFilesController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   async getPopularFiles(@Query('limit') limit?: number) {
     return this.fileDownloadLoggerService.getPopularFiles(limit || 10);
   }
@@ -633,7 +675,10 @@ export class TeacherFilesController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   async getFileDownloads(@Param('id', ParseUUIDPipe) id: string) {
     const [downloads, stats] = await Promise.all([
       this.fileDownloadLoggerService.getFileDownloads(id),

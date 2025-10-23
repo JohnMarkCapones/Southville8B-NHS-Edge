@@ -3,10 +3,12 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useAllUsersStats } from "@/hooks/useAllUsersStats"
+import { useAllUsers } from "@/hooks/useAllUsers"
+import type { User as ApiUser } from "@/lib/api/endpoints/users"
 import {
   Search,
   Download,
-  Plus,
   MoreHorizontal,
   Eye,
   Edit,
@@ -712,15 +714,63 @@ const archivedUsers = [
   },
 ]
 
-const stats = [
-  { label: "Total Users", value: "1,247", change: "+12%" },
-  { label: "Active Users", value: "1,156", change: "+8%" },
-  { label: "New This Month", value: "23", change: "+15%" },
-  { label: "Inactive Users", value: "91", change: "-5%" },
-]
-
 export function AllUsersManagementSection() {
   const { toast } = useToast()
+
+  // Fetch real user statistics from API
+  const { stats: userStats, loading: statsLoading, error: statsError } = useAllUsersStats({
+    enabled: true,
+    refetchInterval: 2 * 60 * 1000, // Refresh every 2 minutes
+    enableCache: true,
+  })
+
+  // ✅ NEW: Fetch real users data from API
+  const {
+    users: apiUsers,
+    pagination: apiPagination,
+    loading: usersLoading,
+    error: usersError,
+    filters,
+    setFilters,
+    searchQuery: apiSearchQuery,
+    setSearchQuery: setApiSearchQuery,
+    currentPage: apiCurrentPage,
+    goToPage: apiGoToPage,
+  } = useAllUsers({
+    enabled: true,
+    initialPage: 1,
+    limit: 20,
+    sortBy: 'created_at',
+    sortOrder: 'desc',
+  })
+
+  // Prepare stats cards with real data or fallback to loading state
+  const stats = [
+    {
+      label: "Total Users",
+      value: userStats ? userStats.total.toLocaleString() : "-",
+      change: "+12%", // TODO: Calculate actual change percentage from historical data
+      isLoading: statsLoading,
+    },
+    {
+      label: "Active Users",
+      value: userStats ? userStats.active.toLocaleString() : "-",
+      change: "+8%", // TODO: Calculate actual change percentage
+      isLoading: statsLoading,
+    },
+    {
+      label: "New This Month",
+      value: userStats ? userStats.newThisMonth.toLocaleString() : "-",
+      change: "+15%", // TODO: Calculate actual change percentage
+      isLoading: statsLoading,
+    },
+    {
+      label: "Inactive Users",
+      value: userStats ? userStats.inactive.toLocaleString() : "-",
+      change: "-5%", // TODO: Calculate actual change percentage
+      isLoading: statsLoading,
+    },
+  ]
 
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
@@ -1155,7 +1205,35 @@ export function AllUsersManagementSection() {
     }
   }, [contextMenu.visible, primaryRoleMenu.visible, subRoleMenu.visible])
 
-  const filteredUsers = users.filter((user) => {
+  // ✅ Transform API users to component format
+  const transformedUsers = apiUsers.map((user: ApiUser) => ({
+    id: user.id,
+    name: user.full_name,
+    email: user.email,
+    role: user.role?.name || 'Student',
+    subRole: user.primary_domain_role
+      ? `${user.primary_domain_role.role_name} (${user.primary_domain_role.domain_name})`
+      : '-',
+    status: user.status,
+    lastLogin: user.last_login_at
+      ? new Date(user.last_login_at).toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      : 'Never',
+    joinDate: user.created_at ? new Date(user.created_at).toISOString().split('T')[0] : '',
+    // Keep original user object for reference
+    _originalUser: user,
+  }))
+
+  // ✅ Use transformed API users instead of mock data (fallback to mock users for archived/other features)
+  const displayUsers = usersLoading ? [] : transformedUsers
+
+  const filteredUsers = displayUsers.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1175,10 +1253,11 @@ export function AllUsersManagementSection() {
     return matchesSearch && matchesRole
   })
 
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex)
+  // ✅ Use API pagination for main users table
+  const totalPages = apiPagination?.totalPages || 1
+  const startIndex = apiPagination ? (apiPagination.page - 1) * apiPagination.limit + 1 : 0
+  const endIndex = apiPagination ? Math.min(apiPagination.page * apiPagination.limit, apiPagination.total) : 0
+  const paginatedUsers = filteredUsers // API already returns paginated results
 
   const archivedTotalPages = Math.ceil(filteredArchivedUsers.length / archivedItemsPerPage)
   const archivedStartIndex = (archivedCurrentPage - 1) * archivedItemsPerPage
@@ -1186,13 +1265,32 @@ export function AllUsersManagementSection() {
   const paginatedArchivedUsers = filteredArchivedUsers.slice(archivedStartIndex, archivedEndIndex)
 
   const handleFilterChange = (filterType: string, value: string) => {
+    // ✅ Update local state for UI
     setCurrentPage(1)
+
+    // ✅ Update API filters
     switch (filterType) {
       case "role":
         setRoleFilter(value)
+        // Map frontend role values to backend UserRole type
+        const roleMapping: Record<string, 'Student' | 'Teacher' | 'Admin' | undefined> = {
+          'student': 'Student',
+          'teacher': 'Teacher',
+          'administrator': 'Admin',
+          'all': undefined,
+        }
+        setFilters({ role: roleMapping[value] })
         break
       case "status":
         setStatusFilter(value)
+        // Map frontend status values to backend UserStatus type
+        const statusMapping: Record<string, 'Active' | 'Inactive' | 'Suspended' | undefined> = {
+          'active': 'Active',
+          'inactive': 'Inactive',
+          'suspended': 'Suspended',
+          'all': undefined,
+        }
+        setFilters({ status: statusMapping[value] })
         break
       case "subRole":
         setSubRoleFilter(value)
@@ -1332,10 +1430,6 @@ export function AllUsersManagementSection() {
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
-            <Plus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
         </div>
       </div>
 
@@ -1344,17 +1438,39 @@ export function AllUsersManagementSection() {
         {stats.map((stat) => (
           <Card key={stat.label} className="bg-card border-border">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+              {stat.isLoading ? (
+                // Loading skeleton
+                <div className="flex items-center justify-between animate-pulse">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                  </div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
                 </div>
-                <div className="text-sm text-green-500">{stat.change}</div>
-              </div>
+              ) : (
+                // Actual data
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  </div>
+                  <div className="text-sm text-green-500">{stat.change}</div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Error Alert */}
+      {statsError && (
+        <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-900/20">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load user statistics. Showing placeholder data. Error: {statsError.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filters and Search */}
       <Card className="bg-card border-border">
@@ -1373,8 +1489,11 @@ export function AllUsersManagementSection() {
                   placeholder="Search users by name or email..."
                   value={searchTerm}
                   onChange={(e) => {
-                    setSearchTerm(e.target.value)
+                    const value = e.target.value
+                    setSearchTerm(value)
                     setCurrentPage(1)
+                    // ✅ Update API search with debouncing handled by user typing
+                    setApiSearchQuery(value)
                   }}
                   className="pl-10 bg-background border-border text-foreground"
                 />
@@ -1421,8 +1540,11 @@ export function AllUsersManagementSection() {
               <Select
                 value={itemsPerPage.toString()}
                 onValueChange={(value) => {
-                  setItemsPerPage(Number(value))
+                  const newLimit = Number(value)
+                  setItemsPerPage(newLimit)
                   setCurrentPage(1)
+                  // ✅ Update API limit
+                  setFilters({ limit: newLimit, page: 1 })
                 }}
               >
                 <SelectTrigger className="w-[100px] bg-background border-border text-foreground">
@@ -1439,7 +1561,7 @@ export function AllUsersManagementSection() {
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} users
+              Showing {startIndex} to {endIndex} of {apiPagination?.total || 0} users
             </div>
           </div>
 
@@ -1467,31 +1589,67 @@ export function AllUsersManagementSection() {
           )}
 
           {/* Users Table */}
-          <div className="border border-border rounded-lg" data-table-container>
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border">
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead className="text-foreground">User</TableHead>
-                  <TableHead className="text-foreground">Role</TableHead>
-                  <TableHead className="text-foreground">Sub Role</TableHead>
+          {/* ✅ Show error alert if API call fails */}
+          {usersError && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Failed to load users: {usersError.message}. Please try refreshing the page.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* ✅ Show loading state */}
+          {usersLoading && (
+            <div className="border border-border rounded-lg">
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center space-y-3">
+                  <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-sm text-muted-foreground">Loading users...</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Show table only when not loading and no error */}
+          {!usersLoading && !usersError && (
+            <>
+            <div className="border border-border rounded-lg" data-table-container>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border">
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead className="text-foreground">User</TableHead>
+                    <TableHead className="text-foreground">Role</TableHead>
+                    <TableHead className="text-foreground">Sub Role</TableHead>
                   <TableHead className="text-foreground">Status</TableHead>
                   <TableHead className="text-foreground">Last Login</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    className="border-border cursor-pointer hover:bg-muted/50"
-                    onContextMenu={(e) => handleContextMenu(e, user)}
-                  >
+                {paginatedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <div className="space-y-2">
+                        <Users className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                        <p className="text-muted-foreground font-medium">No users found</p>
+                        <p className="text-sm text-muted-foreground/70">Try adjusting your search or filters</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedUsers.map((user) => (
+                    <TableRow
+                      key={user.id}
+                      className="border-border cursor-pointer hover:bg-muted/50"
+                      onContextMenu={(e) => handleContextMenu(e, user)}
+                    >
                     <TableCell>
                       <Checkbox
                         checked={selectedUsers.includes(user.id)}
@@ -1539,67 +1697,89 @@ export function AllUsersManagementSection() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages} ({filteredUsers.length} total users)
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-                className="border-border bg-transparent"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Previous
-              </Button>
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = i + 1
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={currentPage === pageNum ? "" : "border-border bg-transparent"}
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                })}
-                {totalPages > 5 && (
-                  <>
-                    <span className="text-muted-foreground">...</span>
-                    <Button
-                      variant={currentPage === totalPages ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      className={currentPage === totalPages ? "" : "border-border bg-transparent"}
-                    >
-                      {totalPages}
-                    </Button>
+            {/* Pagination */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages} ({apiPagination?.total || 0} total users)
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    const prevPage = currentPage - 1
+                    setCurrentPage(prevPage)
+                    // ✅ Update API page
+                    apiGoToPage(prevPage)
+                  }}
+                  className="border-border bg-transparent"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = i + 1
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setCurrentPage(pageNum)
+                          // ✅ Update API page
+                          apiGoToPage(pageNum)
+                        }}
+                        className={currentPage === pageNum ? "" : "border-border bg-transparent"}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                  {totalPages > 5 && (
+                    <>
+                      <span className="text-muted-foreground">...</span>
+                      <Button
+                        variant={currentPage === totalPages ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setCurrentPage(totalPages)
+                          // ✅ Update API page
+                          apiGoToPage(totalPages)
+                        }}
+                        className={currentPage === totalPages ? "" : "border-border bg-transparent"}
+                      >
+                        {totalPages}
+                      </Button>
                   </>
                 )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => {
+                    const nextPage = currentPage + 1
+                    setCurrentPage(nextPage)
+                    // ✅ Update API page
+                    apiGoToPage(nextPage)
+                  }}
+                  className="border-border bg-transparent"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-                className="border-border bg-transparent"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
             </div>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

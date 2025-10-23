@@ -635,7 +635,7 @@ export class UsersService {
       } catch (error) {
         errors.push({
           userType: bulkUser.userType,
-          email: (bulkUser.data as any).email || 'unknown',
+          email: bulkUser.data.email || 'unknown',
           error: error.message,
         });
       }
@@ -779,7 +779,7 @@ export class UsersService {
       }) || [];
 
     return {
-      data: transformedData,
+      data: data || [],
       pagination: {
         page,
         limit: effectiveLimit,
@@ -899,10 +899,10 @@ export class UsersService {
       this.logger.log(`[findOne] Admin data found: ${admin.name}`);
     }
 
-    // Check for student data
+    // Check for student data (with section join)
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('*')
+      .select('*, sections(*)')
       .eq('user_id', id)
       .single();
 
@@ -913,6 +913,25 @@ export class UsersService {
         errorMessage: studentError.message,
       });
     } else if (student) {
+      // If Supabase auto-join didn't work (no FK), manually fetch section
+      if (student.section_id && !student.sections) {
+        const { data: section, error: sectionError } = await supabase
+          .from('sections')
+          .select('*')
+          .eq('id', student.section_id)
+          .single();
+
+        if (!sectionError && section) {
+          student.sections = section;
+        } else if (sectionError) {
+          this.logger.error('[findOne] Error fetching section:', {
+            sectionId: student.section_id,
+            errorCode: sectionError.code,
+            errorMessage: sectionError.message,
+          });
+        }
+      }
+
       studentData = student;
       this.logger.log(
         `[findOne] Student data found: ${student.first_name} ${student.last_name}`,
@@ -1197,6 +1216,105 @@ export class UsersService {
   }
 
   /**
+   * Get user's primary domain role from PBAC system
+   * Uses the user_primary_domain_roles view created in database
+   * @param userId - User UUID
+   * @returns Primary domain role or null if user has no domain roles
+   */
+  async getUserPrimaryDomainRole(userId: string): Promise<{
+    role_name: string;
+    domain_type: string;
+    domain_name: string;
+  } | null> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      const { data, error } = await supabase
+        .from('user_primary_domain_roles')
+        .select('primary_role, domain_type, domain_name')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        // PGRST116 means no rows found, which is fine (user has no domain roles)
+        if (error.code === 'PGRST116') {
+          this.logger.debug(`User ${userId} has no domain roles assigned`);
+          return null;
+        }
+        this.logger.error(
+          `Error fetching domain role for user ${userId}:`,
+          error,
+        );
+        return null;
+      }
+
+      if (!data) {
+        return null;
+      }
+
+      return {
+        role_name: data.primary_role,
+        domain_type: data.domain_type,
+        domain_name: data.domain_name,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error getting domain role for user ${userId}:`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Sync last login timestamp from Supabase Auth to users table
+   * This should be called after successful authentication
+   * @param userId - User UUID
+   */
+  async syncLastLogin(userId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get last_sign_in_at from Supabase Auth
+      const { data: authUser, error: authError } =
+        await supabase.auth.admin.getUserById(userId);
+
+      if (authError) {
+        this.logger.warn(
+          `Could not fetch auth data for user ${userId}: ${authError.message}`,
+        );
+        return;
+      }
+
+      if (!authUser || !authUser.user) {
+        this.logger.warn(`No auth user data found for user ${userId}`);
+        return;
+      }
+
+      const lastSignIn = authUser.user.last_sign_in_at;
+
+      if (lastSignIn) {
+        // Update users table with last login timestamp
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ last_login_at: lastSignIn })
+          .eq('id', userId);
+
+        if (updateError) {
+          this.logger.error(
+            `Error updating last_login_at for user ${userId}:`,
+            updateError,
+          );
+        } else {
+          this.logger.log(
+            `Synced last login for user ${userId}: ${lastSignIn}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error syncing last login for user ${userId}:`,
+        error,
    * Parse phone number from scientific notation to proper format
    */
   private parsePhoneNumber(value: string): string {

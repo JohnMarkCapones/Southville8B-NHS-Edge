@@ -323,4 +323,76 @@ export class GwaService {
       );
     }
   }
+
+  /**
+   * Get top students by GWA for leaderboard display (public endpoint)
+   */
+  async getTopStudents(params: {
+    gradeLevel?: string;
+    quarter?: string;
+    schoolYear?: string;
+    limit?: number;
+  }): Promise<Gwa[]> {
+    const supabase = this.getSupabaseClient();
+    const { gradeLevel, quarter, schoolYear, limit = 10 } = params;
+
+    let query = supabase
+      .from('students_gwa')
+      .select(
+        `
+        *,
+        student:students(
+          id,
+          first_name,
+          last_name,
+          middle_name,
+          student_id,
+          lrn_id,
+          grade_level,
+          section:sections(
+            id,
+            name,
+            grade_level
+          )
+        ),
+        teacher:teachers(
+          id,
+          first_name,
+          last_name,
+          middle_name,
+          advisory_section:sections(
+            id,
+            name,
+            grade_level
+          )
+        )
+      `,
+      )
+      .order('gwa', { ascending: false })
+      .limit(limit);
+
+    // Apply filters
+    if (gradeLevel) {
+      query = query.eq('student.grade_level', gradeLevel);
+    }
+
+    if (quarter) {
+      query = query.eq('grading_period', quarter);
+    }
+
+    if (schoolYear) {
+      query = query.eq('school_year', schoolYear);
+    }
+
+    const { data: gwaRecords, error } = await query;
+
+    if (error) {
+      this.logger.error('Error fetching top students by GWA:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch top students by GWA',
+      );
+    }
+
+    return gwaRecords || [];
+  }
 }

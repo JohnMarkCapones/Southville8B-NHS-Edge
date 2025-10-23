@@ -14,6 +14,7 @@ import {
   ParseBoolPipe,
   Logger,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SchedulesService } from './schedules.service';
+import { StudentsService } from '../students/students.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { BulkCreateSchedulesDto } from './dto/bulk-create-schedules.dto';
@@ -46,7 +48,10 @@ import { AuditInterceptor } from './audit.interceptor';
 export class SchedulesController {
   private readonly logger = new Logger(SchedulesController.name);
 
-  constructor(private readonly schedulesService: SchedulesService) {}
+  constructor(
+    private readonly schedulesService: SchedulesService,
+    private readonly studentsService: StudentsService,
+  ) {}
 
   @Post()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
@@ -308,7 +313,29 @@ export class SchedulesController {
     description: 'Forbidden - Student access required',
   })
   async getMySchedule(@AuthUser() user: any): Promise<Schedule[]> {
-    return this.schedulesService.getStudentSchedule(user.studentId);
+    try {
+      this.logger.log(
+        `Getting schedule for user: ${user.id} (role: ${user.role})`,
+      );
+
+      // Get the student ID from the user ID
+      const studentId = await this.studentsService.getStudentIdByUserId(
+        user.id,
+      );
+      this.logger.log(`Found student ID: ${studentId} for user: ${user.id}`);
+
+      return this.schedulesService.getStudentSchedule(studentId);
+    } catch (error) {
+      this.logger.error(`Error getting schedule for user ${user.id}:`, error);
+
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(
+          `Student record not found. Please contact the administrator to set up your student profile.`,
+        );
+      }
+
+      throw error;
+    }
   }
 
   @Get(':id')

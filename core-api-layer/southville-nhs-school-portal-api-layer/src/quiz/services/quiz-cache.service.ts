@@ -170,7 +170,11 @@ export class QuizCacheService {
   async setStudentQuizzes(studentId: string, quizzes: any): Promise<void> {
     try {
       const key = this.getStudentQuizzesKey(studentId);
-      await this.cacheManager.set(key, quizzes, this.STUDENT_QUIZZES_TTL * 1000);
+      await this.cacheManager.set(
+        key,
+        quizzes,
+        this.STUDENT_QUIZZES_TTL * 1000,
+      );
       this.logger.debug(`Cache SET: ${key}`);
     } catch (error) {
       this.logger.error('Error setting student quizzes cache:', error);

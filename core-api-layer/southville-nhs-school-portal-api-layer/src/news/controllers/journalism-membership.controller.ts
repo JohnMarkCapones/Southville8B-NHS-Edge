@@ -115,10 +115,7 @@ export class JournalismMembershipController {
     status: 409,
     description: 'User already a member OR position already taken',
   })
-  async addMember(
-    @Body() addMemberDto: AddMemberDto,
-    @AuthUser() user: any,
-  ) {
+  async addMember(@Body() addMemberDto: AddMemberDto, @AuthUser() user: any) {
     return this.membershipService.addMember(addMemberDto, user.id);
   }
 
@@ -128,7 +125,7 @@ export class JournalismMembershipController {
    */
   @Patch(':userId')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Update a student member\'s position' })
+  @ApiOperation({ summary: "Update a student member's position" })
   @ApiResponse({
     status: 200,
     description: 'Position updated successfully',
@@ -177,10 +174,7 @@ export class JournalismMembershipController {
     description: 'Forbidden - Insufficient permissions',
   })
   @ApiResponse({ status: 404, description: 'Member not found' })
-  async removeMember(
-    @Param('userId') userId: string,
-    @AuthUser() user: any,
-  ) {
+  async removeMember(@Param('userId') userId: string, @AuthUser() user: any) {
     await this.membershipService.removeMember(userId, user.id);
   }
 }

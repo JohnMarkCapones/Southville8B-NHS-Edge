@@ -198,9 +198,7 @@ export class TagsService {
       // Ignore duplicate key errors (tag already linked)
       if (error.code !== '23505') {
         this.logger.error('Error linking tags to news:', error);
-        throw new BadRequestException(
-          `Failed to link tags: ${error.message}`,
-        );
+        throw new BadRequestException(`Failed to link tags: ${error.message}`);
       }
     }
 
@@ -222,9 +220,7 @@ export class TagsService {
 
     if (error) {
       this.logger.error('Error unlinking tags from news:', error);
-      throw new BadRequestException(
-        `Failed to unlink tags: ${error.message}`,
-      );
+      throw new BadRequestException(`Failed to unlink tags: ${error.message}`);
     }
 
     this.logger.debug(`Unlinked all tags from news ${newsId}`);

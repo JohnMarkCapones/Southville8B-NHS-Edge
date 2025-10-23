@@ -428,7 +428,10 @@ export class NewsService {
     }
 
     if (filters?.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+      query = query.range(
+        filters.offset,
+        filters.offset + (filters.limit || 10) - 1,
+      );
     }
 
     const { data, error } = await query;
@@ -511,6 +514,34 @@ export class NewsService {
   }
 
   /**
+   * Find article by slug for public access (simplified query)
+   * @param slug Article slug
+   * @returns Promise<News>
+   */
+  async findBySlugPublic(slug: string): Promise<News> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // Use a simpler query for public access to avoid complex joins
+    const { data, error } = await supabase
+      .from('news')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .eq('visibility', 'public')
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new NotFoundException(`Article with slug "${slug}" not found`);
+    }
+
+    // Increment view count
+    await this.incrementViews(data.id);
+
+    return this.mapToDto(data);
+  }
+
+  /**
    * Increment article view count
    * @param newsId Article ID
    * @returns Promise<void>
@@ -545,8 +576,7 @@ export class NewsService {
 
     // Verify all users are journalism members
     for (const userId of userIds) {
-      const isMember =
-        await this.newsAccessService.isJournalismMember(userId);
+      const isMember = await this.newsAccessService.isJournalismMember(userId);
       if (!isMember) {
         throw new BadRequestException(
           `User ${userId} is not a journalism team member`,
@@ -638,7 +668,9 @@ export class NewsService {
       );
     }
 
-    this.logger.log(`Co-author added to article ${newsId}: ${addCoAuthorDto.userId}`);
+    this.logger.log(
+      `Co-author added to article ${newsId}: ${addCoAuthorDto.userId}`,
+    );
   }
 
   /**
@@ -676,7 +708,9 @@ export class NewsService {
       );
     }
 
-    this.logger.log(`Co-author removed from article ${newsId}: ${coAuthorUserId}`);
+    this.logger.log(
+      `Co-author removed from article ${newsId}: ${coAuthorUserId}`,
+    );
   }
 
   /**

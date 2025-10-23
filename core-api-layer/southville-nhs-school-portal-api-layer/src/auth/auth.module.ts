@@ -8,6 +8,7 @@ import { JwtVerificationService } from './jwt-verification.service';
 import { RoleCacheService } from './services/role-cache.service';
 import { AuthController } from './auth.controller';
 import { PbacModule } from './pbac.module';
+import { SessionManagementService } from '../session-management/session-management.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PbacModule } from './pbac.module';
     RolesGuard,
     JwtVerificationService,
     RoleCacheService,
+    SessionManagementService,
   ],
   exports: [
     AuthService,

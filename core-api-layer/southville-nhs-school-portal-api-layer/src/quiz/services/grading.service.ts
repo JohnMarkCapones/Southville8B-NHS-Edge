@@ -66,7 +66,9 @@ export class GradingService {
 
       if (error) {
         this.logger.error('Error fetching ungraded answers:', error);
-        throw new InternalServerErrorException('Failed to fetch ungraded answers');
+        throw new InternalServerErrorException(
+          'Failed to fetch ungraded answers',
+        );
       }
 
       return answers || [];
@@ -79,7 +81,9 @@ export class GradingService {
         throw error;
       }
       this.logger.error('Error fetching ungraded answers:', error);
-      throw new InternalServerErrorException('Failed to fetch ungraded answers');
+      throw new InternalServerErrorException(
+        'Failed to fetch ungraded answers',
+      );
     }
   }
 

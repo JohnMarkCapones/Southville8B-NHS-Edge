@@ -43,6 +43,15 @@ export class Event {
   @ApiProperty({ description: 'Last update timestamp' })
   updatedAt: string;
 
+  @ApiProperty({ description: 'Soft delete timestamp', required: false })
+  deleted_at?: string;
+
+  @ApiProperty({
+    description: 'User who deleted/archived the event',
+    required: false,
+  })
+  deleted_by?: string;
+
   // Relations
   @ApiProperty({ description: 'Organizer user info', required: false })
   organizer?: {

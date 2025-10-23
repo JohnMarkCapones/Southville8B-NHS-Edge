@@ -21,6 +21,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { PoliciesGuard } from '../auth/guards/policies.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { Policies } from '../auth/decorators/policies.decorator';
+import { AuthUser } from '../auth/auth-user.decorator';
+import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 import { ClubsService } from './clubs.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { UpdateClubDto } from './dto/update-club.dto';
@@ -41,6 +43,13 @@ export class ClubsController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async create(@Body() createClubDto: CreateClubDto) {
     return this.clubsService.create(createClubDto);
+  }
+
+  @Get('positions')
+  @ApiOperation({ summary: 'Get all club positions' })
+  @ApiResponse({ status: 200, description: 'Positions retrieved successfully' })
+  async getPositions() {
+    return this.clubsService.getPositions();
   }
 
   @Get()
@@ -137,5 +146,22 @@ export class ClubsController {
     @Body() financesData: any,
   ) {
     return this.clubsService.updateFinances(clubId, financesData);
+  }
+
+  @Post(':clubId/join')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Join a club' })
+  @ApiResponse({ status: 201, description: 'Successfully joined club' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Club not found' })
+  async joinClub(
+    @Param('clubId') clubId: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    return this.clubsService.joinClub(clubId, user);
   }
 }

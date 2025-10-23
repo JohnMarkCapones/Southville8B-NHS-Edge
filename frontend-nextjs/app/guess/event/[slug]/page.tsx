@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { absoluteUrl } from "@/lib/seo"
 import { findEventBySlug, EVENTS } from "./data"
-import { findEventBySlugFromAPI } from "../data-mapping"
+import { getEventBySlug } from "@/lib/api/endpoints/events"
 import ClientPage from "./ui-client"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // Try to fetch from API first, fallback to static data
   let event
   try {
-    event = await findEventBySlugFromAPI(slug)
+    event = await getEventBySlug(slug)
     if (!event) {
       event = findEventBySlug(slug)
     }
@@ -51,7 +51,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   // Try to fetch from API first, fallback to static data
   let event
   try {
-    event = await findEventBySlugFromAPI(slug)
+    event = await getEventBySlug(slug)
     if (!event) {
       event = findEventBySlug(slug)
     }

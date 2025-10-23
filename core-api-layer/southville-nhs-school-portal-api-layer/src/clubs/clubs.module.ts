@@ -8,6 +8,8 @@ import { ClubFormResponsesService } from './services/club-form-responses.service
 import { ClubFormsController } from './controllers/club-forms.controller';
 import { ClubMembershipsService } from './services/club-memberships.service';
 import { ClubMembershipsController } from './controllers/club-memberships.controller';
+import { ClubAnnouncementsService } from './services/club-announcements.service';
+import { ClubAnnouncementsController } from './controllers/club-announcements.controller';
 
 @Module({
   imports: [SupabaseModule, AuthModule],
@@ -15,18 +17,21 @@ import { ClubMembershipsController } from './controllers/club-memberships.contro
     ClubsController,
     ClubFormsController,
     ClubMembershipsController,
+    ClubAnnouncementsController,
   ],
   providers: [
     ClubsService,
     ClubFormsService,
     ClubFormResponsesService,
     ClubMembershipsService,
+    ClubAnnouncementsService,
   ],
   exports: [
     ClubsService,
     ClubFormsService,
     ClubFormResponsesService,
     ClubMembershipsService,
+    ClubAnnouncementsService,
   ],
 })
 export class ClubsModule {}

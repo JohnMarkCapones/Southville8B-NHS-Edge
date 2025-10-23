@@ -15,6 +15,8 @@ import { useTheme } from "next-themes"
 import Link from "next/link"
 import { AnnouncementsSection } from "@/components/homepage/announcements-section"
 import { EventsSection } from "@/components/homepage/events-section"
+import { ClubsSection } from "@/components/homepage/clubs-section"
+import { NewsSection } from "@/components/homepage/news-section"
 import {
   BookOpen,
   Users,
@@ -200,38 +202,6 @@ export default function HomePage() {
     },
   ]
 
-  const featuredNews = [
-    {
-      id: 1,
-      title: "Science Fair Champions Advance to Nationals",
-      excerpt: "Our students' innovative projects earn recognition at state level competition.",
-      author: "Dr.Sarah Chen",
-      date: "2024-02-15",
-      category: "Academic",
-      image: "/placeholder.svg?height=200&width=300&text=Science+Fair",
-      readTime: "3 min read",
-    },
-    {
-      id: 2,
-      title: "New STEM Laboratory Opens",
-      excerpt: "State-of-the-art facilities now available for advanced research and learning.",
-      author: "Principal Martinez",
-      date: "2024-02-10",
-      category: "Facilities",
-      image: "/placeholder.svg?height=200&width=300&text=STEM+Lab",
-      readTime: "2 min read",
-    },
-    {
-      id: 3,
-      title: "Basketball Team Reaches State Finals",
-      excerpt: "Eagles continue undefeated season with championship game ahead.",
-      author: "Coach Johnson",
-      date: "2024-02-08",
-      category: "Athletics",
-      image: "/placeholder.svg?height=200&width=300&text=Basketball",
-      readTime: "4 min read",
-    },
-  ]
 
   const upcomingEvents = [
     {
@@ -453,6 +423,8 @@ export default function HomePage() {
 
       <EventsSection />
 
+      <NewsSection />
+
       {/* Student Rankings */}
       <section ref={rankingsRef} className="py-20 bg-background">
         <div className="container mx-auto px-4">
@@ -482,117 +454,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured News */}
-      <section className="py-16 sm:py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-8 sm:mb-12 gap-4">
-            <div className="animate-slideInLeft">
-              <Badge variant="secondary" className="mb-4">
-                <Newspaper className="w-4 h-4 mr-2" />
-                Latest Updates
-              </Badge>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Featured <span className="gradient-text">News</span>
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground">
-                Stay informed with the latest happenings in our school community.
-              </p>
-            </div>
-            <AnimatedButton
-              variant="outline"
-              className="self-start lg:self-auto animate-slideInRight group hover:scale-105 transition-all duration-300"
-              asChild
-            >
-              <Link href="/guess/news-events">
-                View All News
-                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </AnimatedButton>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 xs:gap-6 sm:gap-8">
-            {featuredNews.map((article, index) => (
-              <AnimatedCard
-                key={article.id}
-                className="group cursor-pointer hover:scale-105 transition-all duration-300 animate-slideInUp overflow-visible relative"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <Link href={article.id === 1 ? "/guess/news/science-fair-champions" : "/guess/news"}>
-                  <div className="aspect-video relative overflow-hidden mb-4">
-                    <Image
-                      src={article.image || "/placeholder.svg"}
-                      alt={article.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
-                      priority={index === 0}
-                      loading={index === 0 ? undefined : "lazy"}
-                    />
-                    <div className="absolute top-2 xs:top-4 right-2 xs:right-4">
-                      <Badge
-                        variant="secondary"
-                        className="bg-white/95 text-gray-900 backdrop-blur-sm text-xs xs:text-sm"
-                      >
-                        {article.category}
-                      </Badge>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-
-                  {/* Box format for md screens and up */}
-                  <div className="hidden md:block absolute left-4 xs:left-6 sm:left-8 top-4 xs:top-6 sm:top-8 z-10">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-md p-1.5 xs:p-2 shadow-lg min-w-[50px] xs:min-w-[60px] text-center group-hover:scale-110 transition-transform duration-300">
-                      <div className="text-sm xs:text-lg font-bold leading-none">
-                        {new Date(article.date).getDate()}
-                      </div>
-                      <div className="text-[10px] xs:text-xs font-medium uppercase leading-none mt-0.5 xs:mt-1">
-                        {new Date(article.date).toLocaleDateString("en-US", { month: "short" })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Text format for smaller screens */}
-                  <div className="md:hidden absolute top-2 left-2 z-10">
-                    <div className="bg-black/70 text-white px-2 py-1 rounded text-xs font-medium backdrop-blur-sm">
-                      {new Date(article.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="p-4 xs:p-5 sm:p-6">
-                    <h3 className="text-lg xs:text-xl font-bold mb-2 xs:mb-3 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
-                      {article.title}
-                    </h3>
-                    <p className="text-muted-foreground mb-3 xs:mb-4 line-clamp-2 leading-relaxed text-sm xs:text-base">
-                      {article.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <div className="flex items-center text-muted-foreground hover:text-primary transition-colors">
-                        <div className="w-5 h-5 xs:w-6 xs:h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2">
-                          <User className="w-2.5 h-2.5 xs:w-3 xs:h-3 text-white" />
-                        </div>
-                        <span className="font-medium truncate">{article.author}</span>
-                      </div>
-                      <div className="flex items-center text-muted-foreground flex-shrink-0 ml-2">
-                        <Clock className="w-3 h-3 xs:w-4 xs:h-4 mr-1" />
-                        <span>{article.readTime}</span>
-                      </div>
-                    </div>
-                    <div className="mt-3 xs:mt-4 pt-3 xs:pt-4 border-t border-transparent group-hover:border-border transition-colors">
-                      <div className="flex items-center text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                        <span className="text-xs xs:text-sm font-medium">Read more</span>
-                        <ArrowRight className="w-3 h-3 xs:w-4 xs:h-4 ml-1" />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </AnimatedCard>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Features Section */}
       <section ref={featuresRef} className="py-20 bg-muted/30">
@@ -830,7 +691,71 @@ export default function HomePage() {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          {/* content omitted for brevity (unchanged from original) */}
+          <div className={cn("text-center max-w-4xl mx-auto", ctaInView && "animate-fadeIn")}>
+            <Badge variant="secondary" className="mb-6 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Advanced Learning Platform
+            </Badge>
+            
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              Experience Our <span className="gradient-text">Advanced LMS Platform</span>
+            </h2>
+            
+            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+              Cutting-edge educational technology designed to enhance learning and streamline teaching. 
+              Our comprehensive platform provides everything students and educators need to succeed.
+            </p>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Interactive Learning</h3>
+                <p className="text-sm text-muted-foreground">Engaging digital content and interactive lessons</p>
+              </div>
+              
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Quiz System</h3>
+                <p className="text-sm text-muted-foreground">Interactive assessments and instant feedback</p>
+              </div>
+              
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Progress Tracking</h3>
+                <p className="text-sm text-muted-foreground">Real-time analytics and performance insights</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/guess/student">
+                <AnimatedButton 
+                  size="lg" 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <User className="w-5 h-5 mr-2" />
+                  Student Portal
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </AnimatedButton>
+              </Link>
+              
+              <Link href="/guess/teacher">
+                <AnimatedButton 
+                  variant="outline" 
+                  size="lg"
+                  className="border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white transition-all duration-300"
+                >
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Teacher Portal
+                </AnimatedButton>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 

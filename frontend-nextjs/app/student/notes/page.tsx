@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { StudentLayout } from "@/components/student/student-layout"
+import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { formatDateTime } from "@/lib/utils/dateUtils"
+import { useTranslation } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -57,7 +60,9 @@ const noteColors = [
 ]
 
 export default function NotesPage() {
-  const [notes, setNotes] = useState<Note[]>([])
+  const { t } = useTranslation()
+  // Use reliable localStorage hook
+  const [notes, setNotes] = useLocalStorage<Note[]>("student-notes-v2", [])
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -73,18 +78,9 @@ export default function NotesPage() {
     isPrivate: false,
   })
 
+  // Initialize with sample data only if no notes exist
   useEffect(() => {
-    const savedNotes = localStorage.getItem("student-notes")
-    if (savedNotes) {
-      const parsedNotes = JSON.parse(savedNotes).map((note: any) => ({
-        ...note,
-        createdAt: new Date(note.createdAt),
-        updatedAt: new Date(note.updatedAt),
-        color: note.color || "bg-white",
-        isPrivate: note.isPrivate || false,
-      }))
-      setNotes(parsedNotes)
-    } else {
+    if (notes.length === 0) {
       const sampleNotes: Note[] = [
         {
           id: "1",
@@ -112,12 +108,24 @@ export default function NotesPage() {
         },
       ]
       setNotes(sampleNotes)
+    } else {
+      // Ensure all dates are properly converted to Date objects
+      const notesWithProperDates = notes.map(note => ({
+        ...note,
+        createdAt: note.createdAt instanceof Date ? note.createdAt : new Date(note.createdAt),
+        updatedAt: note.updatedAt instanceof Date ? note.updatedAt : new Date(note.updatedAt),
+      }))
+      
+      // Only update if dates were actually converted
+      const needsUpdate = notes.some(note => 
+        !(note.createdAt instanceof Date) || !(note.updatedAt instanceof Date)
+      )
+      
+      if (needsUpdate) {
+        setNotes(notesWithProperDates)
+      }
     }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem("student-notes", JSON.stringify(notes))
-  }, [notes])
+  }, [notes.length, setNotes])
 
   useEffect(() => {
     let filtered = notes
@@ -287,9 +295,9 @@ export default function NotesPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-                Notes
+                {t('productivity.notes.title')}
               </h1>
-              <p className="text-gray-600 mt-1">Capture and organize your thoughts and ideas</p>
+              <p className="text-gray-600 mt-1">{t('student.readyToAchieve')}</p>
             </div>
 
             <div className="flex gap-2">
@@ -306,22 +314,22 @@ export default function NotesPage() {
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Note
+                    {t('productivity.notes.addNote')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>{editingNote ? "Edit Note" : "Add New Note"}</DialogTitle>
+                    <DialogTitle>{editingNote ? t('productivity.notes.editNote') : t('productivity.notes.addNote')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <Input
-                      placeholder="Note title"
+                      placeholder={t('productivity.notes.noteTitle')}
                       value={newNote.title}
                       onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
                       className="transition-all duration-200 focus:ring-2 focus:ring-green-500"
                     />
                     <Textarea
-                      placeholder="Write your note content here..."
+                      placeholder={t('productivity.notes.noteContent')}
                       value={newNote.content}
                       onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
                       rows={8}
@@ -386,7 +394,7 @@ export default function NotesPage() {
                         onClick={editingNote ? updateNote : addNote}
                         className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 transition-all duration-200"
                       >
-                        {editingNote ? "Update Note" : "Add Note"}
+                        {editingNote ? t('productivity.notes.saveNote') : t('productivity.notes.addNote')}
                       </Button>
                       <Button
                         variant="outline"
@@ -397,7 +405,7 @@ export default function NotesPage() {
                         }}
                         className="hover:bg-gray-50 transition-all duration-200"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </Button>
                     </div>
                   </div>
@@ -459,7 +467,7 @@ export default function NotesPage() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search notes..."
+                    placeholder={t('productivity.notes.searchNotes')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-green-500"
@@ -624,8 +632,7 @@ export default function NotesPage() {
                           </div>
 
                           <div className="text-xs text-gray-500">
-                            Updated {note.updatedAt.toLocaleDateString()} at{" "}
-                            {note.updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            Updated {formatDateTime(note.updatedAt)}
                           </div>
                         </div>
                       )}

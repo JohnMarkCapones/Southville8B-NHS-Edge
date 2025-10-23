@@ -45,31 +45,53 @@ export class ClubMembershipsService {
   ): Promise<boolean> {
     const supabase = this.supabaseService.getServiceClient();
 
-    // Check if user is Admin
-    const { data: user } = await supabase
+    // Check if user is Admin by getting their role
+    const { data: userWithRole, error: userError } = await supabase
       .from('users')
-      .select('role_id, roles(name)') // Remove !inner for left join
+      .select('id, role_id, roles!inner(name)')
       .eq('id', userId)
       .single();
 
-    // Handle both object and array shapes safely
-    const roleName = user?.roles?.[0]?.name;
+    if (userError) {
+      this.logger.error('Error fetching user role:', userError);
+    }
+
+    // Check role name - handle both object and array responses
+    const roles: any = userWithRole?.roles;
+    const roleName = Array.isArray(roles) ? roles[0]?.name : roles?.name;
+
+    this.logger.debug(`User ${userId} has role: ${roleName}`);
+
     if (roleName === 'Admin') return true;
 
-    // Check if user is adviser, co-adviser, or president
-    const { data: club } = await supabase
+    // Check if user is adviser, co-adviser, or president of this club
+    const { data: club, error: clubError } = await supabase
       .from('clubs')
       .select('advisor_id, co_advisor_id, president_id')
       .eq('id', clubId)
       .single();
 
-    if (!club) return false;
+    if (clubError) {
+      this.logger.error('Error fetching club:', clubError);
+    }
 
-    return (
+    if (!club) {
+      this.logger.warn(`Club ${clubId} not found`);
+      return false;
+    }
+
+    this.logger.debug(
+      `Checking access - User: ${userId}, Advisor: ${club.advisor_id}, Co-Advisor: ${club.co_advisor_id}, President: ${club.president_id}`,
+    );
+
+    const hasAccess =
       club.advisor_id === userId ||
       club.co_advisor_id === userId ||
-      club.president_id === userId
-    );
+      club.president_id === userId;
+
+    this.logger.debug(`Access granted: ${hasAccess}`);
+
+    return hasAccess;
   }
 
   async create(

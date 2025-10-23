@@ -49,9 +49,24 @@ export class QuizController {
   @Get('available')
   @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Get available quizzes for the current student' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
-  @ApiQuery({ name: 'subjectId', required: false, type: String, description: 'Filter by subject ID' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
+  @ApiQuery({
+    name: 'subjectId',
+    required: false,
+    type: String,
+    description: 'Filter by subject ID',
+  })
   @ApiResponse({
     status: 200,
     description: 'Available quizzes retrieved successfully',
@@ -102,10 +117,30 @@ export class QuizController {
   @Get()
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all quizzes with pagination and filtering' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
-  @ApiQuery({ name: 'teacherId', required: false, type: String, description: 'Filter by teacher ID' })
-  @ApiQuery({ name: 'subjectId', required: false, type: String, description: 'Filter by subject ID' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
+  @ApiQuery({
+    name: 'teacherId',
+    required: false,
+    type: String,
+    description: 'Filter by teacher ID',
+  })
+  @ApiQuery({
+    name: 'subjectId',
+    required: false,
+    type: String,
+    description: 'Filter by subject ID',
+  })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -175,7 +210,9 @@ export class QuizController {
 
   @Patch(':id')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update a quiz (teachers can only update their own quizzes)' })
+  @ApiOperation({
+    summary: 'Update a quiz (teachers can only update their own quizzes)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Quiz updated successfully',
@@ -256,7 +293,8 @@ export class QuizController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - You can only configure settings for your own quizzes',
+    description:
+      'Forbidden - You can only configure settings for your own quizzes',
   })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
   async createQuizSettings(
@@ -299,7 +337,9 @@ export class QuizController {
 
   @Post(':id/assign-sections')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Assign quiz to sections with optional deadline overrides' })
+  @ApiOperation({
+    summary: 'Assign quiz to sections with optional deadline overrides',
+  })
   @ApiResponse({
     status: 200,
     description: 'Quiz assigned to sections successfully',
@@ -319,7 +359,9 @@ export class QuizController {
     @Body() assignDto: AssignQuizToSectionsDto,
     @AuthUser() user: SupabaseUser,
   ): Promise<{ message: string }> {
-    this.logger.log(`Assigning quiz ${quizId} to ${assignDto.sectionIds.length} section(s)`);
+    this.logger.log(
+      `Assigning quiz ${quizId} to ${assignDto.sectionIds.length} section(s)`,
+    );
     await this.quizService.assignQuizToSections(
       quizId,
       assignDto.sectionIds,

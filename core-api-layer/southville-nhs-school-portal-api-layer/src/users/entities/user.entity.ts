@@ -25,6 +25,9 @@ export class User {
   @ApiProperty({ description: 'Last update timestamp' })
   updated_at: string;
 
+  @ApiProperty({ description: 'Last login timestamp', required: false })
+  last_login_at?: string;
+
   // Related data
   @ApiProperty({ description: 'Role name', required: false })
   role?: {
@@ -40,4 +43,14 @@ export class User {
 
   @ApiProperty({ description: 'Student data', required: false })
   student?: Student;
+
+  @ApiProperty({
+    description: 'Primary domain role from PBAC system',
+    required: false,
+  })
+  primary_domain_role?: {
+    role_name: string;
+    domain_type: string;
+    domain_name: string;
+  };
 }

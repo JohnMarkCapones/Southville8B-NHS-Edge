@@ -3,10 +3,13 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { UpdateClubDto } from './dto/update-club.dto';
+import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
 
 @Injectable()
 export class ClubsService {
@@ -23,29 +26,34 @@ export class ClubsService {
     try {
       const supabase = this.supabaseService.getServiceClient();
 
-      // Verify domain exists
-      const { data: domain, error: domainError } = await supabase
-        .from('domains')
-        .select('id, type, name')
-        .eq('id', createClubDto.domain_id)
-        .single();
+      // Verify domain exists (if provided)
+      if (createClubDto.domain_id) {
+        const { data: domain, error: domainError } = await supabase
+          .from('domains')
+          .select('id, type, name')
+          .eq('id', createClubDto.domain_id)
+          .single();
 
-      if (domainError || !domain) {
-        throw new NotFoundException(
-          `Domain with ID ${createClubDto.domain_id} not found`,
-        );
+        if (domainError || !domain) {
+          throw new NotFoundException(
+            `Domain with ID ${createClubDto.domain_id} not found`,
+          );
+        }
+
+        if (domain.type !== 'club') {
+          throw new BadRequestException(
+            `Domain type must be 'club', got '${domain.type}'`,
+          );
+        }
       }
 
-      if (domain.type !== 'club') {
-        throw new BadRequestException(
-          `Domain type must be 'club', got '${domain.type}'`,
-        );
-      }
+      // Extract nested data
+      const { goals, benefits, faqs, ...clubData } = createClubDto;
 
-      // Create club
-      const { data, error } = await supabase
+      // 1. Create club
+      const { data: club, error: clubError } = await supabase
         .from('clubs')
-        .insert(createClubDto)
+        .insert(clubData)
         .select(
           `
           *,
@@ -59,19 +67,88 @@ export class ClubsService {
         )
         .single();
 
-      if (error) {
-        this.logger.error('Error creating club:', error);
+      if (clubError) {
+        this.logger.error('Error creating club:', clubError);
         throw new BadRequestException(
-          `Failed to create club: ${error.message}`,
+          `Failed to create club: ${clubError.message}`,
         );
       }
 
-      this.logger.log(`Created club: ${data.name} (ID: ${data.id})`);
-      return data;
+      // 2. Insert goals (if provided)
+      if (goals && goals.length > 0) {
+        const goalsToInsert = goals.map((goal) => ({
+          club_id: club.id,
+          goal_text: goal.goal_text,
+          order_index: goal.order_index,
+        }));
+
+        const { error: goalsError } = await supabase
+          .from('club_goals')
+          .insert(goalsToInsert);
+
+        if (goalsError) {
+          // Rollback club creation
+          await supabase.from('clubs').delete().eq('id', club.id);
+          this.logger.error('Error inserting club goals:', goalsError);
+          throw new InternalServerErrorException(
+            'Failed to create club goals. Club creation rolled back.',
+          );
+        }
+      }
+
+      // 3. Insert benefits (if provided)
+      if (benefits && benefits.length > 0) {
+        const benefitsToInsert = benefits.map((benefit) => ({
+          club_id: club.id,
+          title: benefit.title,
+          description: benefit.description,
+          order_index: benefit.order_index,
+        }));
+
+        const { error: benefitsError } = await supabase
+          .from('club_benefits')
+          .insert(benefitsToInsert);
+
+        if (benefitsError) {
+          // Rollback club creation
+          await supabase.from('clubs').delete().eq('id', club.id);
+          this.logger.error('Error inserting club benefits:', benefitsError);
+          throw new InternalServerErrorException(
+            'Failed to create club benefits. Club creation rolled back.',
+          );
+        }
+      }
+
+      // 4. Insert FAQs (if provided)
+      if (faqs && faqs.length > 0) {
+        const faqsToInsert = faqs.map((faq) => ({
+          club_id: club.id,
+          question: faq.question,
+          answer: faq.answer,
+          order_index: faq.order_index,
+        }));
+
+        const { error: faqsError } = await supabase
+          .from('club_faqs')
+          .insert(faqsToInsert);
+
+        if (faqsError) {
+          // Rollback club creation
+          await supabase.from('clubs').delete().eq('id', club.id);
+          this.logger.error('Error inserting club FAQs:', faqsError);
+          throw new InternalServerErrorException(
+            'Failed to create club FAQs. Club creation rolled back.',
+          );
+        }
+      }
+
+      this.logger.log(`Created club: ${club.name} (ID: ${club.id})`);
+      return club;
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
       ) {
         throw error;
       }
@@ -129,10 +206,13 @@ export class ClubsService {
     try {
       const supabase = this.supabaseService.getServiceClient();
 
-      const { data, error } = await supabase
-        .from('clubs')
-        .select(
-          `
+      // Fetch club with goals, benefits, and FAQs in parallel
+      const [clubResult, goalsResult, benefitsResult, faqsResult] =
+        await Promise.all([
+          supabase
+            .from('clubs')
+            .select(
+              `
           *,
           president:president_id(id, full_name, email),
           vp:vp_id(id, full_name, email),
@@ -141,15 +221,39 @@ export class ClubsService {
           co_advisor:co_advisor_id(id, full_name, email),
           domain:domain_id(id, type, name)
         `,
-        )
-        .eq('id', id)
-        .single();
+            )
+            .eq('id', id)
+            .single(),
+          supabase
+            .from('club_goals')
+            .select('*')
+            .eq('club_id', id)
+            .order('order_index', { ascending: true }),
+          supabase
+            .from('club_benefits')
+            .select('*')
+            .eq('club_id', id)
+            .order('order_index', { ascending: true }),
+          supabase
+            .from('club_faqs')
+            .select('*')
+            .eq('club_id', id)
+            .order('order_index', { ascending: true }),
+        ]);
 
-      if (error || !data) {
+      if (clubResult.error || !clubResult.data) {
         throw new NotFoundException(`Club with ID ${id} not found`);
       }
 
-      return data;
+      // Combine results
+      const club = {
+        ...clubResult.data,
+        goals: goalsResult.data || [],
+        benefits: benefitsResult.data || [],
+        faqs: faqsResult.data || [],
+      };
+
+      return club;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -300,5 +404,128 @@ export class ClubsService {
       message: 'Finances updated successfully',
       data: financesData,
     };
+  }
+
+  /**
+   * Join a club
+   * @param clubId - Club ID to join
+   * @param user - Authenticated user
+   * @returns Promise<{success: boolean}>
+   */
+  async joinClub(
+    clubId: string,
+    user: SupabaseUser,
+  ): Promise<{ success: boolean }> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      // Verify club exists
+      const { data: club, error: clubError } = await supabase
+        .from('clubs')
+        .select('id, name')
+        .eq('id', clubId)
+        .single();
+
+      if (clubError || !club) {
+        throw new NotFoundException(`Club with ID ${clubId} not found`);
+      }
+
+      // Get student record for the user
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (studentError || !student) {
+        throw new NotFoundException('Student record not found for user');
+      }
+
+      // Check if student is already a member
+      const { data: existingMembership, error: membershipCheckError } =
+        await supabase
+          .from('club_memberships')
+          .select('id, status')
+          .eq('student_id', student.id)
+          .eq('club_id', clubId)
+          .single();
+
+      if (membershipCheckError && membershipCheckError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if no membership exists
+        this.logger.error(
+          'Error checking existing membership:',
+          membershipCheckError,
+        );
+        throw new InternalServerErrorException(
+          'Failed to check existing membership',
+        );
+      }
+
+      if (existingMembership) {
+        if (existingMembership.status === 'active') {
+          throw new ConflictException('You are already a member of this club');
+        } else if (existingMembership.status === 'pending') {
+          throw new ConflictException(
+            'You already have a pending membership request for this club',
+          );
+        }
+      }
+
+      // Create new membership
+      const { data: newMembership, error: createError } = await supabase
+        .from('club_memberships')
+        .insert({
+          student_id: student.id,
+          club_id: clubId,
+          status: 'active', // For now, auto-approve. In real implementation, this might be 'pending'
+          joined_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        this.logger.error('Error creating club membership:', createError);
+        throw new InternalServerErrorException('Failed to join club');
+      }
+
+      this.logger.log(
+        `Student ${user.email} successfully joined club: ${club.name} (${clubId})`,
+      );
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Error joining club:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all club positions
+   * @returns Promise<Position[]> - Array of positions
+   */
+  async getPositions(): Promise<any[]> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      const { data, error } = await supabase
+        .from('club_positions')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+      if (error) {
+        this.logger.error('Error fetching club positions:', error);
+        throw new BadRequestException(
+          `Failed to fetch club positions: ${error.message}`,
+        );
+      }
+
+      return data || [];
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Unexpected error fetching club positions:', error);
+      throw new BadRequestException('Failed to fetch club positions');
+    }
   }
 }

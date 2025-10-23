@@ -1,4 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { TeacherFileDownload } from '../entities/teacher-file-download.entity';
 
@@ -263,7 +267,8 @@ export class FileDownloadLoggerService {
         totalDownloads: totalDownloads || 0,
         totalFiles,
         totalUsers,
-        averageDownloadsPerFile: Math.round(averageDownloadsPerFile * 100) / 100,
+        averageDownloadsPerFile:
+          Math.round(averageDownloadsPerFile * 100) / 100,
       };
     } catch (error) {
       this.logger.error('Error in getOverallStats:', error);

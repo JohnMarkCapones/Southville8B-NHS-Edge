@@ -39,13 +39,17 @@ export class SessionManagementService {
         .eq('is_active', true)
         .gte(
           'last_heartbeat',
-          new Date(Date.now() - this.SESSION_TIMEOUT_MINUTES * 60 * 1000).toISOString(),
+          new Date(
+            Date.now() - this.SESSION_TIMEOUT_MINUTES * 60 * 1000,
+          ).toISOString(),
         )
         .single();
 
       if (error && error.code !== 'PGRST116') {
         this.logger.error('Error checking active session:', error);
-        throw new InternalServerErrorException('Failed to check active session');
+        throw new InternalServerErrorException(
+          'Failed to check active session',
+        );
       }
 
       return {
@@ -183,7 +187,8 @@ export class SessionManagementService {
         session.initial_device_fingerprint !== currentDeviceFingerprint;
 
       // Check IP change (warning only, not blocking)
-      const ipChanged = session.initial_ip_address !== session.current_ip_address;
+      const ipChanged =
+        session.initial_ip_address !== session.current_ip_address;
 
       if (deviceChanged) {
         // Log suspicious activity
@@ -298,9 +303,14 @@ export class SessionManagementService {
             .eq('session_id', session.session_id);
 
           if (deleteError) {
-            this.logger.error(`Error deleting old session ${session.session_id}:`, deleteError);
+            this.logger.error(
+              `Error deleting old session ${session.session_id}:`,
+              deleteError,
+            );
           } else {
-            this.logger.log(`Deleted old session ${session.session_id} for attempt ${session.attempt_id}`);
+            this.logger.log(
+              `Deleted old session ${session.session_id} for attempt ${session.attempt_id}`,
+            );
           }
 
           // Also flag the old attempt as terminated
@@ -350,10 +360,7 @@ export class SessionManagementService {
   /**
    * Get active session details
    */
-  async getSessionDetails(
-    attemptId: string,
-    studentId: string,
-  ): Promise<any> {
+  async getSessionDetails(attemptId: string, studentId: string): Promise<any> {
     try {
       const supabase = this.supabaseService.getClient();
 
@@ -375,7 +382,8 @@ export class SessionManagementService {
         isActive: session.is_active,
         lastHeartbeat: session.last_heartbeat,
         deviceChanged:
-          session.initial_device_fingerprint !== session.current_device_fingerprint,
+          session.initial_device_fingerprint !==
+          session.current_device_fingerprint,
         ipChanged: session.initial_ip_address !== session.current_ip_address,
       };
     } catch (error) {

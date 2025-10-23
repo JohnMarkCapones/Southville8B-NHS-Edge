@@ -29,7 +29,8 @@ export class CreateQuizDto {
   @IsString()
   @MaxLength(1000)
   @ApiProperty({
-    example: 'This quiz covers basic algebra concepts including equations and inequalities',
+    example:
+      'This quiz covers basic algebra concepts including equations and inequalities',
     description: 'Quiz description',
     required: false,
     maxLength: 1000,
@@ -124,7 +125,8 @@ export class CreateQuizDto {
   @ValidateIf((o) => o.questionPoolSize)
   @ApiProperty({
     example: 20,
-    description: 'Number of questions to display per attempt (must be <= questionPoolSize)',
+    description:
+      'Number of questions to display per attempt (must be <= questionPoolSize)',
     required: false,
     minimum: 1,
   })

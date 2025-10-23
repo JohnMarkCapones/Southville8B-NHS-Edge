@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,6 +45,9 @@ import {
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/hooks/use-toast"
+import { useSections } from "@/hooks/useSections"
+import { useBuildings } from "@/hooks/useBuildings"
 
 const initialGradeLevelsData = [
   {
@@ -248,11 +251,33 @@ const initialGradeLevelsData = [
 ]
 
 export default function GradeLevelsPage() {
+  const { toast } = useToast()
+  const { 
+    sections, 
+    loading, 
+    error, 
+    loadSectionsByGradeLevel, 
+    addSection, 
+    removeSection, 
+    updateSectionData,
+    loadAvailableTeachers,
+    clearError 
+  } = useSections()
+  const { buildings, loadBuildings } = useBuildings()
+  
   const [gradeLevelsData, setGradeLevelsData] = useState(initialGradeLevelsData)
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedSections, setSelectedSections] = useState<number[]>([])
+  const [availableTeachers, setAvailableTeachers] = useState<any[]>([])
+  const [selectedBuilding, setSelectedBuilding] = useState<string>("")
+  const [selectedFloor, setSelectedFloor] = useState<string>("")
+  const [selectedRoom, setSelectedRoom] = useState<string>("")
+  const [createSectionForm, setCreateSectionForm] = useState({
+    name: "",
+    adviser: "",
+  })
 
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; sectionId: number | null; sectionName: string }>({
     open: false,
@@ -275,6 +300,32 @@ export default function GradeLevelsPage() {
     open: false,
     sectionId: null,
   })
+
+  // Load buildings and available teachers on mount
+  useEffect(() => {
+    console.log('useEffect: Starting to load data...')
+    console.log('useEffect: loadBuildings function:', typeof loadBuildings)
+    console.log('useEffect: loadAvailableTeachers function:', typeof loadAvailableTeachers)
+    
+    loadBuildings().then((result) => {
+      console.log('Buildings loaded successfully:', result)
+      console.log('Buildings data:', buildings)
+    }).catch(error => {
+      console.error('Error loading buildings:', error)
+      console.error('Error details:', error.message, error.stack)
+    })
+    
+    loadAvailableTeachers().then(teachers => {
+      console.log('Available teachers loaded successfully:', teachers)
+      console.log('Teachers type:', typeof teachers, 'Is array:', Array.isArray(teachers))
+      console.log('Teachers length:', teachers?.length)
+      setAvailableTeachers(teachers || [])
+    }).catch(error => {
+      console.error('Error loading teachers:', error)
+      console.error('Error details:', error.message, error.stack)
+      setAvailableTeachers([])
+    })
+  }, [loadBuildings, loadAvailableTeachers])
 
   // Calculate totals
   const totalSections = gradeLevelsData.reduce((sum, grade) => sum + grade.totalSections, 0)
@@ -363,6 +414,57 @@ export default function GradeLevelsPage() {
   const confirmAssignAdviser = () => {
     console.log("[v0] Assigning adviser to section:", assignAdviserModal.sectionId)
     setAssignAdviserModal({ open: false, sectionId: null })
+  }
+
+  // Handle create section
+  const handleCreateSection = async () => {
+    if (!createSectionForm.name || !createSectionForm.adviser || !selectedBuilding || !selectedFloor || !selectedRoom) {
+      toast({
+        title: "⚠️ Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+        duration: 4000,
+      })
+      return
+    }
+
+    try {
+      const sectionData = {
+        name: createSectionForm.name,
+        grade_level: `Grade ${selectedGrade}`,
+        teacher_id: createSectionForm.adviser,
+        building_id: selectedBuilding,
+        floor_id: selectedFloor,
+        room_id: selectedRoom,
+        status: 'active' as const,
+      }
+
+      const newSection = await addSection(sectionData)
+      
+      if (newSection) {
+        toast({
+          title: "✅ Section Created",
+          description: `${createSectionForm.name} has been successfully created.`,
+          variant: "default",
+          duration: 4000,
+        })
+        
+        // Reset form
+        setCreateSectionForm({ name: "", adviser: "" })
+        setSelectedBuilding("")
+        setSelectedFloor("")
+        setSelectedRoom("")
+        setCreateSectionModal(false)
+      }
+    } catch (error) {
+      console.error("Error creating section:", error)
+      toast({
+        title: "❌ Creation Failed",
+        description: "Failed to create section. Please try again.",
+        variant: "destructive",
+        duration: 4000,
+      })
+    }
   }
 
   const StatusBadge = ({ status, sectionId }: { status: string; sectionId: number }) => {
@@ -528,6 +630,7 @@ export default function GradeLevelsPage() {
           Create Section
         </Button>
       </div>
+
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -774,40 +877,96 @@ export default function GradeLevelsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Section Name *</Label>
-                <Input placeholder="e.g., 7-A, 7-Einstein" />
+                <Input 
+                  placeholder="e.g., 7-A, 7-Einstein" 
+                  value={createSectionForm.name}
+                  onChange={(e) => setCreateSectionForm(prev => ({ ...prev, name: e.target.value }))}
+                />
               </div>
               <div className="space-y-2">
-                <Label>Room *</Label>
-                <Input placeholder="e.g., Room 101" />
+                <Label>Adviser *</Label>
+                <Select 
+                  value={createSectionForm.adviser} 
+                  onValueChange={(value) => setCreateSectionForm(prev => ({ ...prev, adviser: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select adviser" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTeachers?.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        {teacher.full_name}
+                      </SelectItem>
+                    )) || []}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Adviser *</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select adviser" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Ms. Maria Santos</SelectItem>
-                  <SelectItem value="2">Mr. John Reyes</SelectItem>
-                  <SelectItem value="3">Ms. Ana Cruz</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Schedule *</Label>
-              <Input placeholder="e.g., Mon-Fri 7:30 AM" />
-            </div>
-            <div className="space-y-2">
-              <Label>Maximum Students</Label>
-              <Input type="number" placeholder="35" />
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Building *</Label>
+                <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select building" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings?.map((building) => (
+                      <SelectItem key={building.id} value={building.id}>
+                        {building.buildingName}
+                      </SelectItem>
+                    )) || []}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {selectedBuilding && (
+                <div className="space-y-2">
+                  <Label>Floor *</Label>
+                  <Select value={selectedFloor} onValueChange={setSelectedFloor}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select floor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {buildings
+                        ?.find(b => b.id === selectedBuilding)
+                        ?.floors?.map((floor) => (
+                          <SelectItem key={floor.id} value={floor.id}>
+                            {floor.floorName}
+                          </SelectItem>
+                        )) || []}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              {selectedFloor && (
+                <div className="space-y-2">
+                  <Label>Room *</Label>
+                  <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {buildings
+                        ?.find(b => b.id === selectedBuilding)
+                        ?.floors?.find(f => f.id === selectedFloor)
+                        ?.rooms?.map((room) => (
+                          <SelectItem key={room.id} value={room.id}>
+                            {room.roomNumber} - {room.roomName}
+                          </SelectItem>
+                        )) || []}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateSectionModal(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setCreateSectionModal(false)}>Create Section</Button>
+            <Button onClick={handleCreateSection}>Create Section</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

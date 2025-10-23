@@ -191,6 +191,9 @@ class ApiClient {
         // For JSON, stringify
         finalOptions.body = JSON.stringify(body);
       }
+    } else {
+      // If no body, remove Content-Type header (e.g., for DELETE requests)
+      headers.delete('Content-Type');
     }
 
     // Debug logging
@@ -255,8 +258,17 @@ class ApiClient {
                                currentPath.startsWith('/_next');
           
           if (!isPublicPage) {
-            console.log('[API Client] 401 Unauthorized - redirecting to login');
-            window.location.href = '/guess/login';
+            console.log('[API Client] 401 Unauthorized - redirecting to portal');
+            
+            // Determine role based on the current path
+            let role = 'student'; // default
+            if (currentPath.startsWith('/teacher')) {
+              role = 'teacher';
+            } else if (currentPath.startsWith('/admin') || currentPath.startsWith('/superadmin')) {
+              role = 'admin';
+            }
+            
+            window.location.href = `/guess/portal?role=${role}`;
           }
         }
       }

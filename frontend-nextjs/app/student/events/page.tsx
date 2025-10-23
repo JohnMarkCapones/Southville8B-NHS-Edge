@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import StudentLayout from "@/components/student/student-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,213 +25,114 @@ import {
   Grid3X3,
   List,
   ChevronRight,
-  BookOpen,
-  Trophy,
-  Palette,
   Eye,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
+import { useEvents, useFeaturedEvents } from "@/hooks/useEvents"
+import { generateSlug, formatDate, getCategoryColor, getCategoryName } from "@/lib/api/endpoints/events"
+import type { Event } from "@/lib/api/types/events"
+import { EventStatus, EventVisibility } from "@/lib/api/types/events"
 
 export default function StudentEventsPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [favorites, setFavorites] = useState<number[]>([])
-  const [notifications, setNotifications] = useState<number[]>([])
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [notifications, setNotifications] = useState<string[]>([])
 
-  const createSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "")
-  }
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300) // Wait 300ms after user stops typing
 
-  const events = [
-    {
-      id: 1,
-      title: "Science Fair 2024",
-      date: "2025-03-15",
-      time: "9:00 AM - 4:00 PM",
-      location: "Main Auditorium",
-      category: "academic",
-      description: "Annual science fair showcasing student projects and innovations with university judges.",
-      attendees: 150,
-      maxAttendees: 200,
-      status: "upcoming",
-      image: "/placeholder.svg?height=200&width=300&text=Science+Fair",
-      featured: true,
-      tags: ["STEM", "Competition", "Innovation"],
-      organizer: "Science Department",
-      registrationDeadline: "2025-03-10",
-      price: "Free",
-    },
-    {
-      id: 2,
-      title: "Basketball Championship Finals",
-      date: "2025-03-20",
-      time: "3:00 PM - 6:00 PM",
-      location: "School Gymnasium",
-      category: "sports",
-      description: "Inter-section basketball championship finals with exciting prizes and awards.",
-      attendees: 200,
-      maxAttendees: 300,
-      status: "upcoming",
-      image: "/placeholder.svg?height=200&width=300&text=Basketball",
-      featured: false,
-      tags: ["Sports", "Championship", "Competition"],
-      organizer: "Athletic Department",
-      registrationDeadline: "2025-03-18",
-      price: "Free",
-    },
-    {
-      id: 3,
-      title: "Cultural Night Celebration",
-      date: "2025-03-25",
-      time: "6:00 PM - 9:00 PM",
-      location: "School Theater",
-      category: "cultural",
-      description: "Celebration of diverse cultures with performances, food, and traditional displays.",
-      attendees: 300,
-      maxAttendees: 400,
-      status: "upcoming",
-      image: "/placeholder.svg?height=200&width=300&text=Cultural+Night",
-      featured: true,
-      tags: ["Culture", "Performance", "Food"],
-      organizer: "Cultural Club",
-      registrationDeadline: "2025-03-22",
-      price: "₱50",
-    },
-    {
-      id: 4,
-      title: "Math Olympiad Regional",
-      date: "2025-02-28",
-      time: "10:00 AM - 2:00 PM",
-      location: "Computer Lab",
-      category: "academic",
-      description: "Regional mathematics competition for grade 8 students with cash prizes.",
-      attendees: 80,
-      maxAttendees: 100,
-      status: "completed",
-      image: "/placeholder.svg?height=200&width=300&text=Math+Olympiad",
-      featured: false,
-      tags: ["Math", "Competition", "Regional"],
-      organizer: "Math Department",
-      registrationDeadline: "2025-02-25",
-      price: "Free",
-    },
-    {
-      id: 5,
-      title: "Spring Musical: Hamilton Jr.",
-      date: "2025-04-10",
-      time: "7:00 PM - 9:30 PM",
-      location: "School Theater",
-      category: "cultural",
-      description: "Student production of Hamilton Jr. featuring talented performers from our drama club.",
-      attendees: 45,
-      maxAttendees: 350,
-      status: "upcoming",
-      image: "/placeholder.svg?height=200&width=300&text=Hamilton+Musical",
-      featured: true,
-      tags: ["Musical", "Drama", "Performance"],
-      organizer: "Drama Club",
-      registrationDeadline: "2025-04-08",
-      price: "₱100",
-    },
-    {
-      id: 6,
-      title: "Environmental Awareness Week",
-      date: "2025-04-22",
-      time: "8:00 AM - 5:00 PM",
-      location: "School Campus",
-      category: "social",
-      description: "Week-long activities promoting environmental awareness and sustainability practices.",
-      attendees: 120,
-      maxAttendees: 500,
-      status: "upcoming",
-      image: "/placeholder.svg?height=200&width=300&text=Environment+Week",
-      featured: false,
-      tags: ["Environment", "Sustainability", "Awareness"],
-      organizer: "Environmental Club",
-      registrationDeadline: "2025-04-20",
-      price: "Free",
-    },
-  ]
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
-  const categories = [
-    { value: "all", label: "All Events", icon: <Grid3X3 className="w-4 h-4" />, count: events.length },
-    {
-      value: "academic",
-      label: "Academic",
-      icon: <BookOpen className="w-4 h-4" />,
-      count: events.filter((e) => e.category === "academic").length,
-    },
-    {
-      value: "sports",
-      label: "Sports",
-      icon: <Trophy className="w-4 h-4" />,
-      count: events.filter((e) => e.category === "sports").length,
-    },
-    {
-      value: "cultural",
-      label: "Cultural",
-      icon: <Palette className="w-4 h-4" />,
-      count: events.filter((e) => e.category === "cultural").length,
-    },
-    {
-      value: "social",
-      label: "Social",
-      icon: <Users className="w-4 h-4" />,
-      count: events.filter((e) => e.category === "social").length,
-    },
-  ]
-
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesCategory = selectedCategory === "all" || event.category === selectedCategory
-    return matchesSearch && matchesCategory
+  // API data fetching with React Query
+  const {
+    data: eventsResponse,
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = useEvents({
+    limit: 50,
+    status: EventStatus.PUBLISHED,
+    visibility: EventVisibility.PUBLIC,
+    search: debouncedSearchTerm || undefined,
   })
 
-  const upcomingEvents = filteredEvents.filter((event) => event.status === "upcoming")
-  const pastEvents = filteredEvents.filter((event) => event.status === "completed")
-  const featuredEvents = upcomingEvents.filter((event) => event.featured)
+  const { data: featuredEvents = [], isLoading: featuredLoading } = useFeaturedEvents(3)
 
-  const toggleFavorite = (eventId: number) => {
+  // Get all events
+  const allEvents = eventsResponse?.data || []
+
+  // Client-side category filtering
+  const filteredEvents = useMemo(() => {
+    if (selectedCategory === "all") return allEvents
+
+    return allEvents.filter((event) => {
+      const category = getCategoryName(event)
+      return category.toLowerCase() === selectedCategory.toLowerCase()
+    })
+  }, [allEvents, selectedCategory])
+
+  // Separate upcoming and past events
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const upcomingEvents = filteredEvents.filter((event) => {
+    const eventDate = new Date(event.date)
+    return eventDate >= today && event.status === "published"
+  })
+
+  const pastEvents = filteredEvents.filter((event) => {
+    const eventDate = new Date(event.date)
+    return eventDate < today || event.status === "completed"
+  })
+
+  // Build categories list with counts
+  const categories = useMemo(() => {
+    const categoryCounts: { [key: string]: number } = {}
+
+    allEvents.forEach((event) => {
+      const category = getCategoryName(event)
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1
+    })
+
+    return [
+      { value: "all", label: "All Events", count: allEvents.length },
+      { value: "academic", label: "Academic", count: categoryCounts["Academic"] || 0 },
+      { value: "sports", label: "Sports", count: categoryCounts["Sports"] || 0 },
+      { value: "cultural", label: "Cultural", count: categoryCounts["Cultural"] || 0 },
+      { value: "social", label: "Social", count: categoryCounts["Social"] || 0 },
+    ]
+  }, [allEvents])
+
+  const toggleFavorite = (eventId: string) => {
     setFavorites((prev) => (prev.includes(eventId) ? prev.filter((id) => id !== eventId) : [...prev, eventId]))
   }
 
-  const toggleNotification = (eventId: number) => {
+  const toggleNotification = (eventId: string) => {
     setNotifications((prev) => (prev.includes(eventId) ? prev.filter((id) => id !== eventId) : [...prev, eventId]))
-    if (!notifications.includes(eventId)) {
-      // Simple notification feedback - could be enhanced with toast
-      console.log(`Notifications enabled for event: ${events.find((e) => e.id === eventId)?.title}`)
-    }
   }
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryGradientColor = (event: Event) => {
+    const category = getCategoryName(event)
     const colors = {
-      academic: "from-blue-500 to-blue-600",
-      sports: "from-green-500 to-green-600",
-      cultural: "from-purple-500 to-purple-600",
-      social: "from-orange-500 to-orange-600",
+      Academic: "from-blue-500 to-blue-600",
+      Sports: "from-green-500 to-green-600",
+      Cultural: "from-purple-500 to-purple-600",
+      Social: "from-orange-500 to-orange-600",
     }
     return colors[category as keyof typeof colors] || "from-gray-500 to-gray-600"
-  }
-
-  const getCategoryBadgeColor = (category: string) => {
-    const colors = {
-      academic: "bg-blue-100 text-blue-700 border-blue-200",
-      sports: "bg-green-100 text-green-700 border-green-200",
-      cultural: "bg-purple-100 text-purple-700 border-purple-200",
-      social: "bg-orange-100 text-orange-700 border-orange-200",
-    }
-    return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-700 border-gray-200"
   }
 
   return (
     <StudentLayout>
       <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Header Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-6 sm:p-8 text-white">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10">
@@ -267,6 +168,7 @@ export default function StudentEventsPage() {
           </div>
         </div>
 
+        {/* Search and Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 flex-1">
@@ -278,6 +180,11 @@ export default function StudentEventsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 h-11"
                 />
+                {searchTerm && searchTerm !== debouncedSearchTerm && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -319,7 +226,26 @@ export default function StudentEventsPage() {
           </div>
         </div>
 
-        {featuredEvents.length > 0 && (
+        {/* Loading State */}
+        {eventsLoading && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* Error State */}
+        {eventsError && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center">
+            <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Failed to Load Events</h3>
+            <p className="text-muted-foreground">
+              We encountered an error while loading events. Please try again later.
+            </p>
+          </div>
+        )}
+
+        {/* Featured Events Section */}
+        {!debouncedSearchTerm && !eventsLoading && featuredEvents.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Star className="w-5 h-5 text-yellow-500" />
@@ -328,17 +254,19 @@ export default function StudentEventsPage() {
             </div>
 
             <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredEvents.slice(0, 3).map((event) => (
+              {featuredEvents.map((event) => (
                 <Card
                   key={event.id}
                   className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-yellow-200 dark:border-yellow-800"
                 >
                   <div className="relative aspect-video bg-gradient-to-r from-yellow-400 to-orange-500">
-                    <img
-                      src={event.image || "/placeholder.svg"}
-                      alt={event.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {event.eventImage && (
+                      <img
+                        src={event.eventImage}
+                        alt={event.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
                     <div className="absolute top-3 left-3">
                       <Badge className="bg-yellow-500 text-white font-semibold">
                         <Star className="w-3 h-3 mr-1" />
@@ -367,8 +295,8 @@ export default function StudentEventsPage() {
                       <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
                         {event.title}
                       </CardTitle>
-                      <Badge variant="outline" className={getCategoryBadgeColor(event.category)}>
-                        {event.category}
+                      <Badge variant="outline" className={getCategoryColor(event)}>
+                        {getCategoryName(event)}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -380,34 +308,27 @@ export default function StudentEventsPage() {
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <Calendar className="w-4 h-4 text-primary" />
                         <span>
-                          {new Date(event.date).toLocaleDateString()} at {event.time}
+                          {formatDate(event.date)} at {event.time}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <MapPin className="w-4 h-4 text-primary" />
                         <span>{event.location}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <Users className="w-4 h-4 text-primary" />
-                          <span>
-                            {event.attendees}/{event.maxAttendees}
-                          </span>
-                        </div>
-                        <div className="text-sm font-semibold text-primary">{event.price}</div>
-                      </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1">
-                      {event.tags.slice(0, 2).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
+                    {event.tags && event.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {event.tags.slice(0, 2).map((tag) => (
+                          <Badge key={tag.id} variant="secondary" className="text-xs">
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex space-x-2">
-                      <Link href={`/student/events/${createSlug(event.title)}`} className="flex-1">
+                      <Link href={`/student/events/${generateSlug(event.title)}`} className="flex-1">
                         <Button className="w-full group-hover:bg-primary/90 transition-colors">
                           <Eye className="w-4 h-4 mr-1" />
                           View Details
@@ -430,227 +351,84 @@ export default function StudentEventsPage() {
           </div>
         )}
 
-        <Tabs defaultValue="upcoming" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/50">
-            <TabsTrigger
-              value="upcoming"
-              className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Upcoming Events ({upcomingEvents.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="past"
-              className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              <Award className="w-4 h-4 mr-2" />
-              Past Events ({pastEvents.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* Upcoming and Past Events Tabs */}
+        {!eventsLoading && !eventsError && (
+          <Tabs defaultValue="upcoming" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/50">
+              <TabsTrigger
+                value="upcoming"
+                className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Upcoming Events ({upcomingEvents.length})
+              </TabsTrigger>
+              <TabsTrigger
+                value="past"
+                className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                <Award className="w-4 h-4 mr-2" />
+                Past Events ({pastEvents.length})
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="upcoming" className="space-y-4">
-            <div className={viewMode === "grid" ? "grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-              {upcomingEvents.map((event, index) => (
-                <Card
-                  key={event.id}
-                  className={`group overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 animate-fadeIn ${
-                    viewMode === "list" ? "flex flex-col sm:flex-row" : ""
-                  }`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div
-                    className={`relative bg-gradient-to-r ${getCategoryColor(event.category)} ${
-                      viewMode === "list" ? "sm:w-48 sm:flex-shrink-0" : "aspect-video"
-                    }`}
-                  >
-                    <img
-                      src={event.image || "/placeholder.svg"}
-                      alt={event.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            {/* Upcoming Events Tab */}
+            <TabsContent value="upcoming" className="space-y-4">
+              {upcomingEvents.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No upcoming events found</h3>
+                  <p className="text-muted-foreground">
+                    {debouncedSearchTerm
+                      ? `No events matching "${debouncedSearchTerm}"`
+                      : "Try adjusting your search or filter criteria"}
+                  </p>
+                </div>
+              ) : (
+                <div className={viewMode === "grid" ? "grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                  {upcomingEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      viewMode={viewMode}
+                      favorites={favorites}
+                      notifications={notifications}
+                      toggleFavorite={toggleFavorite}
+                      toggleNotification={toggleNotification}
+                      getCategoryColor={getCategoryColor}
+                      getCategoryName={getCategoryName}
+                      getCategoryGradientColor={getCategoryGradientColor}
                     />
-                    <div className="absolute top-3 left-3">
-                      <Badge className={getCategoryBadgeColor(event.category)}>{event.category}</Badge>
-                    </div>
-                    <div className="absolute top-3 right-3 flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 w-8 p-0 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => toggleFavorite(event.id)}
-                      >
-                        <Heart
-                          className={`w-4 h-4 ${favorites.includes(event.id) ? "text-red-500 fill-current" : "text-gray-600"}`}
-                        />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 w-8 p-0 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Share2 className="w-4 h-4 text-gray-600" />
-                      </Button>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
-                  <div className="flex-1">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
-                          {event.title}
-                        </CardTitle>
-                        <div className="flex items-center space-x-1 text-sm font-semibold text-primary">
-                          {event.price}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">by {event.organizer}</p>
-                    </CardHeader>
-
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <Calendar className="w-4 h-4 text-primary" />
-                          <span>{new Date(event.date).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <Clock className="w-4 h-4 text-primary" />
-                          <span>{event.time}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <MapPin className="w-4 h-4 text-primary" />
-                          <span>{event.location}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1">
-                        {event.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Link href={`/student/events/${createSlug(event.title)}`} className="flex-1">
-                          <Button className="w-full group-hover:bg-primary/90 transition-colors">
-                            <Eye className="w-4 h-4 mr-1" />
-                            View Details
-                            <ChevronRight className="w-4 h-4 ml-1" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleNotification(event.id)}
-                          className={notifications.includes(event.id) ? "bg-blue-50 border-blue-200" : ""}
-                        >
-                          <Bell className={`w-4 h-4 ${notifications.includes(event.id) ? "text-blue-600" : ""}`} />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {upcomingEvents.length === 0 && (
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No upcoming events found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="past" className="space-y-4">
-            <div className={viewMode === "grid" ? "grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-              {pastEvents.map((event, index) => (
-                <Card
-                  key={event.id}
-                  className={`group overflow-hidden hover:shadow-lg transition-all duration-300 opacity-90 hover:opacity-100 animate-fadeIn ${
-                    viewMode === "list" ? "flex flex-col sm:flex-row" : ""
-                  }`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div
-                    className={`relative bg-gradient-to-r from-gray-400 to-gray-600 ${
-                      viewMode === "list" ? "sm:w-48 sm:flex-shrink-0" : "aspect-video"
-                    }`}
-                  >
-                    <img
-                      src={event.image || "/placeholder.svg"}
-                      alt={event.title}
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+            {/* Past Events Tab */}
+            <TabsContent value="past" className="space-y-4">
+              {pastEvents.length === 0 ? (
+                <div className="text-center py-12">
+                  <Award className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No past events found</h3>
+                  <p className="text-muted-foreground">Check back later for completed events</p>
+                </div>
+              ) : (
+                <div className={viewMode === "grid" ? "grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                  {pastEvents.map((event) => (
+                    <PastEventCard
+                      key={event.id}
+                      event={event}
+                      viewMode={viewMode}
+                      getCategoryColor={getCategoryColor}
+                      getCategoryName={getCategoryName}
                     />
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-gray-500 text-white">Completed</Badge>
-                    </div>
-                    <div className="absolute top-3 right-3">
-                      <Badge variant="outline" className="bg-white/90 text-gray-700">
-                        {event.category}
-                      </Badge>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
 
-                  <div className="flex-1">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{event.title}</CardTitle>
-                      <p className="text-sm text-muted-foreground">by {event.organizer}</p>
-                    </CardHeader>
-
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>{new Date(event.date).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="w-4 h-4" />
-                          <span>{event.location}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Award className="w-4 h-4" />
-                          <span>Event completed</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1">
-                        {event.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs opacity-75">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <Button variant="outline" className="w-full bg-transparent">
-                        <Link
-                          href={`/student/events/${createSlug(event.title)}`}
-                          className="flex items-center justify-center w-full"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Event Details
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {pastEvents.length === 0 && (
-              <div className="text-center py-12">
-                <Award className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No past events found</h3>
-                <p className="text-muted-foreground">Check back later for completed events</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-
+        {/* Call to Action */}
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 rounded-xl p-6 border">
           <div className="text-center space-y-4">
             <h3 className="text-lg font-semibold">Want to organize an event?</h3>
@@ -669,5 +447,222 @@ export default function StudentEventsPage() {
         </div>
       </div>
     </StudentLayout>
+  )
+}
+
+// Event Card Component for Upcoming Events
+function EventCard({
+  event,
+  viewMode,
+  favorites,
+  notifications,
+  toggleFavorite,
+  toggleNotification,
+  getCategoryColor,
+  getCategoryName,
+  getCategoryGradientColor,
+}: {
+  event: Event
+  viewMode: "grid" | "list"
+  favorites: string[]
+  notifications: string[]
+  toggleFavorite: (id: string) => void
+  toggleNotification: (id: string) => void
+  getCategoryColor: (event: Event) => string
+  getCategoryName: (event: Event) => string
+  getCategoryGradientColor: (event: Event) => string
+}) {
+  return (
+    <Card
+      className={`group overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${
+        viewMode === "list" ? "flex flex-col sm:flex-row" : ""
+      }`}
+    >
+      <div
+        className={`relative bg-gradient-to-r ${getCategoryGradientColor(event)} ${
+          viewMode === "list" ? "sm:w-48 sm:flex-shrink-0" : "aspect-video"
+        }`}
+      >
+        {event.eventImage && (
+          <img
+            src={event.eventImage}
+            alt={event.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        )}
+        <div className="absolute top-3 left-3">
+          <Badge className={getCategoryColor(event)}>{getCategoryName(event)}</Badge>
+        </div>
+        <div className="absolute top-3 right-3 flex space-x-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 w-8 p-0 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => toggleFavorite(event.id)}
+          >
+            <Heart
+              className={`w-4 h-4 ${favorites.includes(event.id) ? "text-red-500 fill-current" : "text-gray-600"}`}
+            />
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 w-8 p-0 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Share2 className="w-4 h-4 text-gray-600" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
+              {event.title}
+            </CardTitle>
+          </div>
+          {event.organizer && (
+            <p className="text-sm text-muted-foreground">by {event.organizer.fullName}</p>
+          )}
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <div className="flex items-center space-x-2 text-muted-foreground">
+              <Calendar className="w-4 h-4 text-primary" />
+              <span>{formatDate(event.date)}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-muted-foreground">
+              <Clock className="w-4 h-4 text-primary" />
+              <span>{event.time}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-muted-foreground">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span>{event.location}</span>
+            </div>
+          </div>
+
+          {event.tags && event.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {event.tags.map((tag) => (
+                <Badge key={tag.id} variant="secondary" className="text-xs">
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="flex space-x-2">
+            <Link href={`/student/events/${generateSlug(event.title)}`} className="flex-1">
+              <Button className="w-full group-hover:bg-primary/90 transition-colors">
+                <Eye className="w-4 h-4 mr-1" />
+                View Details
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toggleNotification(event.id)}
+              className={notifications.includes(event.id) ? "bg-blue-50 border-blue-200" : ""}
+            >
+              <Bell className={`w-4 h-4 ${notifications.includes(event.id) ? "text-blue-600" : ""}`} />
+            </Button>
+          </div>
+        </CardContent>
+      </div>
+    </Card>
+  )
+}
+
+// Past Event Card Component
+function PastEventCard({
+  event,
+  viewMode,
+  getCategoryColor,
+  getCategoryName,
+}: {
+  event: Event
+  viewMode: "grid" | "list"
+  getCategoryColor: (event: Event) => string
+  getCategoryName: (event: Event) => string
+}) {
+  return (
+    <Card
+      className={`group overflow-hidden hover:shadow-lg transition-all duration-300 opacity-90 hover:opacity-100 ${
+        viewMode === "list" ? "flex flex-col sm:flex-row" : ""
+      }`}
+    >
+      <div
+        className={`relative bg-gradient-to-r from-gray-400 to-gray-600 ${
+          viewMode === "list" ? "sm:w-48 sm:flex-shrink-0" : "aspect-video"
+        }`}
+      >
+        {event.eventImage && (
+          <img
+            src={event.eventImage}
+            alt={event.title}
+            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+          />
+        )}
+        <div className="absolute top-3 left-3">
+          <Badge className="bg-gray-500 text-white">Completed</Badge>
+        </div>
+        <div className="absolute top-3 right-3">
+          <Badge variant="outline" className="bg-white/90 text-gray-700">
+            {getCategoryName(event)}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="flex-1">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">{event.title}</CardTitle>
+          {event.organizer && <p className="text-sm text-muted-foreground">by {event.organizer.fullName}</p>}
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4" />
+              <span>{formatDate(event.date)}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-4 h-4" />
+              <span>{event.location}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Award className="w-4 h-4" />
+              <span>Event completed</span>
+            </div>
+          </div>
+
+          {event.tags && event.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {event.tags.map((tag) => (
+                <Badge key={tag.id} variant="secondary" className="text-xs opacity-75">
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <Button variant="outline" className="w-full bg-transparent">
+            <Link
+              href={`/student/events/${generateSlug(event.title)}`}
+              className="flex items-center justify-center w-full"
+            >
+              <Eye className="w-4 h-4 mr-1" />
+              View Event Details
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Link>
+          </Button>
+        </CardContent>
+      </div>
+    </Card>
   )
 }

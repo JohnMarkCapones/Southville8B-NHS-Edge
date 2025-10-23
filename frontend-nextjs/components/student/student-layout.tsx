@@ -9,8 +9,10 @@ import StudentHeader from "@/components/student/student-header"
 import StudentFooter from "@/components/student/student-footer"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslation } from "@/lib/i18n"
 import { useSidebarStore } from "@/lib/stores/sidebar-store"
 import { BotChat } from "@/components/chat/bot-chat"
+import { useUser } from "@/hooks/useUser"
 import {
   BookOpen,
   CalendarIcon,
@@ -49,89 +51,7 @@ interface StudentLayoutProps {
   children: React.ReactNode
 }
 
-const NAVIGATION_CONFIG = [
-  {
-    type: "single" as const,
-    icon: Home,
-    label: "Dashboard",
-    href: "/student",
-    gradient: "from-blue-500 to-indigo-600",
-  },
-  {
-    type: "section" as const,
-    key: "academics",
-    icon: GraduationCap,
-    label: "Academics",
-    gradient: "from-emerald-500 to-teal-600",
-    items: [
-      { icon: BookOpen, label: "My Subjects", href: "/student/courses" },
-      { icon: Brain, label: "Quiz Central", href: "/student/quiz" },
-      { icon: CalendarIcon, label: "Class Schedule", href: "/student/schedule" },
-      { icon: Trophy, label: "Grades", href: "/student/grades" },
-      { icon: Calendar, label: "Academic Calendar", href: "/student/calendar" },
-    ],
-  },
-  {
-    type: "section" as const,
-    key: "documents",
-    icon: FileText,
-    label: "Documents",
-    gradient: "from-orange-500 to-red-600",
-    items: [{ icon: Award, label: "Certificates", href: "/student/certificates" }],
-  },
-  {
-    type: "section" as const,
-    key: "studentLife",
-    icon: Users,
-    label: "Student Life",
-    gradient: "from-purple-500 to-pink-600",
-    items: [
-      { icon: Users, label: "My Clubs", href: "/student/clubs" },
-      { icon: FileCheck, label: "My Applications", href: "/student/clubs/applications" },
-      { icon: Search, label: "Discover Clubs", href: "/student/clubs/discover" },
-      { icon: Calendar, label: "Campus Events", href: "/student/events", badge: "2" },
-      { icon: Newspaper, label: "School News", href: "/student/news", badge: "5" },
-    ],
-  },
-  {
-    type: "section" as const,
-    key: "publisher",
-    icon: PenTool,
-    label: "Publisher",
-    gradient: "from-rose-500 to-pink-600",
-    items: [
-      { icon: Users, label: "Journalist", href: "/student/publisher/journalist" },
-      { icon: BarChart3, label: "My Articles", href: "/student/publisher" },
-      { icon: Edit3, label: "Write Article", href: "/student/publisher/create" },
-    ],
-  },
-  {
-    type: "section" as const,
-    key: "tools",
-    icon: Wrench,
-    label: "Tools & More",
-    gradient: "from-cyan-500 to-blue-600",
-    items: [
-      { icon: StickyNote, label: "Notes", href: "/student/notes" },
-      { icon: CheckSquare, label: "Todo List", href: "/student/todo" },
-      { icon: Target, label: "Goals", href: "/student/goals" },
-      { icon: Timer, label: "Pomodoro Timer", href: "/student/pomodoro" },
-      { icon: Settings, label: "Settings", href: "/student/settings" },
-      { icon: User, label: "Profile", href: "/student/profile" },
-    ],
-  },
-] as const
-
-const STUDENT_DATA = {
-  name: "Precious Danielle Mañalac",
-  studentId: "S2024001",
-  grade: "Grade 8",
-  section: "Section B",
-  avatar: "/student-avatar.png",
-  gwa: 94.5,
-  notifications: 3,
-  achievements: 12,
-} as const
+// NAVIGATION_CONFIG will be created inside the component using translations
 
 const SidebarHeader = ({
   sidebarCollapsed,
@@ -201,7 +121,34 @@ const SidebarHeader = ({
   </div>
 )
 
-const StudentProfile = ({ sidebarCollapsed, isMobile }: { sidebarCollapsed: boolean; isMobile: boolean }) => {
+const StudentProfile = ({
+  sidebarCollapsed,
+  isMobile,
+  studentName,
+  studentId,
+  gradeLevel,
+  section,
+  gwa,
+  notifications,
+  achievements
+}: {
+  sidebarCollapsed: boolean;
+  isMobile: boolean;
+  studentName: string;
+  studentId: string;
+  gradeLevel: string;
+  section: string;
+  gwa: number;
+  notifications: number;
+  achievements: number;
+}) => {
+  // Get initials from student name
+  const initials = studentName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
   if (sidebarCollapsed && !isMobile) {
     return (
       <div className="p-3 border-b border-slate-200/20 dark:border-slate-700/20">
@@ -209,13 +156,13 @@ const StudentProfile = ({ sidebarCollapsed, isMobile }: { sidebarCollapsed: bool
           <div className="relative group cursor-pointer">
             <div className="w-12 h-12 bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 group-hover:shadow-2xl group-hover:scale-105 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent group-hover:from-white/30 transition-all duration-300"></div>
-              <span className="text-white font-bold text-sm relative z-10">PD</span>
+              <span className="text-white font-bold text-sm relative z-10">{initials}</span>
             </div>
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
               <div className="w-2 h-2 bg-white rounded-full"></div>
             </div>
             <div className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-              <span className="text-white text-xs font-bold">{STUDENT_DATA.notifications}</span>
+              <span className="text-white text-xs font-bold">{notifications}</span>
             </div>
           </div>
         </div>
@@ -234,7 +181,7 @@ const StudentProfile = ({ sidebarCollapsed, isMobile }: { sidebarCollapsed: bool
             <div className="relative">
               <div className="w-14 h-14 bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                <span className="text-white font-bold text-lg relative z-10">PD</span>
+                <span className="text-white font-bold text-lg relative z-10">{initials}</span>
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
                 <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -245,12 +192,12 @@ const StudentProfile = ({ sidebarCollapsed, isMobile }: { sidebarCollapsed: bool
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-sm truncate text-slate-800 dark:text-slate-200">{STUDENT_DATA.name}</h3>
+              <h3 className="font-bold text-sm truncate text-slate-800 dark:text-slate-200">{studentName}</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                {STUDENT_DATA.grade} • {STUDENT_DATA.section}
+                {gradeLevel} • {section}
               </p>
               <p className="text-xs text-violet-600 dark:text-violet-400 font-mono font-medium">
-                ID: {STUDENT_DATA.studentId}
+                ID: {studentId}
               </p>
             </div>
           </div>
@@ -258,20 +205,20 @@ const StudentProfile = ({ sidebarCollapsed, isMobile }: { sidebarCollapsed: bool
           <div className="flex items-center justify-between mt-4 gap-2">
             <div className="flex items-center space-x-1 bg-gradient-to-r from-amber-100/80 to-yellow-100/80 dark:from-amber-900/30 dark:to-yellow-900/30 px-3 py-2 rounded-xl border border-amber-200/50 dark:border-amber-700/50">
               <Star className="w-4 h-4 text-amber-500 fill-current" />
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400">GWA {STUDENT_DATA.gwa}</span>
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-400">GWA {gwa}</span>
             </div>
 
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-1 bg-gradient-to-r from-emerald-100/80 to-green-100/80 dark:from-emerald-900/30 dark:to-green-900/30 px-3 py-2 rounded-xl border border-emerald-200/50 dark:border-emerald-700/50">
                 <Trophy className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                  {STUDENT_DATA.achievements}
+                  {achievements}
                 </span>
               </div>
               <div className="flex items-center space-x-1 bg-gradient-to-r from-red-100/80 to-pink-100/80 dark:from-red-900/30 dark:to-pink-900/30 px-3 py-2 rounded-xl border border-red-200/50 dark:border-red-700/20 relative">
                 <Bell className="w-4 h-4 text-red-600 dark:text-red-400" />
-                <span className="text-xs font-medium text-red-700 dark:text-red-400">{STUDENT_DATA.notifications}</span>
-                {STUDENT_DATA.notifications > 0 && (
+                <span className="text-xs font-medium text-red-700 dark:text-red-400">{notifications}</span>
+                {notifications > 0 && (
                   <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                 )}
               </div>
@@ -525,6 +472,23 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
   const sidebarScrollRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   const { restoreScrollPosition, saveScrollPosition, setIsUserScrolling } = useSidebarStore()
+  const { t } = useTranslation()
+
+  // Fetch current user data
+  const { data: user, isLoading, isError } = useUser()
+
+  // Extract student data with fallbacks
+  const studentName = user?.student
+    ? `${user.student.first_name} ${user.student.middle_name ? user.student.middle_name + ' ' : ''}${user.student.last_name}`.trim()
+    : user?.full_name || 'Student'
+
+  const studentId = user?.student?.student_id || 'N/A'
+  const gradeLevel = user?.student?.grade_level ? `Grade ${user.student.grade_level}` : 'N/A'
+  const section = user?.student?.sections?.name || 'N/A'
+  const gwa = 94.5 // TODO: Get from actual GWA data when available
+  const notifications = 3 // TODO: Get from actual notifications when available
+  const achievements = 12 // TODO: Get from actual achievements when available
+  const studentAvatar = user?.profile?.avatar || '/student-avatar.png'
 
   useEffect(() => {
     const checkMobile = () => {
@@ -566,6 +530,80 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
     }
   }, [pathname, restoreScrollPosition])
 
+  // Build navigation with translations
+  const NAV = [
+    {
+      type: "single" as const,
+      icon: Home,
+      label: t('navigation.dashboard'),
+      href: "/student",
+      gradient: "from-blue-500 to-indigo-600",
+    },
+    {
+      type: "section" as const,
+      key: "academics",
+      icon: GraduationCap,
+      label: t('navigation.academics'),
+      gradient: "from-emerald-500 to-teal-600",
+      items: [
+        { icon: BookOpen, label: t('student.mySubjects'), href: "/student/courses" },
+        { icon: Brain, label: t('student.quizCentral'), href: "/student/quiz" },
+        { icon: CalendarIcon, label: t('student.classSchedule'), href: "/student/schedule" },
+        { icon: Trophy, label: t('student.grades'), href: "/student/grades" },
+        { icon: Calendar, label: t('student.academicCalendar'), href: "/student/calendar" },
+      ],
+    },
+    {
+      type: "section" as const,
+      key: "documents",
+      icon: FileText,
+      label: t('navigation.documents'),
+      gradient: "from-orange-500 to-red-600",
+      items: [{ icon: Award, label: t('student.certificates'), href: "/student/certificates" }],
+    },
+    {
+      type: "section" as const,
+      key: "studentLife",
+      icon: Users,
+      label: t('navigation.studentLife'),
+      gradient: "from-purple-500 to-pink-600",
+      items: [
+        { icon: Users, label: t('student.myClubs'), href: "/student/clubs" },
+        { icon: FileCheck, label: t('student.myApplications'), href: "/student/clubs/applications" },
+        { icon: Search, label: t('student.discoverClubs'), href: "/student/clubs/discover" },
+        { icon: Calendar, label: t('student.schoolEvents'), href: "/student/events", badge: "2" },
+        { icon: Newspaper, label: t('student.schoolNews'), href: "/student/news", badge: "5" },
+      ],
+    },
+    {
+      type: "section" as const,
+      key: "publisher",
+      icon: PenTool,
+      label: t('navigation.publisher'),
+      gradient: "from-rose-500 to-pink-600",
+      items: [
+        { icon: Users, label: t('student.journalist'), href: "/student/publisher/journalist" },
+        { icon: BarChart3, label: t('student.myArticles'), href: "/student/publisher" },
+        { icon: Edit3, label: t('student.writeArticle'), href: "/student/publisher/create" },
+      ],
+    },
+    {
+      type: "section" as const,
+      key: "tools",
+      icon: Wrench,
+      label: t('navigation.tools'),
+      gradient: "from-cyan-500 to-blue-600",
+      items: [
+        { icon: StickyNote, label: t('student.notes'), href: "/student/notes" },
+        { icon: CheckSquare, label: t('student.todoList'), href: "/student/todo" },
+        { icon: Target, label: t('student.goals'), href: "/student/goals" },
+        { icon: Timer, label: t('student.pomodoroTimer'), href: "/student/pomodoro" },
+        { icon: Settings, label: t('student.settings'), href: "/student/settings" },
+        { icon: User, label: t('student.profile'), href: "/student/profile" },
+      ],
+    },
+  ] as const
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white/95 backdrop-blur-2xl dark:bg-slate-900/95">
       <SidebarHeader
@@ -574,13 +612,23 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
-      <StudentProfile sidebarCollapsed={sidebarCollapsed} isMobile={isMobile} />
+      <StudentProfile
+        sidebarCollapsed={sidebarCollapsed}
+        isMobile={isMobile}
+        studentName={studentName}
+        studentId={studentId}
+        gradeLevel={gradeLevel}
+        section={section}
+        gwa={gwa}
+        notifications={notifications}
+        achievements={achievements}
+      />
 
       <nav
         ref={sidebarScrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-slate-50/30 to-white/20 dark:from-slate-800/30 dark:to-slate-900/20 scrollbar-thin scrollbar-thumb-violet-300 dark:scrollbar-thumb-violet-600 scrollbar-track-transparent hover:scrollbar-thumb-violet-400 dark:hover:scrollbar-thumb-violet-500 scrollbar-thumb-rounded-full"
       >
-        {NAVIGATION_CONFIG.map((section) => {
+        {NAV.map((section) => {
           if (section.type === "single") {
             const isActive = pathname === section.href
             return (
@@ -652,8 +700,11 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
         }`}
       >
         <StudentHeader
-          studentName={STUDENT_DATA.name}
-          studentAvatar={STUDENT_DATA.avatar}
+          studentName={studentName}
+          studentAvatar={studentAvatar}
+          gradeLevel={gradeLevel}
+          section={section}
+          studentId={studentId}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
           isMobile={isMobile}
         />

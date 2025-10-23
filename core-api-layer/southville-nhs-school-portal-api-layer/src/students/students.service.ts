@@ -13,6 +13,7 @@ import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
 import { EmergencyContact } from './entities/emergency-contact.entity';
 import { CreateStudentRankingDto } from './dto/create-student-ranking.dto';
+import * as crypto from 'crypto';
 import { UpdateStudentRankingDto } from './dto/update-student-ranking.dto';
 import { StudentRanking } from './entities/student-ranking.entity';
 
@@ -73,21 +74,121 @@ export class StudentsService {
    * @param userId - The user ID
    * @returns The student ID
    */
-  private async getStudentIdByUserId(userId: string): Promise<string> {
+  async getStudentIdByUserId(userId: string): Promise<string> {
     const supabase = this.supabaseService.getServiceClient();
+
+    this.logger.log(`Looking up student for user ID: ${userId}`);
 
     const { data: student, error } = await supabase
       .from('students')
-      .select('id')
+      .select('id, first_name, last_name, user_id')
       .eq('user_id', userId)
       .single();
 
-    if (error || !student) {
-      this.logger.error(`Student not found for user ${userId}:`, error);
-      throw new NotFoundException('Student record not found');
+    if (error) {
+      this.logger.error(
+        `Database error when looking up student for user ${userId}:`,
+        {
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
+          errorHint: error.hint,
+        },
+      );
+
+      if (error.code === 'PGRST116') {
+        // No rows returned - student record doesn't exist
+        this.logger.error(
+          `No student record found for user ${userId}. User exists in auth but not in students table.`,
+        );
+        throw new NotFoundException(
+          `Student record not found for user ${userId}. Please ensure the user has a corresponding student record.`,
+        );
+      }
+
+      throw new InternalServerErrorException(
+        `Database error: ${error.message}`,
+      );
     }
 
+    if (!student) {
+      this.logger.error(`Student data is null for user ${userId}`);
+      throw new NotFoundException(
+        `Student record not found for user ${userId}`,
+      );
+    }
+
+    this.logger.log(
+      `Found student record: ${student.first_name} ${student.last_name} (ID: ${student.id}) for user ${userId}`,
+    );
     return student.id;
+  }
+
+  /**
+   * Create a student record for an existing user
+   * This is useful when a user exists in Supabase Auth but doesn't have a student record
+   * @param userId - The existing user ID
+   * @param studentData - Basic student information
+   * @returns The created student record
+   */
+  async createStudentRecordForExistingUser(
+    userId: string,
+    studentData: {
+      firstName: string;
+      lastName: string;
+      studentId: string;
+      lrnId: string;
+      gradeLevel?: string;
+      birthday?: string;
+    },
+  ): Promise<any> {
+    try {
+      this.logger.log(`Creating student record for existing user: ${userId}`);
+
+      const supabase = this.supabaseService.getServiceClient();
+
+      // Generate a student UUID
+      const studentUuid = crypto.randomUUID();
+
+      // Create the student record
+      const { data: student, error } = await supabase
+        .from('students')
+        .insert({
+          id: studentUuid,
+          user_id: userId,
+          first_name: studentData.firstName,
+          last_name: studentData.lastName,
+          student_id: studentData.studentId,
+          lrn_id: studentData.lrnId,
+          grade_level: studentData.gradeLevel || 'Grade 10',
+          birthday: studentData.birthday,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error(
+          `Error creating student record for user ${userId}:`,
+          error,
+        );
+        throw new InternalServerErrorException(
+          `Failed to create student record: ${error.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Successfully created student record: ${student.first_name} ${student.last_name} (ID: ${student.id}) for user ${userId}`,
+      );
+      return student;
+    } catch (error) {
+      this.logger.error(
+        `Error in createStudentRecordForExistingUser for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
   }
 
   async create(createStudentDto: CreateStudentDto): Promise<any> {
@@ -225,8 +326,8 @@ export class StudentsService {
       search,
       gradeLevel,
       sectionId,
-      sortBy = 'created_at',
-      sortOrder = 'desc',
+      sortBy = 'student_id',
+      sortOrder = 'asc',
     } = filters;
 
     let query = supabase.from('students').select(

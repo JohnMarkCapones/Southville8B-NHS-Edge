@@ -3,13 +3,14 @@
 import type React from "react"
 
 import { useState, Suspense, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Search, Activity, Settings, Sun, Moon, HelpCircle } from "lucide-react"
 import { primaryNavItems } from "@/components/superadmin/data/navigation-data"
+import { HelpSupportDialog } from "@/components/superadmin/help-support-dialog"
 
 // Loading components
 const DashboardSkeleton = () => (
@@ -68,9 +69,25 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout = ({ activeSection, activeSubSection, children }: DashboardLayoutProps) => {
   const [searchQuery, setSearchQuery] = useState("")
+  const [helpDialogOpen, setHelpDialogOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   const activeNavItem = primaryNavItems.find((item) => item.id === activeSection)
+
+  // Global keyboard shortcut for help
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + H to open help
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault()
+        setHelpDialogOpen(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Filter secondary sidebar content based on search
   const filteredContent = activeNavItem?.content.filter(
@@ -91,6 +108,7 @@ export const DashboardLayout = ({ activeSection, activeSubSection, children }: D
           filteredContent={filteredContent}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          onOpenHelpDialog={() => setHelpDialogOpen(true)}
         />
 
         {/* Secondary Sidebar */}
@@ -107,6 +125,13 @@ export const DashboardLayout = ({ activeSection, activeSubSection, children }: D
           <Suspense fallback={<DashboardSkeleton />}>{children}</Suspense>
         </main>
       </div>
+
+      {/* Help & Support Dialog */}
+      <HelpSupportDialog
+        isOpen={helpDialogOpen}
+        onClose={() => setHelpDialogOpen(false)}
+        currentPage={pathname}
+      />
     </div>
   )
 }
@@ -201,9 +226,10 @@ interface PrimarySidebarProps {
   filteredContent?: any[]
   searchQuery: string
   setSearchQuery: (query: string) => void
+  onOpenHelpDialog: () => void
 }
 
-const PrimarySidebar = ({ activeSection }: PrimarySidebarProps) => {
+const PrimarySidebar = ({ activeSection, onOpenHelpDialog }: PrimarySidebarProps) => {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -270,6 +296,7 @@ const PrimarySidebar = ({ activeSection }: PrimarySidebarProps) => {
         </button>
 
         <button
+          onClick={onOpenHelpDialog}
           className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:shadow-md"
           title="Help & Support"
         >

@@ -460,16 +460,96 @@ export class EventsController {
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Delete event (Admin only)' })
+  @ApiOperation({
+    summary: 'Permanently delete event (Admin only - use for archived events)',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Event deleted successfully',
+    description: 'Event permanently deleted',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 404, description: 'Event not found' })
   async remove(@Param('id') id: string): Promise<void> {
     return this.eventsService.remove(id);
+  }
+
+  @Post(':id/archive')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Archive event (soft delete - Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event archived successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({ status: 404, description: 'Event not found' })
+  async archive(@Param('id') id: string, @AuthUser() user: any): Promise<void> {
+    return this.eventsService.softDelete(id, user.id);
+  }
+
+  @Get('archived')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get archived (soft-deleted) events' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search in title, description, location',
+  })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    type: String,
+    description: 'Filter by category (tag ID)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Archived events retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  async findArchived(
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+  ) {
+    const filters = { page, limit, search, category };
+    return this.eventsService.findArchived(filters);
+  }
+
+  @Patch(':id/restore')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Restore archived event (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event restored successfully',
+    type: Event,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({ status: 404, description: 'Event not found' })
+  async restore(@Param('id') id: string): Promise<Event> {
+    return this.eventsService.restore(id);
   }
 
   // Additional Info endpoints

@@ -74,7 +74,9 @@ export class NewsApprovalService {
       );
     }
 
-    this.logger.log(`Article ${newsId} submitted for approval by user ${userId}`);
+    this.logger.log(
+      `Article ${newsId} submitted for approval by user ${userId}`,
+    );
   }
 
   /**

@@ -182,6 +182,67 @@ export class SchedulesService {
 
       const cacheKey = `schedules:all:${JSON.stringify(filters)}`;
 
+    const supabase = this.getSupabaseClient();
+    const {
+      page = 1,
+      limit = 10,
+      sectionId,
+      teacherId,
+      dayOfWeek,
+      schoolYear,
+      semester,
+      search,
+    } = filters;
+
+    let query = supabase.from('schedules').select(
+      `
+      id,
+      subject_id,
+      teacher_id,
+      section_id,
+      room_id,
+      building_id,
+      day_of_week,
+      start_time,
+      end_time,
+      school_year,
+      semester,
+      created_at,
+      updated_at,
+      subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
+      teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
+      section:sections!inner(id, name, grade_level, teacher_id),
+      room:rooms!inner(
+        id,
+        room_number,
+        capacity,
+        floor_id,
+        floor:floors(
+          id,
+          number,
+          building:buildings(id, building_name)
+        )
+      )
+    `,
+      { count: 'exact' },
+    );
+
+    // Apply filters
+    if (sectionId) {
+      query = query.eq('section_id', sectionId);
+    }
+    if (teacherId) {
+      query = query.eq('teacher_id', teacherId);
+    }
+    if (dayOfWeek) {
+      query = query.eq('day_of_week', dayOfWeek);
+    }
+    if (schoolYear) {
+      query = query.eq('school_year', schoolYear);
+    }
+    if (semester) {
+      query = query.eq('semester', semester);
+    }
       // Try to get from cache
       const cached = await this.cacheManager.get(cacheKey);
       if (cached) {
@@ -254,16 +315,81 @@ export class SchedulesService {
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit - 1;
 
-      console.log('Executing Supabase query with filters:', {
-        sectionId,
-        teacherId,
-        dayOfWeek,
-        schoolYear,
-        semester,
-        search,
-        page,
-        limit,
-      });
+    // Transform the data
+    const transformedData =
+      data?.map((schedule: any) => ({
+        id: schedule.id,
+        subjectId: schedule.subject_id,
+        teacherId: schedule.teacher_id,
+        sectionId: schedule.section_id,
+        roomId: schedule.room_id,
+        buildingId: schedule.building_id,
+        dayOfWeek: schedule.day_of_week,
+        startTime: schedule.start_time,
+        endTime: schedule.end_time,
+        schoolYear: schedule.school_year,
+        semester: schedule.semester,
+        createdAt: schedule.created_at,
+        updatedAt: schedule.updated_at,
+        subject: schedule.subject
+          ? {
+              id: schedule.subject.id,
+              subjectName: schedule.subject.subject_name,
+              description: schedule.subject.description,
+              gradeLevel: schedule.subject.grade_level,
+              colorHex: schedule.subject.color_hex,
+            }
+          : undefined,
+        teacher: schedule.teacher
+          ? {
+              id: schedule.teacher.id,
+              firstName: schedule.teacher.first_name,
+              lastName: schedule.teacher.last_name,
+              middleName: schedule.teacher.middle_name,
+              user: schedule.teacher.user
+                ? {
+                    id: schedule.teacher.user.id,
+                    fullName: schedule.teacher.user.full_name,
+                    email: schedule.teacher.user.email,
+                  }
+                : undefined,
+            }
+          : undefined,
+        section: schedule.section
+          ? {
+              id: schedule.section.id,
+              name: schedule.section.name,
+              gradeLevel: schedule.section.grade_level,
+              teacherId: schedule.section.teacher_id,
+            }
+          : undefined,
+        room: schedule.room
+          ? {
+              id: schedule.room.id,
+              roomNumber: schedule.room.room_number,
+              capacity: schedule.room.capacity,
+              floorId: schedule.room.floor_id,
+              floor: schedule.room.floor
+                ? {
+                    id: schedule.room.floor.id,
+                    floorNumber: schedule.room.floor.number,
+                    building: schedule.room.floor.building
+                      ? {
+                          id: schedule.room.floor.building.id,
+                          name: schedule.room.floor.building.building_name,
+                        }
+                      : undefined,
+                  }
+                : undefined,
+            }
+          : undefined,
+        building: schedule.room?.floor?.building
+          ? {
+              id: schedule.room.floor.building.id,
+              name: schedule.room.floor.building.building_name,
+            }
+          : undefined,
+      })) || [];
 
       const { data, error, count } = await query.range(startIndex, endIndex);
 
@@ -390,11 +516,20 @@ export class SchedulesService {
         semester,
         created_at,
         updated_at,
-        subject:subjects(id, subject_name, description, grade_level, color_hex),
-        teacher:teachers(id, first_name, last_name, middle_name, user:users(id, full_name, email)),
-        section:sections(id, name, grade_level, teacher_id),
-        room:rooms(id, room_number, capacity, floor_id),
-        building:buildings(id, building_name),
+        subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
+        teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
+        section:sections!inner(id, name, grade_level, teacher_id),
+        room:rooms!inner(
+          id,
+          room_number,
+          capacity,
+          floor_id,
+          floor:floors(
+            id,
+            number,
+            building:buildings(id, building_name)
+          )
+        ),
         students:student_schedule(student:students(id, first_name, last_name, middle_name, student_id, lrn_id, grade_level))
       `,
       )
@@ -458,12 +593,24 @@ export class SchedulesService {
             roomNumber: (data as any).room.room_number,
             capacity: (data as any).room.capacity,
             floorId: (data as any).room.floor_id,
+            floor: (data as any).room.floor
+              ? {
+                  id: (data as any).room.floor.id,
+                  floorNumber: (data as any).room.floor.number,
+                  building: (data as any).room.floor.building
+                    ? {
+                        id: (data as any).room.floor.building.id,
+                        name: (data as any).room.floor.building.building_name,
+                      }
+                    : undefined,
+                }
+              : undefined,
           }
         : undefined,
-      building: (data as any).building
+      building: (data as any).room?.floor?.building
         ? {
-            id: (data as any).building.id,
-            buildingName: (data as any).building.building_name,
+            id: (data as any).room.floor.building.id,
+            name: (data as any).room.floor.building.building_name,
           }
         : undefined,
       students: (data as any).students?.map((ss: any) => ss.student),
@@ -743,11 +890,20 @@ export class SchedulesService {
           semester,
           created_at,
           updated_at,
-          subject:subjects(id, subject_name, description, grade_level, color_hex),
-          teacher:teachers(id, first_name, last_name, middle_name, user:users(id, full_name, email)),
-          section:sections(id, name, grade_level, teacher_id),
-          room:rooms(id, room_number, capacity, floor_id),
-          building:buildings(id, building_name)
+          subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
+          teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
+          section:sections!inner(id, name, grade_level, teacher_id),
+          room:rooms!inner(
+            id,
+            room_number,
+            capacity,
+            floor_id,
+            floor:floors(
+              id,
+              number,
+              building:buildings(id, building_name)
+            )
+          )
         )
       `,
       )
@@ -813,12 +969,24 @@ export class SchedulesService {
               roomNumber: item.schedule.room.room_number,
               capacity: item.schedule.room.capacity,
               floorId: item.schedule.room.floor_id,
+              floor: item.schedule.room.floor
+                ? {
+                    id: item.schedule.room.floor.id,
+                    floorNumber: item.schedule.room.floor.number,
+                    building: item.schedule.room.floor.building
+                      ? {
+                          id: item.schedule.room.floor.building.id,
+                          name: item.schedule.room.floor.building.building_name,
+                        }
+                      : undefined,
+                  }
+                : undefined,
             }
           : undefined,
-        building: item.schedule.building
+        building: item.schedule.room?.floor?.building
           ? {
-              id: item.schedule.building.id,
-              buildingName: item.schedule.building.building_name,
+              id: item.schedule.room.floor.building.id,
+              name: item.schedule.room.floor.building.building_name,
             }
           : undefined,
       })) || [];

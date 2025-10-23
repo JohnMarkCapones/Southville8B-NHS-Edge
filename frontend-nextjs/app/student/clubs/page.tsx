@@ -27,13 +27,28 @@ import {
   Activity,
   Sparkles,
   FileText,
+  Loader2,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useUser, useStudentClubs } from "@/hooks"
+import { useQuery } from "@tanstack/react-query"
+import { getClubs } from "@/lib/api/endpoints/clubs"
 
 export default function ClubsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
-  const [showEmptyState, setShowEmptyState] = useState(false)
+  const [page, setPage] = useState(1)
+  const limit = 50
+  const { data: user } = useUser()
+  const studentId = user?.student?.id
+  const { data: myClubsResp } = useStudentClubs(studentId)
+
+  // Fetch all clubs using the newer API
+  const { data: availableResp = [], isLoading: loadingClubs } = useQuery({
+    queryKey: ['clubs', 'all'],
+    queryFn: () => getClubs({ limit: 100 }),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const generateSlug = (name: string) => {
     return name
@@ -42,109 +57,52 @@ export default function ClubsPage() {
       .replace(/[^a-z0-9-]/g, "")
   }
 
-  const myClubs = [
-    {
-      id: 1,
-      name: "Math Club",
-      role: "Member",
-      members: 42,
-      nextMeeting: "Tomorrow 3:00 PM",
-      location: "Room 301",
-      description: "Competitive mathematics and problem solving",
-      achievements: ["Municipal Champions 2024", "Regional Qualifiers"],
+  const myClubs = useMemo(() => {
+    const memberships = myClubsResp || []
+    return memberships.map((m, idx) => ({
+      id: m.club.id,
+      name: m.club.name,
+      role: m.position?.name || 'Member',
+      members: m.club.member_count ?? 0,
+      nextMeeting: "",
+      location: "",
+      description: m.club.description || "",
+      achievements: [],
       color: "bg-blue-500",
-      joined: "2024-01-15",
-      engagement: 85,
-      upcomingEvents: 3,
-      category: "Academic",
-      advisor: "Ms. Rodriguez",
-      meetingFrequency: "Weekly",
-      socialLinks: { facebook: "#", instagram: "#" },
-    },
-    {
-      id: 2,
-      name: "Science Club",
-      role: "Vice President",
-      members: 38,
-      nextMeeting: "Friday 2:30 PM",
-      location: "Science Lab",
-      description: "Hands-on experiments and science fair preparation",
-      achievements: ["Science Fair Winners", "Innovation Award"],
-      color: "bg-green-500",
-      joined: "2024-01-10",
-      engagement: 92,
-      upcomingEvents: 2,
-      category: "Academic",
-      advisor: "Mr. Santos",
-      meetingFrequency: "Bi-weekly",
-      socialLinks: { facebook: "#", instagram: "#" },
-    },
-  ]
+      joined: m.joined_at || "",
+      engagement: 0,
+      upcomingEvents: 0,
+      category: m.club.category || "",
+      advisor: "",
+      meetingFrequency: "",
+      socialLinks: {},
+    }))
+  }, [myClubsResp])
+  
 
-  const availableClubs = [
-    {
-      id: 3,
-      name: "Drama Club",
-      members: 25,
-      nextMeeting: "Monday 4:00 PM",
-      location: "Auditorium",
-      description: "Theater performances and creative expression",
+  const availableClubs = useMemo(() => {
+    const list = availableResp || []
+    return list.map((c, idx) => ({
+      id: c.id,
+      name: c.name,
+      members: 0, // Can be populated if membership count is available
+      nextMeeting: "",
+      location: "",
+      description: c.description || "",
       color: "bg-purple-500",
-      advisor: "Ms. Torres",
-      category: "Arts",
-      difficulty: "Beginner Friendly",
-      timeCommitment: "3-4 hours/week",
-      highlights: ["Annual School Play", "Drama Competitions"],
-    },
-    {
-      id: 4,
-      name: "Art Club",
-      members: 30,
-      nextMeeting: "Wednesday 3:30 PM",
-      location: "Art Room",
-      description: "Visual arts, painting, and creative projects",
-      color: "bg-pink-500",
-      advisor: "Mr. Dela Cruz",
-      category: "Arts",
+      advisor: c.advisor?.full_name || "",
+      category: c.domain?.name || "",
       difficulty: "All Levels",
-      timeCommitment: "2-3 hours/week",
-      highlights: ["Art Exhibitions", "Community Murals"],
-    },
-    {
-      id: 5,
-      name: "Debate Society",
-      members: 20,
-      nextMeeting: "Thursday 3:00 PM",
-      location: "Room 205",
-      description: "Public speaking and competitive debating",
-      color: "bg-orange-500",
-      advisor: "Mrs. Gonzales",
-      category: "Academic",
-      difficulty: "Intermediate",
-      timeCommitment: "4-5 hours/week",
-      highlights: ["Inter-school Debates", "Public Speaking Workshops"],
-    },
-    {
-      id: 6,
-      name: "Environmental Club",
-      members: 35,
-      nextMeeting: "Tuesday 3:30 PM",
-      location: "Garden Area",
-      description: "Environmental awareness and sustainability projects",
-      color: "bg-emerald-500",
-      advisor: "Ms. Reyes",
-      category: "Service",
-      difficulty: "Beginner Friendly",
-      timeCommitment: "2-3 hours/week",
-      highlights: ["Tree Planting", "Recycling Programs"],
-    },
-  ]
+      timeCommitment: "",
+      highlights: [],
+    }))
+  }, [availableResp])
 
   const clubStats = {
-    totalClubs: availableClubs.length + 2,
-    activeMembers: 190,
-    upcomingEvents: 8,
-    achievements: 15,
+    totalClubs: availableClubs.length,
+    activeMembers: 0,
+    upcomingEvents: 0,
+    achievements: 0,
   }
 
   const categories = ["all", "Academic", "Arts", "Service", "Sports", "Technology"]
@@ -421,8 +379,14 @@ export default function ClubsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredClubs.map((club) => (
+            {loadingClubs ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-500" />
+                <p className="text-gray-600 dark:text-gray-400">Loading clubs...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredClubs.map((club) => (
                 <Card
                   key={club.id}
                   className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50/30 dark:from-gray-800 dark:to-gray-900/30 overflow-hidden"
@@ -513,9 +477,10 @@ export default function ClubsPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+              </div>
+            )}
 
-            {filteredClubs.length === 0 && (
+            {!loadingClubs && filteredClubs.length === 0 && (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                   <Search className="w-8 h-8 text-gray-400" />

@@ -130,9 +130,7 @@ export class AlertsController {
     status: 401,
     description: 'Unauthorized',
   })
-  async findAll(
-    @Query() queryDto: QueryAlertDto,
-  ): Promise<{
+  async findAll(@Query() queryDto: QueryAlertDto): Promise<{
     data: Alert[];
     total: number;
     page: number;
@@ -162,9 +160,7 @@ export class AlertsController {
     status: 404,
     description: 'Alert not found',
   })
-  async findOne(
-    @Param('id') id: string,
-  ): Promise<Alert> {
+  async findOne(@Param('id') id: string): Promise<Alert> {
     // Public endpoint - show alert without user filter
     return this.alertsService.findOne(id);
   }

@@ -65,9 +65,49 @@ export class StudentsController {
     return this.studentsService.create(createStudentDto);
   }
 
+  @Post('create-for-existing-user')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Create student record for existing user' })
+  @ApiResponse({
+    status: 201,
+    description: 'Student record created successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async createStudentRecordForExistingUser(
+    @Body()
+    body: {
+      userId: string;
+      firstName: string;
+      lastName: string;
+      studentId: string;
+      lrnId: string;
+      gradeLevel?: string;
+      birthday?: string;
+    },
+    @AuthUser() user: SupabaseUser,
+  ) {
+    console.log(
+      `Creating student record for existing user: ${body.userId} by admin: ${user.email}`,
+    );
+    return this.studentsService.createStudentRecordForExistingUser(
+      body.userId,
+      {
+        firstName: body.firstName,
+        lastName: body.lastName,
+        studentId: body.studentId,
+        lrnId: body.lrnId,
+        gradeLevel: body.gradeLevel,
+        birthday: body.birthday,
+      },
+    );
+  }
+
   @Get()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Policies('id', 'student:read')
   @ApiOperation({ summary: 'Get all students with pagination and filtering' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -77,7 +117,7 @@ export class StudentsController {
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    enum: ['created_at', 'first_name', 'last_name', 'student_id'],
+    enum: ['first_name', 'last_name', 'student_id', 'grade_level'],
   })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   @ApiResponse({ status: 200, description: 'Students retrieved successfully' })
@@ -93,8 +133,8 @@ export class StudentsController {
     @Query('search') search?: string,
     @Query('gradeLevel') gradeLevel?: string,
     @Query('sectionId') sectionId?: string,
-    @Query('sortBy') sortBy: string = 'created_at',
-    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
+    @Query('sortBy') sortBy: string = 'student_id',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'asc',
   ) {
     this.logger.log('Fetching students');
     return this.studentsService.findAll({
@@ -276,138 +316,6 @@ export class StudentsController {
     return this.studentsService.createRanking(createDto);
   }
 
-  @Get('rankings')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Policies('id', 'student:read')
-  @ApiOperation({
-    summary: 'Get all student rankings with pagination and filtering',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Items per page',
-  })
-  @ApiQuery({
-    name: 'gradeLevel',
-    required: false,
-    type: String,
-    description: 'Filter by grade level',
-  })
-  @ApiQuery({
-    name: 'quarter',
-    required: false,
-    type: String,
-    description: 'Filter by quarter',
-  })
-  @ApiQuery({
-    name: 'schoolYear',
-    required: false,
-    type: String,
-    description: 'Filter by school year',
-  })
-  @ApiQuery({
-    name: 'topN',
-    required: false,
-    type: Number,
-    description: 'Get top N students (default: 100)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Student rankings retrieved successfully',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Insufficient permissions',
-  })
-  async findAllRankings(
-    @AuthUser() user: SupabaseUser,
-    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
-    @Query('gradeLevel') gradeLevel?: string,
-    @Query('quarter') quarter?: string,
-    @Query('schoolYear') schoolYear?: string,
-    @Query('topN', new ParseIntPipe({ optional: true })) topN: number = 100,
-  ) {
-    this.logger.log('Fetching student rankings');
-    return this.studentsService.findAllRankings({
-      page,
-      limit,
-      gradeLevel,
-      quarter,
-      schoolYear,
-      topN,
-    });
-  }
-
-  @Get('rankings/:id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Policies('id', 'student:read')
-  @ApiOperation({ summary: 'Get a student ranking by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Student ranking retrieved successfully',
-    type: StudentRanking,
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Insufficient permissions',
-  })
-  @ApiResponse({ status: 404, description: 'Student ranking not found' })
-  async findRankingById(
-    @Param('id') id: string,
-    @AuthUser() user: SupabaseUser,
-  ) {
-    // Students can only view their own rankings
-    if (user.role === 'Student') {
-      const ranking = await this.studentsService.findRankingById(id);
-      if (ranking.student_id !== user.id) {
-        throw new ForbiddenException(
-          'Students can only view their own rankings',
-        );
-      }
-    }
-
-    this.logger.log(`Fetching student ranking ${id}`);
-    return this.studentsService.findRankingById(id);
-  }
-
-  @Get(':studentId/rankings')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Policies('id', 'student:read')
-  @ApiOperation({ summary: 'Get all rankings for a specific student' })
-  @ApiResponse({
-    status: 200,
-    description: 'Student rankings retrieved successfully',
-    type: [StudentRanking],
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Insufficient permissions',
-  })
-  @ApiResponse({ status: 404, description: 'Student not found' })
-  async findRankingsByStudent(
-    @Param('studentId') studentId: string,
-    @AuthUser() user: SupabaseUser,
-  ) {
-    // Students can only view their own rankings
-    if (user.role === 'Student' && user.id !== studentId) {
-      throw new ForbiddenException('Students can only view their own rankings');
-    }
-
-    this.logger.log(`Fetching rankings for student ${studentId}`);
-    return this.studentsService.findRankingsByStudent(studentId);
-  }
-
   @Patch('rankings/:id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Policies('id', 'student:update')
@@ -459,4 +367,26 @@ export class StudentsController {
     await this.studentsService.deleteRanking(id);
     return { message: 'Student ranking deleted successfully' };
   }
+
+  // TEMPORARILY COMMENTED OUT - Missing implementation in StudentsService
+  // TODO: Implement getStudentClubs method in StudentsService
+  // @Get(':studentId/clubs')
+  // @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  // @ApiOperation({ summary: 'Get student club memberships' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Student club memberships retrieved successfully',
+  // })
+  // @ApiResponse({ status: 401, description: 'Unauthorized' })
+  // @ApiResponse({ status: 403, description: 'Forbidden' })
+  // @ApiResponse({ status: 404, description: 'Student not found' })
+  // async getStudentClubs(
+  //   @Param('studentId') studentId: string,
+  //   @AuthUser() user: SupabaseUser,
+  // ) {
+  //   this.logger.log(
+  //     `Getting clubs for student ${studentId} by user: ${user.email} (${user.id})`,
+  //   );
+  //   return await this.studentsService.getStudentClubs(studentId, user);
+  // }
 }

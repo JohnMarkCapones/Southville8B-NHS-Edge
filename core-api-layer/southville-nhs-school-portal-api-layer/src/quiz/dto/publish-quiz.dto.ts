@@ -22,7 +22,8 @@ export class PublishQuizDto {
   @ArrayMinSize(1)
   @ApiProperty({
     example: ['550e8400-e29b-41d4-a716-446655440000'],
-    description: 'Section IDs to assign this quiz to (for section_only visibility)',
+    description:
+      'Section IDs to assign this quiz to (for section_only visibility)',
     required: false,
     type: [String],
   })

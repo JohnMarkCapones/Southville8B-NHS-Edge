@@ -449,10 +449,11 @@ export class ModulesController {
   }
 
   @Get('admin')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({
-    summary: 'Get all modules (Admin only)',
-    description: 'Get all modules with full access for administrators.',
+    summary: 'Get all modules (Admin & Teacher)',
+    description:
+      'Get all modules with full access for administrators and teachers.',
   })
   @ApiQuery({
     name: 'page',
@@ -534,7 +535,7 @@ export class ModulesController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Admin access required',
+    description: 'Forbidden - Admin or Teacher access required',
   })
   async findAllAdmin(
     @Query() query: ModuleQueryDto,

@@ -293,7 +293,9 @@ export class QuizService {
     // Get original quiz
     const originalQuiz = await this.findQuizById(originalQuizId);
     if (originalQuiz.teacher_id !== teacherId) {
-      throw new ForbiddenException('You can only create versions of your own quizzes');
+      throw new ForbiddenException(
+        'You can only create versions of your own quizzes',
+      );
     }
 
     // Create new quiz with incremented version
@@ -483,7 +485,8 @@ export class QuizService {
 
     // Only include source_question_bank_id if it's provided and not null
     if (createQuestionDto.sourceQuestionBankId) {
-      questionData.source_question_bank_id = createQuestionDto.sourceQuestionBankId;
+      questionData.source_question_bank_id =
+        createQuestionDto.sourceQuestionBankId;
     }
 
     const { data: question, error: questionError } = await supabase
@@ -593,7 +596,9 @@ export class QuizService {
       }
     }
 
-    this.logger.log(`Quiz published: ${quizId} with status ${publishDto.status}`);
+    this.logger.log(
+      `Quiz published: ${quizId} with status ${publishDto.status}`,
+    );
     return updatedQuiz;
   }
 
@@ -694,7 +699,10 @@ export class QuizService {
     }
 
     // Step 2: If there are overrides, insert into quiz_section_settings
-    if (overrides && (overrides.startDate || overrides.endDate || overrides.timeLimit)) {
+    if (
+      overrides &&
+      (overrides.startDate || overrides.endDate || overrides.timeLimit)
+    ) {
       const settingsToInsert = sectionIds.map((sectionId) => ({
         quiz_id: quizId,
         section_id: sectionId,
@@ -710,7 +718,10 @@ export class QuizService {
         });
 
       if (settingsError) {
-        this.logger.error('Error setting section-specific settings:', settingsError);
+        this.logger.error(
+          'Error setting section-specific settings:',
+          settingsError,
+        );
         throw new InternalServerErrorException(
           'Failed to set section-specific settings',
         );
@@ -797,10 +808,7 @@ export class QuizService {
     }
 
     // Also delete section-specific settings
-    await supabase
-      .from('quiz_section_settings')
-      .delete()
-      .eq('quiz_id', quizId);
+    await supabase.from('quiz_section_settings').delete().eq('quiz_id', quizId);
 
     this.logger.log(`Quiz ${quizId} removed from all sections`);
   }
@@ -954,7 +962,9 @@ export class QuizService {
 
     if (error) {
       this.logger.error('Error fetching available quizzes:', error);
-      throw new InternalServerErrorException('Failed to fetch available quizzes');
+      throw new InternalServerErrorException(
+        'Failed to fetch available quizzes',
+      );
     }
 
     // Enrich quizzes with section-specific settings
@@ -1096,7 +1106,9 @@ export class QuizService {
             metadata: meta.metadata,
           }));
 
-          await supabase.from('quiz_question_metadata').insert(metadataToInsert);
+          await supabase
+            .from('quiz_question_metadata')
+            .insert(metadataToInsert);
         }
       }
     }
@@ -1119,7 +1131,8 @@ export class QuizService {
         track_tab_switches: originalSettings.track_tab_switches,
         track_device_changes: originalSettings.track_device_changes,
         track_ip_changes: originalSettings.track_ip_changes,
-        tab_switch_warning_threshold: originalSettings.tab_switch_warning_threshold,
+        tab_switch_warning_threshold:
+          originalSettings.tab_switch_warning_threshold,
       });
     }
 
@@ -1144,10 +1157,12 @@ export class QuizService {
     // Get questions with choices
     const { data: questions, error: questionsError } = await supabase
       .from('quiz_questions')
-      .select(`
+      .select(
+        `
         *,
         quiz_choices (*)
-      `)
+      `,
+      )
       .eq('quiz_id', quizId)
       .order('order_index', { ascending: true });
 

@@ -264,14 +264,22 @@ export class EventsService {
       search,
     } = filters;
 
-    // Start with a simple query to avoid complex joins that might fail
+    // Start with a query that includes related data
     let query = supabase.from('events').select(
       `
       *,
-      organizer:users!events_organizer_id_fkey(id, full_name, email)
-    `,
+      organizer:users!events_organizer_id_fkey(id, full_name, email),
+      tags:event_tags(tag:tags(id, name, color)),
+      additionalInfo:event_additional_info(id, title, content, order_index),
+      highlights:event_highlights(id, title, content, image_url, order_index),
+      schedule:event_schedule(id, activity_time, activity_description, order_index),
+      faq:events_faq(id, question, answer)
+      `,
       { count: 'exact' },
     );
+
+    // Filter out soft-deleted events
+    query = query.is('deleted_at', null);
 
     // Apply filters
     if (status) {
@@ -356,6 +364,7 @@ export class EventsService {
         eventImage: event.event_image,
         status: event.status,
         visibility: event.visibility,
+        is_featured: event.is_featured,
         createdAt: event.created_at,
         updatedAt: event.updated_at,
         organizer: event.organizer,
@@ -410,6 +419,7 @@ export class EventsService {
       `,
       )
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -428,6 +438,7 @@ export class EventsService {
       eventImage: data.event_image,
       status: data.status,
       visibility: data.visibility,
+      is_featured: data.is_featured,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       organizer: data.organizer,
@@ -456,13 +467,73 @@ export class EventsService {
       return cached as { data: Event[]; pagination: any };
     }
 
+    const supabase = this.getSupabaseClient();
     const today = new Date().toISOString().split('T')[0];
-    const result = await this.findAll({
-      startDate: today,
-      status: 'published',
-      visibility: 'public',
-      limit: 20,
-    });
+
+    // Direct query for upcoming events (public, no auth required)
+    const { data, error, count } = await supabase
+      .from('events')
+      .select(
+        `
+        *,
+        organizer:users!events_organizer_id_fkey(id, full_name, email),
+        tags:event_tags(tag:tags(id, name, color)),
+        additionalInfo:event_additional_info(id, title, content, order_index),
+        highlights:event_highlights(id, title, content, image_url, order_index),
+        schedule:event_schedule(id, activity_time, activity_description, order_index),
+        faq:events_faq(id, question, answer)
+        `,
+        { count: 'exact' },
+      )
+      .eq('status', 'published')
+      .eq('visibility', 'public')
+      .is('deleted_at', null)
+      .gte('date', today)
+      .order('date', { ascending: true })
+      .limit(20);
+
+    if (error) {
+      this.logger.error('Error fetching upcoming events:', error);
+      throw new InternalServerErrorException('Failed to fetch upcoming events');
+    }
+
+    // Transform the data to match our entity structure
+    const transformedData =
+      data?.map((event) => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        organizerId: event.organizer_id,
+        eventImage: event.event_image,
+        status: event.status,
+        visibility: event.visibility,
+        is_featured: event.is_featured,
+        createdAt: event.created_at,
+        updatedAt: event.updated_at,
+        organizer: event.organizer,
+        tags: event.tags?.map((t) => t.tag),
+        additionalInfo: event.additionalInfo?.sort(
+          (a, b) => a.order_index - b.order_index,
+        ),
+        highlights: event.highlights?.sort(
+          (a, b) => a.order_index - b.order_index,
+        ),
+        schedule: event.schedule?.sort((a, b) => a.order_index - b.order_index),
+        faq: event.faq,
+      })) || [];
+
+    const result = {
+      data: transformedData,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / 20),
+      },
+    };
 
     // Cache the result
     await this.cacheManager.set(cacheKey, result, this.UPCOMING_CACHE_TTL);
@@ -602,6 +673,165 @@ export class EventsService {
       }
       this.logger.error('Unexpected error deleting event:', error);
       throw new InternalServerErrorException('Failed to delete event');
+    }
+  }
+
+  async softDelete(id: string, userId: string, reason?: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      await this.findOne(id); // Verify event exists
+
+      const { error } = await supabase
+        .from('events')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: userId,
+        })
+        .eq('id', id);
+
+      if (error) {
+        this.logger.error('Error soft deleting event:', error);
+        throw new InternalServerErrorException('Failed to archive event');
+      }
+
+      // Invalidate cache
+      await this.invalidateEventCaches();
+      await this.cacheManager.del(`event:${id}`);
+
+      this.logger.log(`Event archived successfully: ${id}`);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error('Unexpected error archiving event:', error);
+      throw new InternalServerErrorException('Failed to archive event');
+    }
+  }
+
+  async findArchived(
+    filters: any,
+  ): Promise<{ data: Event[]; pagination: any }> {
+    const supabase = this.getSupabaseClient();
+    const { page = 1, limit = 10, search, category } = filters;
+
+    let query = supabase.from('events').select(
+      `
+      *,
+      organizer:users!events_organizer_id_fkey(id, full_name, email),
+      tags:event_tags(tag:tags(id, name, color))
+      `,
+      { count: 'exact' },
+    );
+
+    // Only get soft-deleted events
+    query = query.not('deleted_at', 'is', null);
+
+    if (search) {
+      query = query.or(
+        `title.ilike.%${search}%,description.ilike.%${search}%,location.ilike.%${search}%`,
+      );
+    }
+
+    // Filter by category (tag)
+    if (category && category !== 'all') {
+      const { data: eventTags } = await supabase
+        .from('event_tags')
+        .select('event_id')
+        .eq('tag_id', category);
+
+      const eventIds = eventTags?.map((et) => et.event_id) || [];
+
+      if (eventIds.length > 0) {
+        query = query.in('id', eventIds);
+      } else {
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            page,
+            limit,
+            pages: 0,
+          },
+        };
+      }
+    }
+
+    // Pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to).order('deleted_at', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      this.logger.error('Error fetching archived events:', error);
+      throw new InternalServerErrorException('Failed to fetch archived events');
+    }
+
+    // Transform the data
+    const transformedData =
+      data?.map((event) => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        organizerId: event.organizer_id,
+        eventImage: event.event_image,
+        status: event.status,
+        visibility: event.visibility,
+        is_featured: event.is_featured,
+        createdAt: event.created_at,
+        updatedAt: event.updated_at,
+        deletedAt: event.deleted_at,
+        deletedBy: event.deleted_by, // Just return the UUID
+        organizer: event.organizer,
+        tags: event.tags?.map((t) => t.tag),
+      })) || [];
+
+    return {
+      data: transformedData,
+      pagination: {
+        total: count || 0,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit),
+      },
+    };
+  }
+
+  async restore(id: string): Promise<Event> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) {
+        this.logger.error('Error restoring event:', error);
+        throw new NotFoundException('Event not found or already active');
+      }
+
+      // Invalidate cache
+      await this.invalidateEventCaches();
+
+      this.logger.log(`Event restored successfully: ${id}`);
+      return this.findOne(id);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error('Unexpected error restoring event:', error);
+      throw new InternalServerErrorException('Failed to restore event');
     }
   }
 

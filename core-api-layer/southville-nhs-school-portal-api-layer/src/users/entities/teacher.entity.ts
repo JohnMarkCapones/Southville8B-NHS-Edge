@@ -37,6 +37,9 @@ export class Teacher {
   @ApiProperty({ description: 'Last update timestamp' })
   updated_at: string;
 
+  @ApiProperty({ description: 'Soft delete timestamp', required: false })
+  deleted_at?: string;
+
   // Related data
   @ApiProperty({ description: 'Subject specialization', required: false })
   subject_specialization?: {

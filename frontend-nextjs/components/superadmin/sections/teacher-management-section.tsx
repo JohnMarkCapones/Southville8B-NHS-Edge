@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,53 +24,63 @@ import {
   Calendar,
   Settings,
   BarChart3,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react"
-import { teacherData, type Teacher } from "../data/teacher-data"
 import { TeacherDetailPanel } from "../panels/teacher-detail-panel"
-
-// Department distribution calculated from teacher data
-const departmentDistribution = [
-  {
-    department: "Mathematics",
-    count: teacherData.filter((t) => t.department === "Mathematics").length,
-    color: "bg-blue-500",
-  },
-  { department: "Science", count: teacherData.filter((t) => t.department === "Science").length, color: "bg-green-500" },
-  {
-    department: "English",
-    count: teacherData.filter((t) => t.department === "English").length,
-    color: "bg-yellow-500",
-  },
-  {
-    department: "Social Studies",
-    count: teacherData.filter((t) => t.department === "Social Studies").length,
-    color: "bg-orange-500",
-  },
-  {
-    department: "Filipino",
-    count: teacherData.filter((t) => t.department === "Filipino").length,
-    color: "bg-purple-500",
-  },
-  {
-    department: "Physical Education",
-    count: teacherData.filter((t) => t.department === "Physical Education").length,
-    color: "bg-pink-500",
-  },
-]
+import { useAllTeachers, type TeacherData } from "@/hooks/useAllTeachers"
 
 export function TeacherManagementSection() {
+  // ✅ Use API hook instead of mock data
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDepartment, setSelectedDepartment] = useState("All")
   const [selectedStatus, setSelectedStatus] = useState("All")
-  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null)
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
 
-  const departments = ["All", "Mathematics", "Science", "English", "Social Studies", "Filipino", "Physical Education"]
-  const statuses = ["All", "Active", "On Leave", "Inactive"]
+  // ✅ Fetch teachers from API
+  const {
+    teachers,
+    pagination,
+    loading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    goToPage,
+    nextPage,
+    previousPage,
+    setFilters,
+  } = useAllTeachers({
+    initialPage: 1,
+    limit: itemsPerPage,
+    sortBy: 'created_at',
+    sortOrder: 'desc',
+  })
 
-  const openTeacherPanel = useCallback((teacher: Teacher) => {
+  // ✅ Update search query with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchTerm)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm, setSearchQuery])
+
+  // ✅ Update filters when status changes
+  useEffect(() => {
+    setFilters({
+      status: selectedStatus === 'All' ? undefined : selectedStatus as 'Active' | 'Inactive' | 'Suspended',
+    })
+  }, [selectedStatus, setFilters])
+
+  // ✅ Update limit when itemsPerPage changes
+  useEffect(() => {
+    setFilters({ limit: itemsPerPage })
+  }, [itemsPerPage, setFilters])
+
+  const openTeacherPanel = useCallback((teacher: any) => {
     setSelectedTeacher(teacher)
     setIsDetailPanelOpen(true)
   }, [])
@@ -80,29 +90,80 @@ export function TeacherManagementSection() {
     setTimeout(() => setSelectedTeacher(null), 500)
   }, [])
 
-  const filteredTeachers = teacherData.filter((teacher) => {
-    const matchesSearch =
-      teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesDepartment = selectedDepartment === "All" || teacher.department === selectedDepartment
-    const matchesStatus = selectedStatus === "All" || teacher.status === selectedStatus
+  // ✅ Calculate stats from API data
+  const stats = useMemo(() => {
+    if (!pagination) return { total: 0, active: 0, inactive: 0, onLeave: 0 }
 
-    return matchesSearch && matchesDepartment && matchesStatus
-  })
+    const activeCount = teachers.filter(t => t.status === 'Active').length
+    const inactiveCount = teachers.filter(t => t.status === 'Inactive').length
+    const onLeaveCount = teachers.filter(t => t.status === 'On Leave').length
 
-  // Pagination
-  const totalPages = Math.ceil(filteredTeachers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedTeachers = filteredTeachers.slice(startIndex, startIndex + itemsPerPage)
+    return {
+      total: pagination.total,
+      active: activeCount,
+      inactive: inactiveCount,
+      onLeave: onLeaveCount,
+    }
+  }, [teachers, pagination])
 
-  const activeTeachers = teacherData.filter((t) => t.status === "Active").length
-  const onLeaveTeachers = teacherData.filter((t) => t.status === "On Leave").length
-  const inactiveTeachers = teacherData.filter((t) => t.status === "Inactive").length
-  const avgPerformance = Math.round(teacherData.reduce((sum, t) => sum + t.performance, 0) / teacherData.length)
-  const totalClassLoad = teacherData.reduce((sum, t) => sum + t.classLoad, 0)
+  // ✅ Calculate department distribution from API data
+  const departmentDistribution = useMemo(() => {
+    const deptMap = new Map<string, number>()
 
-  const maxCount = Math.max(...departmentDistribution.map((d) => d.count))
+    teachers.forEach((teacher) => {
+      const deptName = teacher.teacher?.department?.department_name
+      if (deptName) {
+        deptMap.set(deptName, (deptMap.get(deptName) || 0) + 1)
+      }
+    })
+
+    const colors = ["bg-blue-500", "bg-green-500", "bg-yellow-500", "bg-orange-500", "bg-purple-500", "bg-pink-500"]
+
+    return Array.from(deptMap.entries())
+      .map(([department, count], index) => ({
+        department,
+        count,
+        color: colors[index % colors.length],
+      }))
+      .sort((a, b) => b.count - a.count) // Sort by count descending
+  }, [teachers])
+
+  const maxCount = Math.max(...departmentDistribution.map((d) => d.count), 1) // At least 1 to avoid division by zero
+
+  // ✅ Get unique departments for filter dropdown
+  const departments = useMemo(() => {
+    const depts = new Set<string>()
+    teachers.forEach((teacher) => {
+      const deptName = teacher.teacher?.department?.department_name
+      if (deptName) depts.add(deptName)
+    })
+    return ['All', ...Array.from(depts).sort()]
+  }, [teachers])
+
+  // Show loading state
+  if (loading && teachers.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading teachers...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-4" />
+          <p className="text-destructive font-medium">Failed to load teachers</p>
+          <p className="text-sm text-muted-foreground mt-2">{error.message}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -123,13 +184,14 @@ export function TeacherManagementSection() {
         </div>
       </div>
 
+      {/* ✅ Stats Cards - Using API Data */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800 shadow-lg">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">Total Teachers</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{teacherData.length}</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <UserCog className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -148,7 +210,7 @@ export function TeacherManagementSection() {
             <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">Active</p>
-                <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{activeTeachers}</p>
+                <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.active}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -162,27 +224,20 @@ export function TeacherManagementSection() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800 shadow-lg">
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-yellow-200 dark:border-yellow-800 shadow-lg">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <p className="text-purple-600 dark:text-purple-400 text-sm font-medium">Avg Performance</p>
-                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{avgPerformance}%</p>
+                <p className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">On Leave</p>
+                <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.onLeave}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               </div>
             </div>
             <div className="h-8 flex items-end gap-1">
-              {[20, 28, 25, 32, 28, 35, 32, 38, 35, 42].map((height, i) => (
-                <div key={i} className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                  <div
-                    className={`h-full ${height}% bg-purple-400/60 rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
-                    style={{ width: `${(height / maxCount) * 100}%` }}
-                  >
-                    <span className="text-white text-xs font-medium">{height}</span>
-                  </div>
-                </div>
+              {[10, 15, 12, 18, 14, 20, 16, 22, 18, 24].map((height, i) => (
+                <div key={i} className="flex-1 bg-yellow-400/60 rounded-sm" style={{ height: `${height}%` }} />
               ))}
             </div>
           </CardContent>
@@ -192,23 +247,16 @@ export function TeacherManagementSection() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <p className="text-orange-600 dark:text-orange-400 text-sm font-medium">Total Classes</p>
-                <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{totalClassLoad}</p>
+                <p className="text-orange-600 dark:text-orange-400 text-sm font-medium">Inactive</p>
+                <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.inactive}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <School className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
             <div className="h-8 flex items-end gap-1">
-              {[12, 18, 15, 22, 18, 25, 22, 28, 25, 30].map((height, i) => (
-                <div key={i} className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                  <div
-                    className={`h-full ${height}% bg-orange-400/60 rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
-                    style={{ width: `${(height / maxCount) * 100}%` }}
-                  >
-                    <span className="text-white text-xs font-medium">{height}</span>
-                  </div>
-                </div>
+              {[8, 12, 10, 14, 11, 16, 13, 18, 15, 20].map((height, i) => (
+                <div key={i} className="flex-1 bg-orange-400/60 rounded-sm" style={{ height: `${height}%` }} />
               ))}
             </div>
           </CardContent>
@@ -238,7 +286,7 @@ export function TeacherManagementSection() {
                     </div>
                   </div>
                   <div className="w-12 text-sm text-muted-foreground text-right">
-                    {Math.round((dept.count / teacherData.length) * 100)}%
+                    {stats.total > 0 ? Math.round((dept.count / stats.total) * 100) : 0}%
                   </div>
                 </div>
               ))}
@@ -321,11 +369,11 @@ export function TeacherManagementSection() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="All">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="On Leave">On Leave</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                  <SelectItem value="Suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -367,109 +415,116 @@ export function TeacherManagementSection() {
                   <th className="text-left p-4 font-semibold text-foreground">Teacher</th>
                   <th className="text-left p-4 font-semibold text-foreground">Department</th>
                   <th className="text-left p-4 font-semibold text-foreground">Position</th>
-                  <th className="text-left p-4 font-semibold text-foreground">Experience</th>
                   <th className="text-left p-4 font-semibold text-foreground">Status</th>
                   <th className="text-left p-4 font-semibold text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedTeachers.map((teacher, index) => (
-                  <tr
-                    key={teacher.id}
-                    className={`border-b border-border/30 hover:bg-muted/30 transition-all duration-200 ${
-                      index % 2 === 0 ? "bg-background" : "bg-muted/10"
-                    }`}
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={teacher.avatar || "/placeholder.svg"}
-                          alt={teacher.name}
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                        <div>
-                          <div className="font-medium text-foreground">{teacher.name}</div>
-                          <div className="text-sm text-muted-foreground font-mono bg-muted/50 px-2 py-1 rounded">
-                            {teacher.employeeId}
+                {teachers.map((teacher, index) => {
+                  // ✅ Map API teacher data to component format
+                  const fullName = teacher.full_name || `${teacher.teacher?.first_name || ''} ${teacher.teacher?.last_name || ''}`.trim()
+                  const departmentName = teacher.teacher?.department?.department_name || '-'
+                  const subjectName = teacher.teacher?.subject_specialization?.subject_name || '-'
+                  const status = teacher.status || 'Unknown'
+
+                  return (
+                    <tr
+                      key={teacher.id}
+                      className={`border-b border-border/30 hover:bg-muted/30 transition-all duration-200 ${
+                        index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                      }`}
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                            {fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-medium text-foreground">{fullName}</div>
+                            <div className="text-sm text-muted-foreground">{teacher.email}</div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="font-medium text-foreground bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-sm">
-                        {teacher.department}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                        {teacher.position}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm font-medium text-foreground">{teacher.yearsOfExperience} years</span>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          teacher.status === "Active"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-                            : teacher.status === "On Leave"
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-                        }`}
-                      >
-                        {teacher.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
-                          onClick={() => openTeacherPanel(teacher)}
+                      </td>
+                      <td className="p-4">
+                        <span className="font-medium text-foreground bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-sm">
+                          {departmentName}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                          {subjectName}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            status === "Active"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              : status === "On Leave"
+                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                : status === "Suspended"
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                          }`}
                         >
-                          <Eye className="h-4 w-4 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-full"
-                        >
-                          <Edit className="h-4 w-4 text-emerald-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {status}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
+                            onClick={() => openTeacherPanel(teacher)}
+                          >
+                            <Eye className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-full"
+                          >
+                            <Edit className="h-4 w-4 text-emerald-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
 
+      {/* ✅ Enhanced Pagination - Using API Pagination */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-muted/20 p-4 rounded-lg">
         <div className="text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">{startIndex + 1}</span> to{" "}
-          <span className="font-medium text-foreground">
-            {Math.min(startIndex + itemsPerPage, filteredTeachers.length)}
-          </span>{" "}
-          of <span className="font-medium text-foreground">{filteredTeachers.length}</span> teachers
+          {pagination && (
+            <>
+              Showing <span className="font-medium text-foreground">{((pagination.page - 1) * pagination.limit) + 1}</span> to{" "}
+              <span className="font-medium text-foreground">
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{" "}
+              of <span className="font-medium text-foreground">{pagination.total}</span> teachers
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
+            onClick={previousPage}
+            disabled={!pagination || currentPage === 1}
             className="border-border/50 hover:bg-muted"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -477,14 +532,14 @@ export function TeacherManagementSection() {
           </Button>
 
           <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            {pagination && Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
               const pageNum = i + 1
               return (
                 <Button
                   key={pageNum}
                   variant={currentPage === pageNum ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
+                  onClick={() => goToPage(pageNum)}
                   className={
                     currentPage === pageNum
                       ? "bg-primary text-primary-foreground shadow-md"
@@ -495,20 +550,20 @@ export function TeacherManagementSection() {
                 </Button>
               )
             })}
-            {totalPages > 5 && (
+            {pagination && pagination.totalPages > 5 && (
               <>
                 <span className="px-2 text-muted-foreground">...</span>
                 <Button
-                  variant={currentPage === totalPages ? "default" : "outline"}
+                  variant={currentPage === pagination.totalPages ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => goToPage(pagination.totalPages)}
                   className={
-                    currentPage === totalPages
+                    currentPage === pagination.totalPages
                       ? "bg-primary text-primary-foreground shadow-md"
                       : "border-border/50 hover:bg-muted"
                   }
                 >
-                  {totalPages}
+                  {pagination.totalPages}
                 </Button>
               </>
             )}
@@ -517,8 +572,8 @@ export function TeacherManagementSection() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
+            onClick={nextPage}
+            disabled={!pagination || currentPage === pagination.totalPages}
             className="border-border/50 hover:bg-muted"
           >
             Next

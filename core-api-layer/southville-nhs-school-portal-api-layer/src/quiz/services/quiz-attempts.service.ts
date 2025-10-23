@@ -71,7 +71,11 @@ export class QuizAttemptsService {
       const attemptNumber = (existingAttempts?.length || 0) + 1;
 
       // Check if retakes are allowed
-      if (!quiz.allow_retakes && existingAttempts && existingAttempts.length > 0) {
+      if (
+        !quiz.allow_retakes &&
+        existingAttempts &&
+        existingAttempts.length > 0
+      ) {
         throw new ForbiddenException('Retakes are not allowed for this quiz');
       }
 
@@ -83,7 +87,11 @@ export class QuizAttemptsService {
         .eq('quiz_id', quizId)
         .order('order_index', { ascending: true });
 
-      if (quiz.question_pool_size && quiz.questions_to_display && allQuestions) {
+      if (
+        quiz.question_pool_size &&
+        quiz.questions_to_display &&
+        allQuestions
+      ) {
         // Randomize questions from pool
         const shuffled = allQuestions
           .sort(() => 0.5 - Math.random())
@@ -113,7 +121,9 @@ export class QuizAttemptsService {
       }
 
       // Check for duplicate sessions and terminate them BEFORE creating new session
-      this.logger.log(`Checking for duplicate sessions for student ${studentId} on quiz ${quizId}`);
+      this.logger.log(
+        `Checking for duplicate sessions for student ${studentId} on quiz ${quizId}`,
+      );
       await this.sessionManagementService.checkDuplicateSessions(
         quizId,
         studentId,
@@ -145,7 +155,9 @@ export class QuizAttemptsService {
         });
         throw new InternalServerErrorException('Failed to create quiz session');
       } else {
-        this.logger.log(`✅ Active session created: ${sessionData.session_id} for attempt ${attempt.attempt_id}`);
+        this.logger.log(
+          `✅ Active session created: ${sessionData.session_id} for attempt ${attempt.attempt_id}`,
+        );
       }
 
       this.logger.log(
@@ -296,25 +308,31 @@ export class QuizAttemptsService {
 
         if (answersError) {
           this.logger.error('Error saving final answers:', answersError);
-          throw new InternalServerErrorException('Failed to save final answers');
+          throw new InternalServerErrorException(
+            'Failed to save final answers',
+          );
         }
       }
 
       // Auto-grade the quiz attempt
       this.logger.log(`Starting auto-grading for attempt ${attemptId}`);
-      const gradingResult = await this.autoGradingService.gradeQuizAttempt(attemptId);
+      const gradingResult =
+        await this.autoGradingService.gradeQuizAttempt(attemptId);
       this.logger.log(
         `Auto-grading complete: ${gradingResult.totalScore}/${gradingResult.maxScore} ` +
-        `(${gradingResult.gradedCount} auto-graded, ${gradingResult.manualGradingRequired} manual)`,
+          `(${gradingResult.gradedCount} auto-graded, ${gradingResult.manualGradingRequired} manual)`,
       );
 
       // Calculate time taken
       const startedAt = new Date(attempt.started_at);
       const now = new Date();
-      const timeTakenSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+      const timeTakenSeconds = Math.floor(
+        (now.getTime() - startedAt.getTime()) / 1000,
+      );
 
       // Determine final status based on grading
-      const finalStatus = gradingResult.manualGradingRequired > 0 ? 'submitted' : 'graded';
+      const finalStatus =
+        gradingResult.manualGradingRequired > 0 ? 'submitted' : 'graded';
 
       // Update attempt status
       const { error: updateError } = await supabase

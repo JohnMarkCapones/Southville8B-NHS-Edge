@@ -3,7 +3,6 @@ import {
   Logger,
   InternalServerErrorException,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -68,15 +67,14 @@ export class RoomsService {
         throw new BadRequestException('Floor not found');
       }
 
-      // Get next room number
-      const roomNumber = await this.getNextRoomNumber(createRoomDto.floorId);
+      // Room number conflict detection removed - allow automatic increment
 
       const { data: room, error } = await supabase
         .from('rooms')
         .insert({
           floor_id: createRoomDto.floorId,
           name: createRoomDto.name,
-          room_number: roomNumber,
+          room_number: createRoomDto.roomNumber,
           capacity: createRoomDto.capacity,
           status: createRoomDto.status || RoomStatus.AVAILABLE,
         })
@@ -103,10 +101,7 @@ export class RoomsService {
       this.logger.log(`Room created successfully: ${room.room_number}`);
       return room;
     } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof BadRequestException) {
         throw error;
       }
       this.logger.error('Error creating room:', error);

@@ -15,7 +15,10 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AccessControlService } from '../services/access-control.service';
-import { GenerateAccessLinkDto, ValidateAccessLinkDto } from '../dto/generate-access-link.dto';
+import {
+  GenerateAccessLinkDto,
+  ValidateAccessLinkDto,
+} from '../dto/generate-access-link.dto';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { PoliciesGuard } from '../../auth/guards/policies.guard';
@@ -48,9 +51,15 @@ export class AccessControlController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Teachers and Admins only' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teachers and Admins only',
+  })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
-  @ApiResponse({ status: 400, description: 'Bad Request - Quiz must be published' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Quiz must be published',
+  })
   async generateAccessLink(
     @Param('quizId') quizId: string,
     @Body() generateDto: GenerateAccessLinkDto,
@@ -100,7 +109,10 @@ export class AccessControlController {
     description: 'Access links retrieved successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Teachers and Admins only' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teachers and Admins only',
+  })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
   async getQuizAccessLinks(
     @Param('quizId') quizId: string,
@@ -118,7 +130,10 @@ export class AccessControlController {
     description: 'Access link revoked successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Teachers and Admins only' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teachers and Admins only',
+  })
   @ApiResponse({ status: 404, description: 'Access link not found' })
   async revokeAccessLink(
     @Param('token') token: string,
@@ -140,7 +155,8 @@ export class AccessControlController {
   async getQRCode(@Param('token') token: string) {
     this.logger.log(`Generating QR code for token ${token}`);
     const accessLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/quiz/access/${token}`;
-    const qrCodeData = await this.accessControlService.generateQRCode(accessLink);
+    const qrCodeData =
+      await this.accessControlService.generateQRCode(accessLink);
     return {
       qrCodeData,
       accessLink,

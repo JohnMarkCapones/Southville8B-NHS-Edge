@@ -24,6 +24,17 @@ export class CreateRoomDto {
   })
   floorId: string;
 
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  @ApiProperty({
+    example: '101',
+    description: 'Room number (unique within floor)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  roomNumber: string;
+
   @IsOptional()
   @IsString()
   @MinLength(2)

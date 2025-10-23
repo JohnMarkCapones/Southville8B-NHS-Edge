@@ -200,7 +200,7 @@ export class AcademicCalendarService {
    */
   private generateCalendarDays(startDate: Date, endDate: Date): any[] {
     const days: any[] = [];
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     let weekNumber = 1;
     const firstDayOfWeek = startDate.getDay();
 

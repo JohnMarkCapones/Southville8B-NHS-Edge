@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslation } from "@/lib/i18n"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import StudentLayout from "@/components/student/student-layout"
@@ -10,6 +11,7 @@ import { TodoList } from "@/components/productivity/todo-list"
 import { GoalTracker } from "@/components/productivity/goal-tracker"
 import { PomodoroTimer } from "@/components/productivity/pomodoro-timer"
 import { AnnouncementModal, type AnnouncementData } from "@/components/student/announcement-modal"
+import { useUser } from "@/hooks/useUser"
 import {
   BookOpen,
   CalendarIcon,
@@ -38,12 +40,16 @@ import {
 
 export default function StudentDashboard() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [subjectsCollapsed, setSubjectsCollapsed] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showNotifications, setShowNotifications] = useState(false)
   const [activeProductivityTool, setActiveProductivityTool] = useState<string | null>(null)
+
+  // Fetch current user data
+  const { data: user, isLoading, isError } = useUser()
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -120,15 +126,18 @@ export default function StudentDashboard() {
     // In a real app, this would update the backend
   }
 
+  // Extract student data with fallbacks
   const studentData = {
-    name: "Precious Danielle Mañalac",
-    studentId: "S2024001",
-    grade: "Grade 8",
-    section: "Section B",
-    avatar: "/student-avatar.png",
-    gwa: 94.5,
-    rank: 12,
-    totalStudents: 240,
+    name: user?.student
+      ? `${user.student.first_name} ${user.student.middle_name ? user.student.middle_name + ' ' : ''}${user.student.last_name}`.trim()
+      : user?.full_name || 'Student',
+    studentId: user?.student?.student_id || 'N/A',
+    grade: user?.student?.grade_level ? `Grade ${user.student.grade_level}` : 'N/A',
+    section: user?.student?.sections?.name || 'N/A',
+    avatar: user?.profile?.avatar || '/student-avatar.png',
+    gwa: 94.5, // TODO: Get from actual GWA data when available
+    rank: user?.student?.rank || 12,
+    totalStudents: 240, // TODO: Get from actual total students count when available
   }
 
   const subjects = [
@@ -390,13 +399,13 @@ export default function StudentDashboard() {
           <CardContent className="p-4 sm:p-6 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Welcome back, {studentData.name}!</h1>
-                  <div className="animate-bounce">👋</div>
-                </div>
-                <p className="text-sm sm:text-base md:text-lg opacity-90 mb-3 sm:mb-4">
-                  Ready to conquer another day of learning?
-                </p>
+                  <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t('dashboard.welcomeBack')}, {studentData.name}!</h1>
+                    <div className="animate-bounce">👋</div>
+                  </div>
+                  <p className="text-sm sm:text-base md:text-lg opacity-90 mb-3 sm:mb-4">
+                    {t('dashboard.readyToConquer')}
+                  </p>
 
                 <div className="flex items-center flex-wrap gap-3 sm:gap-6 mb-3 sm:mb-4">
                   <div className="flex items-center space-x-2">
@@ -413,7 +422,7 @@ export default function StudentDashboard() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="text-xs sm:text-sm">Productive Day</span>
+                    <span className="text-xs sm:text-sm">{t('dashboard.productiveDay')}</span>
                   </div>
                 </div>
 
@@ -421,9 +430,9 @@ export default function StudentDashboard() {
                   <div className="flex items-start space-x-2 sm:space-x-3">
                     <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 text-yellow-300 flex-shrink-0" />
                     <div>
-                      <p className="text-xs sm:text-sm font-medium mb-1">💡 Study Tip of the Day</p>
+                      <p className="text-xs sm:text-sm font-medium mb-1">💡 {t('dashboard.studyTipOfTheDay')}</p>
                       <p className="text-xs sm:text-sm opacity-90">{currentTip}</p>
-                      <p className="text-xs opacity-75 mt-1">💪 You've got this! Stay focused and keep learning!</p>
+                      <p className="text-xs opacity-75 mt-1">💪 {t('dashboard.youveGotThis')}</p>
                     </div>
                   </div>
                 </div>

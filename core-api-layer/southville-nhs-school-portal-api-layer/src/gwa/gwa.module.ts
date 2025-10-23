@@ -1,11 +1,17 @@
 import { Module } from '@nestjs/common';
 import { GwaController } from './gwa.controller';
-import { GwaService } from './gwa.service';
-import { AuthModule } from '../auth/auth.module';
+import { GwaPublicController } from './gwa-public.controller';
 
 @Module({
-  imports: [AuthModule],
-  controllers: [GwaController],
+  imports: [
+    ConfigModule,
+    CacheModule.register({
+      ttl: 300, // 5 minutes default TTL
+      max: 1000, // Maximum number of items in cache
+    }),
+    AuthModule,
+  ],
+  controllers: [GwaController, GwaPublicController],
   providers: [GwaService],
   exports: [GwaService],
 })

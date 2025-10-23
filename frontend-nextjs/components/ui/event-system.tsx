@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
@@ -18,10 +18,14 @@ import {
   Microscope,
   GraduationCap,
   Palette,
+  Loader2,
 } from "lucide-react"
+import { getEvents } from "@/lib/api/endpoints/events"
+import type { Event as ApiEvent } from "@/lib/api/types/events"
+import { EventStatus, EventVisibility } from "@/lib/api/types/events"
 
 interface Event {
-  id: number
+  id: string
   title: string
   description: string
   date: string
@@ -37,108 +41,56 @@ interface Event {
   organizer: string
   price?: string
   featured?: boolean
+  slug?: string
 }
 
-const events: Event[] = [
-  {
-    id: 1,
-    title: "Spring Musical: Hamilton",
-    description: "Drama department with professional-level production",
-    date: "2024-04-20",
-    time: "7:00 PM",
-    location: "Main Auditorium",
-    category: "Arts & Culture",
-    registrationCount: 342,
-    maxRegistration: 500,
-    isInterested: true,
-    isRegistered: false,
-    image: "/placeholder.svg?height=200&width=300&text=Hamilton+Musical",
-    tags: ["Musical", "Drama", "Hamilton"],
-    organizer: "Drama Department",
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "State Basketball Championship",
-    description: "Eagles compete for state championship",
-    date: "2024-03-15",
-    time: "8:00 PM",
-    location: "State Arena, Downtown",
-    category: "Sports",
-    registrationCount: 150,
-    isInterested: true,
-    isRegistered: true,
-    image: "/placeholder.svg?height=200&width=300&text=Basketball+Championship",
-    tags: ["Basketball", "Championship", "Sports"],
-    organizer: "Athletic Department",
-  },
-  {
-    id: 3,
-    title: "Science Fair 2024",
-    description: "Annual showcase of student STEM projects with university judges",
-    date: "2024-05-10",
-    time: "9:00 AM",
-    location: "Gymnasium",
-    category: "Academic",
-    registrationCount: 89,
-    maxRegistration: 100,
-    isInterested: false,
-    isRegistered: true,
-    image: "/placeholder.svg?height=200&width=300&text=Science+Fair",
-    tags: ["Science", "STEM", "Competition"],
-    organizer: "Science Department",
-  },
-  {
-    id: 4,
-    title: "Graduation Ceremony 2024",
-    description: "Celebrating the graduating class of 2024",
-    date: "2024-06-15",
-    time: "10:00 AM",
-    location: "Football Stadium",
-    category: "Special Event",
-    registrationCount: 560,
-    maxRegistration: 600,
-    isInterested: false,
-    isRegistered: false,
-    image: "/placeholder.svg?height=200&width=300&text=Graduation+2024",
-    tags: ["Graduation", "Class of 2024", "Ceremony"],
-    organizer: "Administration",
-    featured: true,
-  },
-  {
-    id: 5,
-    title: "Senior Prom 2024",
-    description: "Elegant senior prom with 'Enchanted Garden' theme",
-    date: "2024-05-18",
-    time: "7:00 PM",
-    location: "Grand Ballroom Hotel",
-    category: "Social",
-    registrationCount: 287,
-    maxRegistration: 400,
-    isInterested: true,
-    isRegistered: false,
-    image: "/placeholder.svg?height=200&width=300&text=Senior+Prom",
-    tags: ["Prom", "Senior", "Dance"],
-    organizer: "Student Council",
-    price: "$75",
-  },
-  {
-    id: 6,
-    title: "Robotics Competition",
-    description: "Regional robotics competition featuring innovative student robots",
-    date: "2024-04-12",
-    time: "8:00 AM",
-    location: "Engineering Lab",
-    category: "Academic",
-    registrationCount: 78,
-    maxRegistration: 100,
-    isInterested: false,
-    isRegistered: true,
-    image: "/placeholder.svg?height=200&width=300&text=Robotics+Competition",
-    tags: ["Robotics", "Engineering", "Competition"],
-    organizer: "Engineering Club",
-  },
-]
+// Helper function to validate and sanitize image URL
+function validateImageUrl(url: string | undefined): string {
+  if (!url) {
+    return "/placeholder.svg?height=200&width=300&text=Event+Image"
+  }
+  
+  try {
+    // Try to construct a URL to validate it
+    new URL(url)
+    return url
+  } catch (error) {
+    // If URL is invalid, return placeholder
+    console.warn('Invalid image URL detected:', url)
+    return "/placeholder.svg?height=200&width=300&text=Event+Image"
+  }
+}
+
+// Helper function to map API event to component format
+function mapApiEventToComponent(apiEvent: ApiEvent): Event {
+  // Generate slug from title if not provided
+  const slug = apiEvent.slug || apiEvent.title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+
+  return {
+    id: apiEvent.id,
+    title: apiEvent.title,
+    description: apiEvent.description,
+    date: apiEvent.date,
+    time: apiEvent.time,
+    location: apiEvent.location,
+    category: "Special Event", // Default category since API doesn't provide this
+    registrationCount: 0, // Default since API doesn't provide this
+    maxRegistration: undefined,
+    isInterested: false, // Default state
+    isRegistered: false, // Default state
+    image: validateImageUrl(apiEvent.eventImage),
+    tags: apiEvent.tags?.map(tag => tag.name) || [],
+    organizer: apiEvent.organizer?.fullName || "Event Organizer",
+    price: undefined,
+    featured: false, // Will be set based on is_featured from API
+    slug: slug
+  }
+}
 
 const categoryIcons = {
   "Arts & Culture": <Palette className="w-4 h-4" />,
@@ -152,14 +104,112 @@ export function EventSystem() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [events, setEvents] = useState<Event[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const categories = ["All", "Arts & Culture", "Sports", "Academic", "Special Event", "Social"]
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        const response = await getEvents({
+          page: 1,
+          limit: 6,
+          status: EventStatus.PUBLISHED,
+          visibility: EventVisibility.PUBLIC
+        })
+        
+        // Map API events to component format
+        const mappedEvents = response.data.map(mapApiEventToComponent)
+        
+        // Set featured status based on is_featured from API
+        const eventsWithFeatured = mappedEvents.map(event => {
+          const apiEvent = response.data.find(ae => ae.id === event.id)
+          return {
+            ...event,
+            featured: apiEvent?.is_featured || false
+          }
+        })
+        
+        setEvents(eventsWithFeatured)
+      } catch (err) {
+        console.error('Failed to fetch events:', err)
+        setError('Failed to load events')
+        // Fallback to empty array
+        setEvents([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchEvents()
+  }, [])
 
   const filteredEvents =
     selectedCategory === "All" ? events : events.filter((event) => event.category === selectedCategory)
 
   const featuredEvents = events.filter((event) => event.featured)
   const upcomingEvents = events.slice(0, 3)
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-4xl font-bold mb-4">
+            School <span className="gradient-text">Events</span>
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Discover and participate in exciting events happening throughout our school community
+          </p>
+        </div>
+        
+        {/* Loading State */}
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading events...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-4xl font-bold mb-4">
+            School <span className="gradient-text">Events</span>
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Discover and participate in exciting events happening throughout our school community
+          </p>
+        </div>
+        
+        {/* Error State */}
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <AnimatedButton 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+            >
+              Try Again
+            </AnimatedButton>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -256,10 +306,12 @@ export function EventSystem() {
                       {event.isRegistered ? "Registered" : "Register"}
                     </AnimatedButton>
                     <Link
-                      href={`/guess/event/${event.title
+                      href={`/guess/event/${event.slug || event.title
                         .toLowerCase()
-                        .replace(/[^a-z0-9]+/g, "-")
-                        .replace(/(^-|-$)/g, "")}`}
+                        .replace(/[^a-z0-9\s-]/g, '')
+                        .replace(/\s+/g, '-')
+                        .replace(/-+/g, '-')
+                        .trim()}`}
                     >
                       <AnimatedButton variant="outline" size="sm">
                         View Details
@@ -307,6 +359,11 @@ export function EventSystem() {
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                 priority={false}
+                onError={(e) => {
+                  // Fallback to placeholder if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/placeholder.svg?height=200&width=300&text=Event+Image";
+                }}
               />
               <div className="absolute top-3 left-3">
                 <Badge variant="outline" className="bg-white/90 text-gray-900 border-white/50">
@@ -346,10 +403,12 @@ export function EventSystem() {
               </div>
               <div className="flex gap-2">
                 <Link
-                  href={`/guess/event/${event.title
+                  href={`/guess/event/${event.slug || event.title
                     .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, "-")
-                    .replace(/(^-|-$)/g, "")}`}
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .trim()}`}
                   className="flex-1"
                 >
                   <AnimatedButton

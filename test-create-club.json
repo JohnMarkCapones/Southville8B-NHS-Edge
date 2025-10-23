@@ -1,0 +1,46 @@
+{
+  "name": "AI Innovation Club",
+  "description": "Exploring artificial intelligence and machine learning",
+  "mission_statement": "To empower students with AI knowledge and skills for the future",
+
+  "goals": [
+    {
+      "goal_text": "Learn fundamental AI concepts and algorithms",
+      "order_index": 0
+    },
+    {
+      "goal_text": "Build AI projects using Python and TensorFlow",
+      "order_index": 1
+    },
+    {
+      "goal_text": "Participate in AI competitions and hackathons",
+      "order_index": 2
+    }
+  ],
+
+  "benefits": [
+    {
+      "title": "Hands-on AI Projects",
+      "description": "Work on real AI projects and build your portfolio",
+      "order_index": 0
+    },
+    {
+      "title": "Industry Mentorship",
+      "description": "Learn from AI professionals and industry experts",
+      "order_index": 1
+    }
+  ],
+
+  "faqs": [
+    {
+      "question": "Do I need programming experience?",
+      "answer": "Basic Python knowledge is helpful but not required. We'll teach you everything!",
+      "order_index": 0
+    },
+    {
+      "question": "When do we meet?",
+      "answer": "Every Friday from 3:00 PM to 5:00 PM in Computer Lab 3",
+      "order_index": 1
+    }
+  ]
+}
