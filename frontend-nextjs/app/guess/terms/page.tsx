@@ -1,4 +1,8 @@
+export const dynamic = "force-static"
+export const revalidate = 86400 // Revalidate once per day
 import type { Metadata } from "next"
+import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
+import { DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo"
 import { Shield, FileText, Scale, AlertTriangle, Mail, Calendar, ChevronRight, BookOpen } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,10 +11,30 @@ import { Button } from "@/components/ui/button"
 export const metadata: Metadata = {
   title: "Terms of Service | Southville 8B NHS",
   description: "Read the Terms of Service for using Southville 8B National High School's website and services.",
+  alternates: { canonical: "/guess/terms" },
+  openGraph: {
+    title: "Terms of Service | Southville 8B NHS",
+    description:
+      "Read the Terms of Service for using Southville 8B National High School's website and services.",
+    url: "/guess/terms",
+    type: "article",
+    images: [{ url: DEFAULT_OG_IMAGE }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms of Service | Southville 8B NHS",
+    description:
+      "Read the Terms of Service for using Southville 8B National High School's website and services.",
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 export default function TermsPage() {
   const lastUpdated = "December 15, 2024"
+  const breadcrumb = buildBreadcrumbListSchema([
+    { name: "Home", url: SITE_URL + "/" },
+    { name: "Terms of Service", url: SITE_URL + "/guess/terms" },
+  ])
 
   const sections = [
     {
@@ -59,6 +83,7 @@ export default function TermsPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <JsonLd id="breadcrumb-terms" data={breadcrumb} />
       <div className="container mx-auto px-4 py-16 md:py-24">
         {/* Header Section */}
         <div className="max-w-4xl mx-auto">

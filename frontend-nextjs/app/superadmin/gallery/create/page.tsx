@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { useGallery } from "@/hooks/useGallery"
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,10 @@ interface UploadedFile {
   tags: string[]
   featured: boolean
   photographer: string
+  photographerCredit: string
+  altText: string
+  takenAt: string
+  location: string
   hasConsent: boolean
 }
 
@@ -42,8 +47,10 @@ export default function CreateGalleryPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const { createItem } = useGallery()
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -83,6 +90,10 @@ export default function CreateGalleryPage() {
       tags: [],
       featured: false,
       photographer: "",
+      photographerCredit: "",
+      altText: "",
+      takenAt: new Date().toISOString().split('T')[0], // Default to today
+      location: "",
       hasConsent: false,
     }))
     setUploadedFiles((prev) => [...prev, ...newFiles])
@@ -128,25 +139,59 @@ export default function CreateGalleryPage() {
     setConfirmDialogOpen(true)
   }
 
-  const confirmUpload = () => {
-    toast({
-      title: "✅ Photos Uploaded Successfully",
-      description: (
-        <div className="space-y-2">
-          <p className="font-medium">{uploadedFiles.length} photos have been added to the gallery</p>
-          <div className="text-sm space-y-1">
-            <p>• {uploadedFiles.filter((f) => f.featured).length} marked as featured</p>
-            <p>• Organized into {new Set(uploadedFiles.map((f) => f.album)).size} albums</p>
+  const confirmUpload = async () => {
+    setIsUploading(true)
+    
+    try {
+      // Upload each file
+      const uploadPromises = uploadedFiles.map(async (file) => {
+        const uploadData = {
+          file: file.file,
+          title: file.title,
+          caption: file.description,
+          alt_text: file.altText,
+          is_featured: file.featured,
+          photographer_name: file.photographer,
+          photographer_credit: file.photographerCredit,
+          taken_at: file.takenAt,
+          location: file.location,
+          display_order: 0
+        }
+        
+        return await createItem(uploadData)
+      })
+
+      await Promise.all(uploadPromises)
+
+      toast({
+        title: "✅ Photos Uploaded Successfully",
+        description: (
+          <div className="space-y-2">
+            <p className="font-medium">{uploadedFiles.length} photos have been added to the gallery</p>
+            <div className="text-sm space-y-1">
+              <p>• {uploadedFiles.filter((f) => f.featured).length} marked as featured</p>
+              <p>• Organized into {new Set(uploadedFiles.map((f) => f.album)).size} albums</p>
+            </div>
           </div>
-        </div>
-      ),
-      className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
-      duration: 5000,
-    })
-    setConfirmDialogOpen(false)
-    setTimeout(() => {
-      router.push("/superadmin/gallery")
-    }, 1000)
+        ),
+        className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
+        duration: 5000,
+      })
+      
+      setConfirmDialogOpen(false)
+      setTimeout(() => {
+        router.push("/superadmin/gallery")
+      }, 1000)
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast({
+        title: "❌ Upload Failed",
+        description: "There was an error uploading the photos. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -170,10 +215,10 @@ export default function CreateGalleryPage() {
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
-              disabled={uploadedFiles.length === 0}
+              disabled={uploadedFiles.length === 0 || isUploading}
             >
               <Upload className="w-4 h-4 mr-2" />
-              Upload {uploadedFiles.length > 0 && `(${uploadedFiles.length})`}
+              {isUploading ? "Uploading..." : `Upload ${uploadedFiles.length > 0 ? `(${uploadedFiles.length})` : ""}`}
             </Button>
           </div>
         </div>
@@ -371,6 +416,49 @@ export default function CreateGalleryPage() {
                           </p>
                         </div>
 
+                        {/* Additional Photo Details */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`photographer-credit-${file.id}`}>Photographer Credit</Label>
+                            <Input
+                              id={`photographer-credit-${file.id}`}
+                              value={file.photographerCredit}
+                              onChange={(e) => updateFile(file.id, { photographerCredit: e.target.value })}
+                              placeholder="e.g., Photo by John Doe, School Journalism Club"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`alt-text-${file.id}`}>Alt Text (Accessibility)</Label>
+                            <Input
+                              id={`alt-text-${file.id}`}
+                              value={file.altText}
+                              onChange={(e) => updateFile(file.id, { altText: e.target.value })}
+                              placeholder="e.g., Three students in lab coats standing next to a robotic arm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`taken-at-${file.id}`}>Date Taken</Label>
+                            <Input
+                              id={`taken-at-${file.id}`}
+                              type="date"
+                              value={file.takenAt}
+                              onChange={(e) => updateFile(file.id, { takenAt: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`location-${file.id}`}>Location</Label>
+                            <Input
+                              id={`location-${file.id}`}
+                              value={file.location}
+                              onChange={(e) => updateFile(file.id, { location: e.target.value })}
+                              placeholder="e.g., School Gymnasium"
+                            />
+                          </div>
+                        </div>
+
                         {/* Consent Confirmation */}
                         <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
                           <div className="flex items-start gap-3">
@@ -522,9 +610,10 @@ export default function CreateGalleryPage() {
               <Button
                 onClick={confirmUpload}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                disabled={isUploading}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Confirm Upload
+                {isUploading ? "Uploading..." : "Confirm Upload"}
               </Button>
             </DialogFooter>
           </DialogContent>

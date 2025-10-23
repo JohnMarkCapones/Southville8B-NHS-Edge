@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Southville8BEdgeUI.ViewModels.Admin;
 using System;
 using System.Collections.Generic;
@@ -230,7 +231,14 @@ public partial class AdminShellViewModel : ViewModelBase
         CloseUserDropdown();
     }
 
-    [RelayCommand] private void Logout() { CloseUserDropdown(); NavigateTo?.Invoke(new LoginViewModel()); }
+    [RelayCommand] private void Logout() 
+    { 
+        CloseUserDropdown(); 
+        var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+        NavigateTo?.Invoke(new LoginViewModel(authService, toastService, roleValidationService)); 
+    }
     [RelayCommand] private void DismissAlert(SystemAlertViewModel alert) { if (CurrentContent is AdminDashboardViewModel d) d.SystemAlerts.Remove(alert); }
 
     // Calendar week navigation (previous / next) - wraps across months

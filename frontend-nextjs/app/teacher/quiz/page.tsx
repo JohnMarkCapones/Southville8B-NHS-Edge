@@ -75,6 +75,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { quizApi } from "@/lib/api/endpoints/quiz"
+import type { Quiz } from "@/lib/api/types"
 
 // Mock quiz data
 const quizzesData = [
@@ -303,6 +305,7 @@ export default function TeacherQuizPage() {
   const [shareQuiz, setShareQuiz] = useState<any>(null)
 
   const [quizzes, setQuizzes] = useState(quizzesData)
+  const [isLoading, setIsLoading] = useState(false) // API loading state
 
   const [statusConfirmation, setStatusConfirmation] = useState<{
     open: boolean
@@ -366,6 +369,11 @@ export default function TeacherQuizPage() {
     }
   }, [contextMenu.show])
 
+  // Load quizzes on mount and when filters change
+  useEffect(() => {
+    loadQuizzes()
+  }, [selectedStatus, searchQuery]) // Reload when filters change
+
   const tabs = [
     { id: "all-quizzes", label: "All Quizzes", icon: ClipboardList, count: quizzes.length },
     { id: "question-bank", label: "Question Bank", icon: BookOpen, count: 24 },
@@ -409,6 +417,48 @@ export default function TeacherQuizPage() {
       }),
   }
 
+  // Load quizzes from API
+  const loadQuizzes = async () => {
+    setIsLoading(true)
+    try {
+      const response = await quizApi.teacher.getQuizzes({
+        page: 1,
+        limit: 100,
+        status: selectedStatus !== 'all' ? selectedStatus as any : undefined,
+        search: searchQuery || undefined,
+      })
+
+      // Map API quizzes to match UI format
+      const mappedQuizzes = response.data.map((apiQuiz: any) => ({
+        id: apiQuiz.quiz_id,
+        title: apiQuiz.title,
+        subject: apiQuiz.subject_id || 'Unknown',
+        grade: 'Grade 8', // Default, can be enhanced later
+        questions: apiQuiz.quiz_questions?.length || 0,
+        duration: apiQuiz.time_limit || 0,
+        status: apiQuiz.status,
+        attempts: 0, // Will come from attempts API
+        avgScore: 0, // Will come from analytics API
+        created: apiQuiz.created_at,
+        dueDate: apiQuiz.end_date || '',
+        type: apiQuiz.quiz_type || 'mixed',
+      }))
+
+      setQuizzes(mappedQuizzes)
+    } catch (error: any) {
+      console.error('Failed to load quizzes:', error)
+      toast({
+        title: "Failed to Load Quizzes",
+        description: error.message || 'Could not load quizzes from server',
+        variant: "destructive",
+      })
+      // Keep using mock data as fallback
+      setQuizzes(quizzesData)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleCreateQuiz = () => {
     router.push("/teacher/quiz/create")
   }
@@ -418,19 +468,56 @@ export default function TeacherQuizPage() {
     setDeleteDialogOpen(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (quizToDelete) {
-      // Here you would implement the actual delete logic
-      setQuizzes((prevQuizzes) => prevQuizzes.filter((q) => q.id !== quizToDelete.id))
-      console.log("Deleting quiz:", quizToDelete.id)
+      try {
+        // Call API to delete quiz
+        await quizApi.teacher.deleteQuiz(quizToDelete.id)
+
+        // Remove from local state
+        setQuizzes((prevQuizzes) => prevQuizzes.filter((q) => q.id !== quizToDelete.id))
+
+        toast({
+          title: "Quiz Deleted",
+          description: `"${quizToDelete.title}" has been successfully deleted.`,
+          variant: "destructive",
+          duration: 3000,
+        })
+      } catch (error: any) {
+        toast({
+          title: "Delete Failed",
+          description: error.message || 'Failed to delete quiz',
+          variant: "destructive",
+        })
+      } finally {
+        setDeleteDialogOpen(false)
+        setQuizToDelete(null)
+      }
+    }
+  }
+
+  const handleDuplicateQuiz = async (quiz: any) => {
+    try {
+      // Call API to duplicate quiz
+      const clonedQuiz = await quizApi.teacher.cloneQuiz(quiz.id, {
+        newTitle: `${quiz.title} (Copy)`
+      })
+
       toast({
-        title: "Quiz Deleted",
-        description: `"${quizToDelete.title}" has been successfully deleted.`,
-        variant: "destructive",
+        title: "Quiz Duplicated",
+        description: `"${quiz.title}" has been successfully duplicated.`,
+        variant: "default",
         duration: 3000,
       })
-      setDeleteDialogOpen(false)
-      setQuizToDelete(null)
+
+      // Navigate to edit the cloned quiz
+      router.push(`/teacher/quiz/builder?quizId=${clonedQuiz.quiz_id}`)
+    } catch (error: any) {
+      toast({
+        title: "Duplicate Failed",
+        description: error.message || 'Failed to duplicate quiz',
+        variant: "destructive",
+      })
     }
   }
 
@@ -1087,8 +1174,30 @@ export default function TeacherQuizPage() {
               </div>
 
               <div className="lg:hidden space-y-6">
-                {(selectedStatus === "all" || selectedStatus === "scheduled") &&
-                  groupedQuizzes.scheduled.length > 0 && (
+                {isLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i} className="animate-pulse">
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
+                            <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+                            <div className="flex gap-2">
+                              <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+                              <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {(selectedStatus === "all" || selectedStatus === "scheduled") &&
+                      groupedQuizzes.scheduled.length > 0 && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-3 pb-2 border-b-2 border-purple-200 dark:border-purple-800">
                         <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
@@ -1165,7 +1274,10 @@ export default function TeacherQuizPage() {
                                     <Edit className="w-4 h-4" />
                                     Edit Quiz
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="flex items-center gap-2">
+                                  <DropdownMenuItem
+                                    className="flex items-center gap-2"
+                                    onClick={() => handleDuplicateQuiz(quiz)}
+                                  >
                                     <Copy className="w-4 h-4" />
                                     Duplicate
                                   </DropdownMenuItem>
@@ -1523,7 +1635,10 @@ export default function TeacherQuizPage() {
                                     <Edit className="w-4 h-4" />
                                     Edit Quiz
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="flex items-center gap-2">
+                                  <DropdownMenuItem
+                                    className="flex items-center gap-2"
+                                    onClick={() => handleDuplicateQuiz(quiz)}
+                                  >
                                     <Copy className="w-4 h-4" />
                                     Duplicate
                                   </DropdownMenuItem>
@@ -1706,11 +1821,35 @@ export default function TeacherQuizPage() {
                     ))}
                   </div>
                 )}
+                  </>
+                )}
               </div>
 
               <div className="hidden lg:block space-y-6">
-                {(selectedStatus === "all" || selectedStatus === "scheduled") &&
-                  groupedQuizzes.scheduled.length > 0 && (
+                {isLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="animate-pulse border rounded-lg p-6">
+                        <div className="space-y-3">
+                          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-2/3"></div>
+                          <div className="flex gap-2">
+                            <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+                            <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-4">
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {(selectedStatus === "all" || selectedStatus === "scheduled") &&
+                      groupedQuizzes.scheduled.length > 0 && (
                     <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg">
                       <CardHeader className="border-b border-slate-200 dark:border-slate-700 bg-purple-50 dark:bg-purple-900/10">
                         <CardTitle className="text-slate-900 dark:text-white flex items-center gap-3">
@@ -2314,6 +2453,8 @@ export default function TeacherQuizPage() {
                       </Table>
                     </CardContent>
                   </Card>
+                )}
+                  </>
                 )}
               </div>
             </div>

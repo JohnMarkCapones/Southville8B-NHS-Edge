@@ -194,6 +194,7 @@ export function ChatSystem({ className }: ChatSystemProps) {
             ? "bg-gradient-to-r from-gaming-neon-green to-gaming-neon-blue text-gaming-dark animate-gamingPulse"
             : "bg-gradient-to-r from-blue-500 to-purple-500 text-white",
         )}
+        aria-label="Open chat"
       >
         <MessageSquare className="h-6 w-6" />
         {chats.reduce((total, chat) => total + chat.unreadCount, 0) > 0 && (

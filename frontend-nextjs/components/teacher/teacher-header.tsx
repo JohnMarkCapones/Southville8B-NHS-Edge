@@ -49,8 +49,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
+import { logoutAction } from "@/app/actions/auth"
 
-export function TeacherHeader() {
+interface TeacherHeaderProps {
+  teacherName: string
+  teacherAvatar?: string
+  department?: string
+  teacherId?: string
+}
+
+export function TeacherHeader({ teacherName, teacherAvatar, department, teacherId }: TeacherHeaderProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
   const [isSearchFocused, setIsSearchFocused] = React.useState(false)
@@ -61,13 +69,29 @@ export function TeacherHeader() {
     setMounted(true)
   }, [])
 
-  if (!mounted) return null
+  // Don't return null - causes hydration mismatch
+  // Instead, calculate theme safely with mounted check
+  const isDarkMode = mounted ? theme === "dark" : false
 
-  const isDarkMode = theme === "dark"
-
-  const handleLogout = () => {
-    console.log("[v0] Teacher logout confirmed")
-    window.location.href = "/guess/login"
+  const handleLogout = async () => {
+    try {
+      // Call the proper logout action to clear authentication cookies
+      const result = await logoutAction()
+      
+      if (result.success) {
+        console.log("[TeacherHeader] Logout successful")
+        // Redirect to portal page after successful logout
+        window.location.href = "/guess/portal?role=teacher"
+      } else {
+        console.error("[TeacherHeader] Logout failed:", result.error)
+        // Still redirect even if logout action fails (fallback)
+        window.location.href = "/guess/portal?role=teacher"
+      }
+    } catch (error) {
+      console.error("[TeacherHeader] Logout error:", error)
+      // Fallback redirect on error
+      window.location.href = "/guess/portal?role=teacher"
+    }
   }
 
   const handleClearAllNotifications = () => {
@@ -426,10 +450,11 @@ export function TeacherHeader() {
               variant="ghost"
               size="icon"
               className="hover:bg-white/10 hover:scale-110 transition-all duration-300"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              onClick={() => setTheme(mounted && theme === "light" ? "dark" : "light")}
+              suppressHydrationWarning
             >
               <div className="relative w-5 h-5">
-                {theme === "light" ? (
+                {mounted && theme === "light" ? (
                   <Sun className="w-5 h-5 text-yellow-300" />
                 ) : (
                   <Moon className="w-5 h-5 text-blue-200" />
@@ -448,10 +473,10 @@ export function TeacherHeader() {
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
                   </div>
                   <div className="hidden sm:block text-left">
-                    <div className="text-sm font-semibold text-white">Ms. Rodriguez</div>
+                    <div className="text-sm font-semibold text-white">{teacherName}</div>
                     <div className="text-xs text-white/80 flex items-center">
                       <Star className="w-3 h-3 mr-1 text-yellow-300" />
-                      Mathematics Teacher
+                      {department || 'Education'} Teacher
                     </div>
                   </div>
                 </AnimatedButton>
@@ -466,8 +491,8 @@ export function TeacherHeader() {
                       <User className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">Ms. Rodriguez</div>
-                      <div className="text-xs text-slate-600 dark:text-slate-400">Mathematics Department</div>
+                      <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{teacherName}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">{department || 'Education Department'}</div>
                       <div className="text-xs text-green-600 dark:text-green-400 flex items-center mt-1 animate-pulse">
                         <Activity className="w-3 h-3 mr-1" />
                         Active now

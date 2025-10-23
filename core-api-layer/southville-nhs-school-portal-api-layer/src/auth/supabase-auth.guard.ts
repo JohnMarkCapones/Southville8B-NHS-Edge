@@ -23,8 +23,9 @@ export class SupabaseAuthGuard implements CanActivate {
       // Verify the token and get user data
       const user: SupabaseUser = await this.authService.verifyToken(token);
 
-      // Attach user data to request object for use in controllers
+      // Attach user data and raw token to request object for use in controllers/services
       request.user = user;
+      request.accessToken = token; // Store raw token for RLS-enabled Supabase queries
 
       return true;
     } catch (error) {

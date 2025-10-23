@@ -3,7 +3,7 @@
 import type React from "react"
 import StudentLayout from "@/components/student/student-layout"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,30 +42,38 @@ import {
   Download,
   Trash2,
 } from "lucide-react"
+import { useUser } from "@/hooks/useUser"
+import { getEmergencyContacts } from "@/lib/api/endpoints"
+import type { EmergencyContact } from "@/lib/api/types"
 
 export default function ProfilePage() {
   const [showPassword, setShowPassword] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([])
+  const [loadingContacts, setLoadingContacts] = useState(false)
 
-  // Mock student profile data
+  // Fetch current user data
+  const { data: user, isLoading } = useUser()
+
+  // Initialize profile data from user
   const [profileData, setProfileData] = useState({
     // Personal Information
-    firstName: "Alex",
-    lastName: "Rivera",
-    middleName: "Santos",
-    studentId: "S2024001",
-    email: "alex.rivera@s8bnhs.edu",
-    phone: "+63 912 345 6789",
-    dateOfBirth: "2009-03-15",
-    address: "123 Main Street, Southville, Biñan, Laguna",
+    firstName: "",
+    lastName: "",
+    middleName: "",
+    studentId: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
 
     // Academic Information
-    grade: "Grade 8",
-    section: "Section B",
-    schoolYear: "2023-2024",
-    gpa: 94.5,
-    rank: 12,
+    grade: "",
+    section: "",
+    schoolYear: "2024-2025", // Can be hardcoded or from config
+    gpa: 0,
+    rank: 0,
     totalStudents: 240,
 
     // Emergency Contacts
@@ -109,6 +117,73 @@ export default function ProfilePage() {
       dateFormat: "MM/DD/YYYY",
     },
   })
+
+  // Update profile data when user data loads
+  useEffect(() => {
+    if (user) {
+      setProfileData((prev) => ({
+        ...prev,
+        firstName: user.student?.first_name || "",
+        lastName: user.student?.last_name || "",
+        middleName: user.student?.middle_name || "",
+        studentId: user.student?.student_id || "",
+        email: user.email || "",
+        phone: user.profile?.phone_number || "",
+        dateOfBirth: user.student?.birthday || "",
+        address: user.profile?.address || "",
+        grade: user.student?.grade_level ? `Grade ${user.student.grade_level}` : "",
+        section: user.student?.sections?.name || "",
+        gpa: 94.5, // TODO: Get from actual GWA data
+        rank: user.student?.rank || 0,
+      }))
+
+      // Set profile image if available
+      if (user.profile?.avatar) {
+        setProfileImage(user.profile.avatar)
+      }
+
+      // Fetch emergency contacts using user.id (NOT student.id)
+      // The endpoint expects studentUserId which is the user_id from students table
+      if (user.id) {
+        fetchEmergencyContacts(user.id)
+      }
+    }
+  }, [user])
+
+  // Fetch emergency contacts from API
+  const fetchEmergencyContacts = async (studentId: string) => {
+    setLoadingContacts(true)
+    try {
+      const contacts = await getEmergencyContacts(studentId)
+      setEmergencyContacts(contacts)
+
+      // Update profile data with emergency contacts
+      if (contacts.length > 0) {
+        const primary = contacts.find(c => c.isPrimary) || contacts[0]
+        const secondary = contacts.find(c => !c.isPrimary) || contacts[1]
+
+        setProfileData(prev => ({
+          ...prev,
+          emergencyContact1: {
+            name: primary?.guardianName || "",
+            relationship: primary?.relationship || "",
+            phone: primary?.phoneNumber || "",
+            email: primary?.email || "",
+          },
+          emergencyContact2: secondary ? {
+            name: secondary.guardianName || "",
+            relationship: secondary.relationship || "",
+            phone: secondary.phoneNumber || "",
+            email: secondary.email || "",
+          } : prev.emergencyContact2,
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch emergency contacts:', error)
+    } finally {
+      setLoadingContacts(false)
+    }
+  }
 
   const achievements = [
     { title: "Honor Roll", description: "Achieved honor roll status for 3 consecutive quarters", date: "2024-01-15" },
@@ -166,6 +241,20 @@ export default function ProfilePage() {
         [key]: value,
       },
     }))
+  }
+
+  // Show loading state while user data is being fetched
+  if (isLoading) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading profile...</p>
+          </div>
+        </div>
+      </StudentLayout>
+    )
   }
 
   return (

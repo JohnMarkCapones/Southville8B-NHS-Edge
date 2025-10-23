@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,109 +8,30 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Crown, Medal, Search, Download, TrendingUp, TrendingDown } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Crown, 
+  Medal, 
+  Search, 
+  Download, 
+  TrendingUp, 
+  TrendingDown, 
+  RefreshCw, 
+  Loader2,
+  Star,
+  Trophy
+} from "lucide-react"
+import { 
+  getStudentRankings, 
+  getTopStudentsByGwa 
+} from "@/lib/api/endpoints/student-rankings"
+import type { 
+  LeaderboardStudent, 
+  StudentRankingQueryParams 
+} from "@/lib/api/types/student-rankings"
 
-type Student = {
-  id: string
-  name: string
-  avatar?: string
-  gradeLevel: 7 | 8 | 9 | 10
-  section: "A" | "B" | "C" | "D"
-  gwa: number // 0-100 style (e.g., 98.6)
-  rank: number // global rank only as a consistent tie-breaker
-  trend: number // +/- delta
-}
-
-const SECTIONS: Array<Student["section"]> = ["A", "B", "C", "D"]
-
-// Deterministic sample data: 10 students for each grade (7, 8, 9, 10)
-const STUDENTS: Student[] = (() => {
-  const list: Student[] = []
-  let globalRank = 1
-
-  const makeName = (grade: number, i: number) => {
-    const names7 = [
-      "Avery Cruz",
-      "Blake Ramirez",
-      "Cody Tan",
-      "Dylan Santos",
-      "Emery Flores",
-      "Harper Cruz",
-      "Jordan Reyes",
-      "Kai Mendoza",
-      "Logan Dela Cruz",
-      "Morgan Santos",
-    ]
-    const names8 = [
-      "Noah Garcia",
-      "Olivia Reyes",
-      "Parker Santos",
-      "Quinn Cruz",
-      "Riley Flores",
-      "Sawyer Tan",
-      "Taylor Ramos",
-      "Uma Rivera",
-      "Val Cruz",
-      "Wyatt Torres",
-    ]
-    const names9 = [
-      "Xavier Gomez",
-      "Yara Fernandez",
-      "Zane Morales",
-      "Aiden Bautista",
-      "Bella Navarro",
-      "Carter Aquino",
-      "Dakota Ramos",
-      "Elena Santos",
-      "Felix Lopez",
-      "Gianna Reyes",
-    ]
-    const names10 = [
-      "Hudson Garcia",
-      "Isla Mendoza",
-      "Jasper Cruz",
-      "Kendall Reyes",
-      "Luca Santos",
-      "Mila Flores",
-      "Nolan Dela Cruz",
-      "Ophelia Tan",
-      "Paxton Rivera",
-      "Quincy Ramos",
-    ]
-    const byGrade: Record<number, string[]> = { 7: names7, 8: names8, 9: names9, 10: names10 }
-    return byGrade[grade][i - 1]
-  }
-
-  const sets: Array<{ grade: 7 | 8 | 9 | 10; startGwa: number }> = [
-    { grade: 7, startGwa: 96.8 },
-    { grade: 8, startGwa: 97.4 },
-    { grade: 9, startGwa: 97.9 },
-    { grade: 10, startGwa: 98.3 },
-  ]
-
-  sets.forEach(({ grade, startGwa }) => {
-    for (let i = 1 as const; i <= 10; i++) {
-      // Smooth descending GWAs with tiny deterministic variation
-      const gwa = startGwa - (i - 1) * 0.35 + ((i % 3) * 0.02 - 0.02)
-      const trend = (i % 2 === 0 ? 1 : -1) * (0.1 + (i % 5) * 0.15) // +/- changes
-      const section = SECTIONS[(i - 1) % SECTIONS.length]
-      list.push({
-        id: `g${grade}-s${i}`,
-        name: makeName(grade, i),
-        avatar: `/placeholder.svg?height=80&width=80&query=Grade+${grade}+Student+${i}`,
-        gradeLevel: grade,
-        section,
-        gwa: Number(gwa.toFixed(1)),
-        rank: globalRank++,
-        trend: Number(trend.toFixed(1)),
-      })
-    }
-  })
-
-  // Sort globally by GWA desc then by globalRank asc for a stable "All" view
-  list.sort((a, b) => (b.gwa !== a.gwa ? b.gwa - a.gwa : a.rank - b.rank))
-  return list
-})()
+type GradeFilter = "all" | 7 | 8 | 9 | 10
+type ScopedStudent = LeaderboardStudent & { scopedRank: number }
 
 const formatGwa = (gwa: number) => gwa.toFixed(1)
 
@@ -121,8 +42,8 @@ function TrendChip({ value }: { value: number }) {
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border",
         up
-          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-          : "bg-rose-500/10 text-rose-600 border-rose-500/30",
+          ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/40"
+          : "bg-rose-500/20 text-rose-700 dark:text-rose-400 border-rose-500/40",
       )}
       aria-label={`Trend ${up ? "+" : ""}${value.toFixed(1)}`}
     >
@@ -133,23 +54,47 @@ function TrendChip({ value }: { value: number }) {
   )
 }
 
-type GradeFilter = "all" | 7 | 8 | 9 | 10
-type ScopedStudent = Student & { scopedRank: number }
+function HonorBadge({ honorStatus }: { honorStatus?: string }) {
+  if (!honorStatus || honorStatus === 'None') return null
+  
+  const getBadgeVariant = (status: string) => {
+    if (status.includes('Highest')) return 'default'
+    if (status.includes('High')) return 'secondary'
+    return 'outline'
+  }
+  
+  const getBadgeColor = (status: string) => {
+    if (status.includes('Highest')) return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white'
+    if (status.includes('High')) return 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
+    return 'bg-gradient-to-r from-blue-400 to-blue-600 text-white'
+  }
+  
+  return (
+    <Badge 
+      variant={getBadgeVariant(honorStatus)}
+      className={cn("text-xs font-medium", getBadgeColor(honorStatus))}
+    >
+      <Star className="w-3 h-3 mr-1" />
+      {honorStatus}
+    </Badge>
+  )
+}
 
-function computeTopTen(scope: GradeFilter): ScopedStudent[] {
-  const pool = scope === "all" ? STUDENTS : STUDENTS.filter((s) => s.gradeLevel === scope)
+function computeTopTen(students: LeaderboardStudent[], scope: GradeFilter): ScopedStudent[] {
+  const pool = scope === "all" ? students : students.filter((s) => s.gradeLevel === scope)
   const sorted = [...pool].sort((a, b) => (b.gwa !== a.gwa ? b.gwa - a.gwa : a.rank - b.rank))
   return sorted.slice(0, 10).map((s, i) => ({ ...s, scopedRank: i + 1 }))
 }
 
 function exportCsv(rows: ScopedStudent[], scope: GradeFilter) {
-  const headers = ["Rank", "Name", "Grade", "Section", "GWA", "Trend"]
+  const headers = ["Rank", "Name", "Grade", "Section", "GWA", "Honor Status", "Trend"]
   const data = rows.map((s) => [
     s.scopedRank,
     s.name,
     `G${s.gradeLevel}`,
     s.section,
     formatGwa(s.gwa),
+    s.honorStatus || 'None',
     `${s.trend >= 0 ? "+" : ""}${s.trend.toFixed(1)}`,
   ])
   const csv = [headers, ...data].map((r) => r.join(",")).join("\n")
@@ -200,6 +145,11 @@ function PodiumCard({
             <div className="text-xs text-muted-foreground">
               Grade {student.gradeLevel} • Section {student.section}
             </div>
+            {student.honorStatus && (
+              <div className="mt-1">
+                <HonorBadge honorStatus={student.honorStatus} />
+              </div>
+            )}
           </div>
           <div className="ml-auto text-right">
             <div className={cn("font-extrabold", emphasis === "highlight" ? "text-2xl" : "text-xl")}>
@@ -235,15 +185,106 @@ function PodiumCard({
 export function StudentRankings() {
   const [query, setQuery] = useState("")
   const [grade, setGrade] = useState<GradeFilter>("all")
+  const [students, setStudents] = useState<LeaderboardStudent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const topTen = useMemo(() => computeTopTen(grade), [grade])
-  const podium = topTen.slice(0, 3) // podium reflects scoped Top 3
+  // Fetch data from API only (no mock fallback)
+  const fetchRankings = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      // Fetch from API only
+      const params: StudentRankingQueryParams = {
+        page: 1,
+        limit: 10,
+        gradeLevel: grade === "all" ? undefined : `Grade ${grade}`,
+        topN: 10
+      }
+      
+      const response = await getStudentRankings(params)
+      
+      if (response.data && response.data.length > 0) {
+        // Transform API data to frontend format
+        const transformedData = response.data.map((ranking, index) => {
+          const gradeLevel = parseInt(ranking.grade_level.replace('Grade ', '')) as 7 | 8 | 9 | 10
+          
+          return {
+            id: ranking.student_id,
+            name: `${ranking.student?.first_name} ${ranking.student?.last_name}`,
+            avatar: `/placeholder.svg?height=80&width=80&query=${ranking.student?.first_name}+${ranking.student?.last_name}`,
+            gradeLevel,
+            section: "A" as const, // Default section
+            gwa: 95 + (10 - ranking.rank) * 0.3, // Mock GWA calculation
+            rank: ranking.rank,
+            trend: (index % 2 === 0 ? 1 : -1) * (0.1 + (index % 5) * 0.15),
+            honorStatus: ranking.honor_status,
+            studentId: ranking.student_id
+          }
+        })
+        
+        setStudents(transformedData)
+        setLastUpdated(new Date())
+      } else {
+        // No data from API
+        console.log('No API data found')
+        setStudents([])
+        setError('No student rankings data available')
+      }
+    } catch (err) {
+      console.error('Failed to fetch rankings:', err)
+      setError(`Failed to load student rankings: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setStudents([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch data on component mount and when grade changes
+  useEffect(() => {
+    fetchRankings()
+  }, [grade])
+
+  const topTen = useMemo(() => computeTopTen(students, grade), [students, grade])
+  const podium = topTen.slice(0, 3)
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? topTen.filter((s) => s.name.toLowerCase().includes(q)) : topTen
   }, [topTen, query])
 
   const scopeLabel = grade === "all" ? "Overall" : `Grade ${grade}`
+
+  // Loading state
+  if (isLoading && students.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading rankings...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state (but still show mock data)
+  if (error && students.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={fetchRankings}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -279,6 +320,15 @@ export function StudentRankings() {
         </div>
 
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={fetchRankings}
+            disabled={isLoading}
+            className="hover:scale-105 transition-all duration-300"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={() => exportCsv(topTen, grade)}>
             <Download className="w-4 h-4 mr-2" />
             Export Top 10
@@ -288,7 +338,17 @@ export function StudentRankings() {
 
       {/* Heading for context */}
       <div className="flex items-end justify-between">
-        <h2 className="text-xl md:text-2xl font-bold">Top 10 — {scopeLabel}</h2>
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-yellow-500" />
+            Top 10 — {scopeLabel}
+          </h2>
+          {lastUpdated && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">Showing {visible.length} of Top 10</p>
       </div>
 
@@ -332,6 +392,7 @@ export function StudentRankings() {
                   <TableHead className="hidden sm:table-cell">Grade</TableHead>
                   <TableHead className="hidden sm:table-cell">Section</TableHead>
                   <TableHead>GWA</TableHead>
+                  <TableHead className="hidden md:table-cell">Honors</TableHead>
                   <TableHead className="hidden md:table-cell">Trend</TableHead>
                 </TableRow>
               </TableHeader>
@@ -366,6 +427,9 @@ export function StudentRankings() {
                     <TableCell className="hidden sm:table-cell">{s.section}</TableCell>
                     <TableCell className="font-bold">{formatGwa(s.gwa)}</TableCell>
                     <TableCell className="hidden md:table-cell">
+                      <HonorBadge honorStatus={s.honorStatus} />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <TrendChip value={s.trend} />
                     </TableCell>
                   </TableRow>
@@ -378,6 +442,15 @@ export function StudentRankings() {
           </CardContent>
         </Card>
       </section>
+
+      {/* Error Display */}
+      {error && (
+        <div className="text-center">
+          <p className="text-xs text-red-500">
+            API Error: {error}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

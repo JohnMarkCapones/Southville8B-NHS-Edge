@@ -200,22 +200,58 @@ export class DashboardService {
     }
   }
 
-  static async getKPIData() {
+  /**
+   * Get KPI data with support for real API data injection
+   * Accepts optional real counts to override mock data
+   */
+  static async getKPIData(realCounts?: {
+    students?: { total: number; active: number; inactive: number };
+    teachers?: { total: number; active: number; inactive: number };
+    departments?: { total: number; active?: number };
+    clubs?: { total: number; active?: number };
+    sections?: { total: number };
+    modules?: { total: number; active?: number };
+    events?: { total: number; active?: number; inactive?: number };
+  }) {
     const data = await this.getDashboardData()
+
+    // Use real data if provided, otherwise fall back to mock data
+    const studentTotal = realCounts?.students?.total ?? data.studentMetrics.total;
+    const studentActive = realCounts?.students?.active ?? data.studentMetrics.active;
+    const studentInactive = realCounts?.students?.inactive ?? data.studentMetrics.inactive;
+
+    const teacherTotal = realCounts?.teachers?.total ?? 89;
+    const teacherActive = realCounts?.teachers?.active ?? 76;
+    const teacherInactive = realCounts?.teachers?.inactive ?? 13;
+
+    const departmentTotal = realCounts?.departments?.total ?? 24;
+    const departmentActive = realCounts?.departments?.active ?? 22;
+
+    const clubTotal = realCounts?.clubs?.total ?? 12;
+    const clubActive = realCounts?.clubs?.active ?? 12;
+
+    const sectionTotal = realCounts?.sections?.total ?? 48;
+
+    const moduleTotal = realCounts?.modules?.total ?? 1456;
+    const moduleGlobal = realCounts?.modules?.active ?? 1268; // global modules
+
+    const eventTotal = realCounts?.events?.total ?? 28;
+    const eventUpcoming = realCounts?.events?.inactive ?? 5; // upcoming events
+
     return {
       students: {
-        value: data.studentMetrics.total,
+        value: studentTotal,
         change: { value: "+12%", trend: "up" as const, label: "vs last month" },
         statusIndicators: {
-          active: data.studentMetrics.active,
-          inactive: data.studentMetrics.inactive,
+          active: studentActive,
+          inactive: studentInactive,
         },
         sparklineData: data.studentMetrics.trends.students,
       },
       teachers: {
-        value: 89,
+        value: teacherTotal,
         change: { value: "+3", trend: "up" as const, label: "new hires this month" },
-        statusIndicators: { active: 76, inactive: 13 },
+        statusIndicators: { active: teacherActive, inactive: teacherInactive },
         sparklineData: data.studentMetrics.trends.teachers,
       },
       sessions: {
@@ -224,28 +260,28 @@ export class DashboardService {
         sparklineData: data.studentMetrics.trends.sessions,
       },
       subjects: {
-        value: 24,
-        change: { value: "+2", trend: "up" as const, label: "Active" },
+        value: departmentTotal,
+        change: { value: `+${departmentActive}`, trend: "up" as const, label: "Active" },
         sparklineData: sparklineData.subjects,
       },
       clubs: {
-        value: 12,
-        change: { value: "195", trend: "up" as const, label: "Members" },
+        value: clubTotal,
+        change: { value: `${clubActive}`, trend: "up" as const, label: "Active Clubs" },
         sparklineData: sparklineData.clubs,
       },
       sections: {
-        value: 48,
+        value: sectionTotal,
         change: { value: "26", trend: "up" as const, label: "Avg Size" },
         sparklineData: sparklineData.sections,
       },
       modules: {
-        value: "1,456",
-        change: { value: "87%", trend: "up" as const, label: "Complete" },
+        value: moduleTotal.toString(),
+        change: { value: `${moduleGlobal}`, trend: "up" as const, label: "Global" },
         sparklineData: sparklineData.modules,
       },
       events: {
-        value: 28,
-        change: { value: "5", trend: "up" as const, label: "Upcoming" },
+        value: eventTotal,
+        change: { value: `${eventUpcoming}`, trend: "up" as const, label: "Upcoming" },
         sparklineData: sparklineData.events,
       },
       galleryViews: {

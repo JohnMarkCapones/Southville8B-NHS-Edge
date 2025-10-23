@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useUser } from "@/hooks/useUser"
+import { useTeacherAdvisory } from "@/hooks"
 import {
   ChartContainer,
   ChartTooltip,
@@ -220,9 +222,13 @@ const atRiskStudents = allStudents.slice(-3).map((student) => ({
 const COLORS = ["hsl(var(--teacher-primary))", "hsl(var(--teacher-accent))", "#10b981", "#f59e0b", "#ef4444"]
 
 function RealTimeClock() {
-  const [time, setTime] = useState(new Date())
+  // Initialize to null to avoid hydration mismatch - time will be set on client
+  const [time, setTime] = useState<Date | null>(null)
 
   useEffect(() => {
+    // Set initial time on client mount
+    setTime(new Date())
+
     const timer = setInterval(() => {
       setTime(new Date())
     }, 1000)
@@ -248,8 +254,18 @@ function RealTimeClock() {
     })
   }
 
+  // Show placeholder until time is set on client to avoid hydration mismatch
+  if (!time) {
+    return (
+      <div className="text-right">
+        <div className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400">--:--:--</div>
+        <div className="text-sm text-blue-500 dark:text-blue-300">Loading...</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="text-right">
+    <div className="text-right" suppressHydrationWarning>
       <div className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400">{formatTime(time)}</div>
       <div className="text-sm text-blue-500 dark:text-blue-300">{formatDate(time)}</div>
     </div>
@@ -263,6 +279,36 @@ export default function TeacherDashboard() {
   const [sectionFilter, setSectionFilter] = useState("all")
   const [sortBy, setSortBy] = useState("rank")
   const [sortOrder, setSortOrder] = useState("asc")
+
+  // Fetch current user data
+  const { data: user, isLoading, isError } = useUser()
+
+  // Teacher context
+  const teacherId = user?.teacher?.user_id ?? user?.id
+  const { data: advisory } = useTeacherAdvisory(teacherId)
+
+  // Compute unique student count across advisory sections
+  const totalAdvisoryStudents = useMemo(() => {
+    const ids = new Set<string>()
+    if (!advisory) return 0
+    for (const section of advisory) {
+      for (const student of section.students ?? []) {
+        // Prefer stable UUID if present, fallback to student_id
+        const key = (student.id as string) || (student.student_id as unknown as string)
+        if (key) ids.add(key)
+      }
+    }
+    return ids.size
+  }, [advisory])
+
+  // Extract teacher data with fallbacks
+  const teacherData = {
+    name: user?.teacher
+      ? `${user.teacher.first_name} ${user.teacher.middle_name ? user.teacher.middle_name + ' ' : ''}${user.teacher.last_name}`.trim()
+      : user?.full_name || 'Teacher',
+    department: user?.teacher?.department || 'Education',
+    avatar: user?.profile?.avatar || '/teacher-avatar.png'
+  }
 
   const filteredStudents = allStudents
     .filter((student) => {
@@ -318,7 +364,7 @@ export default function TeacherDashboard() {
             Teacher Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
-            Welcome back, Ms. Rodriguez! Here's your classroom overview.
+            Welcome back, {teacherData.name}! Here's your classroom overview.
           </p>
           <div className="flex items-center space-x-2 mt-2">
             <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
@@ -383,7 +429,7 @@ export default function TeacherDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mb-1">165</div>
+                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mb-1">{totalAdvisoryStudents}</div>
                 <p className="text-xs text-green-600 flex items-center">
                   <TrendingUp className="w-3 h-3 mr-1" />
                   +5 from last month

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -36,32 +36,37 @@ import {
   Monitor,
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { logoutAction } from "@/app/actions/auth"
+import { useTranslation, languages } from "@/lib/i18n"
 
 interface StudentHeaderProps {
   studentName: string
   studentAvatar?: string
+  gradeLevel?: string
+  section?: string
+  studentId?: string
   onToggleSidebar: () => void
   isMobile?: boolean
 }
 
-export default function StudentHeader({ studentName, studentAvatar, onToggleSidebar, isMobile }: StudentHeaderProps) {
-  const [selectedLanguage, setSelectedLanguage] = useState("English")
+export default function StudentHeader({ studentName, studentAvatar, gradeLevel, section, studentId, onToggleSidebar, isMobile }: StudentHeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { t, language, setLanguage } = useTranslation()
 
-  const languages = [
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "fil", name: "Filipino", flag: "🇵🇭" },
-  ]
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const notifications = [
     {
       id: 1,
       type: "assignment",
-      title: "Math Assignment Due",
-      message: "Algebra homework is due tomorrow at 11:59 PM",
-      time: "2 hours ago",
+      title: language === 'fil' ? "Takdang Aralin sa Math" : "Math Assignment Due",
+      message: language === 'fil' ? "Ang homework sa Algebra ay due bukas ng 11:59 PM" : "Algebra homework is due tomorrow at 11:59 PM",
+      time: language === 'fil' ? "2 oras na ang nakalipas" : "2 hours ago",
       read: false,
       icon: BookOpen,
       color: "text-blue-500",
@@ -69,9 +74,9 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
     {
       id: 2,
       type: "grade",
-      title: "New Grade Posted",
-      message: "Your Science quiz grade has been posted: 95/100",
-      time: "4 hours ago",
+      title: language === 'fil' ? "Bagong Marka na Na-post" : "New Grade Posted",
+      message: language === 'fil' ? "Ang marka mo sa Science quiz ay na-post na: 95/100" : "Your Science quiz grade has been posted: 95/100",
+      time: language === 'fil' ? "4 oras na ang nakalipas" : "4 hours ago",
       read: false,
       icon: AlertCircle,
       color: "text-green-500",
@@ -79,9 +84,9 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
     {
       id: 3,
       type: "schedule",
-      title: "Schedule Change",
-      message: "PE class moved to Gymnasium B for today",
-      time: "1 day ago",
+      title: language === 'fil' ? "Pagbabago sa Oras" : "Schedule Change",
+      message: language === 'fil' ? "Ang PE class ay inilipat sa Gymnasium B para sa araw na ito" : "PE class moved to Gymnasium B for today",
+      time: language === 'fil' ? "1 araw na ang nakalipas" : "1 day ago",
       read: true,
       icon: Clock,
       color: "text-orange-500",
@@ -89,9 +94,9 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
     {
       id: 4,
       type: "announcement",
-      title: "School Announcement",
-      message: "Parent-Teacher Conference scheduled for next week",
-      time: "2 days ago",
+      title: language === 'fil' ? "Anunsyo sa Paaralan" : "School Announcement",
+      message: language === 'fil' ? "Ang Parent-Teacher Conference ay naka-schedule para sa susunod na linggo" : "Parent-Teacher Conference scheduled for next week",
+      time: language === 'fil' ? "2 araw na ang nakalipas" : "2 days ago",
       read: true,
       icon: Bell,
       color: "text-purple-500",
@@ -111,16 +116,30 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
   }
 
   const themeOptions = [
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "system", label: "System", icon: Monitor },
+    { value: "light", label: t('header.light'), icon: Sun },
+    { value: "dark", label: t('header.dark'), icon: Moon },
+    { value: "system", label: t('header.system'), icon: Monitor },
   ]
 
-  const handleLogout = () => {
-    // Handle logout logic here
-    console.log("[v0] Student logout confirmed")
-    // Redirect to login or handle logout
-    window.location.href = "/guess/login"
+  const handleLogout = async () => {
+    try {
+      // Call the proper logout action to clear authentication cookies
+      const result = await logoutAction()
+      
+      if (result.success) {
+        console.log("[StudentHeader] Logout successful")
+        // Redirect to portal page after successful logout
+        window.location.href = "/guess/portal?role=student"
+      } else {
+        console.error("[StudentHeader] Logout failed:", result.error)
+        // Still redirect even if logout action fails (fallback)
+        window.location.href = "/guess/portal?role=student"
+      }
+    } catch (error) {
+      console.error("[StudentHeader] Logout error:", error)
+      // Fallback redirect on error
+      window.location.href = "/guess/portal?role=student"
+    }
   }
 
   return (
@@ -134,6 +153,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 variant="ghost"
                 size="sm"
                 onClick={onToggleSidebar}
+                aria-label="Toggle sidebar"
                 className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
               >
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -145,11 +165,11 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-sm sm:text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
-                  <span className="hidden xs:inline">Welcome back, </span>
+                  <span className="hidden xs:inline">{t('student.welcome')}, </span>
                   {studentName.split(" ")[0]}!
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium hidden sm:block">
-                  Ready to achieve greatness today? ✨
+                  {t('student.readyToAchieve')}
                 </p>
               </div>
             </div>
@@ -164,10 +184,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   variant="ghost"
                   size="sm"
                   className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
+                  suppressHydrationWarning
                 >
-                  {theme === "light" && <Sun className="w-4 h-4" />}
-                  {theme === "dark" && <Moon className="w-4 h-4" />}
-                  {theme === "system" && <Monitor className="w-4 h-4" />}
+                  {mounted && theme === "light" && <Sun className="w-4 h-4" />}
+                  {mounted && theme === "dark" && <Moon className="w-4 h-4" />}
+                  {mounted && theme === "system" && <Monitor className="w-4 h-4" />}
+                  {!mounted && <Sun className="w-4 h-4" />}
                   <ChevronDown className="w-3 h-3 ml-1 hidden sm:inline" />
                 </Button>
               </DropdownMenuTrigger>
@@ -182,7 +204,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                     >
                       <IconComponent className="w-4 h-4" />
                       <span className="text-sm">{option.label}</span>
-                      {theme === option.value && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
+                      {mounted && theme === option.value && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
                     </DropdownMenuItem>
                   )
                 })}
@@ -198,7 +220,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   className="hidden sm:flex items-center space-x-2 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-h-[44px]"
                 >
                   <Globe className="w-4 h-4" />
-                  <span className="hidden md:inline text-sm font-medium">{selectedLanguage}</span>
+                  <span className="hidden md:inline text-sm font-medium">{languages.find(lang => lang.code === language)?.name}</span>
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -206,12 +228,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 {languages.map((lang) => (
                   <DropdownMenuItem
                     key={lang.code}
-                    onClick={() => setSelectedLanguage(lang.name)}
+                    onClick={() => setLanguage(lang.code)}
                     className="flex items-center space-x-2 cursor-pointer touch-manipulation min-h-[44px]"
                   >
                     <span>{lang.flag}</span>
                     <span>{lang.name}</span>
-                    {selectedLanguage === lang.name && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
+                    {language === lang.code && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -240,7 +262,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 <div className="p-3 sm:p-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-base sm:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      Notifications
+                      {t('header.notifications')}
                     </h3>
                     <div className="flex items-center space-x-2">
                       {unreadCount > 0 && (
@@ -250,7 +272,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                           onClick={markAllAsRead}
                           className="text-xs hover:bg-white/50 dark:hover:bg-slate-800/50 touch-manipulation min-h-[36px]"
                         >
-                          Mark all read
+                          {t('header.markAllRead')}
                         </Button>
                       )}
                       <Button
@@ -301,7 +323,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   ) : (
                     <div className="p-8 text-center text-slate-500">
                       <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No notifications</p>
+                      <p>{t('header.noNotifications')}</p>
                     </div>
                   )}
                 </div>
@@ -327,7 +349,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   </Avatar>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-sm truncate max-w-[100px]">{studentName.split(" ")[0]}</p>
-                    <p className="text-xs text-slate-500">Grade 8B</p>
+                    <p className="text-xs text-slate-500">{gradeLevel || 'N/A'} {section || ''}</p>
                   </div>
                   <ChevronDown className="w-3 h-3 hidden sm:inline" />
                 </Button>
@@ -349,12 +371,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-sm truncate text-slate-900 dark:text-slate-100">{studentName}</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Grade 8 • Section B</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{gradeLevel || 'N/A'} • {section || 'N/A'}</p>
                       <Badge
                         variant="secondary"
                         className="text-xs mt-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                       >
-                        Student ID: S2024001
+                        Student ID: {studentId || 'N/A'}
                       </Badge>
                     </div>
                   </div>
@@ -362,11 +384,11 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
                 <DropdownMenuItem className="flex items-center space-x-3 cursor-pointer py-3 touch-manipulation text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <User className="w-4 h-4" />
-                  <span>View Profile</span>
+                  <span>{t('header.viewProfile')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="flex items-center space-x-3 cursor-pointer py-3 touch-manipulation text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <Settings className="w-4 h-4" />
-                  <span>Account Settings</span>
+                  <span>{t('header.accountSettings')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
                 <DropdownMenuItem
@@ -377,7 +399,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   }}
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{t('header.signOut')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -391,10 +413,10 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-slate-900 dark:text-slate-100">
               <LogOut className="w-5 h-5 text-red-500" />
-              <span>Sign Out</span>
+              <span>{t('header.signOut')}</span>
             </DialogTitle>
             <DialogDescription className="text-slate-600 dark:text-slate-400">
-              Are you sure you want to sign out of your account? You'll need to log in again to access your dashboard.
+              {t('header.signOutConfirm')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex space-x-2">
@@ -403,11 +425,11 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
               onClick={() => setShowLogoutModal(false)}
               className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
               <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              {t('header.signOut')}
             </Button>
           </DialogFooter>
         </DialogContent>

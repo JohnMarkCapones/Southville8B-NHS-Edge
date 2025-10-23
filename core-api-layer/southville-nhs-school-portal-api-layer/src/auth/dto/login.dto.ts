@@ -27,4 +27,3 @@ export class TokenVerifyDto {
   @IsNotEmpty({ message: 'Token is required' })
   token: string;
 }
-

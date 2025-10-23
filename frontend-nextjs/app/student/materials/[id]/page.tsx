@@ -28,84 +28,169 @@ import {
   Target,
   Zap,
   GraduationCap,
+  Loader2,
+  AlertCircle,
+  FileText,
+  Calendar,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { getSubject, type Subject } from "@/lib/api/endpoints/subjects"
+import { getModules, getModuleDownloadUrl, type Module } from "@/lib/api/endpoints/modules"
 
 export default function SubjectMaterialsPage() {
   const params = useParams()
   const router = useRouter()
-  const subjectId = Number.parseInt(params.id as string)
-  const [bookmarkedItems, setBookmarkedItems] = useState<number[]>([])
+  const subjectId = params.id as string
+  const [bookmarkedItems, setBookmarkedItems] = useState<string[]>([])
   const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false)
-  const [selectedPdf, setSelectedPdf] = useState<{ id: number; title: string } | null>(null)
+  const [selectedModule, setSelectedModule] = useState<{ id: string; title: string } | null>(null)
+  const [subject, setSubject] = useState<Subject | null>(null)
+  const [modules, setModules] = useState<Module[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
 
-  const subjects = [
-    {
-      id: 1,
-      name: "Mathematics",
-      teacher: "Ms. Garcia",
-      color: "bg-gradient-to-br from-blue-500 to-blue-600",
-      description: "Advanced algebra and geometry concepts",
-      totalModules: 8,
-      completedModules: 5,
-      totalPDFs: 12,
-      downloadedPDFs: 8,
-    },
-    {
-      id: 2,
-      name: "Science",
-      teacher: "Mr. Santos",
-      color: "bg-gradient-to-br from-green-500 to-green-600",
-      description: "Physics and chemistry fundamentals",
-      totalModules: 6,
-      completedModules: 3,
-      totalPDFs: 10,
-      downloadedPDFs: 5,
-    },
-    {
-      id: 3,
-      name: "English",
-      teacher: "Mrs. Cruz",
-      color: "bg-gradient-to-br from-purple-500 to-purple-600",
-      description: "Literature analysis and creative writing",
-      totalModules: 7,
-      completedModules: 4,
-      totalPDFs: 15,
-      downloadedPDFs: 10,
-    },
-    {
-      id: 4,
-      name: "Filipino",
-      teacher: "Ms. Reyes",
-      color: "bg-gradient-to-br from-orange-500 to-orange-600",
-      description: "Filipino literature and language studies",
-      totalModules: 6,
-      completedModules: 6,
-      totalPDFs: 8,
-      downloadedPDFs: 8,
-    },
-    {
-      id: 5,
-      name: "TLE (Technology and Livelihood Education)",
-      teacher: "Mr. Dela Cruz",
-      color: "bg-gradient-to-br from-red-500 to-red-600",
-      description: "Practical skills and entrepreneurship",
-      totalModules: 5,
-      completedModules: 3,
-      totalPDFs: 6,
-      downloadedPDFs: 4,
-    },
-  ]
+  // Fetch subject and modules data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!subjectId) return
 
-  const subject = subjects.find((s) => s.id === subjectId)
+      try {
+        setLoading(true)
+        setError(null)
+        console.log('[SubjectMaterials] Fetching subject:', subjectId)
 
+        // Fetch subject data
+        const subjectData = await getSubject(subjectId)
+        setSubject(subjectData)
+        console.log('[SubjectMaterials] ✅ Subject loaded:', subjectData.subject_name)
+
+        // Fetch modules for this subject
+        console.log('[SubjectMaterials] Fetching modules for subject:', subjectId)
+        const modulesData = await getModules({ subjectId, limit: 100 })
+        setModules(modulesData.modules)
+        console.log('[SubjectMaterials] ✅ Loaded', modulesData.modules.length, 'modules')
+      } catch (err) {
+        console.error('[SubjectMaterials] ❌ Error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load subject data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [subjectId])
+
+  // Fallback helper function
+  const fallback = (value: any, defaultValue: string = '-april') => {
+    if (value === null || value === undefined || value === '') {
+      return defaultValue
+    }
+    return value
+  }
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '-april Unknown'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-april Unknown'
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return '-april Invalid'
+    }
+  }
+
+  const progressPercentage = modules.length > 0
+    ? Math.round((modules.filter(m => m.downloadStats?.totalDownloads).length / modules.length) * 100)
+    : 0
+
+  const toggleBookmark = (id: string) => {
+    setBookmarkedItems((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
+  const handleDownloadClick = (module: { id: string; title: string }) => {
+    setSelectedModule(module)
+    setDownloadConfirmOpen(true)
+  }
+
+  const handleDownloadConfirm = async () => {
+    if (!selectedModule) return
+
+    try {
+      setDownloading(selectedModule.id)
+      console.log('[SubjectMaterials] Downloading module:', selectedModule.title)
+      const { url } = await getModuleDownloadUrl(selectedModule.id)
+      window.open(url, '_blank')
+      console.log('[SubjectMaterials] ✅ Download started')
+    } catch (err) {
+      console.error('[SubjectMaterials] ❌ Download failed:', err)
+      alert('Failed to download module. Please try again.')
+    } finally {
+      setDownloading(null)
+      setDownloadConfirmOpen(false)
+      setSelectedModule(null)
+    }
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">Loading Subject Materials...</h2>
+            <p className="text-slate-600 dark:text-slate-400">Please wait while we fetch your content</p>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Error Loading Subject</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">{error}</p>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => window.location.reload()}>
+                <Download className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/student/courses")}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Courses
+              </Button>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Subject not found
   if (!subject) {
     return (
       <StudentLayout>
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
           <div className="text-center">
+            <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-4">Subject Not Found</h1>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">The subject you're looking for doesn't exist or has been removed.</p>
             <Button onClick={() => router.push("/student/courses")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Courses
@@ -114,76 +199,6 @@ export default function SubjectMaterialsPage() {
         </div>
       </StudentLayout>
     )
-  }
-
-  const pdfs = [
-    {
-      id: 1,
-      title: "Quadratic Equations Formula Sheet",
-      description: "Quick reference guide with all essential formulas",
-      pages: 4,
-      size: "2.1 MB",
-      type: "Reference",
-      downloadCount: 1500,
-      rating: 4.9,
-      isBookmarked: false,
-      thumbnail: "/mathematics-formula-sheet-pdf.jpg",
-    },
-    {
-      id: 2,
-      title: "Practice Problems Set 1",
-      description: "50 practice problems with detailed solutions",
-      pages: 25,
-      size: "5.8 MB",
-      type: "Practice",
-      downloadCount: 1200,
-      rating: 4.8,
-      isBookmarked: true,
-      thumbnail: "/mathematics-practice-problems-workbook.jpg",
-    },
-    {
-      id: 3,
-      title: "Advanced Quadratic Applications",
-      description: "Complex real-world problem solving techniques",
-      pages: 18,
-      size: "4.2 MB",
-      type: "Advanced",
-      downloadCount: 800,
-      rating: 4.7,
-      isBookmarked: false,
-      thumbnail: "/mathematics-advanced-applications-guide.jpg",
-    },
-    {
-      id: 4,
-      title: "Visual Guide to Graphing",
-      description: "Step-by-step visual guide for graphing quadratic functions",
-      pages: 12,
-      size: "8.5 MB",
-      type: "Visual Guide",
-      downloadCount: 950,
-      rating: 4.9,
-      isBookmarked: true,
-      thumbnail: "/mathematics-graphing-visual-guide.jpg",
-    },
-  ]
-
-  const progressPercentage = Math.round((subject.completedModules / subject.totalModules) * 100)
-
-  const toggleBookmark = (id: number) => {
-    setBookmarkedItems((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
-  }
-
-  const handleDownloadClick = (pdf: { id: number; title: string }) => {
-    setSelectedPdf(pdf)
-    setDownloadConfirmOpen(true)
-  }
-
-  const handleDownloadConfirm = () => {
-    if (selectedPdf) {
-      console.log("[v0] Downloading PDF:", selectedPdf.title)
-      setDownloadConfirmOpen(false)
-      setSelectedPdf(null)
-    }
   }
 
   return (
@@ -220,41 +235,51 @@ export default function SubjectMaterialsPage() {
 
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-center gap-6">
-                <div className={`w-20 h-20 ${subject.color} rounded-2xl flex items-center justify-center shadow-2xl`}>
+                <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-2xl">
                   <GraduationCap className="w-10 h-10 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold mb-2 text-white">{subject.name}</h1>
-                  <p className="text-white/90 text-lg mb-2">{subject.description}</p>
+                  <h1 className="text-4xl font-bold mb-2 text-white">{fallback(subject.subject_name, '-april Untitled Subject')}</h1>
+                  <p className="text-white/90 text-lg mb-2">{fallback(subject.description, '-april No description available')}</p>
                   <div className="flex items-center gap-4 text-white/80">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span>{subject.teacher}</span>
+                      <FileText className="w-4 h-4" />
+                      <span>Code: {fallback(subject.code, '-april N/A')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Trophy className="w-4 h-4" />
-                      <span>{progressPercentage}% Complete</span>
+                      <span>{progressPercentage}% Accessed</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>{formatDate(subject.updated_at)}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Badge className="bg-white/20 text-white border-white/30">{fallback(subject.status, '-april unknown')}</Badge>
+                    {subject.grade_levels && subject.grade_levels.length > 0 && (
+                      <Badge className="bg-white/10 text-white border-white/20">
+                        Grades: {subject.grade_levels.join(', ')}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-blue-600/40 backdrop-blur-sm rounded-xl p-4 text-center border border-blue-500/30">
-                  <div className="text-2xl font-bold text-white">{subject.totalModules}</div>
-                  <div className="text-sm text-white/80">Modules</div>
+                  <div className="text-2xl font-bold text-white">{modules.length}</div>
+                  <div className="text-sm text-white/80">Total Modules</div>
                 </div>
                 <div className="bg-cyan-600/40 backdrop-blur-sm rounded-xl p-4 text-center border border-cyan-500/30">
-                  <div className="text-2xl font-bold text-white">{subject.completedModules}</div>
-                  <div className="text-sm text-white/80">Completed</div>
-                </div>
-                <div className="bg-teal-600/40 backdrop-blur-sm rounded-xl p-4 text-center border border-teal-500/30">
-                  <div className="text-2xl font-bold text-white">{subject.totalPDFs}</div>
-                  <div className="text-sm text-white/80">Resources</div>
+                  <div className="text-2xl font-bold text-white">
+                    {modules.filter(m => m.downloadStats?.totalDownloads).length}
+                  </div>
+                  <div className="text-sm text-white/80">Downloaded</div>
                 </div>
                 <div className="bg-indigo-600/40 backdrop-blur-sm rounded-xl p-4 text-center border border-indigo-500/30">
                   <div className="text-2xl font-bold text-white">{progressPercentage}%</div>
-                  <div className="text-sm text-white/80">Progress</div>
+                  <div className="text-sm text-white/80">Access Rate</div>
                 </div>
               </div>
             </div>
@@ -279,96 +304,118 @@ export default function SubjectMaterialsPage() {
           <div className="space-y-6">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-4">
-                Downloadable Learning Resources
+                Learning Modules
               </h2>
               <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                Access comprehensive study materials, practice sheets, and reference guides
+                {modules.length > 0
+                  ? `Access ${modules.length} comprehensive study materials and resources`
+                  : '-april No modules available for this subject yet'}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pdfs.map((pdf, index) => (
-                <Card
-                  key={pdf.id}
-                  className="group hover:-translate-y-2 transition-all duration-500 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-2xl hover:shadow-blue-500/10 overflow-hidden"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="relative">
-                    <img
-                      src={pdf.thumbnail || "/placeholder.svg"}
-                      alt={pdf.title}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-primary text-white border-0">{pdf.type}</Badge>
+            {modules.length === 0 ? (
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-xl p-12 text-center">
+                <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No Modules Available</h3>
+                <p className="text-slate-600 dark:text-slate-400">
+                  -april There are no modules uploaded for this subject yet. Please check back later.
+                </p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {modules.map((module, index) => (
+                  <Card
+                    key={module.id}
+                    className="group hover:-translate-y-2 transition-all duration-500 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-2xl hover:shadow-blue-500/10 overflow-hidden"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-8 h-48 flex items-center justify-center">
+                      <FileText className="w-20 h-20 text-primary/40" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                      <div className="absolute top-4 left-4">
+                        <Badge className="bg-primary text-white border-0">{fallback(module.mime_type, '-april PDF')}</Badge>
+                      </div>
+                      <div className="absolute top-4 right-4">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-primary hover:bg-white/20 backdrop-blur-sm"
+                          onClick={() => toggleBookmark(module.id)}
+                        >
+                          <Bookmark className={`w-4 h-4 ${bookmarkedItems.includes(module.id) ? "fill-current" : ""}`} />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 text-sm font-medium">
+                          <span>{formatFileSize(module.file_size_bytes)}</span>
+                          <span>{formatDate(module.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="absolute top-4 right-4">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-white hover:bg-white/20 backdrop-blur-sm"
-                        onClick={() => toggleBookmark(pdf.id)}
-                      >
-                        <Bookmark className={`w-4 h-4 ${bookmarkedItems.includes(pdf.id) ? "fill-current" : ""}`} />
-                      </Button>
-                    </div>
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <div className="flex items-center justify-between text-white text-sm">
-                        <div className="flex items-center gap-4">
-                          <span>{pdf.pages} pages</span>
-                          <span>{pdf.size}</span>
+
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors line-clamp-2">
+                        {fallback(module.title, '-april Untitled Module')}
+                      </CardTitle>
+                      <CardDescription className="text-slate-600 dark:text-slate-400 line-clamp-2">
+                        {fallback(module.description, '-april No description available')}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                        <div className="flex items-center gap-1">
+                          <Download className="w-4 h-4" />
+                          <span>{fallback(module.downloadStats?.totalDownloads?.toString(), '-april 0')} downloads</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-current text-yellow-400" />
-                          <span>{pdf.rating}</span>
+                          <Users className="w-4 h-4" />
+                          <span>{fallback(module.uploader?.full_name, '-april Unknown')}</span>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors line-clamp-2">
-                      {pdf.title}
-                    </CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-400 line-clamp-2">
-                      {pdf.description}
-                    </CardDescription>
-                  </CardHeader>
+                      {module.sections && module.sections.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {module.sections.slice(0, 2).map((section) => (
+                            <Badge key={section.id} variant="outline" className="text-xs">
+                              {section.name}
+                            </Badge>
+                          ))}
+                          {module.sections.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{module.sections.length - 2} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
 
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-1">
-                        <Download className="w-4 h-4" />
-                        <span>{pdf.downloadCount} downloads</span>
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1 bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-300"
+                          onClick={() => router.push(`/student/modules/${module.id}`)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Module
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-transparent"
+                          onClick={() => handleDownloadClick({ id: module.id, title: module.title })}
+                          disabled={downloading === module.id || !module.file_url}
+                        >
+                          {downloading === module.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-4 h-4" />
-                        <span>{Math.round(pdf.rating * 100)} likes</span>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        className="flex-1 bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-300"
-                        onClick={() => router.push(`/student/modules/${pdf.id}`)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Module
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-transparent"
-                        onClick={() => handleDownloadClick({ id: pdf.id, title: pdf.title })}
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           <Card className="mt-8 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 border-0 shadow-xl">
@@ -412,14 +459,23 @@ export default function SubjectMaterialsPage() {
         <AlertDialog open={downloadConfirmOpen} onOpenChange={setDownloadConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Download Resource</AlertDialogTitle>
+              <AlertDialogTitle>Download Module</AlertDialogTitle>
               <AlertDialogDescription>
-                Do you want to download "{selectedPdf?.title}"? This file will be saved to your device.
+                Do you want to download "{selectedModule?.title}"? This file will be saved to your device.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDownloadConfirm}>Download</AlertDialogAction>
+              <AlertDialogAction onClick={handleDownloadConfirm} disabled={!!downloading}>
+                {downloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  'Download'
+                )}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

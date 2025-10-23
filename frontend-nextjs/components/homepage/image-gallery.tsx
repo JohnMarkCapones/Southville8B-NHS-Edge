@@ -67,16 +67,21 @@ export function ImageGallery() {
           >
             <ChevronRight className="h-6 w-6" />
           </Button>
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2" role="group" aria-label="Image gallery navigation">
             {MOCK_GALLERY_IMAGES.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`w-3 h-3 rounded-full transition-colors ${
+                className={`touch-target rounded-full transition-colors ${
                   index === currentIndex ? "bg-primary" : "bg-gray-300 hover:bg-gray-400"
                 }`}
-                aria-label={`Go to image ${index + 1}`}
-              />
+                aria-label={`Go to image ${index + 1} of ${MOCK_GALLERY_IMAGES.length}`}
+                aria-current={index === currentIndex ? "true" : "false"}
+              >
+                <span className="sr-only">
+                  {index === currentIndex ? `Image ${index + 1} (current)` : `Image ${index + 1}`}
+                </span>
+              </button>
             ))}
           </div>
         </div>

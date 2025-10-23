@@ -2,6 +2,7 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
 import { Trophy, Medal, Users, Calendar, Clock, Star, Award, Target, Heart, Zap, TrendingUp } from "lucide-react"
+import Image from "next/image"
 
 export default function AthleticsPage() {
   const availableSports = [
@@ -235,7 +236,14 @@ export default function AthleticsPage() {
                 className="overflow-hidden animate-slideInUp"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <img src={sport.image || "/placeholder.svg"} alt={sport.name} className="w-full h-32 object-cover" />
+                <Image
+                  src={sport.image || "/placeholder.svg"}
+                  alt={sport.name}
+                  width={400}
+                  height={128}
+                  className="w-full h-32 object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                />
                 <div className="p-4">
                   <h3 className="font-bold text-lg mb-2">{sport.name}</h3>
                   <p className="text-sm text-muted-foreground mb-2">{sport.coach}</p>

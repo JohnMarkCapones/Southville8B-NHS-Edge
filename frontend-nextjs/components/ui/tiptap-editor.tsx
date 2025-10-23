@@ -58,6 +58,7 @@ export function TiptapEditor({ content, onChange, editable = true }: TiptapEdito
     ],
     content,
     editable, // Pass editable prop to editor
+    immediatelyRender: false, // Fix SSR hydration issues
     onUpdate: ({ editor }) => {
       if (onChange) {
         onChange(editor.getHTML())

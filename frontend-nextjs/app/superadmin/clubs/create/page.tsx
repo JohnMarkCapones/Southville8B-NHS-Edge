@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { createClub } from "@/lib/api/endpoints/clubs"
+import type { CreateClubDto } from "@/lib/api/types/clubs"
 import {
   ArrowLeft,
   Plus,
@@ -243,20 +245,58 @@ export default function CreateClubPage() {
     setShowConfirmModal(false)
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const validGoals = goals.filter((g) => g.title.trim())
+      const validBenefits = benefits.filter((b) => b.title.trim() && b.description.trim())
+      const validFAQs = faqs.filter((f) => f.question.trim() && f.answer.trim())
 
-    const validGoals = goals.filter((g) => g.title.trim())
-    const validBenefits = benefits.filter((b) => b.title.trim() && b.description.trim())
-    const validFAQs = faqs.filter((f) => f.question.trim() && f.answer.trim())
+      // Transform data to match backend DTO
+      const createClubDto: CreateClubDto = {
+        name: clubName,
+        description: clubDescription,
+        mission_statement: missionStatement,
 
-    toast({
-      title: "Club Created Successfully",
-      description: `${clubName} has been added with ${validGoals.length} goals, ${validBenefits.length} benefits, and ${validFAQs.length} FAQs.`,
-      duration: 4000,
-    })
+        // Transform goals
+        goals: validGoals.map((goal, index) => ({
+          goal_text: goal.title,
+          order_index: index,
+        })),
 
-    router.push("/superadmin/clubs")
+        // Transform benefits
+        benefits: validBenefits.map((benefit, index) => ({
+          title: benefit.title,
+          description: benefit.description,
+          order_index: index,
+        })),
+
+        // Transform FAQs
+        faqs: validFAQs.map((faq, index) => ({
+          question: faq.question,
+          answer: faq.answer,
+          order_index: index,
+        })),
+      }
+
+      // Call API
+      const createdClub = await createClub(createClubDto)
+
+      toast({
+        title: "Club Created Successfully",
+        description: `${clubName} has been added with ${validGoals.length} goals, ${validBenefits.length} benefits, and ${validFAQs.length} FAQs.`,
+        duration: 4000,
+      })
+
+      router.push("/superadmin/clubs")
+    } catch (error: any) {
+      console.error("Error creating club:", error)
+      toast({
+        title: "Error Creating Club",
+        description: error.message || "Failed to create club. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+      setIsSubmitting(false)
+    }
   }
 
   const getValidCounts = () => {

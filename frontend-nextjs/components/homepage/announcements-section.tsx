@@ -5,9 +5,10 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { Bell, Calendar, ArrowRight, AlertCircle, BookOpen, Trophy, Users } from "lucide-react"
+import { Bell, Calendar, ArrowRight, AlertCircle, BookOpen, Trophy, Users, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { announcementsData } from "@/lib/announcements-data"
+import { useAnnouncements } from "@/hooks/useAnnouncements"
 
 interface Announcement {
   id: string
@@ -54,10 +55,62 @@ const categoryConfig = {
 export function AnnouncementsSection() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
 
+  // ========================================
+  // FETCH ANNOUNCEMENTS FROM REAL API
+  // ========================================
+  // Fetch announcements from backend with React Query
+  // Falls back to mock data if API fails or is loading
+  const { 
+    data: apiData, 
+    isLoading, 
+    isError 
+  } = useAnnouncements(
+    {
+      page: 1,
+      limit: 10,
+      visibility: 'public' as any, // Only show public announcements on homepage
+      includeExpired: false, // Don't show expired announcements
+    },
+    {
+      // Don't require auth for public announcements on homepage
+      // This allows guest users to see announcements
+      retry: 1, // Only retry once for faster fallback
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    }
+  )
+
+  // ========================================
+  // DATA PROCESSING & FALLBACK
+  // ========================================
+  // Use API data if available, otherwise fall back to mock data
+  // This ensures the homepage always shows something even if API is down
+  const useApiData = !isLoading && !isError && apiData?.data && apiData.data.length > 0
+  
+  // Convert API data to match existing interface if using real API
+  const displayAnnouncements = useApiData
+    ? apiData.data.slice(0, 4).map(announcement => {
+        // Strip HTML tags from content to create clean excerpt
+        const cleanContent = announcement.content.replace(/<[^>]*>/g, '')
+        const excerpt = cleanContent.substring(0, 150) + (cleanContent.length > 150 ? '...' : '')
+        
+        return {
+          id: announcement.id,
+          date: announcement.createdAt, // Use createdAt as date
+          title: announcement.title,
+          category: (announcement.type || 'general') as any, // Map type to category
+          source: announcement.user?.full_name || 'Administration', // Fixed: was fullName, should be full_name
+          excerpt, // Clean excerpt without HTML tags
+          href: `/guess/announcements/${announcement.id}`, // Use ID for URL
+          slug: announcement.id, // Use ID as slug
+        }
+      })
+    : announcementsData.slice(0, 4) // Fallback to mock data
+
+  // Filter by category
   const filteredAnnouncements =
     selectedCategory === "all"
-      ? announcementsData.slice(0, 4)
-      : announcementsData.filter((announcement) => announcement.category === selectedCategory).slice(0, 4)
+      ? displayAnnouncements
+      : displayAnnouncements.filter((announcement) => announcement.category === selectedCategory)
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -69,10 +122,31 @@ export function AnnouncementsSection() {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            <Bell className="w-4 h-4 mr-2" />
-            Latest Updates
-          </Badge>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Badge variant="secondary">
+              <Bell className="w-4 h-4 mr-2" />
+              Latest Updates
+            </Badge>
+            {/* Data Source Indicator - Shows if using real API or mock data */}
+            {isLoading && (
+              <Badge variant="outline" className="animate-pulse">
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                Loading...
+              </Badge>
+            )}
+            {useApiData && (
+              <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                <span className="w-2 h-2 bg-white rounded-full mr-1.5 animate-pulse" />
+                Live Data
+              </Badge>
+            )}
+            {!isLoading && !useApiData && (
+              <Badge variant="outline" className="border-amber-500 text-amber-600">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Demo Data
+              </Badge>
+            )}
+          </div>
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
             School <span className="gradient-text">Announcements</span>
           </h2>

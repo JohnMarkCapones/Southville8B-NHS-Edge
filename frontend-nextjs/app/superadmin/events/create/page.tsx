@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TimePicker } from "@/components/ui/time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,9 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useCreateEvent } from "@/hooks/useEvents"
+import { useUser } from "@/hooks/useUser"
+import { EventStatus, EventVisibility } from "@/lib/api/types/events"
 
 interface EventHighlight {
   id: string
@@ -59,13 +64,18 @@ export default function CreateEventPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const createEventMutation = useCreateEvent()
+  const { data: user, isLoading: userLoading } = useUser()
 
   // Form state
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [date, setDate] = useState("")
+  const [time, setTime] = useState("")
   const [venue, setVenue] = useState("")
   const [attendance, setAttendance] = useState("")
+  const [status, setStatus] = useState<EventStatus>(EventStatus.DRAFT)
+  const [visibility, setVisibility] = useState<EventVisibility>(EventVisibility.PUBLIC)
 
   // Dynamic sections
   const [highlights, setHighlights] = useState<EventHighlight[]>([{ id: "1", text: "" }])
@@ -143,6 +153,7 @@ export default function CreateEventPage() {
     if (!title.trim()) newErrors.title = "Title is required"
     if (!description.trim()) newErrors.description = "Description is required"
     if (!date) newErrors.date = "Date is required"
+    if (!time) newErrors.time = "Time is required"
     if (!venue.trim()) newErrors.venue = "Venue is required"
     if (!attendance.trim()) newErrors.attendance = "Attendance is required"
 
@@ -194,6 +205,12 @@ export default function CreateEventPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
+    // Check if user is loaded
+    if (userLoading || !user?.id) {
+      console.error("User not loaded or not authenticated")
+      return
+    }
+
     if (!validateForm()) {
       // Scroll to first error
       const firstError = document.querySelector('[data-error="true"]')
@@ -209,26 +226,44 @@ export default function CreateEventPage() {
     setShowConfirmModal(false)
     setIsSubmitting(true)
 
-    // Filter out empty items
-    const eventData = {
-      title,
-      description,
-      date,
-      venue,
-      attendance,
-      highlights: highlights.filter((h) => h.text.trim()).map((h) => h.text),
-      schedule: schedule.filter((s) => s.time && s.title.trim()),
-      faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()),
-      additionalInfo: additionalInfo.filter((a) => a.text.trim()).map((a) => a.text),
-    }
+    try {
+      // Filter out empty items and map to API format
+      const eventData = {
+        title: title.trim(),
+        description: description.trim(),
+        date,
+        time,
+        location: venue.trim(),
+        organizerId: user?.id || "",
+        status,
+        visibility,
+        highlights: highlights
+          .filter((h) => h.text.trim())
+          .map((h) => ({ title: h.text, content: h.text, imageUrl: "" })),
+        schedule: schedule
+          .filter((s) => s.time && s.title.trim())
+          .map((s) => ({ activityTime: s.time, activityDescription: s.title })),
+        faq: faqs
+          .filter((f) => f.question.trim() && f.answer.trim())
+          .map((f) => ({ question: f.question, answer: f.answer })),
+        additionalInfo: additionalInfo
+          .filter((a) => a.text.trim())
+          .map((a) => ({ title: "Additional Info", content: a.text })),
+      }
 
-    console.log("[v0] Event data:", eventData)
+      console.log("Creating event with data:", eventData)
 
-    // TODO: Implement event creation logic
-    setTimeout(() => {
-      setIsSubmitting(false)
+      await createEventMutation.mutateAsync(eventData)
+      
+      // Success - redirect to events page
       router.push("/superadmin/events")
-    }, 1000)
+    } catch (error) {
+      console.error("Failed to create event:", error)
+      // Error handling is done by the mutation hook
+      // The mutation hook will show a toast notification
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const getValidCounts = () => {
@@ -237,6 +272,35 @@ export default function CreateEventPage() {
     const validFAQs = faqs.filter((f) => f.question.trim() && f.answer.trim())
     const validAdditionalInfo = additionalInfo.filter((a) => a.text.trim())
     return { validHighlights, validSchedule, validFAQs, validAdditionalInfo }
+  }
+
+  // Show loading state while user is being fetched
+  if (userLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading user data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if user is not authenticated
+  if (!user?.id) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-500 opacity-50" />
+            <p className="text-red-600 font-medium">Authentication required</p>
+            <p className="text-muted-foreground text-sm mt-1">Please log in to create events</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -315,6 +379,22 @@ export default function CreateEventPage() {
                   {errors.date && <p className="text-sm text-red-500">{errors.date}</p>}
                 </div>
 
+                <div className="space-y-2" data-error={!!errors.time}>
+                  <Label htmlFor="time" className="text-base">
+                    Time <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className={cn(errors.time && "border-red-500")}
+                  />
+                  {errors.time && <p className="text-sm text-red-500">{errors.time}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2" data-error={!!errors.attendance}>
                   <Label htmlFor="attendance" className="text-base">
                     Expected Attendance <span className="text-red-500">*</span>
@@ -328,6 +408,36 @@ export default function CreateEventPage() {
                     className={cn(errors.attendance && "border-red-500")}
                   />
                   {errors.attendance && <p className="text-sm text-red-500">{errors.attendance}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-base">
+                    Status <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={status} onValueChange={(value) => setStatus(value as EventStatus)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={EventStatus.DRAFT}>Draft</SelectItem>
+                      <SelectItem value={EventStatus.PUBLISHED}>Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="visibility" className="text-base">
+                    Visibility <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={visibility} onValueChange={(value) => setVisibility(value as EventVisibility)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select visibility" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={EventVisibility.PUBLIC}>Public</SelectItem>
+                      <SelectItem value={EventVisibility.PRIVATE}>Private</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -605,9 +715,21 @@ export default function CreateEventPage() {
                       <span>{date}</span>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{time}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       <span>{venue}</span>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs">
+                    <Badge variant="outline" className="text-xs">
+                      {status === EventStatus.DRAFT ? "Draft" : "Published"}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {visibility === EventVisibility.PUBLIC ? "Public" : "Private"}
+                    </Badge>
                   </div>
                 </div>
               </div>

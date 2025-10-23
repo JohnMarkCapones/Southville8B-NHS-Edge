@@ -1,4 +1,8 @@
+export const dynamic = "force-static"
+export const revalidate = 86400 // Revalidate once per day
 import type { Metadata } from "next"
+import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
+import { DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo"
 import { Shield, Eye, Cookie, Database, UserCheck, Mail, Calendar, Lock, ChevronRight, BookOpen } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,10 +11,30 @@ import { Button } from "@/components/ui/button"
 export const metadata: Metadata = {
   title: "Privacy Policy | Southville 8B NHS",
   description: "Learn how Southville 8B National High School collects, uses, and protects your personal information.",
+  alternates: { canonical: "/guess/privacy" },
+  openGraph: {
+    title: "Privacy Policy | Southville 8B NHS",
+    description:
+      "Learn how Southville 8B National High School collects, uses, and protects your personal information.",
+    url: "/guess/privacy",
+    type: "article",
+    images: [{ url: DEFAULT_OG_IMAGE }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy | Southville 8B NHS",
+    description:
+      "Learn how Southville 8B National High School collects, uses, and protects your personal information.",
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 export default function PrivacyPolicyPage() {
   const lastUpdated = "December 15, 2024"
+  const breadcrumb = buildBreadcrumbListSchema([
+    { name: "Home", url: SITE_URL + "/" },
+    { name: "Privacy Policy", url: SITE_URL + "/guess/privacy" },
+  ])
 
   const sections = [
     {
@@ -59,6 +83,7 @@ export default function PrivacyPolicyPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <JsonLd id="breadcrumb-privacy" data={breadcrumb} />
       <div className="container mx-auto px-4 py-16 md:py-24">
         {/* Header Section */}
         <div className="max-w-4xl mx-auto">
