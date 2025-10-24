@@ -44,7 +44,7 @@ export class TeacherActivityService {
 
       // Get students from teacher's schedules
       const { data: studentSchedules } = await this.supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .select('student_id')
         .in('schedule_id', scheduleIds);
 

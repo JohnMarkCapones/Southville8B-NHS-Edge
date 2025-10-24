@@ -36,6 +36,64 @@ export class GwaController {
 
   constructor(private readonly gwaService: GwaService) {}
 
+  @Get('my-gwa')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get authenticated student GWA records',
+    description:
+      'Returns GWA records for the authenticated student with optional filtering by grading period and school year',
+  })
+  @ApiQuery({
+    name: 'grading_period',
+    description: 'Grading period (Q1, Q2, Q3, Q4)',
+    example: 'Q1',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'school_year',
+    description: 'School year (e.g., "2024-2025")',
+    example: '2024-2025',
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Student GWA records retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'GWA record ID' },
+          student_id: { type: 'string', description: 'Student ID' },
+          gwa: { type: 'number', description: 'GWA value (50-100)' },
+          grading_period: { type: 'string', description: 'Grading period' },
+          school_year: { type: 'string', description: 'School year' },
+          remarks: { type: 'string', description: 'Optional remarks' },
+          honor_status: { type: 'string', description: 'Honor status' },
+          recorded_by: { type: 'string', description: 'Teacher who recorded' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Student access required',
+  })
+  @ApiResponse({ status: 404, description: 'Student record not found' })
+  async getMyGwa(
+    @AuthUser() user: any,
+    @Query('grading_period') gradingPeriod?: string,
+    @Query('school_year') schoolYear?: string,
+  ): Promise<any[]> {
+    this.logger.log(
+      `Getting GWA records for student: ${user.id}, period: ${gradingPeriod}, year: ${schoolYear}`,
+    );
+    return this.gwaService.getStudentGwa(user.id, gradingPeriod, schoolYear);
+  }
+
   @Get('teacher/advisory-students')
   @Roles(UserRole.TEACHER)
   @ApiOperation({

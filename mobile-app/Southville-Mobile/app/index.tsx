@@ -1,168 +1,205 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { APIError } from '@/lib/api-client';
-import { login } from '@/services/auth';
+import { useAuthSession } from '@/hooks/use-auth-session';
 
-export default function LoginScreen() {
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+export default function SplashScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
-  const primaryColor = colorScheme === 'dark' ? '#2563EB' : Colors.light.tint;
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { status } = useAuthSession();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleLogin = async () => {
-    const trimmedEmail = email.trim();
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Check if onboarding has been completed
+        const onboardingCompleted = await AsyncStorage.getItem('@onboarding_completed');
+        
+        // Simulate loading time (2-3 seconds)
+        await new Promise(resolve => setTimeout(resolve, 2500));
 
-    if (!trimmedEmail || !password) {
-      setErrorMessage('Enter both email and password to continue.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-
-    try {
-      console.log('[LoginScreen] Attempting login', { email: trimmedEmail });
-      await login({ email: trimmedEmail, password });
-      console.log('[LoginScreen] Login successful');
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('[LoginScreen] Login failed', error);
-      if (error instanceof APIError) {
-        setErrorMessage(error.message || 'Unable to log in. Check your credentials.');
-      } else {
-        setErrorMessage('Something went wrong. Please try again.');
+        if (status === 'authenticated') {
+          // User is already logged in, go to tabs
+          router.replace('/(tabs)');
+        } else if (onboardingCompleted === 'true') {
+          // Onboarding completed, go to login
+          router.replace('/login');
+        } else {
+          // First time user, show onboarding
+          router.replace('/onboarding');
+        }
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        // Default to onboarding on error
+        router.replace('/onboarding');
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    };
+
+    initializeApp();
+  }, [status, router]);
+
+  const logoAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(1, {
+        duration: 1000,
+        easing: Easing.out(Easing.ease),
+      }),
+      transform: [
+        {
+          scale: withSequence(
+            withTiming(0.8, { duration: 0 }),
+            withTiming(1, {
+              duration: 1000,
+              easing: Easing.out(Easing.ease),
+            })
+          ),
+        },
+      ],
+    };
+  });
+
+  const textAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(1, {
+        duration: 800,
+        easing: Easing.out(Easing.ease),
+      }),
+      transform: [
+        {
+          translateY: withTiming(0, {
+            duration: 800,
+            easing: Easing.out(Easing.ease),
+          }),
+        },
+      ],
+    };
+  });
+
+  const loadingAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(1, {
+        duration: 600,
+        easing: Easing.out(Easing.ease),
+      }),
+    };
+  });
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}>
-        <View style={styles.headerContainer}>
-          <Text style={[styles.title, { color: colors.text }]}>Southville Edge</Text>
-          <Text style={[styles.subtitle, { color: colors.icon }]}>Log in to access your campus hub</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email"
-            placeholderTextColor={colors.icon}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="next"
-            style={[styles.input, { borderColor: colors.icon, color: colors.text }]}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {/* Logo */}
+        <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+          <Image 
+            source={require('@/assets/onboarding/logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
           />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor={colors.icon}
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-            style={[styles.input, { borderColor: colors.icon, color: colors.text }]}
-          />
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: primaryColor, opacity: isSubmitting ? 0.7 : 1 }]}
-            disabled={isSubmitting}
-            onPress={handleLogin}>
-            {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log In</Text>}
-          </TouchableOpacity>
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-        </View>
+        </Animated.View>
 
-        <View style={styles.footerContainer}>
-          <Text style={[styles.footerText, { color: colors.icon }]}>Forgot your password?</Text>
-          <TouchableOpacity>
-            <Text style={[styles.linkText, { color: primaryColor }]}>Reset here</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        {/* App Title */}
+        <Animated.View style={[styles.titleContainer, textAnimatedStyle]}>
+          <Text style={styles.title}>Southville 8B NHS</Text>
+          <Text style={styles.titleAccent}>Edge</Text>
+          <Text style={styles.subtitle}>Excellence in Education</Text>
+        </Animated.View>
+
+        {/* Loading Indicator */}
+        <Animated.View style={[styles.loadingContainer, loadingAnimatedStyle]}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={styles.loadingText}>Preparing your portal</Text>
+        </Animated.View>
+      </View>
+
+      {/* Copyright */}
+      <View style={styles.footer}>
+        <Text style={styles.copyright}>All Rights Reserve 2023</Text>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'space-between',
-    paddingBottom: 32,
+    backgroundColor: '#FFFFFF',
   },
-  headerContainer: {
-    marginTop: 32,
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    maxWidth: screenWidth * 0.5,
+    maxHeight: screenHeight * 0.3,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  titleAccent: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    textAlign: 'center',
   },
   subtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#000000',
+    textAlign: 'center',
     marginTop: 8,
-    fontSize: 16,
-    lineHeight: 24,
   },
-  formContainer: {
+  loadingContainer: {
+    alignItems: 'center',
     gap: 16,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#000000',
+    textAlign: 'center',
   },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 12,
+  footer: {
     alignItems: 'center',
+    paddingBottom: 20,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.4,
-  },
-  footerContainer: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  footerText: {
-    fontSize: 14,
-  },
-  linkText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 14,
+  copyright: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#999999',
+    textAlign: 'center',
   },
 });

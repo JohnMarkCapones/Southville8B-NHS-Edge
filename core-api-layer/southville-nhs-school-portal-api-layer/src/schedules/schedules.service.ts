@@ -504,7 +504,7 @@ export class SchedulesService {
       }));
 
       const { error } = await supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .insert(assignments);
 
       if (error) {
@@ -534,7 +534,7 @@ export class SchedulesService {
       await this.findOne(scheduleId);
 
       const { error } = await supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .delete()
         .eq('schedule_id', scheduleId)
         .in('student_id', studentIds);
@@ -566,7 +566,7 @@ export class SchedulesService {
 
       const supabase = this.getSupabaseClient();
       const { data, error } = await supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .select(
           `
         schedule:schedules(
