@@ -9,7 +9,7 @@ public class BuildingDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("building_name")]
+    [JsonPropertyName("name")]
     public string BuildingName { get; set; } = string.Empty;
     
     [JsonPropertyName("code")]

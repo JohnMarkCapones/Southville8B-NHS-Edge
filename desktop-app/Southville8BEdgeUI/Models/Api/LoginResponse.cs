@@ -10,7 +10,7 @@ public class LoginResponse
     public bool Success { get; set; }
 
     [JsonPropertyName("user")]
-    public UserDto? User { get; set; }
+    public LoginUserDto? User { get; set; }
 
     [JsonPropertyName("session")]
     public SessionDto? Session { get; set; }

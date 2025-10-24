@@ -751,11 +751,36 @@ export class UsersService {
           subjectSpecialization: null as string | null,
         };
 
+        console.log(
+          `Base user for ${user.email}: fullName='${baseUser.fullName}', role='${baseUser.role}'`,
+        );
+
         // Map Student-specific fields
         if (user.student) {
+          console.log(
+            `Processing student: ${user.email}, student data:`,
+            user.student,
+          );
+
           baseUser.studentId = user.student.student_id;
           baseUser.gradeLevel = user.student.grade_level;
           baseUser.phoneNumber = user.student.phone_number;
+
+          // Construct full name from student's first_name and last_name
+          const firstName = user.student.first_name || '';
+          const lastName = user.student.last_name || '';
+          const middleName = user.student.middle_name || '';
+
+          console.log(
+            `Student name parts: firstName='${firstName}', lastName='${lastName}', middleName='${middleName}'`,
+          );
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+            console.log(`Constructed fullName: '${baseUser.fullName}'`);
+          }
         }
 
         // Map Teacher-specific fields
@@ -766,6 +791,17 @@ export class UsersService {
             user.teacher.department?.department_name || null;
           baseUser.subjectSpecialization =
             user.teacher.subject_specialization_id;
+
+          // Construct full name from teacher's first_name and last_name
+          const firstName = user.teacher.first_name || '';
+          const lastName = user.teacher.last_name || '';
+          const middleName = user.teacher.middle_name || '';
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+          }
         }
 
         // Map Admin-specific fields
@@ -773,6 +809,17 @@ export class UsersService {
           baseUser.employeeId = user.admin.id;
           baseUser.phoneNumber = user.admin.phone_number;
           baseUser.department = 'Administration';
+
+          // Construct full name from admin's first_name and last_name
+          const firstName = user.admin.first_name || '';
+          const lastName = user.admin.last_name || '';
+          const middleName = user.admin.middle_name || '';
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+          }
         }
 
         return baseUser;

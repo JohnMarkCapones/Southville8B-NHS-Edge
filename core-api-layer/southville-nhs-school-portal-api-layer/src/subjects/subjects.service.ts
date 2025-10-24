@@ -31,13 +31,19 @@ export class SubjectsService {
 
   async findAll(query: SubjectQueryDto): Promise<PaginatedResult> {
     try {
-      const { page = 1, limit = 10, search, status, departmentId, department_id } = query;
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        status,
+        departmentId,
+        department_id,
+      } = query;
       const supabase = this.getSupabaseClient();
 
       let queryBuilder = supabase
         .from('subjects')
-        .select('*', { count: 'exact' })
-        .eq('is_deleted', false);
+        .select('*', { count: 'exact' });
 
       if (search) {
         queryBuilder = queryBuilder.or(
@@ -50,7 +56,10 @@ export class SubjectsService {
       }
 
       if (departmentId || department_id) {
-        queryBuilder = queryBuilder.eq('department_id', departmentId || department_id);
+        queryBuilder = queryBuilder.eq(
+          'department_id',
+          departmentId || department_id,
+        );
       }
 
       const startIndex = (page - 1) * limit;
@@ -84,7 +93,6 @@ export class SubjectsService {
         .from('subjects')
         .select('*')
         .eq('id', id)
-        .eq('is_deleted', false)
         .single();
 
       if (error) {
@@ -123,14 +131,16 @@ export class SubjectsService {
     }
   }
 
-  async update(id: string, updateSubjectDto: UpdateSubjectDto): Promise<Subject> {
+  async update(
+    id: string,
+    updateSubjectDto: UpdateSubjectDto,
+  ): Promise<Subject> {
     try {
       const supabase = this.getSupabaseClient();
       const { data, error } = await supabase
         .from('subjects')
         .update(updateSubjectDto)
         .eq('id', id)
-        .eq('is_deleted', false)
         .select()
         .single();
 
@@ -154,7 +164,7 @@ export class SubjectsService {
       const supabase = this.getSupabaseClient();
       const { error } = await supabase
         .from('subjects')
-        .update({ is_deleted: true })
+        .update({ status: 'inactive' })
         .eq('id', id);
 
       if (error) {
@@ -169,7 +179,10 @@ export class SubjectsService {
   }
 
   private handleError(error: any, operation: string): never {
-    if (error instanceof NotFoundException || error instanceof BadRequestException) {
+    if (
+      error instanceof NotFoundException ||
+      error instanceof BadRequestException
+    ) {
       throw error;
     }
 

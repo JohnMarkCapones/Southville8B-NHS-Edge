@@ -137,7 +137,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         {
             _userId = user.Id;
             UserEmail = user.Email ?? "teacher@southville.edu.ph";
-            UserRole = FormatRoleName(user.Role);
+              UserRole = FormatRoleName(user.Role?.Name);
             UserInitials = GetInitialsFromEmail(user.Email);
             
             // Fetch full profile asynchronously

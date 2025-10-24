@@ -116,7 +116,7 @@ public partial class AdminShellViewModel : ViewModelBase
         {
             _userId = user.Id;
             UserEmail = user.Email ?? "user@southville.edu.ph";
-            UserRole = FormatRoleName(user.Role);
+            UserRole = FormatRoleName(user.Role?.Name);
             UserInitials = GetInitialsFromEmail(user.Email);
             
             // Fetch full profile asynchronously

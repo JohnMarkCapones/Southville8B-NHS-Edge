@@ -76,6 +76,7 @@
 			<Setter Property="FontSize" Value="18"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="Opacity" Value="1"/>
 		</Style>
 		<Style Selector="TextBlock.user-name.tablet">
 			<Setter Property="FontSize" Value="16"/>

@@ -15,7 +15,7 @@ public class UserDto
     public string FullName { get; set; } = string.Empty;
 
     [JsonPropertyName("role")]
-    public string Role { get; set; } = string.Empty;
+    public RoleDto? Role { get; set; }
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
@@ -46,9 +46,18 @@ public class UserDto
     [JsonPropertyName("subjectSpecialization")]
     public string? SubjectSpecialization { get; set; }
 
-    [JsonPropertyName("email_confirmed_at")]
+    [JsonPropertyName("emailConfirmedAt")]
     public string? EmailConfirmedAt { get; set; }
 
-    [JsonPropertyName("user_metadata")]
+    [JsonPropertyName("userMetadata")]
     public Dictionary<string, object>? UserMetadata { get; set; }
+}
+
+public class RoleDto
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 }

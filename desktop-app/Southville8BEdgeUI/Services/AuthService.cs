@@ -53,8 +53,8 @@ public class AuthService : IAuthService
                     expiresAt
                 );
 
-                // Cache current user
-                _currentUser = response.User;
+                // Cache current user (convert LoginUserDto to UserDto)
+                _currentUser = ConvertLoginUserToUserDto(response.User);
 
                 System.Diagnostics.Debug.WriteLine($"Login successful for user: {response.User.Email} with role: {response.User.Role}");
                 return response;
@@ -165,5 +165,20 @@ public class AuthService : IAuthService
             System.Diagnostics.Debug.WriteLine($"Token refresh failed: {ex.Message}");
             return false;
         }
+    }
+
+    private UserDto ConvertLoginUserToUserDto(LoginUserDto loginUser)
+    {
+        return new UserDto
+        {
+            Id = loginUser.Id,
+            Email = loginUser.Email,
+            FullName = loginUser.Email, // Login API doesn't provide full name, use email as fallback
+            Role = new RoleDto { Name = loginUser.Role }, // Convert string role to RoleDto
+            Status = "Active", // Assume active for login
+            CreatedAt = loginUser.CreatedAt,
+            EmailConfirmedAt = loginUser.EmailConfirmedAt,
+            UserMetadata = loginUser.UserMetadata
+        };
     }
 }

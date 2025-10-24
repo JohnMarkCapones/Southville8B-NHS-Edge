@@ -8,13 +8,13 @@ public class RoomDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("floor_id")]
+    [JsonPropertyName("floorId")]
     public string FloorId { get; set; } = string.Empty;
     
     [JsonPropertyName("name")]
     public string? Name { get; set; }
     
-    [JsonPropertyName("room_number")]
+    [JsonPropertyName("roomNumber")]
     public string RoomNumber { get; set; } = string.Empty;
     
     [JsonPropertyName("capacity")]
@@ -23,7 +23,7 @@ public class RoomDto
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
     
-    [JsonPropertyName("display_order")]
+    [JsonPropertyName("displayOrder")]
     public int? DisplayOrder { get; set; }
     
     [JsonPropertyName("created_at")]

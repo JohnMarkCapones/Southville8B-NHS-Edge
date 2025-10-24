@@ -16,20 +16,41 @@ public partial class ScheduleViewModel : ViewModelBase
     }
 
     // UI properties
-    public string SubjectName => Schedule.Subject?.SubjectName ?? "Unknown";
-    public string TeacherName => Schedule.Teacher != null ? $"{Schedule.Teacher.FirstName} {Schedule.Teacher.LastName}" : "Unknown";
-    public string SectionName => Schedule.Section?.Name ?? "Unknown";
-    public string RoomNumber => Schedule.Room?.RoomNumber ?? "N/A";
-    public string BuildingName => Schedule.Building?.BuildingName ?? "N/A";
-    public string TimeRange => $"{FormatTime(Schedule.StartTime)} - {FormatTime(Schedule.EndTime)}";
-    public string DisplayDay => Schedule.DayOfWeek;
-    public IBrush? SubjectColor => Schedule.Subject?.ColorHex != null ? new SolidColorBrush(Color.Parse(Schedule.Subject.ColorHex)) : null;
+    public string SubjectName => Schedule?.Subject?.SubjectName ?? "Unknown";
+    public string TeacherName => Schedule?.Teacher != null ? $"{Schedule.Teacher.FirstName} {Schedule.Teacher.LastName}" : "Unknown";
+    public string SectionName => Schedule?.Section?.Name ?? "Unknown";
+    public string RoomNumber => Schedule?.Room?.RoomNumber ?? "N/A";
+    public string BuildingName => Schedule?.Building?.BuildingName ?? "N/A";
+    public string TimeRange => Schedule != null ? $"{FormatTime(Schedule.StartTime)} - {FormatTime(Schedule.EndTime)}" : "N/A";
+    public string DisplayDay => Schedule?.DayOfWeek ?? "Unknown";
+    public IBrush? SubjectColor 
+    {
+        get
+        {
+            try
+            {
+                if (Schedule.Subject?.ColorHex != null)
+                {
+                    return new SolidColorBrush(Color.Parse(Schedule.Subject.ColorHex));
+                }
+            }
+            catch (Exception)
+            {
+                // Return a default color if parsing fails
+                return new SolidColorBrush(Colors.Gray);
+            }
+            return null;
+        }
+    }
     
     [ObservableProperty] private bool _hasConflict;
     [ObservableProperty] private string? _conflictMessage;
     
-    private string FormatTime(string time)
+    private string FormatTime(string? time)
     {
+        if (string.IsNullOrEmpty(time))
+            return "N/A";
+            
         if (TimeSpan.TryParse(time, out var ts))
         {
             var dateTime = DateTime.Today.Add(ts);

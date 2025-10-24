@@ -62,25 +62,52 @@ public partial class UserManagementViewModel : ViewModelBase
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine("=== Loading Users ===");
             var response = await _apiClient.GetUsersAsync();
+            System.Diagnostics.Debug.WriteLine($"API Response: {response != null}");
+            System.Diagnostics.Debug.WriteLine($"Users in response: {response?.Users?.Count ?? 0}");
+            
             if (response?.Users != null)
             {
+                // Debug: Log first user raw data
+                if (response.Users.Count > 0)
+                {
+                    var firstUser = response.Users[0];
+                    System.Diagnostics.Debug.WriteLine($"First user: ID={firstUser.Id}, Email={firstUser.Email}, FullName={firstUser.FullName}, Role={firstUser.Role}");
+                }
+                
                 Users.Clear();
                 foreach (var userDto in response.Users)
                 {
+                    // Debug logging to see what we're receiving
+                    System.Diagnostics.Debug.WriteLine($"User DTO: ID={userDto.Id}, FullName='{userDto.FullName}', Email='{userDto.Email}', Role='{userDto.Role?.Name}', GradeLevel='{userDto.GradeLevel}'");
+                    
                     var userVm = MapUserDtoToViewModel(userDto);
                     Users.Add(userVm);
+                    
+                    // Debug logging to see what we're displaying
+                    System.Diagnostics.Debug.WriteLine($"User VM: FullName='{userVm.FullName}', Grade='{userVm.Grade}'");
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"Users loaded into collection: {Users.Count}");
                 
                 // Update statistics based on loaded users
                 // Note: Students and Teachers counts come from KPI API
                 UpdateStatisticsFromUsers();
                 ApplyFilters();
+                
+                System.Diagnostics.Debug.WriteLine($"Filtered users count: {FilteredUsers.Count}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No users in response or response is null");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error loading users: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            _toastService.Error($"Failed to load users: {ex.Message}", "Error");
             // Show empty state when API fails
             Users.Clear();
             FilteredUsers.Clear();
@@ -118,15 +145,47 @@ public partial class UserManagementViewModel : ViewModelBase
 
     private UserViewModel MapUserDtoToViewModel(UserDto dto)
     {
+        // Create a better display name fallback
+        string displayName = dto.FullName;
+        
+        // If full name is empty or looks like an ID/LRN, try to construct from other fields
+        if (string.IsNullOrEmpty(displayName) || 
+            displayName.StartsWith("LRN-") || 
+            displayName.All(c => char.IsDigit(c) || c == '-' || c == '_'))
+        {
+            // Try to construct name from email or use a more descriptive fallback
+            if (!string.IsNullOrEmpty(dto.Email))
+            {
+                var emailParts = dto.Email.Split('@')[0];
+                if (emailParts.Contains('.'))
+                {
+                    // Convert email format like "john.doe" to "John Doe"
+                    displayName = string.Join(" ", 
+                        emailParts.Split('.')
+                            .Select(part => char.ToUpper(part[0]) + part.Substring(1).ToLower()));
+                }
+                else
+                {
+                    displayName = char.ToUpper(emailParts[0]) + emailParts.Substring(1).ToLower();
+                }
+            }
+            else
+            {
+                displayName = dto.Role?.Name == "Student" ? "Student User" : 
+                             dto.Role?.Name == "Teacher" ? "Teacher User" : 
+                             dto.Role?.Name == "Admin" ? "Admin User" : "User";
+            }
+        }
+        
         return new UserViewModel
         {
             Id = dto.Id,
-            FullName = dto.FullName,
+            FullName = displayName,
             Username = GenerateUsernameFromEmail(dto.Email),
             Email = dto.Email,
-            Role = dto.Role,
+            Role = dto.Role?.Name ?? "Unknown",
             Status = dto.Status,
-            Grade = dto.GradeLevel ?? (dto.Role == "Teacher" ? "Faculty" : "N/A"),
+            Grade = dto.GradeLevel ?? (dto.Role?.Name == "Teacher" ? "Faculty" : "N/A"),
             StudentId = dto.StudentId ?? "",
             EmployeeId = dto.EmployeeId ?? "",
             PhoneNumber = dto.PhoneNumber ?? "",

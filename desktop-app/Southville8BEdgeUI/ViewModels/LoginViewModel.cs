@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels;
 
@@ -75,12 +76,12 @@ public partial class LoginViewModel : ViewModelBase
                 var role = response.User.Role;
                 
                 // Check if role is allowed to access desktop app
-                if (!_roleValidationService.IsRoleAllowed(role))
+                if (!_roleValidationService.IsRoleAllowed(role ?? ""))
                 {
                     // Block access for unauthorized roles (like students)
                     await _authService.LogoutAsync(); // Clear tokens
                     _toastService.Error(
-                        _roleValidationService.GetAccessDeniedMessage(role),
+                        _roleValidationService.GetAccessDeniedMessage(role ?? "Unknown"),
                         expiration: TimeSpan.FromSeconds(5)
                     );
                     // Clear password for security
@@ -90,8 +91,11 @@ public partial class LoginViewModel : ViewModelBase
 
                 _toastService.Success($"Welcome back, {response.User.Email}!");
 
+                // Convert LoginUserDto to UserDto for shell ViewModels
+                var userDto = ConvertLoginUserToUserDto(response.User);
+
                 // Navigate based on user role
-                var roleLower = role?.ToLowerInvariant();
+                var roleLower = role?.ToLowerInvariant() ?? "";
                 switch (roleLower)
                 {
                 case "admin":
@@ -103,7 +107,7 @@ public partial class LoginViewModel : ViewModelBase
                     // Set the access token on the API client
                     apiClient.SetAccessToken(accessToken);
                     
-                    NavigateTo?.Invoke(new AdminShellViewModel(sseService, apiClient, tokenStorage, response.User, accessToken));
+                    NavigateTo?.Invoke(new AdminShellViewModel(sseService, apiClient, tokenStorage, userDto, accessToken));
                     break;
                 case "teacher":
                     var teacherSseService = ServiceLocator.Services.GetRequiredService<ISseService>();
@@ -114,7 +118,7 @@ public partial class LoginViewModel : ViewModelBase
                     // Set the access token on the API client
                     teacherApiClient.SetAccessToken(teacherAccessToken);
                     
-                    NavigateTo?.Invoke(new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, response.User, teacherAccessToken));
+                    NavigateTo?.Invoke(new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, userDto, teacherAccessToken));
                     break;
                     default:
                         _toastService.Warning($"Unknown role: {response.User.Role}");
@@ -207,5 +211,20 @@ public partial class LoginViewModel : ViewModelBase
     {
         ErrorMessage = null;
         HasError = false;
+    }
+
+    private UserDto ConvertLoginUserToUserDto(LoginUserDto loginUser)
+    {
+        return new UserDto
+        {
+            Id = loginUser.Id,
+            Email = loginUser.Email,
+            FullName = loginUser.Email, // Login API doesn't provide full name, use email as fallback
+            Role = new RoleDto { Name = loginUser.Role }, // Convert string role to RoleDto
+            Status = "Active", // Assume active for login
+            CreatedAt = loginUser.CreatedAt,
+            EmailConfirmedAt = loginUser.EmailConfirmedAt,
+            UserMetadata = loginUser.UserMetadata
+        };
     }
 }

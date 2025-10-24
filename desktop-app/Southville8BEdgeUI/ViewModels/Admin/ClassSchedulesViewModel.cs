@@ -58,6 +58,12 @@ public partial class ClassSchedulesViewModel : ViewModelBase
     // Loading states
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isSaving;
+    
+    // Debug properties
+    [ObservableProperty] private bool _isDataGridVisible;
+    [ObservableProperty] private bool _isEmptyStateVisible;
+    [ObservableProperty] private string _firstScheduleSubject = "Unknown";
+    [ObservableProperty] private string _firstScheduleTeacher = "Unknown";
 
     // Form data for create/edit
     [ObservableProperty] private CreateScheduleDto _createScheduleData = new();
@@ -105,6 +111,9 @@ public partial class ClassSchedulesViewModel : ViewModelBase
         {
             IsLoading = true;
             
+            // Debug logging
+            _toastService.Info("Loading schedules...", "Debug");
+            
             var response = await _apiClient.GetSchedulesAsync(
                 page: 1,
                 limit: 100,
@@ -115,24 +124,90 @@ public partial class ClassSchedulesViewModel : ViewModelBase
                 semester: SelectedSemester
             );
 
+            // Debug logging
+            _toastService.Info($"API Response received: {response != null}", "Debug");
+            
+            if (response?.Data != null)
+            {
+                // Debug: Log the first schedule's raw data
+                if (response.Data.Count > 0)
+                {
+                    var firstSchedule = response.Data[0];
+                    System.Diagnostics.Debug.WriteLine($"First schedule raw data: {System.Text.Json.JsonSerializer.Serialize(firstSchedule)}");
+                }
+            }
+            
             if (response?.Data != null)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    Schedules.Clear();
-                    foreach (var schedule in response.Data)
+                    try
                     {
-                        try
+                        Schedules.Clear();
+                        foreach (var schedule in response.Data)
                         {
-                            Schedules.Add(new ScheduleViewModel(schedule));
+                            try
+                            {
+                                if (schedule != null)
+                                {
+                                    var scheduleVm = new ScheduleViewModel(schedule);
+                                    Schedules.Add(scheduleVm);
+                                    
+                                       // Debug logging for first few schedules
+                                       if (Schedules.Count <= 3)
+                                       {
+                                           System.Diagnostics.Debug.WriteLine($"Schedule {Schedules.Count}: Subject='{scheduleVm.SubjectName}', Teacher='{scheduleVm.TeacherName}', Section='{scheduleVm.SectionName}'");
+                                           System.Diagnostics.Debug.WriteLine($"  ScheduleDto: Subject={schedule?.Subject?.SubjectName ?? "NULL"}, Teacher={schedule?.Teacher?.FirstName ?? "NULL"} {schedule?.Teacher?.LastName ?? "NULL"}");
+                                           System.Diagnostics.Debug.WriteLine($"  ScheduleDto: Section={schedule?.Section?.Name ?? "NULL"}, Room={schedule?.Room?.RoomNumber ?? "NULL"}");
+                                           System.Diagnostics.Debug.WriteLine($"  ScheduleDto: DayOfWeek='{schedule?.DayOfWeek ?? "NULL"}', DisplayDay='{scheduleVm.DisplayDay}'");
+                                           System.Diagnostics.Debug.WriteLine($"  ScheduleDto: StartTime='{schedule?.StartTime ?? "NULL"}', EndTime='{schedule?.EndTime ?? "NULL"}', TimeRange='{scheduleVm.TimeRange}'");
+                                       }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _toastService.Error($"Error creating schedule view model: {ex.Message}", "Error");
+                                System.Diagnostics.Debug.WriteLine($"ScheduleViewModel creation error: {ex}");
+                            }
                         }
-                        catch (Exception ex)
+                        ApplyFilters();
+                        UpdateStatistics();
+                        
+                        // Debug logging
+                        _toastService.Info($"Loaded {Schedules.Count} schedules successfully", "Debug");
+                        
+                        // Test with hardcoded data if no real data
+                        if (Schedules.Count == 0)
                         {
-                            _toastService.Error($"Error creating schedule view model: {ex.Message}", "Error");
+                            _toastService.Info("No real data, adding test data", "Debug");
+                            var testSchedule = new ScheduleDto
+                            {
+                                Id = "test-1",
+                                SubjectId = "test-subject",
+                                TeacherId = "test-teacher",
+                                SectionId = "test-section",
+                                RoomId = "test-room",
+                                DayOfWeek = "Monday",
+                                StartTime = "08:00",
+                                EndTime = "09:00",
+                                SchoolYear = "2024-2025",
+                                Semester = "1st",
+                                Subject = new SubjectDto { SubjectName = "Test Subject", ColorHex = "#FF0000" },
+                                Teacher = new TeacherDto { FirstName = "Test", LastName = "Teacher" },
+                                Section = new SectionDto { Name = "Test Section" },
+                                Room = new RoomDto { RoomNumber = "101" },
+                                Building = new BuildingDto { BuildingName = "Test Building" }
+                            };
+                            Schedules.Add(new ScheduleViewModel(testSchedule));
+                            ApplyFilters();
+                            UpdateStatistics();
                         }
                     }
-                    ApplyFilters();
-                    UpdateStatistics();
+                    catch (Exception ex)
+                    {
+                        _toastService.Error($"Error updating UI with schedule data: {ex.Message}", "Error");
+                        System.Diagnostics.Debug.WriteLine($"UI update error: {ex}");
+                    }
                 });
             }
             else
@@ -248,6 +323,49 @@ public partial class ClassSchedulesViewModel : ViewModelBase
                     Buildings.Add(building);
                 }
             });
+        }
+    }
+
+    [RelayCommand]
+    private void AddTestData()
+    {
+        try
+        {
+            _toastService.Info("Adding test data...", "Debug");
+            
+            var testSchedule = new ScheduleDto
+            {
+                Id = "test-1",
+                SubjectId = "test-subject",
+                TeacherId = "test-teacher",
+                SectionId = "test-section",
+                RoomId = "test-room",
+                DayOfWeek = "Monday",
+                StartTime = "08:00",
+                EndTime = "09:00",
+                SchoolYear = "2024-2025",
+                Semester = "1st",
+                Subject = new SubjectDto { SubjectName = "Test Subject", ColorHex = "#FF0000" },
+                Teacher = new TeacherDto { FirstName = "Test", LastName = "Teacher" },
+                Section = new SectionDto { Name = "Test Section" },
+                Room = new RoomDto { RoomNumber = "101" },
+                Building = new BuildingDto { BuildingName = "Test Building" }
+            };
+            
+            var testScheduleVm = new ScheduleViewModel(testSchedule);
+            Schedules.Add(testScheduleVm);
+            
+            // Debug: Test the test data
+            System.Diagnostics.Debug.WriteLine($"Test data: Subject='{testScheduleVm.SubjectName}', Teacher='{testScheduleVm.TeacherName}', Section='{testScheduleVm.SectionName}'");
+            
+            ApplyFilters();
+            UpdateStatistics();
+            
+            _toastService.Info($"Added test data. Total schedules: {Schedules.Count}", "Debug");
+        }
+        catch (Exception ex)
+        {
+            _toastService.Error($"Error adding test data: {ex.Message}", "Error");
         }
     }
 
@@ -471,35 +589,72 @@ public partial class ClassSchedulesViewModel : ViewModelBase
 
     private void ApplyFilters()
     {
-        var filtered = Schedules.AsEnumerable();
-
-        if (!string.IsNullOrEmpty(SearchText))
+        try
         {
-            filtered = filtered.Where(s => 
-                s.SubjectName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.TeacherName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.SectionName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.RoomNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-            );
-        }
+            var filtered = Schedules.AsEnumerable();
 
-        FilteredSchedules.Clear();
-        foreach (var schedule in filtered)
-        {
-            FilteredSchedules.Add(schedule);
+            if (!string.IsNullOrEmpty(SearchText))
+            {
+                filtered = filtered.Where(s => 
+                    s?.SubjectName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                    s?.TeacherName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                    s?.SectionName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                    s?.RoomNumber?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true
+                );
+            }
+
+            FilteredSchedules.Clear();
+            foreach (var schedule in filtered)
+            {
+                if (schedule != null)
+                {
+                    FilteredSchedules.Add(schedule);
+                }
+            }
+            
+            // Update debug visibility properties
+            IsDataGridVisible = FilteredSchedules.Count > 0;
+            IsEmptyStateVisible = FilteredSchedules.Count == 0;
+            
+            // Update debug properties for first schedule
+            if (FilteredSchedules.Count > 0)
+            {
+                FirstScheduleSubject = FilteredSchedules[0]?.SubjectName ?? "Unknown";
+                FirstScheduleTeacher = FilteredSchedules[0]?.TeacherName ?? "Unknown";
+            }
+            else
+            {
+                FirstScheduleSubject = "No schedules";
+                FirstScheduleTeacher = "No schedules";
+            }
+            
+            // Debug logging
+            _toastService.Info($"Applied filters: {Schedules.Count} total, {FilteredSchedules.Count} filtered", "Debug");
+               _toastService.Info($"Cards visible: {IsDataGridVisible}, Empty state visible: {IsEmptyStateVisible}", "Debug");
+            _toastService.Info($"First schedule: {FirstScheduleSubject} - {FirstScheduleTeacher}", "Debug");
         }
-        
-        // Debug logging
-        _toastService.Info($"Applied filters: {Schedules.Count} total, {FilteredSchedules.Count} filtered", "Debug");
+        catch (Exception ex)
+        {
+            _toastService.Error($"Error applying filters: {ex.Message}", "Error");
+            System.Diagnostics.Debug.WriteLine($"ApplyFilters error: {ex}");
+        }
     }
 
     private void UpdateStatistics()
     {
-        TotalSchedules = Schedules.Count;
-        ActiveSchedules = Schedules.Count(s => s.Schedule.SchoolYear == SelectedSchoolYear);
-        SchedulesThisSemester = Schedules.Count(s => s.Schedule.SchoolYear == SelectedSchoolYear && s.Schedule.Semester == SelectedSemester);
-        ConflictCount = Schedules.Count(s => s.HasConflict);
-        TeacherCount = Schedules.Select(s => s.Schedule.TeacherId).Distinct().Count();
+        try
+        {
+            TotalSchedules = Schedules.Count;
+            ActiveSchedules = Schedules.Count(s => s?.Schedule?.SchoolYear == SelectedSchoolYear);
+            SchedulesThisSemester = Schedules.Count(s => s?.Schedule?.SchoolYear == SelectedSchoolYear && s?.Schedule?.Semester == SelectedSemester);
+            ConflictCount = Schedules.Count(s => s?.HasConflict == true);
+            TeacherCount = Schedules.Where(s => s?.Schedule?.TeacherId != null).Select(s => s.Schedule.TeacherId).Distinct().Count();
+        }
+        catch (Exception ex)
+        {
+            _toastService.Error($"Error updating statistics: {ex.Message}", "Error");
+            System.Diagnostics.Debug.WriteLine($"UpdateStatistics error: {ex}");
+        }
     }
 
     partial void OnSearchTextChanged(string value)

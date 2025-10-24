@@ -8,31 +8,31 @@ public class ScheduleDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("subject_id")]
+    [JsonPropertyName("subjectId")]
     public string SubjectId { get; set; } = string.Empty;
 
-    [JsonPropertyName("teacher_id")]
+    [JsonPropertyName("teacherId")]
     public string TeacherId { get; set; } = string.Empty;
 
-    [JsonPropertyName("section_id")]
+    [JsonPropertyName("sectionId")]
     public string SectionId { get; set; } = string.Empty;
 
-    [JsonPropertyName("room_id")]
+    [JsonPropertyName("roomId")]
     public string RoomId { get; set; } = string.Empty;
 
-    [JsonPropertyName("building_id")]
+    [JsonPropertyName("buildingId")]
     public string BuildingId { get; set; } = string.Empty;
 
-    [JsonPropertyName("day_of_week")]
+    [JsonPropertyName("dayOfWeek")]
     public string DayOfWeek { get; set; } = string.Empty;
 
-    [JsonPropertyName("start_time")]
+    [JsonPropertyName("startTime")]
     public string StartTime { get; set; } = string.Empty;
 
-    [JsonPropertyName("end_time")]
+    [JsonPropertyName("endTime")]
     public string EndTime { get; set; } = string.Empty;
 
-    [JsonPropertyName("school_year")]
+    [JsonPropertyName("schoolYear")]
     public string SchoolYear { get; set; } = string.Empty;
 
     [JsonPropertyName("semester")]
@@ -69,16 +69,16 @@ public class SubjectDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("subject_name")]
+    [JsonPropertyName("subjectName")]
     public string SubjectName { get; set; } = string.Empty;
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
-    [JsonPropertyName("grade_level")]
+    [JsonPropertyName("gradeLevel")]
     public int? GradeLevel { get; set; }
 
-    [JsonPropertyName("color_hex")]
+    [JsonPropertyName("colorHex")]
     public string? ColorHex { get; set; }
 }
 
@@ -87,13 +87,13 @@ public class TeacherDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("first_name")]
+    [JsonPropertyName("firstName")]
     public string FirstName { get; set; } = string.Empty;
 
-    [JsonPropertyName("last_name")]
+    [JsonPropertyName("lastName")]
     public string LastName { get; set; } = string.Empty;
 
-    [JsonPropertyName("middle_name")]
+    [JsonPropertyName("middleName")]
     public string? MiddleName { get; set; }
 
     [JsonPropertyName("user")]

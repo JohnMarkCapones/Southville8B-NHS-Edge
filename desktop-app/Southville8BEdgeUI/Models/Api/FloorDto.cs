@@ -9,7 +9,7 @@ public class FloorDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("building_id")]
+    [JsonPropertyName("buildingId")]
     public string BuildingId { get; set; } = string.Empty;
     
     [JsonPropertyName("name")]
@@ -37,7 +37,7 @@ public class BuildingInfo
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("building_name")]
+    [JsonPropertyName("name")]
     public string BuildingName { get; set; } = string.Empty;
     
     [JsonPropertyName("code")]
@@ -49,7 +49,7 @@ public class RoomInfo
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("room_number")]
+    [JsonPropertyName("roomNumber")]
     public string RoomNumber { get; set; } = string.Empty;
     
     [JsonPropertyName("name")]
