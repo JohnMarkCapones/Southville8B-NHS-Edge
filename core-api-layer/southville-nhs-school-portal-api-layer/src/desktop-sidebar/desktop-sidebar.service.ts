@@ -139,7 +139,7 @@ export class DesktopSidebarService {
 
       // Fetch unique students count from teacher's schedules
       const { data: studentSchedules } = await this.supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .select('student_id')
         .in(
           'schedule_id',

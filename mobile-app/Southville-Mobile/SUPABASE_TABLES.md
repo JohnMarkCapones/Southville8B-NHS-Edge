@@ -1,0 +1,1280 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.academic_calendar (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  year character varying NOT NULL,
+  month_name character varying NOT NULL,
+  term character varying NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  total_days integer NOT NULL,
+  description text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT academic_calendar_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.academic_calendar_days (
+  id bigint NOT NULL DEFAULT nextval('academic_calendar_days_id_seq'::regclass),
+  academic_calendar_id uuid NOT NULL,
+  date date NOT NULL UNIQUE,
+  day_of_week character varying NOT NULL,
+  week_number integer NOT NULL,
+  is_weekend boolean NOT NULL DEFAULT false,
+  is_holiday boolean NOT NULL DEFAULT false,
+  is_current_day boolean NOT NULL DEFAULT false,
+  marker_icon character varying,
+  marker_color character varying,
+  note text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT academic_calendar_days_pkey PRIMARY KEY (id),
+  CONSTRAINT academic_calendar_days_academic_calendar_id_fkey FOREIGN KEY (academic_calendar_id) REFERENCES public.academic_calendar(id)
+);
+CREATE TABLE public.academic_calendar_markers (
+  id bigint NOT NULL DEFAULT nextval('academic_calendar_markers_id_seq'::regclass),
+  academic_calendar_id uuid NOT NULL,
+  academic_calendar_day_id bigint,
+  color character varying NOT NULL,
+  icon character varying,
+  label character varying,
+  order_priority integer DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT academic_calendar_markers_pkey PRIMARY KEY (id),
+  CONSTRAINT academic_calendar_markers_academic_calendar_id_fkey FOREIGN KEY (academic_calendar_id) REFERENCES public.academic_calendar(id),
+  CONSTRAINT academic_calendar_markers_academic_calendar_day_id_fkey FOREIGN KEY (academic_calendar_day_id) REFERENCES public.academic_calendar_days(id)
+);
+CREATE TABLE public.admins (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  role_description text,
+  name character varying,
+  email character varying NOT NULL UNIQUE,
+  phone_number character varying,
+  CONSTRAINT admins_pkey PRIMARY KEY (id),
+  CONSTRAINT admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.alerts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type character varying NOT NULL CHECK (type::text = ANY (ARRAY['info'::character varying, 'warning'::character varying, 'success'::character varying, 'error'::character varying, 'system'::character varying]::text[])),
+  title character varying NOT NULL,
+  message text NOT NULL,
+  created_by uuid,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '1 day'::interval),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  recipient_id uuid,
+  is_read boolean NOT NULL DEFAULT false,
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT alerts_pkey PRIMARY KEY (id),
+  CONSTRAINT alerts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT alerts_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.announcement_tags (
+  announcement_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  CONSTRAINT announcement_tags_pkey PRIMARY KEY (announcement_id, tag_id),
+  CONSTRAINT announcement_tags_announcement_id_fkey FOREIGN KEY (announcement_id) REFERENCES public.announcements(id),
+  CONSTRAINT announcement_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id)
+);
+CREATE TABLE public.announcement_targets (
+  announcement_id uuid NOT NULL,
+  role_id uuid NOT NULL,
+  CONSTRAINT announcement_targets_pkey PRIMARY KEY (announcement_id, role_id),
+  CONSTRAINT announcement_targets_announcement_id_fkey FOREIGN KEY (announcement_id) REFERENCES public.announcements(id),
+  CONSTRAINT announcement_targets_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
+CREATE TABLE public.announcements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title character varying NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone,
+  type character varying,
+  visibility character varying DEFAULT 'public'::character varying CHECK (visibility::text = ANY (ARRAY['public'::character varying, 'private'::character varying]::text[])),
+  CONSTRAINT announcements_pkey PRIMARY KEY (id),
+  CONSTRAINT announcements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.buildings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  building_name character varying NOT NULL,
+  code character varying NOT NULL UNIQUE,
+  capacity integer,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT buildings_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.campus_facilities (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  image_url character varying,
+  description text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  building_id uuid,
+  floor_id uuid,
+  capacity integer CHECK (capacity IS NULL OR capacity >= 0),
+  type character varying CHECK (type::text = ANY (ARRAY['Library'::character varying, 'Laboratory'::character varying, 'Auditorium'::character varying, 'Gymnasium'::character varying, 'Cafeteria'::character varying, 'Clinic'::character varying, 'Office'::character varying, 'Outdoor'::character varying, 'Other'::character varying]::text[])),
+  status character varying DEFAULT 'Available'::character varying CHECK (status::text = ANY (ARRAY['Available'::character varying, 'Occupied'::character varying, 'Maintenance'::character varying, 'Closed'::character varying]::text[])),
+  domain_id uuid,
+  created_by uuid,
+  CONSTRAINT campus_facilities_pkey PRIMARY KEY (id),
+  CONSTRAINT campus_facilities_building_id_fkey FOREIGN KEY (building_id) REFERENCES public.buildings(id),
+  CONSTRAINT campus_facilities_floor_id_fkey FOREIGN KEY (floor_id) REFERENCES public.floors(id),
+  CONSTRAINT campus_facilities_domain_id_fkey FOREIGN KEY (domain_id) REFERENCES public.domains(id),
+  CONSTRAINT campus_facilities_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.club_announcements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL,
+  title character varying NOT NULL CHECK (length(TRIM(BOTH FROM title)) > 0),
+  content text NOT NULL CHECK (length(TRIM(BOTH FROM content)) > 0),
+  priority character varying DEFAULT 'normal'::character varying CHECK (priority::text = ANY (ARRAY['low'::character varying, 'normal'::character varying, 'high'::character varying, 'urgent'::character varying]::text[])),
+  created_by uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_announcements_pkey PRIMARY KEY (id),
+  CONSTRAINT club_announcements_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id),
+  CONSTRAINT club_announcements_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.club_benefits (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL,
+  title character varying NOT NULL,
+  description character varying NOT NULL,
+  order_index integer NOT NULL DEFAULT 0 CHECK (order_index >= 0),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_benefits_pkey PRIMARY KEY (id),
+  CONSTRAINT club_benefits_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id)
+);
+CREATE TABLE public.club_faqs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL,
+  question character varying NOT NULL,
+  answer character varying NOT NULL,
+  order_index integer NOT NULL DEFAULT 0 CHECK (order_index >= 0),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_faqs_pkey PRIMARY KEY (id),
+  CONSTRAINT club_faqs_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id)
+);
+CREATE TABLE public.club_form_answers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  response_id uuid NOT NULL,
+  question_id uuid NOT NULL,
+  answer_text text,
+  answer_value text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_form_answers_pkey PRIMARY KEY (id),
+  CONSTRAINT club_form_answers_response_id_fkey FOREIGN KEY (response_id) REFERENCES public.club_form_responses(id),
+  CONSTRAINT club_form_answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.club_form_questions(id)
+);
+CREATE TABLE public.club_form_question_options (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid NOT NULL,
+  option_text text NOT NULL,
+  option_value text NOT NULL,
+  order_index integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_form_question_options_pkey PRIMARY KEY (id),
+  CONSTRAINT club_form_question_options_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.club_form_questions(id)
+);
+CREATE TABLE public.club_form_questions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  form_id uuid NOT NULL,
+  question_text text NOT NULL,
+  question_type character varying DEFAULT 'text'::character varying CHECK (question_type::text = ANY (ARRAY['text'::character varying, 'textarea'::character varying, 'dropdown'::character varying, 'radio'::character varying, 'checkbox'::character varying, 'number'::character varying, 'email'::character varying, 'date'::character varying]::text[])),
+  required boolean DEFAULT true,
+  order_index integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_form_questions_pkey PRIMARY KEY (id),
+  CONSTRAINT club_form_questions_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.club_forms(id)
+);
+CREATE TABLE public.club_form_responses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  form_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  status character varying DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[])),
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  review_notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_form_responses_pkey PRIMARY KEY (id),
+  CONSTRAINT club_form_responses_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.club_forms(id),
+  CONSTRAINT club_form_responses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT club_form_responses_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.club_forms (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL,
+  created_by uuid,
+  name character varying NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  auto_approve boolean DEFAULT false,
+  form_type character varying DEFAULT 'member_registration'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_forms_pkey PRIMARY KEY (id),
+  CONSTRAINT club_forms_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id),
+  CONSTRAINT club_forms_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.club_goals (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL,
+  goal_text character varying NOT NULL,
+  order_index integer NOT NULL DEFAULT 0 CHECK (order_index >= 0),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_goals_pkey PRIMARY KEY (id),
+  CONSTRAINT club_goals_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id)
+);
+CREATE TABLE public.club_positions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE,
+  description text,
+  level integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT club_positions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.clubs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  description text,
+  president_id uuid,
+  vp_id uuid,
+  secretary_id uuid,
+  advisor_id uuid,
+  domain_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  co_advisor_id uuid,
+  mission_statement character varying,
+  CONSTRAINT clubs_pkey PRIMARY KEY (id),
+  CONSTRAINT clubs_president_id_fkey FOREIGN KEY (president_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_vp_id_fkey FOREIGN KEY (vp_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_secretary_id_fkey FOREIGN KEY (secretary_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_advisor_id_fkey FOREIGN KEY (advisor_id) REFERENCES public.users(id),
+  CONSTRAINT clubs_domain_id_fkey FOREIGN KEY (domain_id) REFERENCES public.domains(id),
+  CONSTRAINT clubs_co_advisor_id_fkey FOREIGN KEY (co_advisor_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.departments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  department_name character varying NOT NULL UNIQUE,
+  description text,
+  head_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  is_active boolean NOT NULL DEFAULT true,
+  CONSTRAINT departments_pkey PRIMARY KEY (id),
+  CONSTRAINT departments_head_id_fkey FOREIGN KEY (head_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.departments_information (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  department_id uuid NOT NULL,
+  office_name character varying,
+  contact_person character varying,
+  description text,
+  email character varying,
+  contact_number character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT departments_information_pkey PRIMARY KEY (id),
+  CONSTRAINT departments_information_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id)
+);
+CREATE TABLE public.domain_role_permissions (
+  id numeric NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  domain_role_id uuid,
+  permission_id uuid,
+  allowed boolean,
+  CONSTRAINT domain_role_permissions_pkey PRIMARY KEY (id),
+  CONSTRAINT domain_role_permissions_domain_role_id_fkey FOREIGN KEY (domain_role_id) REFERENCES public.domain_roles(id),
+  CONSTRAINT domain_role_permissions_permission_id_fkey FOREIGN KEY (permission_id) REFERENCES public.permissions(id)
+);
+CREATE TABLE public.domain_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  domain_id uuid,
+  name text,
+  CONSTRAINT domain_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT domain_roles_domain_id_fkey FOREIGN KEY (domain_id) REFERENCES public.domains(id)
+);
+CREATE TABLE public.domains (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type text,
+  name text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_by uuid,
+  CONSTRAINT domains_pkey PRIMARY KEY (id),
+  CONSTRAINT domains_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.emergency_contacts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  guardian_name character varying NOT NULL,
+  relationship character varying NOT NULL,
+  phone_number character varying NOT NULL,
+  email character varying,
+  address character varying,
+  is_primary boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT emergency_contacts_pkey PRIMARY KEY (id),
+  CONSTRAINT emergency_contacts_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id)
+);
+CREATE TABLE public.event_additional_info (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  title character varying NOT NULL,
+  content text NOT NULL,
+  order_index integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_additional_info_pkey PRIMARY KEY (id),
+  CONSTRAINT event_additional_info_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.event_highlights (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  title character varying NOT NULL,
+  content text NOT NULL,
+  image_url character varying,
+  order_index integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_highlights_pkey PRIMARY KEY (id),
+  CONSTRAINT event_highlights_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.event_schedule (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  activity_time time without time zone NOT NULL,
+  activity_description text NOT NULL,
+  order_index integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_schedule_pkey PRIMARY KEY (id),
+  CONSTRAINT event_schedule_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.event_tags (
+  event_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  CONSTRAINT event_tags_pkey PRIMARY KEY (event_id, tag_id),
+  CONSTRAINT event_tags_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
+  CONSTRAINT event_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id)
+);
+CREATE TABLE public.events (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL,
+  description text NOT NULL,
+  date date NOT NULL,
+  time time without time zone NOT NULL,
+  location character varying NOT NULL,
+  organizer_id uuid NOT NULL,
+  event_image character varying,
+  status character varying DEFAULT 'draft'::character varying CHECK (status::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'cancelled'::character varying, 'completed'::character varying]::text[])),
+  visibility character varying DEFAULT 'public'::character varying CHECK (visibility::text = ANY (ARRAY['public'::character varying, 'private'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  full_description text,
+  is_featured boolean DEFAULT false,
+  deleted_at timestamp with time zone,
+  CONSTRAINT events_pkey PRIMARY KEY (id),
+  CONSTRAINT events_organizer_id_fkey FOREIGN KEY (organizer_id) REFERENCES public.users(id),
+  CONSTRAINT fk_organizer FOREIGN KEY (organizer_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.events_faq (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid,
+  question character varying NOT NULL,
+  answer text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT events_faq_pkey PRIMARY KEY (id),
+  CONSTRAINT events_faq_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.faq (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question character varying NOT NULL,
+  answer text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT faq_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.floors (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  building_id uuid NOT NULL,
+  name character varying NOT NULL,
+  number integer NOT NULL,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT floors_pkey PRIMARY KEY (id),
+  CONSTRAINT floors_building_id_fkey FOREIGN KEY (building_id) REFERENCES public.buildings(id)
+);
+CREATE TABLE public.gallery_albums (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL CHECK (char_length(title::text) >= 3),
+  description text,
+  slug character varying NOT NULL UNIQUE CHECK (slug::text ~ '^[a-z0-9-]+$'::text),
+  category character varying NOT NULL DEFAULT 'other'::character varying CHECK (category::text = ANY (ARRAY['events'::character varying, 'departments'::character varying, 'achievements'::character varying, 'campus_life'::character varying, 'sports'::character varying, 'academics'::character varying, 'other'::character varying]::text[])),
+  cover_image_id uuid,
+  color_theme character varying,
+  visibility character varying DEFAULT 'public'::character varying CHECK (visibility::text = ANY (ARRAY['public'::character varying, 'authenticated'::character varying, 'staff_only'::character varying, 'private'::character varying]::text[])),
+  is_featured boolean DEFAULT false,
+  featured_order integer,
+  event_date date,
+  location character varying,
+  items_count integer DEFAULT 0,
+  views_count integer DEFAULT 0,
+  created_by uuid NOT NULL,
+  updated_by uuid,
+  deleted_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT gallery_albums_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_gallery_albums_cover_image FOREIGN KEY (cover_image_id) REFERENCES public.gallery_items(id)
+);
+CREATE TABLE public.gallery_downloads (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  item_id uuid NOT NULL,
+  user_id uuid,
+  ip_address inet,
+  user_agent text,
+  success boolean DEFAULT true,
+  downloaded_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT gallery_downloads_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_gallery_downloads_item FOREIGN KEY (item_id) REFERENCES public.gallery_items(id)
+);
+CREATE TABLE public.gallery_item_tags (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  item_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT gallery_item_tags_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_gallery_item_tags_item FOREIGN KEY (item_id) REFERENCES public.gallery_items(id),
+  CONSTRAINT fk_gallery_item_tags_tag FOREIGN KEY (tag_id) REFERENCES public.gallery_tags(id)
+);
+CREATE TABLE public.gallery_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  original_filename character varying NOT NULL,
+  file_size_bytes bigint NOT NULL CHECK (file_size_bytes > 0),
+  mime_type character varying NOT NULL,
+  media_type character varying NOT NULL CHECK (media_type::text = ANY (ARRAY['image'::character varying, 'video'::character varying]::text[])),
+  width integer,
+  height integer,
+  duration_seconds integer,
+  title character varying,
+  caption text,
+  alt_text character varying,
+  display_order integer DEFAULT 0,
+  is_cover boolean DEFAULT false,
+  is_featured boolean DEFAULT false,
+  photographer_name character varying,
+  photographer_credit text,
+  taken_at timestamp with time zone,
+  location character varying,
+  views_count integer DEFAULT 0,
+  downloads_count integer DEFAULT 0,
+  uploaded_by uuid NOT NULL,
+  updated_by uuid,
+  deleted_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  cf_image_id text NOT NULL DEFAULT ''::text,
+  cf_image_url text NOT NULL DEFAULT ''::text,
+  CONSTRAINT gallery_items_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.gallery_tags (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE CHECK (char_length(name::text) >= 2),
+  slug character varying NOT NULL UNIQUE CHECK (slug::text ~ '^[a-z0-9-]+$'::text),
+  description text,
+  color character varying,
+  usage_count integer DEFAULT 0,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT gallery_tags_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.gallery_views (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  viewable_type character varying NOT NULL CHECK (viewable_type::text = ANY (ARRAY['album'::character varying, 'item'::character varying]::text[])),
+  viewable_id uuid NOT NULL,
+  user_id uuid,
+  ip_address inet,
+  viewed_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT gallery_views_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.hotspots (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id uuid NOT NULL,
+  label character varying NOT NULL,
+  x_position numeric NOT NULL CHECK (x_position >= 0::numeric AND x_position <= 100::numeric),
+  y_position numeric NOT NULL CHECK (y_position >= 0::numeric AND y_position <= 100::numeric),
+  link_to_location_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT hotspots_pkey PRIMARY KEY (id),
+  CONSTRAINT hotspots_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT hotspots_link_to_location_id_fkey FOREIGN KEY (link_to_location_id) REFERENCES public.locations(id)
+);
+CREATE TABLE public.locations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  description text,
+  image_type character varying CHECK (image_type::text = ANY (ARRAY['panoramic'::character varying, 'regular'::character varying]::text[])),
+  image_url text,
+  preview_image_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT locations_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.module_download_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  module_id uuid NOT NULL,
+  user_id uuid,
+  downloaded_at timestamp with time zone DEFAULT now(),
+  ip_address text,
+  user_agent text,
+  success boolean NOT NULL DEFAULT true,
+  CONSTRAINT module_download_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT module_download_logs_module_id_fkey FOREIGN KEY (module_id) REFERENCES public.modules(id),
+  CONSTRAINT module_download_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.modules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL,
+  description text,
+  file_url character varying NOT NULL,
+  uploaded_by uuid,
+  r2_file_key text,
+  file_size_bytes bigint,
+  mime_type character varying,
+  is_global boolean DEFAULT false,
+  is_deleted boolean DEFAULT false,
+  deleted_at timestamp with time zone,
+  deleted_by uuid,
+  subject_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT modules_pkey PRIMARY KEY (id),
+  CONSTRAINT modules_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id),
+  CONSTRAINT modules_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES public.users(id),
+  CONSTRAINT modules_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id)
+);
+CREATE TABLE public.news (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  article_json jsonb,
+  article_html text,
+  description text,
+  featured_image text NOT NULL,
+  status character varying NOT NULL DEFAULT 'draft'::character varying CHECK (status::text = ANY (ARRAY['draft'::character varying, 'pending_approval'::character varying, 'approved'::character varying, 'published'::character varying, 'rejected'::character varying, 'archived'::character varying]::text[])),
+  visibility character varying NOT NULL DEFAULT 'public'::character varying CHECK (visibility::text = ANY (ARRAY['public'::character varying, 'journalism'::character varying]::text[])),
+  published_date timestamp with time zone,
+  author_id uuid,
+  category_id uuid,
+  views integer DEFAULT 0,
+  deleted_at timestamp with time zone,
+  deleted_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  r2_featured_image_key character varying,
+  scheduled_date timestamp with time zone,
+  CONSTRAINT news_pkey PRIMARY KEY (id),
+  CONSTRAINT news_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id),
+  CONSTRAINT news_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.news_categories(id),
+  CONSTRAINT news_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.news_approval (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  news_id uuid,
+  approver_id uuid,
+  status character varying NOT NULL CHECK (status::text = ANY (ARRAY['approved'::character varying, 'rejected'::character varying]::text[])),
+  remarks text,
+  action_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT news_approval_pkey PRIMARY KEY (id),
+  CONSTRAINT news_approval_news_id_fkey FOREIGN KEY (news_id) REFERENCES public.news(id),
+  CONSTRAINT news_approval_approver_id_fkey FOREIGN KEY (approver_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.news_categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE,
+  slug character varying NOT NULL UNIQUE,
+  description text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT news_categories_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.news_co_authors (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  news_id uuid,
+  co_author_user_id uuid,
+  added_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT news_co_authors_pkey PRIMARY KEY (id),
+  CONSTRAINT news_co_authors_news_id_fkey FOREIGN KEY (news_id) REFERENCES public.news(id),
+  CONSTRAINT news_co_authors_co_author_user_id_fkey FOREIGN KEY (co_author_user_id) REFERENCES public.users(id),
+  CONSTRAINT news_co_authors_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.news_tags (
+  news_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  CONSTRAINT news_tags_pkey PRIMARY KEY (news_id, tag_id),
+  CONSTRAINT news_tags_news_id_fkey FOREIGN KEY (news_id) REFERENCES public.news(id),
+  CONSTRAINT news_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id)
+);
+CREATE TABLE public.permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  key text NOT NULL UNIQUE,
+  description text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT permissions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.positions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_id uuid,
+  name character varying NOT NULL,
+  description character varying,
+  key character varying NOT NULL UNIQUE,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT positions_pkey PRIMARY KEY (id),
+  CONSTRAINT positions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  avatar character varying,
+  address character varying,
+  bio text,
+  phone_number character varying,
+  social_media_links json,
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.question_bank (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  teacher_id uuid,
+  question_text text NOT NULL,
+  question_type character varying NOT NULL,
+  subject_id uuid,
+  topic character varying,
+  difficulty character varying,
+  tags ARRAY,
+  default_points numeric DEFAULT 1,
+  choices jsonb,
+  correct_answer jsonb,
+  allow_partial_credit boolean DEFAULT false,
+  time_limit_seconds integer,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT question_bank_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.quiz_access_links (
+  link_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid,
+  access_token character varying NOT NULL UNIQUE,
+  link_type character varying DEFAULT 'link'::character varying,
+  is_active boolean DEFAULT true,
+  expires_at timestamp with time zone,
+  access_code character varying,
+  max_uses integer,
+  use_count integer DEFAULT 0,
+  requires_auth boolean DEFAULT true,
+  is_revoked boolean DEFAULT false,
+  revoked_at timestamp with time zone,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  last_used_at timestamp with time zone,
+  CONSTRAINT quiz_access_links_pkey PRIMARY KEY (link_id),
+  CONSTRAINT quiz_access_links_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_access_logs (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  link_id uuid,
+  quiz_id uuid,
+  student_id uuid,
+  accessed_at timestamp with time zone DEFAULT now(),
+  ip_address inet,
+  user_agent text,
+  access_granted boolean DEFAULT true,
+  denial_reason text,
+  metadata jsonb,
+  CONSTRAINT quiz_access_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_access_logs_link_id_fkey FOREIGN KEY (link_id) REFERENCES public.quiz_access_links(link_id),
+  CONSTRAINT quiz_access_logs_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_active_sessions (
+  session_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid,
+  student_id uuid,
+  attempt_id uuid,
+  started_at timestamp with time zone DEFAULT now(),
+  last_synced_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  initial_device_fingerprint text,
+  initial_ip_address inet,
+  initial_user_agent text,
+  last_heartbeat timestamp with time zone,
+  current_device_fingerprint text,
+  current_ip_address inet,
+  current_user_agent text,
+  terminated_reason text,
+  CONSTRAINT quiz_active_sessions_pkey PRIMARY KEY (session_id),
+  CONSTRAINT quiz_active_sessions_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id),
+  CONSTRAINT quiz_active_sessions_attempt_id_fkey FOREIGN KEY (attempt_id) REFERENCES public.quiz_attempts(attempt_id)
+);
+CREATE TABLE public.quiz_activity_logs (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  participant_id uuid,
+  session_id uuid,
+  quiz_id uuid,
+  student_id uuid,
+  event_type character varying NOT NULL,
+  message text,
+  metadata jsonb,
+  timestamp timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_activity_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_activity_logs_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.quiz_participants(id),
+  CONSTRAINT quiz_activity_logs_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_active_sessions(session_id),
+  CONSTRAINT quiz_activity_logs_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_analytics (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid UNIQUE,
+  total_attempts integer DEFAULT 0,
+  total_students integer DEFAULT 0,
+  completed_attempts integer DEFAULT 0,
+  average_score numeric,
+  highest_score numeric,
+  lowest_score numeric,
+  median_score numeric,
+  pass_rate numeric,
+  average_time_taken_seconds integer,
+  fastest_completion_seconds integer,
+  slowest_completion_seconds integer,
+  last_calculated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_analytics_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_analytics_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_attempts (
+  attempt_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid,
+  student_id uuid,
+  attempt_number integer NOT NULL,
+  score numeric,
+  max_possible_score numeric,
+  status character varying DEFAULT 'in_progress'::character varying,
+  terminated_by_teacher boolean DEFAULT false,
+  termination_reason text,
+  started_at timestamp with time zone DEFAULT now(),
+  submitted_at timestamp with time zone,
+  time_taken_seconds integer,
+  questions_shown ARRAY,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_attempts_pkey PRIMARY KEY (attempt_id),
+  CONSTRAINT quiz_attempts_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_choices (
+  choice_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  question_id uuid,
+  choice_text text NOT NULL,
+  is_correct boolean DEFAULT false,
+  order_index integer,
+  metadata jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_choices_pkey PRIMARY KEY (choice_id),
+  CONSTRAINT quiz_choices_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.quiz_questions(question_id)
+);
+CREATE TABLE public.quiz_device_sessions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  session_id uuid,
+  device_fingerprint text NOT NULL,
+  ip_address inet,
+  user_agent text,
+  screen_resolution character varying,
+  browser_info jsonb,
+  device_type character varying,
+  first_seen_at timestamp with time zone DEFAULT now(),
+  last_seen_at timestamp with time zone DEFAULT now(),
+  is_current boolean DEFAULT true,
+  CONSTRAINT quiz_device_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_device_sessions_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_active_sessions(session_id)
+);
+CREATE TABLE public.quiz_flags (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  participant_id uuid,
+  session_id uuid,
+  quiz_id uuid,
+  student_id uuid,
+  flag_type character varying NOT NULL,
+  message text,
+  severity character varying DEFAULT 'info'::character varying,
+  metadata jsonb,
+  timestamp timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_flags_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_flags_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.quiz_participants(id),
+  CONSTRAINT quiz_flags_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_active_sessions(session_id),
+  CONSTRAINT quiz_flags_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_participants (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  session_id uuid UNIQUE,
+  quiz_id uuid,
+  student_id uuid,
+  status character varying DEFAULT 'not_started'::character varying,
+  progress integer DEFAULT 0,
+  current_question_index integer DEFAULT 0,
+  questions_answered integer DEFAULT 0,
+  total_questions integer NOT NULL,
+  start_time timestamp with time zone,
+  end_time timestamp with time zone,
+  flag_count integer DEFAULT 0,
+  idle_time_seconds integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_participants_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_participants_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_active_sessions(session_id),
+  CONSTRAINT quiz_participants_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_question_metadata (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  question_id uuid UNIQUE,
+  metadata_type character varying NOT NULL,
+  metadata jsonb NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_question_metadata_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_question_metadata_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.quiz_questions(question_id)
+);
+CREATE TABLE public.quiz_question_stats (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  question_id uuid UNIQUE,
+  quiz_id uuid,
+  total_attempts integer DEFAULT 0,
+  correct_count integer DEFAULT 0,
+  incorrect_count integer DEFAULT 0,
+  skipped_count integer DEFAULT 0,
+  difficulty_score numeric,
+  average_time_spent_seconds integer,
+  discrimination_index numeric,
+  last_calculated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_question_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_question_stats_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.quiz_questions(question_id),
+  CONSTRAINT quiz_question_stats_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_questions (
+  question_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid,
+  question_text text NOT NULL,
+  question_type character varying NOT NULL,
+  order_index integer NOT NULL,
+  points numeric NOT NULL DEFAULT 1,
+  allow_partial_credit boolean DEFAULT false,
+  time_limit_seconds integer,
+  is_pool_question boolean DEFAULT false,
+  source_question_bank_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  correct_answer jsonb,
+  settings jsonb,
+  CONSTRAINT quiz_questions_pkey PRIMARY KEY (question_id),
+  CONSTRAINT quiz_questions_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id),
+  CONSTRAINT quiz_questions_source_question_bank_id_fkey FOREIGN KEY (source_question_bank_id) REFERENCES public.question_bank(id)
+);
+CREATE TABLE public.quiz_section_settings (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid,
+  section_id uuid,
+  start_date timestamp with time zone,
+  end_date timestamp with time zone,
+  time_limit_override integer,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_section_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_section_settings_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_sections (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid,
+  section_id uuid,
+  assigned_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_sections_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_sections_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_session_answers (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  session_id uuid,
+  question_id uuid,
+  temporary_choice_id uuid,
+  temporary_choice_ids ARRAY,
+  temporary_answer_text text,
+  temporary_answer_json jsonb,
+  last_updated timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_session_answers_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_session_answers_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_active_sessions(session_id),
+  CONSTRAINT quiz_session_answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.quiz_questions(question_id)
+);
+CREATE TABLE public.quiz_settings (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  quiz_id uuid UNIQUE,
+  lockdown_browser boolean DEFAULT false,
+  anti_screenshot boolean DEFAULT false,
+  disable_copy_paste boolean DEFAULT false,
+  disable_right_click boolean DEFAULT false,
+  require_fullscreen boolean DEFAULT false,
+  track_tab_switches boolean DEFAULT true,
+  track_device_changes boolean DEFAULT true,
+  track_ip_changes boolean DEFAULT true,
+  tab_switch_warning_threshold integer DEFAULT 3,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_settings_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.quiz_student_answers (
+  answer_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  attempt_id uuid,
+  question_id uuid,
+  choice_id uuid,
+  choice_ids ARRAY,
+  answer_text text,
+  answer_json jsonb,
+  points_awarded numeric DEFAULT 0,
+  is_correct boolean,
+  graded_by uuid,
+  graded_at timestamp with time zone,
+  grader_feedback text,
+  time_spent_seconds integer,
+  answered_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_student_answers_pkey PRIMARY KEY (answer_id),
+  CONSTRAINT quiz_student_answers_attempt_id_fkey FOREIGN KEY (attempt_id) REFERENCES public.quiz_attempts(attempt_id),
+  CONSTRAINT quiz_student_answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.quiz_questions(question_id),
+  CONSTRAINT quiz_student_answers_choice_id_fkey FOREIGN KEY (choice_id) REFERENCES public.quiz_choices(choice_id)
+);
+CREATE TABLE public.quiz_student_summary (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  student_id uuid,
+  quiz_id uuid,
+  last_attempt_id uuid,
+  attempts_count integer DEFAULT 1,
+  highest_score numeric,
+  lowest_score numeric,
+  latest_score numeric,
+  average_score numeric,
+  status character varying DEFAULT 'in_progress'::character varying,
+  passed boolean,
+  last_updated timestamp with time zone DEFAULT now(),
+  CONSTRAINT quiz_student_summary_pkey PRIMARY KEY (id),
+  CONSTRAINT quiz_student_summary_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id),
+  CONSTRAINT quiz_student_summary_last_attempt_id_fkey FOREIGN KEY (last_attempt_id) REFERENCES public.quiz_attempts(attempt_id)
+);
+CREATE TABLE public.quizzes (
+  quiz_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  title character varying NOT NULL,
+  description text,
+  subject_id uuid,
+  teacher_id uuid,
+  type character varying DEFAULT 'form'::character varying,
+  grading_type character varying DEFAULT 'auto'::character varying,
+  time_limit integer,
+  start_date timestamp with time zone,
+  end_date timestamp with time zone,
+  status character varying DEFAULT 'draft'::character varying,
+  version integer DEFAULT 1,
+  parent_quiz_id uuid,
+  visibility character varying DEFAULT 'section_only'::character varying,
+  question_pool_size integer,
+  questions_to_display integer,
+  allow_retakes boolean DEFAULT false,
+  allow_backtracking boolean DEFAULT true,
+  shuffle_questions boolean DEFAULT false,
+  shuffle_choices boolean DEFAULT false,
+  total_points numeric,
+  passing_score numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quizzes_pkey PRIMARY KEY (quiz_id),
+  CONSTRAINT quizzes_parent_quiz_id_fkey FOREIGN KEY (parent_quiz_id) REFERENCES public.quizzes(quiz_id)
+);
+CREATE TABLE public.roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT roles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.rooms (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  floor_id uuid NOT NULL,
+  name character varying,
+  room_number character varying NOT NULL,
+  capacity integer,
+  status character varying NOT NULL DEFAULT 'Available'::character varying CHECK (status::text = ANY (ARRAY['Available'::character varying, 'Occupied'::character varying, 'Maintenance'::character varying]::text[])),
+  display_order integer,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT rooms_pkey PRIMARY KEY (id),
+  CONSTRAINT rooms_floor_id_fkey FOREIGN KEY (floor_id) REFERENCES public.floors(id)
+);
+CREATE TABLE public.schedules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subject_id uuid NOT NULL,
+  teacher_id uuid NOT NULL,
+  section_id uuid NOT NULL,
+  room_id uuid NOT NULL,
+  building_id uuid NOT NULL,
+  day_of_week character varying NOT NULL CHECK (day_of_week::text = ANY (ARRAY['Monday'::character varying, 'Tuesday'::character varying, 'Wednesday'::character varying, 'Thursday'::character varying, 'Friday'::character varying, 'Saturday'::character varying, 'Sunday'::character varying]::text[])),
+  start_time time without time zone NOT NULL,
+  end_time time without time zone NOT NULL,
+  school_year character varying NOT NULL CHECK (school_year::text ~ '^\d{4}-\d{4}$'::text),
+  semester character varying NOT NULL CHECK (semester::text = ANY (ARRAY['1st'::character varying, '2nd'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT schedules_pkey PRIMARY KEY (id),
+  CONSTRAINT schedules_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id),
+  CONSTRAINT schedules_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.teachers(id),
+  CONSTRAINT schedules_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.sections(id),
+  CONSTRAINT schedules_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.rooms(id),
+  CONSTRAINT schedules_building_id_fkey FOREIGN KEY (building_id) REFERENCES public.buildings(id)
+);
+CREATE TABLE public.section_modules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  section_id uuid NOT NULL,
+  module_id uuid NOT NULL,
+  visible boolean DEFAULT true,
+  assigned_at timestamp with time zone DEFAULT now(),
+  assigned_by uuid,
+  CONSTRAINT section_modules_pkey PRIMARY KEY (id),
+  CONSTRAINT section_modules_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.sections(id),
+  CONSTRAINT section_modules_module_id_fkey FOREIGN KEY (module_id) REFERENCES public.modules(id),
+  CONSTRAINT section_modules_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  grade_level character varying,
+  teacher_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  room_id uuid,
+  building_id uuid,
+  floor_id uuid,
+  status character varying DEFAULT 'active'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying]::text[])),
+  CONSTRAINT sections_pkey PRIMARY KEY (id),
+  CONSTRAINT sections_floor_id_fkey FOREIGN KEY (floor_id) REFERENCES public.floors(id),
+  CONSTRAINT sections_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.student_club_memberships (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  club_id uuid NOT NULL,
+  position_id uuid NOT NULL,
+  joined_at date DEFAULT now(),
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT student_club_memberships_pkey PRIMARY KEY (id),
+  CONSTRAINT student_club_memberships_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id),
+  CONSTRAINT student_club_memberships_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(id),
+  CONSTRAINT student_club_memberships_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.club_positions(id)
+);
+CREATE TABLE public.student_rankings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  grade_level character varying NOT NULL,
+  rank integer NOT NULL CHECK (rank >= 1 AND rank <= 100),
+  honor_status character varying,
+  quarter character varying NOT NULL,
+  school_year character varying NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT student_rankings_pkey PRIMARY KEY (id),
+  CONSTRAINT student_rankings_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id)
+);
+CREATE TABLE public.student_schedule (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  schedule_id uuid NOT NULL,
+  student_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT student_schedule_pkey PRIMARY KEY (id),
+  CONSTRAINT student_schedule_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.schedules(id),
+  CONSTRAINT student_schedule_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id)
+);
+CREATE TABLE public.students (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  middle_name text,
+  student_id text NOT NULL,
+  lrn_id text NOT NULL,
+  grade_level text,
+  enrollment_year integer,
+  honor_status text,
+  rank integer,
+  section_id uuid,
+  age integer,
+  birthday date,
+  deleted_at timestamp with time zone,
+  CONSTRAINT students_pkey PRIMARY KEY (id),
+  CONSTRAINT students_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT students_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.sections(id)
+);
+CREATE TABLE public.students_gwa (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  gwa numeric NOT NULL CHECK (gwa >= 50.00 AND gwa <= 100.00),
+  grading_period character varying NOT NULL CHECK (grading_period::text = ANY (ARRAY['Q1'::character varying, 'Q2'::character varying, 'Q3'::character varying, 'Q4'::character varying]::text[])),
+  school_year character varying NOT NULL,
+  remarks character varying,
+  honor_status character varying NOT NULL DEFAULT 'None'::character varying,
+  recorded_by uuid NOT NULL,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT students_gwa_pkey PRIMARY KEY (id),
+  CONSTRAINT students_gwa_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id),
+  CONSTRAINT students_gwa_recorded_by_fkey FOREIGN KEY (recorded_by) REFERENCES public.teachers(id)
+);
+CREATE TABLE public.subjects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subject_name character varying NOT NULL,
+  description text,
+  grade_level integer,
+  department_id uuid,
+  color_hex character varying,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  code character varying UNIQUE,
+  status character varying DEFAULT 'inactive'::character varying,
+  visibility character varying DEFAULT 'public'::character varying,
+  grade_levels ARRAY DEFAULT '{}'::text[],
+  CONSTRAINT subjects_pkey PRIMARY KEY (id),
+  CONSTRAINT subjects_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id)
+);
+CREATE TABLE public.tags (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE,
+  color character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  slug character varying UNIQUE,
+  CONSTRAINT tags_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.teacher_file_downloads (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  file_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  downloaded_at timestamp with time zone DEFAULT now(),
+  ip_address text,
+  user_agent text,
+  success boolean NOT NULL DEFAULT true,
+  CONSTRAINT teacher_file_downloads_pkey PRIMARY KEY (id),
+  CONSTRAINT teacher_file_downloads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.teacher_files (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  folder_id uuid NOT NULL,
+  title character varying NOT NULL,
+  description text,
+  file_url character varying NOT NULL,
+  r2_file_key text NOT NULL UNIQUE,
+  file_size_bytes bigint NOT NULL,
+  mime_type character varying NOT NULL,
+  original_filename character varying NOT NULL,
+  is_deleted boolean DEFAULT false,
+  deleted_at timestamp with time zone,
+  deleted_by uuid,
+  uploaded_by uuid NOT NULL,
+  updated_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT teacher_files_pkey PRIMARY KEY (id),
+  CONSTRAINT teacher_files_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.teacher_folders(id),
+  CONSTRAINT teacher_files_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES public.users(id),
+  CONSTRAINT teacher_files_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id),
+  CONSTRAINT teacher_files_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.teacher_folders (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  description text,
+  parent_id uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at timestamp with time zone,
+  deleted_by uuid,
+  created_by uuid,
+  updated_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT teacher_folders_pkey PRIMARY KEY (id),
+  CONSTRAINT teacher_folders_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.teacher_folders(id),
+  CONSTRAINT teacher_folders_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES public.users(id),
+  CONSTRAINT teacher_folders_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT teacher_folders_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.teachers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  middle_name character varying,
+  age integer,
+  subject_specialization_id uuid,
+  department_id uuid,
+  advisory_section_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  birthday date,
+  deleted_at timestamp with time zone,
+  CONSTRAINT teachers_pkey PRIMARY KEY (id),
+  CONSTRAINT teachers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT teachers_subject_specialization_id_fkey FOREIGN KEY (subject_specialization_id) REFERENCES public.subjects(id),
+  CONSTRAINT teachers_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id),
+  CONSTRAINT teachers_advisory_section_id_fkey FOREIGN KEY (advisory_section_id) REFERENCES public.sections(id)
+);
+CREATE TABLE public.user_domain_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  user_id uuid,
+  domain_role_id uuid,
+  CONSTRAINT user_domain_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_domain_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_domain_roles_domain_role_id_fkey FOREIGN KEY (domain_role_id) REFERENCES public.domain_roles(id)
+);
+CREATE TABLE public.user_positions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  position_id uuid NOT NULL,
+  assigned_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_positions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_positions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_positions_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions(id)
+);
+CREATE TABLE public.user_preferences (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  web_theme character varying NOT NULL DEFAULT 'light'::character varying,
+  desktop_theme character varying NOT NULL DEFAULT 'light'::character varying,
+  language character varying NOT NULL DEFAULT 'en'::character varying,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  deleted_at timestamp without time zone,
+  CONSTRAINT user_preferences_pkey PRIMARY KEY (id),
+  CONSTRAINT user_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  full_name character varying,
+  email character varying NOT NULL UNIQUE,
+  password_hash character varying,
+  role_id uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  status character varying NOT NULL DEFAULT 'Active'::character varying,
+  last_login_at timestamp with time zone,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
