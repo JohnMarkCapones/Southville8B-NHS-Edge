@@ -4,12 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 export default function SchoolInformationScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const router = useRouter();
   
   // Fetch current user data
@@ -20,15 +20,18 @@ export default function SchoolInformationScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
+          <View style={[styles.header, { 
+            backgroundColor: colors.background,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+          }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1976D2" />
+              <Ionicons name="arrow-back" size={24} color={colors.tint} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>School Information</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>School Information</Text>
             <View style={styles.placeholder} />
           </View>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading school information...</Text>
+            <Text style={[styles.loadingText, { color: colors.icon }]}>Loading school information...</Text>
           </View>
         </View>
       </>
@@ -40,15 +43,18 @@ export default function SchoolInformationScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
+          <View style={[styles.header, { 
+            backgroundColor: colors.background,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+          }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1976D2" />
+              <Ionicons name="arrow-back" size={24} color={colors.tint} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>School Information</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>School Information</Text>
             <View style={styles.placeholder} />
           </View>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Failed to load school information: {userError}</Text>
+            <Text style={[styles.errorText, { color: '#F44336' }]}>Failed to load school information: {userError}</Text>
           </View>
         </View>
       </>
@@ -58,87 +64,100 @@ export default function SchoolInformationScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { 
+          backgroundColor: colors.background,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+        }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1976D2" />
+            <Ionicons name="arrow-back" size={24} color={colors.tint} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>School Information</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>School Information</Text>
           <View style={styles.placeholder} />
         </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         
         {/* School Overview Card */}
-        <View style={styles.overviewCard}>
-          <View style={styles.schoolLogo}>
-            <Ionicons name="school" size={48} color="#1976D2" />
+        <View style={[styles.overviewCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
+          <View style={[styles.schoolLogo, { 
+            backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : '#E3F2FD'
+          }]}>
+            <Ionicons name="school" size={48} color={colors.tint} />
           </View>
-          <Text style={styles.schoolName}>Southville 8B</Text>
-          <Text style={styles.schoolType}>National High School</Text>
-          <Text style={styles.schoolDescription}>
+          <Text style={[styles.schoolName, { color: colors.text }]}>Southville 8B</Text>
+          <Text style={[styles.schoolType, { color: colors.tint }]}>National High School</Text>
+          <Text style={[styles.schoolDescription, { color: colors.icon }]}>
             A premier educational institution committed to academic excellence and student development.
           </Text>
         </View>
 
         {/* Student Information */}
         {user?.student && (
-          <View style={styles.detailsCard}>
-            <Text style={styles.cardTitle}>Your Academic Information</Text>
+          <View style={[styles.detailsCard, { 
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+            borderWidth: isDark ? 1 : 0
+          }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Your Academic Information</Text>
             
             <View style={styles.detailRow}>
-              <Ionicons name="school-outline" size={20} color="#1976D2" />
+              <Ionicons name="school-outline" size={20} color={colors.tint} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Grade Level</Text>
-                <Text style={styles.detailValue}>{user.student.grade_level || 'Not specified'}</Text>
+                <Text style={[styles.detailLabel, { color: colors.icon }]}>Grade Level</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.grade_level || 'Not specified'}</Text>
               </View>
             </View>
 
             {user.student.section?.name && (
               <View style={styles.detailRow}>
-                <Ionicons name="people-outline" size={20} color="#1976D2" />
+                <Ionicons name="people-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Section</Text>
-                  <Text style={styles.detailValue}>{user.student.section.name}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Section</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.section.name}</Text>
                 </View>
               </View>
             )}
 
             <View style={styles.detailRow}>
-              <Ionicons name="id-card-outline" size={20} color="#1976D2" />
+              <Ionicons name="id-card-outline" size={20} color={colors.tint} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Student ID</Text>
-                <Text style={styles.detailValue}>{user.student.student_id || 'Not available'}</Text>
+                <Text style={[styles.detailLabel, { color: colors.icon }]}>Student ID</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.student_id || 'Not available'}</Text>
               </View>
             </View>
 
             {user.student.lrn_id && (
               <View style={styles.detailRow}>
-                <Ionicons name="card-outline" size={20} color="#1976D2" />
+                <Ionicons name="card-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>LRN</Text>
-                  <Text style={styles.detailValue}>{user.student.lrn_id}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>LRN</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.lrn_id}</Text>
                 </View>
               </View>
             )}
 
             {user.student.honor_status && (
               <View style={styles.detailRow}>
-                <Ionicons name="trophy-outline" size={20} color="#1976D2" />
+                <Ionicons name="trophy-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Honor Status</Text>
-                  <Text style={styles.detailValue}>{user.student.honor_status}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Honor Status</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.honor_status}</Text>
                 </View>
               </View>
             )}
 
             {user.student.rank && (
               <View style={styles.detailRow}>
-                <Ionicons name="medal-outline" size={20} color="#1976D2" />
+                <Ionicons name="medal-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Class Rank</Text>
-                  <Text style={styles.detailValue}>#{user.student.rank}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Class Rank</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>#{user.student.rank}</Text>
                 </View>
               </View>
             )}
@@ -146,70 +165,78 @@ export default function SchoolInformationScreen() {
         )}
 
         {/* School Details */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>School Details</Text>
+        <View style={[styles.detailsCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>School Details</Text>
           
           <View style={styles.detailRow}>
-            <Ionicons name="location-outline" size={20} color="#1976D2" />
+            <Ionicons name="location-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Address</Text>
-              <Text style={styles.detailValue}>Southville 8B, Philippines</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Address</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>Southville 8B, Philippines</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="call-outline" size={20} color="#1976D2" />
+            <Ionicons name="call-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Contact</Text>
-              <Text style={styles.detailValue}>Contact school administration</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Contact</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>Contact school administration</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={20} color="#1976D2" />
+            <Ionicons name="calendar-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Academic Year</Text>
-              <Text style={styles.detailValue}>2024-2025</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Academic Year</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>2024-2025</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="time-outline" size={20} color="#1976D2" />
+            <Ionicons name="time-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>School Hours</Text>
-              <Text style={styles.detailValue}>7:00 AM - 5:00 PM</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>School Hours</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>7:00 AM - 5:00 PM</Text>
             </View>
           </View>
         </View>
 
         {/* Programs and Services */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>Programs & Services</Text>
+        <View style={[styles.detailsCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Programs & Services</Text>
           
           <View style={styles.programList}>
             <View style={styles.programItem}>
-              <Ionicons name="book-outline" size={20} color="#1976D2" />
-              <Text style={styles.programText}>Academic Excellence Program</Text>
+              <Ionicons name="book-outline" size={20} color={colors.tint} />
+              <Text style={[styles.programText, { color: colors.text }]}>Academic Excellence Program</Text>
             </View>
             <View style={styles.programItem}>
-              <Ionicons name="people-outline" size={20} color="#1976D2" />
-              <Text style={styles.programText}>Student Organizations</Text>
+              <Ionicons name="people-outline" size={20} color={colors.tint} />
+              <Text style={[styles.programText, { color: colors.text }]}>Student Organizations</Text>
             </View>
             <View style={styles.programItem}>
-              <Ionicons name="trophy-outline" size={20} color="#1976D2" />
-              <Text style={styles.programText}>Sports & Athletics</Text>
+              <Ionicons name="trophy-outline" size={20} color={colors.tint} />
+              <Text style={[styles.programText, { color: colors.text }]}>Sports & Athletics</Text>
             </View>
             <View style={styles.programItem}>
-              <Ionicons name="musical-notes-outline" size={20} color="#1976D2" />
-              <Text style={styles.programText}>Arts & Culture</Text>
+              <Ionicons name="musical-notes-outline" size={20} color={colors.tint} />
+              <Text style={[styles.programText, { color: colors.text }]}>Arts & Culture</Text>
             </View>
             <View style={styles.programItem}>
-              <Ionicons name="library-outline" size={20} color="#1976D2" />
-              <Text style={styles.programText}>Library Services</Text>
+              <Ionicons name="library-outline" size={20} color={colors.tint} />
+              <Text style={[styles.programText, { color: colors.text }]}>Library Services</Text>
             </View>
             <View style={styles.programItem}>
-              <Ionicons name="medical-outline" size={20} color="#1976D2" />
-              <Text style={styles.programText}>Health Services</Text>
+              <Ionicons name="medical-outline" size={20} color={colors.tint} />
+              <Text style={[styles.programText, { color: colors.text }]}>Health Services</Text>
             </View>
           </View>
         </View>
@@ -231,7 +258,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -244,7 +270,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
   },
   placeholder: {
     width: 40,
@@ -259,7 +284,6 @@ const styles = StyleSheet.create({
   
   // School Overview Card
   overviewCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
@@ -273,7 +297,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -281,25 +304,21 @@ const styles = StyleSheet.create({
   schoolName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   schoolType: {
     fontSize: 16,
-    color: '#1976D2',
     fontWeight: '600',
     marginBottom: 16,
   },
   schoolDescription: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     lineHeight: 24,
   },
   
   // Details Cards
   detailsCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
@@ -312,7 +331,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   detailRow: {
@@ -327,12 +345,10 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#666666',
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 16,
-    color: '#1A1A1A',
     fontWeight: '600',
   },
   
@@ -348,7 +364,6 @@ const styles = StyleSheet.create({
   },
   programText: {
     fontSize: 16,
-    color: '#1A1A1A',
     fontWeight: '500',
   },
   
@@ -361,7 +376,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666666',
   },
   errorContainer: {
     flex: 1,
@@ -371,7 +385,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#F44336',
     textAlign: 'center',
   },
 });

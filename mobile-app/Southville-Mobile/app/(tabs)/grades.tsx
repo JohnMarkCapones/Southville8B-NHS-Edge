@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, ActivityIndicator, Text, Image, Dimensions } from 'react-native';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, TouchableOpacity, ActivityIndicator, Text, Image, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -15,20 +16,24 @@ import { ThemedView } from '@/components/themed-view';
 import { ReusableHeader } from '@/components/ui/reusable-header';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useAuthSession } from '@/hooks/use-auth-session';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useMyGwa } from '@/hooks/use-my-gwa';
 import { GradingPeriod, HonorStatus } from '@/lib/types/gwa';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function GradesScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const router = useRouter();
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   
   // Filter states
   const [selectedQuarter, setSelectedQuarter] = useState<GradingPeriod | 'All'>('All');
   const [selectedSchoolYear, setSelectedSchoolYear] = useState<string>('');
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Animation values
   const cardScale = useSharedValue(1);
@@ -49,6 +54,36 @@ export default function GradesScreen() {
 
   // Fetch GWA records
   const { gwaRecords, loading, error, refetch } = useMyGwa(filterParams);
+
+  // Auth error handling
+  const { handleAuthError } = useAuthErrorHandler();
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch(filterParams);
+    } catch (error) {
+      console.error('Error refreshing grades:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch, filterParams]);
+
+  // Auto-redirect to login on authentication errors
+  useEffect(() => {
+    console.log('[GRADES][AUTO-REDIRECT] Checking for auth errors', {
+      hasError: !!error
+    });
+    
+    // Check for authentication error using centralized handler
+    if (error) {
+      const wasRedirected = handleAuthError(error);
+      if (wasRedirected) {
+        console.log('[GRADES][AUTO-REDIRECT] Auth error handled - redirecting to login');
+      }
+    }
+  }, [error, handleAuthError]);
 
   // Get unique school years for dropdown
   const schoolYears = useMemo(() => {
@@ -127,34 +162,51 @@ export default function GradesScreen() {
       <ReusableHeader title="Grades" />
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}>
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }>
       
       {/* Creative Header Section */}
-      <View style={styles.creativeHeader}>
+      <View style={[styles.creativeHeader, { 
+        backgroundColor: isDark ? 'rgba(25, 118, 210, 0.1)' : 'rgba(227, 242, 253, 0.8)',
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+        borderWidth: isDark ? 1 : 0
+      }]}>
         <View style={styles.headerIllustration}>
-          <Ionicons name="school-outline" size={40} color="#1976D2" />
+          <Ionicons name="school-outline" size={40} color={colors.tint} />
           <View style={styles.floatingStars}>
             <Text style={styles.star}>⭐</Text>
             <Text style={styles.star}>🌟</Text>
             <Text style={styles.star}>✨</Text>
           </View>
         </View>
-        <Text style={styles.headerTitle}>Your Academic Journey</Text>
-        <Text style={styles.headerSubtitle}>
+        <Text style={[styles.headerTitle, { color: colors.tint }]}>Your Academic Journey</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.icon }]}>
           Track your progress and celebrate your achievements! 🎓
         </Text>
       </View>
 
       {/* Creative Filter Section */}
-      <View style={styles.filterCard}>
+      <View style={[styles.filterCard, { 
+        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+        borderWidth: 1
+      }]}>
         <View style={styles.filterHeader}>
-          <Ionicons name="filter-outline" size={20} color="#1976D2" />
-          <Text style={styles.filterTitle}>Filter Your Grades</Text>
+          <Ionicons name="filter-outline" size={20} color={colors.tint} />
+          <Text style={[styles.filterTitle, { color: colors.tint }]}>Filter Your Grades</Text>
         </View>
         
         {/* Quarter Filter */}
         <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>📅 Quarter:</Text>
+          <Text style={[styles.filterLabel, { color: colors.text }]}>📅 Quarter:</Text>
           <View style={styles.chipContainer}>
             {(['All', GradingPeriod.Q1, GradingPeriod.Q2, GradingPeriod.Q3, GradingPeriod.Q4] as const).map((quarter) => (
               <TouchableOpacity
@@ -162,15 +214,15 @@ export default function GradesScreen() {
                 style={[
                   styles.chip,
                   { 
-                    backgroundColor: selectedQuarter === quarter ? '#1976D2' : '#F5F5F5',
-                    borderColor: selectedQuarter === quarter ? '#1976D2' : '#E0E0E0'
+                    backgroundColor: selectedQuarter === quarter ? (isDark ? '#404040' : colors.tint) : (isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'),
+                    borderColor: selectedQuarter === quarter ? (isDark ? '#404040' : colors.tint) : (isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0')
                   }
                 ]}
                 onPress={() => handleQuarterChange(quarter)}>
                 <Text 
                   style={[
                     styles.chipText,
-                    { color: selectedQuarter === quarter ? '#FFFFFF' : '#333333' }
+                    { color: selectedQuarter === quarter ? '#FFFFFF' : colors.text }
                   ]}>
                   {quarter}
                 </Text>
@@ -181,21 +233,21 @@ export default function GradesScreen() {
 
         {/* School Year Filter */}
         <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>🎓 School Year:</Text>
+          <Text style={[styles.filterLabel, { color: colors.text }]}>🎓 School Year:</Text>
           <View style={styles.chipContainer}>
             <TouchableOpacity
               style={[
                 styles.chip,
                 { 
-                  backgroundColor: selectedSchoolYear === '' ? '#1976D2' : '#F5F5F5',
-                  borderColor: selectedSchoolYear === '' ? '#1976D2' : '#E0E0E0'
+                  backgroundColor: selectedSchoolYear === '' ? (isDark ? '#404040' : colors.tint) : (isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'),
+                  borderColor: selectedSchoolYear === '' ? (isDark ? '#404040' : colors.tint) : (isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0')
                 }
               ]}
               onPress={() => handleSchoolYearChange('')}>
               <Text 
                 style={[
                   styles.chipText,
-                  { color: selectedSchoolYear === '' ? '#FFFFFF' : '#333333' }
+                  { color: selectedSchoolYear === '' ? '#FFFFFF' : colors.text }
                 ]}>
                 All Years
               </Text>
@@ -206,15 +258,15 @@ export default function GradesScreen() {
                 style={[
                   styles.chip,
                   { 
-                    backgroundColor: selectedSchoolYear === year ? '#1976D2' : '#F5F5F5',
-                    borderColor: selectedSchoolYear === year ? '#1976D2' : '#E0E0E0'
+                    backgroundColor: selectedSchoolYear === year ? (isDark ? '#404040' : colors.tint) : (isDark ? 'rgba(255, 255, 255, 0.1)' : '#F5F5F5'),
+                    borderColor: selectedSchoolYear === year ? (isDark ? '#404040' : colors.tint) : (isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0')
                   }
                 ]}
                 onPress={() => handleSchoolYearChange(year)}>
                 <Text 
                   style={[
                     styles.chipText,
-                    { color: selectedSchoolYear === year ? '#FFFFFF' : '#333333' }
+                    { color: selectedSchoolYear === year ? '#FFFFFF' : colors.text }
                   ]}>
                   {year}
                 </Text>
@@ -227,22 +279,25 @@ export default function GradesScreen() {
       {/* Content Section */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1976D2" />
-          <Text style={styles.loadingText}>
+          <ActivityIndicator size="large" color={colors.tint} />
+          <Text style={[styles.loadingText, { color: colors.icon }]}>
             Loading your amazing grades... ✨
           </Text>
         </View>
       ) : error ? (
-        <View style={styles.errorCard}>
+        <View style={[styles.errorCard, { 
+          backgroundColor: isDark ? 'rgba(255, 107, 107, 0.1)' : '#FFEBEE',
+          borderColor: isDark ? 'rgba(255, 107, 107, 0.3)' : '#FFCDD2'
+        }]}>
           <Ionicons name="alert-circle-outline" size={48} color="#F44336" />
-          <Text style={styles.errorText}>
+          <Text style={[styles.errorText, { color: '#F44336' }]}>
             Oops! Something went wrong 😅
           </Text>
-          <Text style={styles.errorSubtext}>
+          <Text style={[styles.errorSubtext, { color: colors.icon }]}>
             {error}
           </Text>
           <TouchableOpacity
-            style={styles.retryButton}
+            style={[styles.retryButton, { backgroundColor: colors.tint }]}
             onPress={() => refetch()}>
             <Ionicons name="refresh-outline" size={20} color="#FFFFFF" />
             <Text style={styles.retryButtonText}>Try Again</Text>
@@ -262,6 +317,9 @@ export default function GradesScreen() {
                 styles.gwaCard,
                 { 
                   backgroundColor: cardGradient[0],
+                  opacity: isDark ? 0.6 : 0.7,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+                  borderWidth: 1,
                   height: isExpanded ? 280 : 200,
                 }
               ]}>
@@ -297,7 +355,10 @@ export default function GradesScreen() {
               
               {/* Expand Button */}
               <TouchableOpacity
-                style={styles.expandButton}
+                style={[styles.expandButton, { 
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.3)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.5)'
+                }]}
                 onPress={() => handleCardExpand(record.id)}>
                 <Text style={styles.expandButtonText}>
                   {isExpanded ? 'Show Less ↑' : 'View Details ↓'}
@@ -306,7 +367,9 @@ export default function GradesScreen() {
               
               {/* Expanded Content */}
               {isExpanded && (
-                <Animated.View style={styles.expandedContent}>
+                <Animated.View style={[styles.expandedContent, { 
+                  borderTopColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.3)' 
+                }]}>
                   <View style={styles.detailsRow}>
                     <Ionicons name="calendar-outline" size={16} color="#FFFFFF" />
                     <Text style={styles.detailText}>School Year: {record.school_year}</Text>
@@ -327,13 +390,16 @@ export default function GradesScreen() {
           );
         })
       ) : (
-        <View style={styles.emptyCard}>
-          <Ionicons name="book-outline" size={64} color="#E0E0E0" />
-          <Text style={styles.emptyTitle}>No Grades Yet 📚</Text>
-          <Text style={styles.emptyText}>
+        <View style={[styles.emptyCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8F9FA',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E9ECEF'
+        }]}>
+          <Ionicons name="book-outline" size={64} color={colors.icon} />
+          <Text style={[styles.emptyTitle, { color: colors.icon }]}>No Grades Yet 📚</Text>
+          <Text style={[styles.emptyText, { color: colors.icon }]}>
             No GWA records found for the selected filters.
           </Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptySubtext, { color: colors.icon }]}>
             Keep studying and your grades will appear here! 🌟
           </Text>
         </View>
@@ -364,7 +430,6 @@ const styles = StyleSheet.create({
   creativeHeader: {
     alignItems: 'center',
     paddingVertical: 20,
-    backgroundColor: 'linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%)',
     borderRadius: 20,
     marginBottom: 10,
     position: 'relative',
@@ -388,20 +453,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1976D2',
     marginBottom: 8,
     textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     paddingHorizontal: 20,
   },
   
   // Filter Card
   filterCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
@@ -420,7 +482,6 @@ const styles = StyleSheet.create({
   filterTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1976D2',
   },
   filterGroup: {
     marginBottom: 16,
@@ -428,7 +489,6 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
     marginBottom: 8,
   },
   chipContainer: {
@@ -455,35 +515,29 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
   },
   
   // Error State
   errorCard: {
-    backgroundColor: '#FFEBEE',
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
     gap: 16,
     borderWidth: 2,
-    borderColor: '#FFCDD2',
   },
   errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#D32F2F',
     textAlign: 'center',
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#666666',
     textAlign: 'center',
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1976D2',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
@@ -507,6 +561,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     position: 'relative',
     overflow: 'hidden',
+    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -618,7 +673,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.3)',
     gap: 12,
   },
   detailsRow: {
@@ -635,29 +689,24 @@ const styles = StyleSheet.create({
   
   // Empty State
   emptyCard: {
-    backgroundColor: '#F8F9FA',
     borderRadius: 20,
     padding: 40,
     alignItems: 'center',
     gap: 16,
     borderWidth: 2,
-    borderColor: '#E9ECEF',
     borderStyle: 'dashed',
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#6C757D',
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
-    color: '#6C757D',
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#ADB5BD',
     textAlign: 'center',
     fontStyle: 'italic',
   },

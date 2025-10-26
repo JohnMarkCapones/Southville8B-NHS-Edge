@@ -4,34 +4,43 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
 
 export default function AccountSecurityScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const router = useRouter();
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { 
+          backgroundColor: colors.background,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+        }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1976D2" />
+            <Ionicons name="arrow-back" size={24} color={colors.tint} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Account Security</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Account Security</Text>
           <View style={styles.placeholder} />
         </View>
 
       {/* Coming Soon Content */}
       <View style={styles.content}>
-        <View style={styles.comingSoonCard}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="shield-checkmark-outline" size={64} color="#1976D2" />
+        <View style={[styles.comingSoonCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
+          <View style={[styles.iconContainer, { 
+            backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : '#E3F2FD'
+          }]}>
+            <Ionicons name="shield-checkmark-outline" size={64} color={colors.tint} />
           </View>
-          <Text style={styles.comingSoonTitle}>Coming Soon</Text>
-          <Text style={styles.comingSoonDescription}>
+          <Text style={[styles.comingSoonTitle, { color: colors.text }]}>Coming Soon</Text>
+          <Text style={[styles.comingSoonDescription, { color: colors.icon }]}>
             Account security features are currently under development. 
             You'll be able to manage your password, enable two-factor authentication, 
             and review your account activity here.
@@ -39,20 +48,20 @@ export default function AccountSecurityScreen() {
           
           <View style={styles.featuresList}>
             <View style={styles.featureItem}>
-              <Ionicons name="key-outline" size={20} color="#1976D2" />
-              <Text style={styles.featureText}>Change Password</Text>
+              <Ionicons name="key-outline" size={20} color={colors.tint} />
+              <Text style={[styles.featureText, { color: colors.text }]}>Change Password</Text>
             </View>
             <View style={styles.featureItem}>
-              <Ionicons name="shield-outline" size={20} color="#1976D2" />
-              <Text style={styles.featureText}>Two-Factor Authentication</Text>
+              <Ionicons name="shield-outline" size={20} color={colors.tint} />
+              <Text style={[styles.featureText, { color: colors.text }]}>Two-Factor Authentication</Text>
             </View>
             <View style={styles.featureItem}>
-              <Ionicons name="time-outline" size={20} color="#1976D2" />
-              <Text style={styles.featureText}>Account Activity</Text>
+              <Ionicons name="time-outline" size={20} color={colors.tint} />
+              <Text style={[styles.featureText, { color: colors.text }]}>Account Activity</Text>
             </View>
             <View style={styles.featureItem}>
-              <Ionicons name="notifications-outline" size={20} color="#1976D2" />
-              <Text style={styles.featureText}>Security Notifications</Text>
+              <Ionicons name="notifications-outline" size={20} color={colors.tint} />
+              <Text style={[styles.featureText, { color: colors.text }]}>Security Notifications</Text>
             </View>
           </View>
         </View>
@@ -73,7 +82,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -86,7 +94,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
   },
   placeholder: {
     width: 40,
@@ -98,7 +105,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   comingSoonCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 40,
     alignItems: 'center',
@@ -114,7 +120,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -122,12 +127,10 @@ const styles = StyleSheet.create({
   comingSoonTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 16,
   },
   comingSoonDescription: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -144,7 +147,6 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 16,
-    color: '#1A1A1A',
     fontWeight: '500',
   },
 });

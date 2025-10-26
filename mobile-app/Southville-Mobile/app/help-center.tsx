@@ -1,246 +1,502 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import { router } from 'expo-router';
+import { helpArticles, helpCategories, taskCategories, faqs, searchHelpContent, HelpArticle, FAQ } from '@/constants/help-content';
+import { useTheme } from '@/contexts/theme-context';
+import { Colors } from '@/constants/theme';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+type TabType = 'browse' | 'tasks' | 'faq';
 
-interface HelpCategory {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  color: string;
-}
-
-interface PopularQuestion {
-  id: string;
-  question: string;
-  answer: string;
-}
-
-export default function HelpCenterScreen() {
-  const router = useRouter();
+export default function HelpCenter() {
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
+  const [activeTab, setActiveTab] = useState<TabType>('browse');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ articles: HelpArticle[]; faqs: FAQ[] }>({ articles: [], faqs: [] });
+  const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
+  const [expandedFaqId, setExpandedFaqId] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: withTiming(1, {
-        duration: 800,
-        easing: Easing.out(Easing.ease),
-      }),
-      transform: [
-        {
-          translateY: withTiming(0, {
-            duration: 800,
-            easing: Easing.out(Easing.ease),
-          }),
-        },
-      ],
-    };
-  });
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Reset search state and clear results
+      setSearchQuery('');
+      setSearchResults({ articles: [], faqs: [] });
+      setSelectedCategory(null);
+      setExpandedArticleId(null);
+      setExpandedFaqId(null);
+      // Simulate refresh delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error('Error refreshing help center:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
-  const handleBack = () => {
-    router.back();
+  // Debounced search
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setIsSearching(true);
+      const timer = setTimeout(() => {
+        const results = searchHelpContent(searchQuery, helpArticles, faqs);
+        setSearchResults(results);
+        setIsSearching(false);
+      }, 300);
+
+      return () => {
+        clearTimeout(timer);
+        setIsSearching(false);
+      };
+    } else {
+      setSearchResults({ articles: [], faqs: [] });
+      setIsSearching(false);
+    }
+  }, [searchQuery]);
+
+  const toggleArticle = (id: string) => {
+    setExpandedArticleId(expandedArticleId === id ? null : id);
   };
 
-  const handleGettingStarted = () => {
-    // Navigate to getting started guide
-    console.log('Navigate to Getting Started');
+  const toggleFaq = (id: string) => {
+    setExpandedFaqId(expandedFaqId === id ? null : id);
   };
 
-  const handleCategoryPress = (category: HelpCategory) => {
-    // Navigate to category details
-    console.log('Navigate to category:', category.title);
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults({ articles: [], faqs: [] });
   };
 
-  const handleQuestionPress = (question: PopularQuestion) => {
-    // Show question details
-    console.log('Show question details:', question.question);
+  const handleCategoryPress = (categoryId: string) => {
+    setSelectedCategory(selectedCategory === categoryId ? null : categoryId);
   };
 
-  const categories: HelpCategory[] = [
-    {
-      id: '1',
-      title: 'Student & Faculty Accounts',
-      description: 'Explore how to setup your account navigate and maximize',
-      icon: 'person-outline',
-      color: '#2196F3',
-    },
-    {
-      id: '2',
-      title: 'Schedule & Calendar',
-      description: 'School events, class schedules, examination dates, holiday notices',
-      icon: 'calendar-outline',
-      color: '#4CAF50',
-    },
-    {
-      id: '3',
-      title: 'Grades & Report Cards',
-      description: 'Viewing, downloading, and interpreting grades, report generation, grading policies',
-      icon: 'document-text-outline',
-      color: '#FF9800',
-    },
-    {
-      id: '4',
-      title: 'Privacy & Security',
-      description: 'Data privacy, account security, authentication, user rights',
-      icon: 'lock-closed-outline',
-      color: '#F44336',
-    },
-  ];
+  const getCategoryArticles = (categoryId: string) => {
+    const category = [...helpCategories, ...taskCategories].find(cat => cat.id === categoryId);
+    if (!category) return [];
+    return helpArticles.filter(article => category.articleIds.includes(article.id));
+  };
 
-  const popularQuestions: PopularQuestion[] = [
-    {
-      id: '1',
-      question: 'I forgot my password. How can I reset it?',
-      answer: 'Click on the "Forgot Password" link on the login page and follow the instructions to reset your password via your registered email.',
-    },
-    {
-      id: '2',
-      question: 'Where can I view my grades?',
-      answer: 'Grades can be viewed in the "Grades" tab after each grading period is finalized. You can also filter by quarter and school year.',
-    },
-    {
-      id: '3',
-      question: 'How do I check my class schedule?',
-      answer: 'Navigate to the "Schedule" tab to view your weekly class schedule. The schedule shows real-time dates and upcoming classes.',
-    },
-    {
-      id: '4',
-      question: 'Where can I see school announcements?',
-      answer: 'All school announcements are displayed on the home screen. Check the announcements section for the latest updates.',
-    },
-    {
-      id: '5',
-      question: 'How do I update my profile information?',
-      answer: 'Go to the "Profile" tab to view and update your personal information, contact details, and student information.',
-    },
-  ];
+  const renderSearchResults = () => {
+    if (!searchQuery.trim()) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Background Circles */}
-      <Animated.View style={[styles.circleBackgroundLeft, animatedStyle]} />
-      <Animated.View style={[styles.circleBackgroundCenter, animatedStyle]} />
-      <Animated.View style={[styles.circleBackgroundRight, animatedStyle]} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+      <View style={styles.searchResults}>
+        <View style={styles.searchResultsHeader}>
+          <Text style={styles.searchResultsTitle}>
+            Search Results ({searchResults.articles.length + searchResults.faqs.length})
+          </Text>
+          <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
+            <Ionicons name="close-circle" size={20} color="#666" />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Help</Text>
-          <Text style={styles.headerTitleAccent}>Center</Text>
         </View>
-        <View style={styles.placeholder} />
+
+        {isSearching ? (
+          <View style={styles.searchLoading}>
+            <ActivityIndicator size="small" color="#1976D2" />
+            <Text style={styles.searchLoadingText}>Searching...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Search Results - Articles */}
+            {searchResults.articles.map((article) => (
+              <TouchableOpacity
+                key={article.id}
+                style={styles.searchResultItem}
+                onPress={() => toggleArticle(article.id)}
+              >
+                <View style={styles.searchResultHeader}>
+                  <View style={styles.searchResultIcon}>
+                    <Ionicons name="document-text-outline" size={16} color="#1976D2" />
+                  </View>
+                  <Text style={styles.searchResultTitle}>{article.title}</Text>
+                  <Ionicons
+                    name={expandedArticleId === article.id ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#666"
+                  />
+                </View>
+                {expandedArticleId === article.id && (
+                  <View style={styles.searchResultContent}>
+                    <Text style={styles.searchResultText}>{article.content}</Text>
+                    {article.steps && article.steps.length > 0 && (
+                      <View style={styles.stepsContainer}>
+                        <Text style={styles.stepsTitle}>Steps:</Text>
+                        {article.steps.map((step, index) => (
+                          <Text key={index} style={styles.stepText}>{index + 1}. {step}</Text>
+                        ))}
+                      </View>
+                    )}
+                    {article.tips && article.tips.length > 0 && (
+                      <View style={styles.tipsContainer}>
+                        <Text style={styles.tipsTitle}>Tips:</Text>
+                        {article.tips.map((tip, index) => (
+                          <Text key={index} style={styles.tipText}>• {tip}</Text>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            {/* Search Results - FAQs */}
+            {searchResults.faqs.map((faq) => (
+              <TouchableOpacity
+                key={faq.id}
+                style={styles.searchResultItem}
+                onPress={() => toggleFaq(faq.id)}
+              >
+                <View style={styles.searchResultHeader}>
+                  <View style={styles.searchResultIcon}>
+                    <Ionicons name="help-circle-outline" size={16} color="#FF9800" />
+                  </View>
+                  <Text style={styles.searchResultTitle}>{faq.question}</Text>
+                  <Ionicons
+                    name={expandedFaqId === faq.id ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#666"
+                  />
+                </View>
+                {expandedFaqId === faq.id && (
+                  <View style={styles.searchResultContent}>
+                    <Text style={styles.searchResultText}>{faq.answer}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            {searchResults.articles.length === 0 && searchResults.faqs.length === 0 && (
+              <View style={styles.noResults}>
+                <Ionicons name="search-outline" size={48} color="#CCC" />
+                <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
+                <Text style={styles.noResultsSubtext}>Try different keywords or browse categories</Text>
+              </View>
+            )}
+          </>
+        )}
       </View>
+    );
+  };
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Animated.View style={[styles.contentContainer, animatedStyle]}>
-          {/* Greeting Section */}
-          <View style={styles.greetingSection}>
-            <Text style={styles.greetingTitle}>How can we help you?</Text>
-            <Text style={styles.greetingSubtitle}>We are happy to help you anytime.</Text>
+  const renderBrowseContent = () => {
+    return (
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }>
+        <Text style={styles.sectionTitle}>Browse by Feature</Text>
+        
+        <View style={styles.categoriesGrid}>
+          {helpCategories.map((category) => (
+            <TouchableOpacity 
+              key={category.id} 
+              style={styles.categoryCard}
+              onPress={() => handleCategoryPress(category.id)}
+            >
+              <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
+                <Ionicons name={category.icon as any} size={24} color={category.color} />
+          </View>
+              <Text style={styles.categoryTitle}>{category.title}</Text>
+              <Text style={styles.categoryDescription}>{category.description}</Text>
+              <Text style={styles.categoryCount}>{category.articleIds.length} articles</Text>
+            </TouchableOpacity>
+          ))}
           </View>
 
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search for help"
-              placeholderTextColor="#999999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <Ionicons name="search" size={20} color="#999999" style={styles.searchIcon} />
-          </View>
-
-          {/* Getting Started Card */}
-          <TouchableOpacity style={styles.gettingStartedCard} onPress={handleGettingStarted}>
-            <View style={styles.gettingStartedContent}>
-              <Text style={styles.gettingStartedTitle}>Getting Started</Text>
-              <Text style={styles.gettingStartedDescription}>
-                Learn how to log in, navigate, and utilize key features of the Edge platform to enhance your academic performance.
+        {/* Show articles for selected category */}
+        {selectedCategory && (
+          <View style={styles.articlesSection}>
+            <View style={styles.articlesHeader}>
+              <Text style={styles.articlesTitle}>
+                {[...helpCategories, ...taskCategories].find(cat => cat.id === selectedCategory)?.title} Articles
               </Text>
+              <TouchableOpacity onPress={() => setSelectedCategory(null)} style={styles.closeButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
             </View>
-            <View style={styles.gettingStartedImage}>
-              <Ionicons name="school-outline" size={60} color="#2196F3" />
+            
+            {getCategoryArticles(selectedCategory).map((article) => (
+              <TouchableOpacity
+                key={article.id}
+                style={styles.articleItem}
+                onPress={() => toggleArticle(article.id)}
+              >
+                <View style={styles.articleHeader}>
+                  <View style={styles.articleIcon}>
+                    <Ionicons name="document-text-outline" size={16} color="#1976D2" />
+                  </View>
+                  <Text style={styles.articleTitle}>{article.title}</Text>
+                  <Ionicons
+                    name={expandedArticleId === article.id ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#666"
+                  />
+                </View>
+                {expandedArticleId === article.id && (
+                  <View style={styles.articleContent}>
+                    <Text style={styles.articleText}>{article.content}</Text>
+                    {article.steps && article.steps.length > 0 && (
+                      <View style={styles.stepsContainer}>
+                        <Text style={styles.stepsTitle}>Steps:</Text>
+                        {article.steps.map((step, index) => (
+                          <Text key={index} style={styles.stepText}>{index + 1}. {step}</Text>
+                        ))}
+                      </View>
+                    )}
+                    {article.tips && article.tips.length > 0 && (
+                      <View style={styles.tipsContainer}>
+                        <Text style={styles.tipsTitle}>Tips:</Text>
+                        {article.tips.map((tip, index) => (
+                          <Text key={index} style={styles.tipText}>• {tip}</Text>
+                        ))}
+                      </View>
+                    )}
             </View>
+                )}
           </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
-          {/* Browse Category Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Browse Category</Text>
-            {categories.map((category) => (
+  const renderTasksContent = () => {
+    return (
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }>
+        <Text style={styles.sectionTitle}>Browse by Task</Text>
+        
+        <View style={styles.categoriesGrid}>
+          {taskCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
-                style={styles.categoryItem}
-                onPress={() => handleCategoryPress(category)}>
+              style={styles.categoryCard}
+              onPress={() => handleCategoryPress(category.id)}
+            >
                 <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
                   <Ionicons name={category.icon as any} size={24} color={category.color} />
                 </View>
-                <View style={styles.categoryContent}>
                   <Text style={styles.categoryTitle}>{category.title}</Text>
                   <Text style={styles.categoryDescription}>{category.description}</Text>
+              <Text style={styles.categoryCount}>{category.articleIds.length} articles</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Show articles for selected category */}
+        {selectedCategory && (
+          <View style={styles.articlesSection}>
+            <View style={styles.articlesHeader}>
+              <Text style={styles.articlesTitle}>
+                {[...helpCategories, ...taskCategories].find(cat => cat.id === selectedCategory)?.title} Articles
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedCategory(null)} style={styles.closeButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {getCategoryArticles(selectedCategory).map((article) => (
+              <TouchableOpacity
+                key={article.id}
+                style={styles.articleItem}
+                onPress={() => toggleArticle(article.id)}
+              >
+                <View style={styles.articleHeader}>
+                  <View style={styles.articleIcon}>
+                    <Ionicons name="document-text-outline" size={16} color="#1976D2" />
+                  </View>
+                  <Text style={styles.articleTitle}>{article.title}</Text>
+                  <Ionicons
+                    name={expandedArticleId === article.id ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#666"
+                  />
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#999999" />
+                {expandedArticleId === article.id && (
+                  <View style={styles.articleContent}>
+                    <Text style={styles.articleText}>{article.content}</Text>
+                    {article.steps && article.steps.length > 0 && (
+                      <View style={styles.stepsContainer}>
+                        <Text style={styles.stepsTitle}>Steps:</Text>
+                        {article.steps.map((step, index) => (
+                          <Text key={index} style={styles.stepText}>{index + 1}. {step}</Text>
+                        ))}
+                      </View>
+                    )}
+                    {article.tips && article.tips.length > 0 && (
+                      <View style={styles.tipsContainer}>
+                        <Text style={styles.tipsTitle}>Tips:</Text>
+                        {article.tips.map((tip, index) => (
+                          <Text key={index} style={styles.tipText}>• {tip}</Text>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
+        )}
+      </ScrollView>
+    );
+  };
 
-          {/* Popular Questions Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Popular Questions</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.questionsScroll}>
-              {popularQuestions.map((question) => (
+  const renderFaqContent = () => {
+    const popularFaqs = faqs.slice(0, 10);
+
+    return (
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }>
+        <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+        
+        <View style={styles.faqContainer}>
+          {popularFaqs.map((faq) => (
                 <TouchableOpacity
-                  key={question.id}
-                  style={styles.questionCard}
-                  onPress={() => handleQuestionPress(question)}>
-                  <View style={styles.questionHeader}>
-                    <Text style={styles.questionTitle}>{question.question}</Text>
+              key={faq.id}
+              style={styles.faqItem}
+              onPress={() => toggleFaq(faq.id)}
+            >
+              <View style={styles.faqHeader}>
+                <Text style={styles.faqQuestion}>{faq.question}</Text>
+                <Ionicons
+                  name={expandedFaqId === faq.id ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color="#666"
+                />
+              </View>
+              {expandedFaqId === faq.id && (
+                <View style={styles.faqAnswer}>
+                  <Text style={styles.faqAnswerText}>{faq.answer}</Text>
                   </View>
-                  <Text style={styles.questionAnswer} numberOfLines={3}>
-                    {question.answer}
-                  </Text>
+              )}
                 </TouchableOpacity>
               ))}
+        </View>
             </ScrollView>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#1976D2" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Help Center</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for help..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Search Results */}
+      {renderSearchResults()}
+
+      {/* Tabs */}
+      {!searchQuery.trim() && (
+        <>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'browse' && styles.activeTab]}
+              onPress={() => setActiveTab('browse')}
+            >
+              <Text style={[styles.tabText, activeTab === 'browse' && styles.activeTabText]}>
+                Browse by Feature
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'tasks' && styles.activeTab]}
+              onPress={() => setActiveTab('tasks')}
+            >
+              <Text style={[styles.tabText, activeTab === 'tasks' && styles.activeTabText]}>
+                Browse by Task
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'faq' && styles.activeTab]}
+              onPress={() => setActiveTab('faq')}
+            >
+              <Text style={[styles.tabText, activeTab === 'faq' && styles.activeTabText]}>
+                FAQ
+              </Text>
+            </TouchableOpacity>
           </View>
 
+          {/* Tab Content */}
+          {activeTab === 'browse' && renderBrowseContent()}
+          {activeTab === 'tasks' && renderTasksContent()}
+          {activeTab === 'faq' && renderFaqContent()}
+        </>
+      )}
+
           {/* Contact Support */}
-          <View style={styles.contactSection}>
+      {!searchQuery.trim() && (
             <View style={styles.contactCard}>
-              <Ionicons name="headset-outline" size={32} color="#2196F3" />
+          <View style={styles.contactIcon}>
+            <Ionicons name="headset-outline" size={20} color="#1976D2" />
+          </View>
               <Text style={styles.contactTitle}>Still need help?</Text>
               <Text style={styles.contactDescription}>
-                Contact our support team for personalized assistance
+            Contact our support team for additional assistance
               </Text>
               <TouchableOpacity style={styles.contactButton}>
                 <Text style={styles.contactButtonText}>Contact Support</Text>
               </TouchableOpacity>
             </View>
+      )}
           </View>
-        </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
   );
 }
 
@@ -248,52 +504,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  circleBackgroundLeft: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: '#E3F2FD',
-    opacity: 0.3,
-    top: screenHeight * 0.1,
-    left: screenWidth * 0.01 - 75,
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  circleBackgroundCenter: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#E3F2FD',
-    opacity: 0.2,
-    top: screenHeight * 0.15,
-    left: screenWidth * 0.5 - 100,
-  },
-  circleBackgroundRight: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E3F2FD',
-    opacity: 0.3,
-    top: screenHeight * 0.12,
-    right: screenWidth * 0.05 - 50,
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
   },
   header: {
     flexDirection: 'row',
@@ -312,72 +522,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#000000',
   },
-  headerTitleAccent: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2196F3',
-  },
-  placeholder: {
+  headerSpacer: {
     width: 40,
   },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  greetingSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  greetingTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  greetingSubtitle: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-  },
   searchContainer: {
-    position: 'relative',
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  searchInput: {
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F5F5F5',
     borderRadius: 25,
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#000000',
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
   searchIcon: {
-    position: 'absolute',
-    right: 20,
-    top: 16,
+    marginRight: 12,
   },
-  gettingStartedCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 32,
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000000',
+  },
+  clearButton: {
+    marginLeft: 8,
+  },
+  searchResults: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  searchResultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  searchResultsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  searchLoading: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  searchLoadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  searchResultItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     shadowColor: '#000',
@@ -389,27 +599,104 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  gettingStartedContent: {
-    flex: 1,
-    marginRight: 16,
+  searchResultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
   },
-  gettingStartedTitle: {
-    fontSize: 20,
+  searchResultIcon: {
+    marginRight: 12,
+  },
+  searchResultTitle: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
+  },
+  searchResultContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  searchResultText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  stepsContainer: {
+    marginBottom: 12,
+  },
+  stepsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976D2',
     marginBottom: 8,
   },
-  gettingStartedDescription: {
+  stepText: {
     fontSize: 14,
-    color: '#666666',
+    color: '#333333',
     lineHeight: 20,
+    marginBottom: 4,
   },
-  gettingStartedImage: {
+  tipsContainer: {
+    marginBottom: 12,
+  },
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF9800',
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  noResults: {
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  section: {
-    marginBottom: 32,
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#1976D2',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -417,55 +704,17 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 16,
   },
-  categoryItem: {
+  categoriesGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoryCard: {
+    width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  categoryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  categoryContent: {
-    flex: 1,
-  },
-  categoryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  categoryDescription: {
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 18,
-  },
-  questionsScroll: {
-    marginTop: 8,
-  },
-  questionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
-    width: screenWidth * 0.8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     shadowColor: '#000',
@@ -477,56 +726,162 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  questionHeader: {
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
-    padding: 8,
+  categoryIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
-  questionTitle: {
-    fontSize: 14,
+  categoryTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#000000',
+    marginBottom: 8,
   },
-  questionAnswer: {
+  categoryDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  categoryCount: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+  },
+  faqContainer: {
+    paddingBottom: 20,
+  },
+  faqItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  faqHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  faqQuestion: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  faqAnswer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  faqAnswerText: {
     fontSize: 14,
     color: '#333333',
     lineHeight: 20,
   },
-  contactSection: {
-    marginTop: 20,
-  },
   contactCard: {
     backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 8,
+    padding: 12,
+    margin: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
+  contactIcon: {
+    marginBottom: 4,
+  },
   contactTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  contactDescription: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 14,
+  },
+  contactButton: {
+    backgroundColor: '#1976D2',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  contactButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  articlesSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  articlesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  articlesTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginTop: 12,
-    marginBottom: 8,
   },
-  contactDescription: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
+  closeButton: {
+    padding: 4,
   },
-  contactButton: {
-    backgroundColor: '#2196F3',
-    borderRadius: 25,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  articleItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  contactButtonText: {
+  articleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  articleIcon: {
+    marginRight: 12,
+  },
+  articleTitle: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#000000',
+  },
+  articleContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  articleText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+    marginBottom: 12,
   },
 });

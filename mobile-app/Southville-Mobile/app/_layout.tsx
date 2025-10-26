@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthSessionProvider } from '@/hooks/use-auth-session';
+import { ThemeProvider as CustomThemeProvider } from '@/contexts/theme-context';
 // import { pushNotificationService } from '@/services/push-notifications';
 
 export const unstable_settings = {
@@ -52,23 +53,25 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AuthSessionProvider>
-          <Stack initialRouteName="index">
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="terms-of-service" options={{ headerShown: false }} />
-            <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
-            <Stack.Screen name="help-center" options={{ headerShown: false }} />
-            <Stack.Screen name="notifications" options={{ headerShown: false }} />
-            <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </AuthSessionProvider>
-      </ThemeProvider>
+      <CustomThemeProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AuthSessionProvider>
+            <Stack initialRouteName="index">
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="terms-of-service" options={{ headerShown: false }} />
+              <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
+              <Stack.Screen name="help-center" options={{ headerShown: false }} />
+              <Stack.Screen name="notifications" options={{ headerShown: false }} />
+              <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </AuthSessionProvider>
+        </ThemeProvider>
+      </CustomThemeProvider>
     </SafeAreaProvider>
   );
 }
