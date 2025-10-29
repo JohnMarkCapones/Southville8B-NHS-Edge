@@ -32,6 +32,11 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _isRightSidebarVisible = true;
 
+    // Cached ViewModels for navigation performance
+    private SchedulePlannerViewModel? _cachedSchedulePlannerViewModel;
+    private GradeEntryViewModel? _cachedGradeEntryViewModel;
+    private MyAnnouncementsViewModel? _cachedMyAnnouncementsViewModel;
+
     [ObservableProperty] private string _userName = "St. Yummy";
     [ObservableProperty] private string _userRole = "Senior Math Teacher";
     [ObservableProperty] private string _userInitials = "SY";
@@ -61,6 +66,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] private int _totalClasses = 6;
     [ObservableProperty] private int _pendingAssignments = 24;
+    [ObservableProperty] private int _totalAnnouncements = 0;
     [ObservableProperty] private int _totalStudents = 180;
     [ObservableProperty] private int _unreadMessages = 12;
 
@@ -76,6 +82,8 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _currentClassGrade = "Grade 8-A Mathematics";
     [ObservableProperty] private string _currentClassTime = "08:00 AM - 09:30 AM";
     [ObservableProperty] private string _currentClassRoom = "Room 101";
+    [ObservableProperty] private bool _hasCurrentClass = false;
+    [ObservableProperty] private bool _hasNextClass = false;
 
     [ObservableProperty] private ObservableCollection<TodayClassItem> _todayClasses = new();
     private int _currentTodayClassIndex = 0;
@@ -83,6 +91,8 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private TodayClassItem? _currentTodayClass;
 
     [ObservableProperty] private ObservableCollection<TeacherActivityItem> _recentActivities = new();
+    
+    [ObservableProperty] private ObservableCollection<AnnouncementSummaryItem> _recentAnnouncements = new();
 
     [ObservableProperty] private ObservableCollection<CalendarDayItem> _calendarDays = new();
     [ObservableProperty] private ObservableCollection<CalendarDayItem> _firstWeekDays = new();
@@ -98,6 +108,9 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     public bool ShowLeftSidebarToggle => !IsLeftSidebarVisible;
     public bool ShowRightSidebarToggle => !IsRightSidebarVisible;
 
+    // Main-level navigation action for app-level navigation (e.g., logout to login)
+    public Action<ViewModelBase>? MainNavigateTo { get; set; }
+
     private DispatcherTimer? _todayClassRotationTimer;
     private readonly bool _enableRotation;
     private readonly bool _enableTimeUpdater;
@@ -107,22 +120,27 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private readonly IApiClient _apiClient;
     private readonly ITokenStorageService _tokenStorage;
     private readonly IToastService _toastService;
+    private readonly IDialogService _dialogService;
     private string? _userId;
+    private string? _teacherId;
     private readonly string? _accessToken;
+    private TeacherDashboardViewModel? _dashboardViewModel;
 
     // Flag to suppress applying a theme while initializing (so we respect OS/default app theme)
     private bool _suppressThemeApply = true;
 
     // Added optional parameters to disable timers for unit tests.
-    public TeacherShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, IToastService toastService, UserDto? user = null, string? accessToken = null, bool enableRotation = true, bool enableTimeUpdater = true)
+    public TeacherShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, IToastService toastService, IDialogService dialogService, UserDto? user = null, string? accessToken = null, bool enableRotation = true, bool enableTimeUpdater = true, Action<ViewModelBase>? mainNavigateTo = null)
     {
         _sseService = sseService;
         _apiClient = apiClient;
         _tokenStorage = tokenStorage;
         _toastService = toastService;
+        _dialogService = dialogService;
         _accessToken = accessToken;
         _enableRotation = enableRotation;
         _enableTimeUpdater = enableTimeUpdater;
+        MainNavigateTo = mainNavigateTo;
 
         // Set the access token on the API client immediately
         if (!string.IsNullOrEmpty(accessToken))
@@ -136,9 +154,11 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         if (user != null)
         {
             _userId = user.Id;
+            _teacherId = user.Teacher?.Id; // Extract teacher ID from user data
             UserEmail = user.Email ?? "teacher@southville.edu.ph";
               UserRole = FormatRoleName(user.Role?.Name);
             UserInitials = GetInitialsFromEmail(user.Email);
+            
             
             // Fetch full profile asynchronously
             _ = LoadUserProfileAsync();
@@ -159,6 +179,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         GenerateCalendarDays();
         
         // Load real data asynchronously
+        // Note: LoadTeacherKpisAsync() is called after teacher ID is loaded from profile
         _ = LoadTodaySchedulesAsync();
         _ = LoadRecentActivitiesAsync();
         _ = LoadTodayEventsAsync();
@@ -244,7 +265,27 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
                     UserRole = FormatRoleName(profile.Role?.Name);
                     UserInitials = GetInitialsFromName(profile.FullName);
                     
-                    System.Diagnostics.Debug.WriteLine($"User profile loaded: {UserName} ({UserRole})");
+                    // Extract teacher ID from profile
+                    if (profile.Teacher != null && !string.IsNullOrEmpty(profile.Teacher.Id))
+                    {
+                        _teacherId = profile.Teacher.Id;
+                        
+                        // Load KPIs now that we have the teacher ID
+                        _ = LoadTeacherKpisAsync();
+                        
+                        // Reload dashboard KPIs if dashboard is currently active
+                        if (_dashboardViewModel != null && !string.IsNullOrEmpty(_teacherId))
+                        {
+                            _ = _dashboardViewModel.ReloadKpisAsync(_teacherId, _userId);
+                        }
+                        
+                        // Load recent announcements
+                        _ = LoadRecentAnnouncementsAsync();
+                        
+                        // Load today's schedule
+                        _ = LoadTodaySchedulesAsync();
+                    }
+                    
                 });
             }
         }
@@ -298,57 +339,44 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
     private async Task LoadTodaySchedulesAsync()
     {
-        if (string.IsNullOrEmpty(_userId)) return;
+        if (string.IsNullOrEmpty(_teacherId)) return;
         
         try
         {
-            var schedules = await _apiClient.GetTeacherTodaySchedulesAsync(_userId);
-            if (schedules != null)
+            
+            // Fetch schedules using same endpoint as SchedulePlannerView
+            var today = DateTime.Now;
+            var dayOfWeek = today.ToString("dddd"); // e.g., "Monday"
+            
+            var schedulesResponse = await _apiClient.GetSchedulesAsync(
+                page: 1,
+                limit: 100,
+                teacherId: _teacherId,
+                schoolYear: "2024-2025",
+                semester: "1st"
+            );
+
+            if (schedulesResponse?.Data != null)
             {
-                Dispatcher.UIThread.Post(() =>
+                // Filter to today's day of week
+                var todaySchedules = schedulesResponse.Data
+                    .Where(s => s.DayOfWeek?.Equals(dayOfWeek, StringComparison.OrdinalIgnoreCase) == true)
+                    .OrderBy(s => s.StartTime)
+                    .ToList();
+                
+                
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    TodayClasses.Clear();
-                    foreach (var schedule in schedules)
-                    {
-                        var subjectName = schedule.Subject?.SubjectName ?? "Unknown Subject";
-                        var sectionName = schedule.Section?.Name ?? "Unknown Section";
-                        var roomName = schedule.Room?.RoomNumber ?? "TBD";
-                        
-                        // Format time from "08:00" to "08:00 AM"
-                        var startTime = FormatTime(schedule.StartTime);
-                        var endTime = FormatTime(schedule.EndTime);
-                        var timeRange = $"{startTime} - {endTime}";
-                        
-                        TodayClasses.Add(new TodayClassItem
-                        {
-                            Subject = subjectName,
-                            Grade = $"{sectionName}",
-                            Time = timeRange,
-                            Room = roomName
-                        });
-                    }
-                    
-                    _currentTodayClassIndex = 0;
-                    ApplyCurrentTodayClass();
+                    UpdateCurrentAndNextClass(todaySchedules);
                 });
+            }
+            else
+            {
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to load today's schedules: {ex.Message}");
-            // Fallback to mock data
-            Dispatcher.UIThread.Post(() =>
-            {
-                TodayClasses = new ObservableCollection<TodayClassItem>
-                {
-                    new() { Subject="Mathematics", Grade="Grade 8-A Mathematics", Time="08:00 AM - 09:30 AM", Room="Room 101" },
-                    new() { Subject="Science",     Grade="Grade 8-B Science",      Time="10:00 AM - 11:30 AM", Room="Laboratory 2" },
-                    new() { Subject="English",     Grade="Grade 8-C English",      Time="01:00 PM - 02:30 PM", Room="Room 203" },
-                    new() { Subject="Advisory",    Grade="Advisory Period",        Time="03:00 PM - 03:30 PM", Room="Faculty Hall" }
-                };
-                _currentTodayClassIndex = 0;
-                ApplyCurrentTodayClass();
-            });
         }
     }
 
@@ -369,6 +397,95 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         }
         
         return time; // Return as-is if parsing fails
+    }
+
+    private void UpdateCurrentAndNextClass(List<ScheduleDto> todaySchedules)
+    {
+        var now = DateTime.Now.TimeOfDay;
+        
+        ScheduleDto? currentClass = null;
+        ScheduleDto? nextClass = null;
+        
+        foreach (var schedule in todaySchedules)
+        {
+            if (!TimeSpan.TryParse(schedule.StartTime, out var startTime) ||
+                !TimeSpan.TryParse(schedule.EndTime, out var endTime))
+                continue;
+            
+            // Check if class is currently ongoing
+            if (now >= startTime && now < endTime)
+            {
+                currentClass = schedule;
+                // Continue to find next class after current
+                continue;
+            }
+            
+            // Check if class is upcoming (starts after now)
+            if (now < startTime)
+            {
+                if (currentClass != null)
+                {
+                    // We have a current class, next upcoming is our next class
+                    nextClass = schedule;
+                    break;
+                }
+                else if (nextClass == null)
+                {
+                    // No current class, this is the first upcoming class
+                    nextClass = schedule;
+                }
+            }
+        }
+        
+        // Update current class display
+        if (currentClass != null)
+        {
+            HasCurrentClass = true;
+            CurrentClassSubject = currentClass.Subject?.SubjectName ?? "Unknown Subject";
+            CurrentClassGrade = $"{currentClass.Section?.Name ?? "Unknown Section"}";
+            
+            var startTime = FormatTime(currentClass.StartTime);
+            var endTime = FormatTime(currentClass.EndTime);
+            CurrentClassTime = $"{startTime} - {endTime}";
+            CurrentClassRoom = currentClass.Room?.RoomNumber ?? "TBD";
+            
+            // Update CurrentTodayClass for display
+            CurrentTodayClass = new TodayClassItem
+            {
+                Subject = CurrentClassSubject,
+                Grade = CurrentClassGrade,
+                Time = CurrentClassTime,
+                Room = CurrentClassRoom
+            };
+            
+        }
+        else
+        {
+            HasCurrentClass = false;
+            CurrentClassSubject = "No ongoing class";
+            CurrentClassGrade = "";
+            CurrentClassTime = "";
+            CurrentClassRoom = "";
+            CurrentTodayClass = null;
+        }
+        
+        // Update next class display
+        if (nextClass != null)
+        {
+            HasNextClass = true;
+            NextClassSubject = $"{nextClass.Subject?.SubjectName ?? "Unknown"} - {nextClass.Section?.Name ?? ""}";
+            
+            var startTime = FormatTime(nextClass.StartTime);
+            var endTime = FormatTime(nextClass.EndTime);
+            NextClassTime = $"{startTime} - {endTime}";
+            
+        }
+        else
+        {
+            HasNextClass = false;
+            NextClassSubject = "No upcoming classes";
+            NextClassTime = "";
+        }
     }
 
     private void InitializeSseConnection()
@@ -395,18 +512,177 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
     private void OnTeacherMetricsUpdated(object? sender, TeacherSidebarMetrics metrics)
     {
+        System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] SSE metrics updated - Classes: {metrics.TotalClasses}, Announcements: {metrics.TotalAnnouncements}, Students: {metrics.TotalStudents}, Messages: {metrics.UnreadMessages}");
         Dispatcher.UIThread.Post(() =>
         {
+            // Update all 4 metrics from SSE for real-time updates
             TotalClasses = metrics.TotalClasses;
-            PendingAssignments = metrics.PendingAssignments;
+            TotalAnnouncements = metrics.TotalAnnouncements;
             TotalStudents = metrics.TotalStudents;
             UnreadMessages = metrics.UnreadMessages;
+            System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] KPI values after SSE update - TotalAnnouncements: {TotalAnnouncements}");
         });
     }
 
     private void OnConnectionStatusChanged(object? sender, string status)
     {
-        System.Diagnostics.Debug.WriteLine($"SSE Connection Status: {status}");
+    }
+
+    private async Task LoadTeacherKpisAsync()
+    {
+        if (_apiClient == null || string.IsNullOrEmpty(_teacherId))
+        {
+            return;
+        }
+
+        try
+        {
+            
+            // Fetch schedules to count total classes
+            var schedulesResponse = await _apiClient.GetSchedulesAsync(
+                page: 1,
+                limit: 100,
+                teacherId: _teacherId,
+                schoolYear: "2024-2025",
+                semester: "1st"
+            );
+
+            if (schedulesResponse?.Data != null)
+            {
+                var scheduleCount = schedulesResponse.Data.Count;
+                
+                Dispatcher.UIThread.Post(() =>
+                {
+                    TotalClasses = scheduleCount;
+                });
+            }
+            else
+            {
+            }
+
+            // Fetch sections to count students using generic GET to handle response structure
+            var sectionsResponse = await _apiClient.GetAsync<SectionListResponse>("sections?limit=100");
+            
+            if (sectionsResponse?.Data != null && !string.IsNullOrEmpty(_userId))
+            {
+                // Filter sections where teacher_id matches current user
+                var teacherSections = sectionsResponse.Data
+                    .Where(s => !string.IsNullOrEmpty(s.TeacherId) && s.TeacherId == _userId)
+                    .ToList();
+
+
+                // Fetch students for each section
+                int totalStudents = 0;
+                foreach (var section in teacherSections)
+                {
+                    try
+                    {
+                        var endpoint = $"students?sectionId={section.Id}&page=1&limit=100";
+                        var response = await _apiClient.GetAsync<StudentListResponse>(endpoint);
+                        
+                        if (response?.Data != null)
+                        {
+                            totalStudents += response.Data.Count;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error fetching students for section {section.Id}: {ex.Message}");
+                    }
+                }
+
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    TotalStudents = totalStudents;
+                });
+            }
+            else
+            {
+            }
+
+            // Fetch announcement count
+            if (!string.IsNullOrEmpty(_userId))
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] Fetching announcement stats for userId: {_userId}");
+                    var announcementStats = await _apiClient.GetAnnouncementStatsAsync(_userId);
+                    if (announcementStats != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] Announcement stats received - Total: {announcementStats.TotalCount}, Active: {announcementStats.ActiveCount}");
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            TotalAnnouncements = announcementStats.TotalCount;
+                            System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] TotalAnnouncements KPI updated to: {TotalAnnouncements}");
+                        });
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("[TeacherShellViewModel] No announcement stats returned from API");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] Error fetching announcement stats: {ex.Message}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[TeacherShellViewModel] Cannot fetch announcement stats - userId is null or empty");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading teacher KPIs: {ex.Message}");
+        }
+    }
+
+
+    private async Task LoadRecentAnnouncementsAsync()
+    {
+        if (_apiClient == null || string.IsNullOrEmpty(_userId)) return;
+        
+        try
+        {
+            
+            // Fetch recent announcements (limit 5)
+            var endpoint = $"announcements?teacherId={_userId}&page=1&limit=5&sortBy=createdAt&sortOrder=desc";
+            var response = await _apiClient.GetAsync<AnnouncementListResponse>(endpoint);
+            
+            if (response?.Data != null)
+            {
+                var items = response.Data.Select(a => new AnnouncementSummaryItem
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    TimeAgo = GetTimeAgo(DateTime.Parse(a.CreatedAt)),
+                    Views = 0, // AnnouncementDto doesn't have view count
+                    Status = a.Visibility ?? "published"
+                }).ToList();
+                
+                Dispatcher.UIThread.Post(() =>
+                {
+                    RecentAnnouncements.Clear();
+                    foreach (var item in items)
+                        RecentAnnouncements.Add(item);
+                    
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading announcements: {ex.Message}");
+        }
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var span = DateTime.UtcNow - dateTime;
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        return dateTime.ToString("MMM dd");
     }
 
     private async Task LoadTodayEventsAsync()
@@ -461,7 +737,6 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             // Calculate expiration time (typically JWT tokens expire in 1 hour)
             var expiresAt = DateTime.UtcNow.AddHours(1);
             await _tokenStorage.SaveTokensAsync(accessToken, string.Empty, expiresAt);
-            System.Diagnostics.Debug.WriteLine("Access token stored successfully");
         }
         catch (Exception ex)
         {
@@ -560,14 +835,18 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             FirstWeekDays.Add(d);
     }
 
-    private TeacherDashboardViewModel CreateDashboardViewModel() => new()
+    private TeacherDashboardViewModel CreateDashboardViewModel()
     {
-        NavigateToSchedulePlannerCommand = NavigateToSchedulePlannerCommand,
-        NavigateToGradeEntryCommand = NavigateToGradeEntryCommand,
-        NavigateToStudentManagementCommand = NavigateToStudentManagementCommand,
-        NavigateToMyAnnouncementsCommand = NavigateToMyAnnouncementsCommand,
-        NavigateToMessagingCommand = NavigateToMessagingCommand
-    };
+        _dashboardViewModel = new(_apiClient, _teacherId, _userId)
+        {
+            NavigateToSchedulePlannerCommand = NavigateToSchedulePlannerCommand,
+            NavigateToGradeEntryCommand = NavigateToGradeEntryCommand,
+            NavigateToStudentManagementCommand = NavigateToStudentManagementCommand,
+            NavigateToMyAnnouncementsCommand = NavigateToMyAnnouncementsCommand,
+            NavigateToMessagingCommand = NavigateToMessagingCommand
+        };
+        return _dashboardViewModel;
+    }
 
     private void UpdateColumnWidths()
     {
@@ -611,7 +890,12 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToProfile()
     {
-        CurrentContent = new ProfileViewModel();
+        if (string.IsNullOrEmpty(_userId))
+        {
+            return;
+        }
+        
+        CurrentContent = new ProfileViewModel(_apiClient, _userId);
         CurrentPage = "Profile";
         IsUserDropdownVisible = false;
     }
@@ -619,7 +903,9 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToSettings()
     {
-        CurrentContent = new SettingsViewModel();
+        var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+        var toastService = ServiceLocator.Services.GetRequiredService<IToastService>();
+        CurrentContent = new SettingsViewModel(apiClient, toastService);
         CurrentPage = "Settings";
         IsUserDropdownVisible = false;
     }
@@ -633,7 +919,77 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void Logout() => IsUserDropdownVisible = false;
+    private async Task Logout()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== TEACHER LOGOUT STARTED ===");
+            System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
+            
+            CloseUserDropdown();
+            
+            // Clear cached ViewModels
+            System.Diagnostics.Debug.WriteLine("Clearing cached ViewModels...");
+            _cachedSchedulePlannerViewModel = null;
+            _cachedGradeEntryViewModel = null;
+            _cachedMyAnnouncementsViewModel = null;
+            _dashboardViewModel = null;
+            System.Diagnostics.Debug.WriteLine("Cached ViewModels cleared");
+            
+            // Reset current content
+            System.Diagnostics.Debug.WriteLine("Resetting CurrentContent...");
+            CurrentContent = null!;
+            System.Diagnostics.Debug.WriteLine("CurrentContent reset");
+            
+            // Call auth service logout
+            System.Diagnostics.Debug.WriteLine("Calling AuthService.LogoutAsync...");
+            var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            await authService.LogoutAsync();
+            System.Diagnostics.Debug.WriteLine("AuthService.LogoutAsync completed");
+            
+            // Show success message
+            _toastService.Success("You have been logged out successfully", "Goodbye!");
+            
+            // Navigate to login screen
+            System.Diagnostics.Debug.WriteLine("Creating LoginViewModel...");
+            var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            var loginVm = new LoginViewModel(authService, _toastService, roleValidationService, _dialogService);
+            System.Diagnostics.Debug.WriteLine($"LoginViewModel created: {loginVm != null}");
+            
+            if (MainNavigateTo != null)
+            {
+                loginVm.NavigateTo = MainNavigateTo;
+                System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+                System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
+                MainNavigateTo.Invoke(loginVm);
+                System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("ERROR: MainNavigateTo is NULL - cannot navigate to login!");
+            }
+            
+            System.Diagnostics.Debug.WriteLine("=== TEACHER LOGOUT COMPLETED ===");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== TEACHER LOGOUT ERROR ===");
+            System.Diagnostics.Debug.WriteLine($"Exception: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            
+            var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            _toastService.Warning("Logout completed with warnings", "Warning");
+            
+            var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            var loginVm = new LoginViewModel(authService, _toastService, roleValidationService, _dialogService);
+            
+            if (MainNavigateTo != null)
+            {
+                loginVm.NavigateTo = MainNavigateTo;
+                MainNavigateTo.Invoke(loginVm);
+            }
+        }
+    }
 
     // Calendar navigation
     [RelayCommand]
@@ -703,21 +1059,42 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToDashboard()
     {
-        CurrentContent = CreateDashboardViewModel();
+        
+        var dashboard = CreateDashboardViewModel();
+        CurrentContent = dashboard;
         CurrentPage = "Dashboard";
+        
+        // Reload KPIs when navigating to dashboard to ensure fresh data
+        if (dashboard != null)
+        {
+            _ = dashboard.ReloadKpisAsync();
+        }
     }
 
     [RelayCommand]
     private void NavigateToSchedulePlanner()
     {
-        CurrentContent = new SchedulePlannerViewModel();
+        
+        // Reuse cached instance if available
+        if (_cachedSchedulePlannerViewModel == null)
+        {
+            _cachedSchedulePlannerViewModel = new SchedulePlannerViewModel(_apiClient, _teacherId, _dialogService);
+        }
+        
+        CurrentContent = _cachedSchedulePlannerViewModel;
         CurrentPage = "Schedule Planner";
     }
 
     [RelayCommand]
     private void NavigateToGradeEntry()
     {
-        CurrentContent = new GradeEntryViewModel(_apiClient, _toastService);
+        // Reuse cached instance if available
+        if (_cachedGradeEntryViewModel == null)
+        {
+            _cachedGradeEntryViewModel = new GradeEntryViewModel(_apiClient, _toastService);
+        }
+        
+        CurrentContent = _cachedGradeEntryViewModel;
         CurrentPage = "Grade Entry";
     }
 
@@ -731,9 +1108,19 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToMyAnnouncements()
     {
-        var vm = new MyAnnouncementsViewModel();
-        vm.NavigateTo = inner => CurrentContent = inner;
-        CurrentContent = vm;
+        if (string.IsNullOrEmpty(_userId))
+        {
+            return;
+        }
+        
+        // Reuse cached instance if available
+        if (_cachedMyAnnouncementsViewModel == null)
+        {
+            _cachedMyAnnouncementsViewModel = new MyAnnouncementsViewModel(_apiClient, _dialogService, _userId);
+            _cachedMyAnnouncementsViewModel.NavigateTo = inner => CurrentContent = inner;
+        }
+        
+        CurrentContent = _cachedMyAnnouncementsViewModel;
         CurrentPage = "My Announcements";
     }
 
@@ -777,7 +1164,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
     private void DisposeCurrentContent()
     {
-        if (_currentContent is IDisposable disposable)
+        if (CurrentContent is IDisposable disposable)
         {
             disposable.Dispose();
         }
@@ -841,4 +1228,13 @@ public partial class TodayClassItem : ViewModelBase
     [ObservableProperty] private string _grade = string.Empty;
     [ObservableProperty] private string _time = string.Empty;
     [ObservableProperty] private string _room = string.Empty;
+}
+
+public partial class AnnouncementSummaryItem : ViewModelBase
+{
+    [ObservableProperty] private string _id = "";
+    [ObservableProperty] private string _title = "";
+    [ObservableProperty] private string _timeAgo = "";
+    [ObservableProperty] private int _views = 0;
+    [ObservableProperty] private string _status = "published"; // draft, published
 }

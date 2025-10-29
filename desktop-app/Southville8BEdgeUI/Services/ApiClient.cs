@@ -134,22 +134,22 @@ public class ApiClient : IApiClient
     }
 
     // User Management Methods
-    public async Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null)
+    public async Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, int page = 1, int limit = 25)
     {
         var queryParams = new List<string>();
-        if (!string.IsNullOrEmpty(role)) queryParams.Add($"role={Uri.EscapeDataString(role)}");
-        if (!string.IsNullOrEmpty(status)) queryParams.Add($"status={Uri.EscapeDataString(status)}");
         
-        // Request all users by setting a high limit
-        queryParams.Add("limit=1000");
+        if (!string.IsNullOrEmpty(role) && role != "All Roles")
+            queryParams.Add($"role={Uri.EscapeDataString(role)}");
         
-        var endpoint = "users";
-        if (queryParams.Any())
-        {
-            endpoint += "?" + string.Join("&", queryParams);
-        }
+        if (!string.IsNullOrEmpty(status) && status != "All Status")
+            queryParams.Add($"status={Uri.EscapeDataString(status)}");
         
-        return await GetAsync<UserListResponse>(endpoint);
+        queryParams.Add($"page={page}");
+        queryParams.Add($"limit={limit}");
+        
+        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+        
+        return await GetAsync<UserListResponse>($"users{queryString}");
     }
 
     public async Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto)
@@ -202,6 +202,38 @@ public class ApiClient : IApiClient
         }
         catch
         {
+            return null;
+        }
+    }
+
+    public async Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId)
+    {
+        try
+        {
+            var request = new ResetPasswordRequestDto { UserId = userId };
+            return await PostAsync<ResetPasswordResponseDto>("auth/reset-password", request);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error resetting password: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword)
+    {
+        try
+        {
+            var request = new ChangePasswordRequestDto 
+            { 
+                CurrentPassword = currentPassword, 
+                NewPassword = newPassword 
+            };
+            return await PostAsync<ChangePasswordResponseDto>("auth/change-password", request);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error changing password: {ex.Message}");
             return null;
         }
     }
@@ -1199,6 +1231,169 @@ public class ApiClient : IApiClient
         catch (Exception ex)
         {
             Debug.WriteLine($"Error getting buildings: {ex.Message}");
+            return null;
+        }
+    }
+
+    // Announcement Management Methods
+    public async Task<AnnouncementListResponse?> GetAnnouncementsAsync(
+        string? teacherId = null,
+        string? sectionId = null,
+        string? visibility = null,
+        string? type = null,
+        bool? includeExpired = null,
+        int page = 1,
+        int limit = 100)
+    {
+        try
+        {
+            var queryParams = new List<string>();
+            if (!string.IsNullOrEmpty(teacherId)) queryParams.Add($"teacherId={teacherId}");
+            if (!string.IsNullOrEmpty(sectionId)) queryParams.Add($"sectionId={sectionId}");
+            if (!string.IsNullOrEmpty(visibility)) queryParams.Add($"visibility={visibility}");
+            if (!string.IsNullOrEmpty(type)) queryParams.Add($"type={type}");
+            if (includeExpired.HasValue) queryParams.Add($"includeExpired={includeExpired.Value}");
+            queryParams.Add($"page={page}");
+            queryParams.Add($"limit={limit}");
+
+            var queryString = string.Join("&", queryParams);
+            var endpoint = $"announcements{(string.IsNullOrEmpty(queryString) ? "" : $"?{queryString}")}";
+            
+            return await GetAsync<AnnouncementListResponse>(endpoint);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting announcements: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AnnouncementDto?> GetAnnouncementByIdAsync(string id)
+    {
+        try
+        {
+            return await GetAsync<AnnouncementDto>($"announcements/{id}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting announcement by id: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AnnouncementDto?> CreateAnnouncementAsync(CreateAnnouncementDto dto)
+    {
+        try
+        {
+            return await PostAsync<AnnouncementDto>("announcements", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error creating announcement: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AnnouncementDto?> UpdateAnnouncementAsync(string id, UpdateAnnouncementDto dto)
+    {
+        try
+        {
+            return await PatchAsync<AnnouncementDto>($"announcements/{id}", dto);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error updating announcement: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task DeleteAnnouncementAsync(string id)
+    {
+        try
+        {
+            await DeleteAsync($"announcements/{id}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error deleting announcement: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<AnnouncementStatsDto?> GetAnnouncementStatsAsync(string teacherId)
+    {
+        try
+        {
+            return await GetAsync<AnnouncementStatsDto>($"announcements/stats?teacherId={teacherId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting announcement stats: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<SectionDto>?> GetMySectionsAsync()
+    {
+        try
+        {
+            return await GetAsync<List<SectionDto>>("sections/my-sections");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting my sections: {ex.Message}");
+            return null;
+        }
+    }
+    
+    public async Task<DepartmentDto?> GetDepartmentAsync(string departmentId)
+    {
+        try
+        {
+            return await GetAsync<DepartmentDto>($"departments/{departmentId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting department: {ex.Message}");
+            return null;
+        }
+    }
+    
+    public async Task<SubjectDto?> GetSubjectAsync(string subjectId)
+    {
+        try
+        {
+            return await GetAsync<SubjectDto>($"subjects/{subjectId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting subject: {ex.Message}");
+            return null;
+        }
+    }
+    
+    public async Task<SectionDto?> GetSectionAsync(string sectionId)
+    {
+        try
+        {
+            return await GetAsync<SectionDto>($"sections/{sectionId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting section: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<StudentDistributionDto?> GetStudentDistributionAsync()
+    {
+        try
+        {
+            return await GetAsync<StudentDistributionDto>("desktop-sidebar/student-distribution");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching student distribution: {ex.Message}");
             return null;
         }
     }

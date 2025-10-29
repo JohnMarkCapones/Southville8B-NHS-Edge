@@ -29,8 +29,22 @@ public class ScheduleDto
     [JsonPropertyName("startTime")]
     public string StartTime { get; set; } = string.Empty;
 
+    [JsonPropertyName("start_time")]
+    public string StartTimeSnake 
+    { 
+        get => StartTime;
+        set => StartTime = value; 
+    }
+
     [JsonPropertyName("endTime")]
     public string EndTime { get; set; } = string.Empty;
+
+    [JsonPropertyName("end_time")]
+    public string EndTimeSnake 
+    { 
+        get => EndTime;
+        set => EndTime = value; 
+    }
 
     [JsonPropertyName("schoolYear")]
     public string SchoolYear { get; set; } = string.Empty;
@@ -69,16 +83,16 @@ public class SubjectDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("subjectName")]
+    [JsonPropertyName("subject_name")]
     public string SubjectName { get; set; } = string.Empty;
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
-    [JsonPropertyName("gradeLevel")]
+    [JsonPropertyName("grade_level")]
     public int? GradeLevel { get; set; }
 
-    [JsonPropertyName("colorHex")]
+    [JsonPropertyName("color_hex")]
     public string? ColorHex { get; set; }
 }
 
@@ -105,6 +119,9 @@ public class StudentDto
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
+    [JsonPropertyName("user_id")]
+    public string? UserId { get; set; }
+
     [JsonPropertyName("first_name")]
     public string FirstName { get; set; } = string.Empty;
 
@@ -122,5 +139,26 @@ public class StudentDto
 
     [JsonPropertyName("grade_level")]
     public string? GradeLevel { get; set; }
+    
+    [JsonPropertyName("enrollment_year")]
+    public int? EnrollmentYear { get; set; }
+    
+    [JsonPropertyName("honor_status")]
+    public string? HonorStatus { get; set; }
+    
+    [JsonPropertyName("rank")]
+    public int? Rank { get; set; }
+    
+    [JsonPropertyName("section_id")]
+    public string? SectionId { get; set; }
+    
+    [JsonPropertyName("age")]
+    public int? Age { get; set; }
+    
+    [JsonPropertyName("birthday")]
+    public string? Birthday { get; set; }
+    
+    [JsonPropertyName("deleted_at")]
+    public string? DeletedAt { get; set; }
 }
 

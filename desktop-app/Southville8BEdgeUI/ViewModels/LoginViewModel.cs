@@ -15,6 +15,7 @@ public partial class LoginViewModel : ViewModelBase
     private readonly IAuthService _authService;
     private readonly IToastService _toastService;
     private readonly IRoleValidationService _roleValidationService;
+    private readonly IDialogService _dialogService;
 
     [ObservableProperty]
     private string _email = string.Empty;
@@ -40,9 +41,10 @@ public partial class LoginViewModel : ViewModelBase
     // This action can be set by the parent view model to handle navigation.
     public Action<ViewModelBase>? NavigateTo { get; set; }
 
-    public LoginViewModel(IAuthService authService, IToastService toastService, IRoleValidationService roleValidationService)
+    public LoginViewModel(IAuthService authService, IToastService toastService, IRoleValidationService roleValidationService, IDialogService dialogService)
     {
         _authService = authService;
+        _dialogService = dialogService;
         _toastService = toastService;
         _roleValidationService = roleValidationService;
     }
@@ -99,6 +101,7 @@ public partial class LoginViewModel : ViewModelBase
                 switch (roleLower)
                 {
                 case "admin":
+                    System.Diagnostics.Debug.WriteLine("=== CREATING ADMIN SHELL ===");
                     var sseService = ServiceLocator.Services.GetRequiredService<ISseService>();
                     var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
                     var tokenStorage = ServiceLocator.Services.GetRequiredService<ITokenStorageService>();
@@ -107,7 +110,13 @@ public partial class LoginViewModel : ViewModelBase
                     // Set the access token on the API client
                     apiClient.SetAccessToken(accessToken);
                     
-                    NavigateTo?.Invoke(new AdminShellViewModel(sseService, apiClient, tokenStorage, userDto, accessToken));
+                    var adminShell = new AdminShellViewModel(sseService, apiClient, tokenStorage, userDto, accessToken, true, NavigateTo);
+                    System.Diagnostics.Debug.WriteLine($"AdminShellViewModel created: {adminShell != null}");
+                    System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo is null: {NavigateTo == null}");
+                    System.Diagnostics.Debug.WriteLine($"About to invoke NavigateTo with AdminShellViewModel");
+                    
+                    NavigateTo?.Invoke(adminShell);
+                    System.Diagnostics.Debug.WriteLine("Navigation to AdminShell completed");
                     break;
                 case "teacher":
                     var teacherSseService = ServiceLocator.Services.GetRequiredService<ISseService>();
@@ -118,7 +127,8 @@ public partial class LoginViewModel : ViewModelBase
                     // Set the access token on the API client
                     teacherApiClient.SetAccessToken(teacherAccessToken);
                     
-                    NavigateTo?.Invoke(new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, userDto, teacherAccessToken));
+                    var teacherShell = new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, _dialogService, userDto, teacherAccessToken, true, true, NavigateTo);
+                    NavigateTo?.Invoke(teacherShell);
                     break;
                     default:
                         _toastService.Warning($"Unknown role: {response.User.Role}");

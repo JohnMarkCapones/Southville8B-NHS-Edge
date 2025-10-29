@@ -30,10 +30,11 @@ namespace Southville8BEdgeUI
                 var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
                 var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
                 var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+                var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
                 
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(authService, toastService, roleValidationService),
+                    DataContext = new MainWindowViewModel(authService, toastService, roleValidationService, dialogService),
                 };
             }
 

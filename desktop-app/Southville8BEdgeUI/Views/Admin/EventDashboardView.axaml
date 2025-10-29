@@ -325,7 +325,7 @@
 				</StackPanel>
 
 				<StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-					<Button x:Name="RefreshButton" Classes="secondary" Command="{Binding RefreshEventsCommand}">
+					<Button x:Name="RefreshButton" Classes="secondary" Command="{Binding RefreshDataCommand}" ToolTip.Tip="Refresh event data">
 						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
 							<ic:FluentIcon Icon="ArrowClockwise" IconSize="Size20"/>
 							<TextBlock Text="Refresh"/>

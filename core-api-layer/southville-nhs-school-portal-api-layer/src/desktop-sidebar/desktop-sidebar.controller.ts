@@ -124,9 +124,9 @@ export class DesktopSidebarController {
           type: 'number',
           description: 'Number of active classes',
         },
-        pendingAssignments: {
+        totalAnnouncements: {
           type: 'number',
-          description: 'Number of pending assignments',
+          description: 'Number of announcements posted by teacher',
         },
         totalStudents: { type: 'number', description: 'Number of students' },
         unreadMessages: {
@@ -148,5 +148,20 @@ export class DesktopSidebarController {
     return await this.desktopSidebarService.triggerTeacherMetricsUpdate(
       user.id,
     );
+  }
+
+  @Get('student-distribution')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get student distribution for grades 7-10',
+    description:
+      'Returns total students and counts per grade from the students table.',
+  })
+  @ApiResponse({ status: 200, description: 'Student distribution payload' })
+  async getStudentDistribution(): Promise<{
+    total: number;
+    grades: { grade: string; count: number }[];
+  }> {
+    return await this.desktopSidebarService.getStudentDistribution();
   }
 }

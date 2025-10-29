@@ -125,24 +125,11 @@
                             Spacing="12" 
                             VerticalAlignment="Center">
                     <Button Classes="secondary" 
-                            Command="{Binding LoadSchedulesCommand}">
+                            Command="{Binding RefreshDataCommand}"
+                            ToolTip.Tip="Refresh schedule data">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="🔄" FontSize="16"/>
                             <TextBlock Text="Refresh" FontSize="14"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="primary" 
-                            Command="{Binding OpenCreateDialogCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="📅" FontSize="16"/>
-                            <TextBlock Text="Create Schedule" FontSize="14"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="secondary" 
-                            Command="{Binding AddTestDataCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="🧪" FontSize="16"/>
-                            <TextBlock Text="Add Test Data" FontSize="14"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -254,23 +241,10 @@
                         
                         <Button Grid.Column="5" 
                                 Classes="tertiary" 
-                                Command="{Binding ApplyFiltersCommand}">
+                                Command="{Binding ClearFiltersCommand}">
                             <TextBlock Text="Clear"/>
                         </Button>
                     </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- DEBUG INFO -->
-            <Border Classes="card" Background="LightYellow">
-                <StackPanel Spacing="8">
-                    <TextBlock Text="DEBUG INFO" FontWeight="Bold" FontSize="14"/>
-                    <TextBlock Text="{Binding Schedules.Count, StringFormat='Total Schedules: {0}'}"/>
-                    <TextBlock Text="{Binding FilteredSchedules.Count, StringFormat='Filtered Schedules: {0}'}"/>
-                    <TextBlock Text="{Binding IsDataGridVisible, StringFormat='Cards Visible: {0}'}"/>
-                    <TextBlock Text="{Binding IsEmptyStateVisible, StringFormat='Empty State Visible: {0}'}"/>
-                    <TextBlock Text="{Binding FirstScheduleSubject, StringFormat='First Schedule Subject: {0}'}"/>
-                    <TextBlock Text="{Binding FirstScheduleTeacher, StringFormat='First Schedule Teacher: {0}'}"/>
                 </StackPanel>
             </Border>
 
@@ -304,7 +278,7 @@
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Center"
                                        Foreground="{DynamicResource TextMutedBrush}"/>
-                            <TextBlock Text="Click 'Refresh' to reload data or 'Create Schedule' to add new schedules" 
+                            <TextBlock Text="Click 'Refresh' to reload data" 
                                        FontSize="14" 
                                        HorizontalAlignment="Center"
                                        Foreground="{DynamicResource TextMutedBrush}"
@@ -366,6 +340,22 @@
                                                                    Foreground="{DynamicResource TextMutedBrush}"/>
                                                     </StackPanel>
                                                 </StackPanel>
+                                                
+                                                <!-- School Year and Semester -->
+                                                <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock Text="📅" FontSize="12"/>
+                                                        <TextBlock Text="{Binding SchoolYear}" 
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock Text="📚" FontSize="12"/>
+                                                        <TextBlock Text="{Binding Semester}" 
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
                                             </StackPanel>
                                             
                                             <!-- Time and Day -->
@@ -380,10 +370,11 @@
                                                                    Foreground="White"
                                                                    HorizontalAlignment="Center"/>
                                                     </Border>
-                                                    <Border Background="{DynamicResource PrimaryBrush}" 
+                                                    <Border Background="#FF5733"  
                                                             CornerRadius="12" 
-                                                            Padding="8,4">
-                                                        <TextBlock Text="{Binding TimeRange}" 
+                                                            Padding="8,4"
+                                                            MinWidth="100">
+                                                        <TextBlock Text="{Binding TimeRange, FallbackValue='NO TIME'}" 
                                                                    FontSize="14" 
                                                                    FontWeight="Bold"
                                                                    Foreground="White"

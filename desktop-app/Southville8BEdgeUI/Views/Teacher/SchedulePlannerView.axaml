@@ -256,11 +256,38 @@
     <UserControl.Resources>
         <!-- Schedule Slot Template -->
         <DataTemplate x:Key="ScheduleSlotTemplate" DataType="vm:ScheduleSlotViewModel">
-            <StackPanel IsVisible="{Binding IsOccupied}" VerticalAlignment="Center">
-                <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
-                <TextBlock Text="{Binding Grade}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding Room}" FontSize="9" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
-            </StackPanel>
+            <Border Background="Transparent" Cursor="Hand" PointerPressed="OnScheduleCellClicked">
+                <StackPanel IsVisible="{Binding IsOccupied}" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{Binding Subject}" 
+                               FontWeight="SemiBold" 
+                               FontSize="11" 
+                               HorizontalAlignment="Center" 
+                               Foreground="{DynamicResource TextPrimaryBrush}" 
+                               TextWrapping="Wrap"
+                               MaxLines="2"
+                               TextTrimming="CharacterEllipsis"/>
+                    
+                    <TextBlock Text="{Binding Grade}" 
+                               FontSize="10" 
+                               Foreground="{DynamicResource TextMutedBrush}" 
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                    
+                    <TextBlock Text="{Binding TimeRange}" 
+                               FontSize="9" 
+                               Foreground="{DynamicResource TextMutedBrush}" 
+                               HorizontalAlignment="Center" 
+                               FontStyle="Italic" 
+                               Opacity="0.8"
+                               TextTrimming="CharacterEllipsis"/>
+                    
+                    <TextBlock Text="{Binding Room}" 
+                               FontSize="9" 
+                               Foreground="{DynamicResource TextMutedBrush}" 
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Border>
         </DataTemplate>
 
         <!-- Upcoming Class Template -->
@@ -354,9 +381,10 @@
             <!-- Schedule Section -->
             <Border Classes="card">
                 <StackPanel Spacing="16">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="Weekly Schedule" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Weekly Schedule" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                             <Button x:Name="RefreshButton" Classes="tertiary-btn" Command="{Binding RefreshScheduleCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16"/>
@@ -371,6 +399,10 @@
                             </Button>
                         </StackPanel>
                     </Grid>
+                    
+                    <!-- Week Date Range -->
+                    <TextBlock Text="{Binding WeekDateRange}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                    </StackPanel>
 
                     <!-- Schedule Grid -->
                     <Grid x:Name="ScheduleGrid">

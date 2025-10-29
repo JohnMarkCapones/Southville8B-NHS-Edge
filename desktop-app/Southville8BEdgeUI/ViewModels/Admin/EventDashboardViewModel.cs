@@ -15,6 +15,7 @@ namespace Southville8BEdgeUI.ViewModels.Admin;
 public partial class EventDashboardViewModel : ViewModelBase
 {
     private readonly IApiClient _apiClient;
+    private bool _isInitialLoad = true;
     
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? NavigateBack { get; set; }
@@ -91,8 +92,18 @@ public partial class EventDashboardViewModel : ViewModelBase
         Events = new ObservableCollection<EventViewModel>();
         FilteredEvents = new ObservableCollection<EventViewModel>(Events);
         
-        // Load initial data
-        _ = LoadInitialDataAsync();
+        // Only load on first creation
+        if (_isInitialLoad)
+        {
+            _ = LoadInitialDataAsync();
+            _isInitialLoad = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task RefreshData()
+    {
+        await LoadInitialDataAsync();
     }
 
     partial void OnSearchTextChanged(string value) => _ = LoadEventsAsync();
@@ -389,9 +400,24 @@ public partial class EventViewModel : ViewModelBase
         ? eventDate.ToString("MMM dd, yyyy")
         : Date;
 
-    public string TimeRange => Time == "00:00" 
-        ? "All Day"
-        : Time;
+    public string TimeRange
+    {
+        get
+        {
+            if (Time == "00:00")
+                return "All Day";
+            
+            // Parse 24-hour format (HH:MM) and convert to 12-hour with AM/PM
+            if (TimeSpan.TryParse(Time, out var timeSpan))
+            {
+                var dateTime = DateTime.Today.Add(timeSpan);
+                return dateTime.ToString("h:mm tt"); // e.g., "2:30 PM"
+            }
+            
+            // Fallback to original if parsing fails
+            return Time;
+        }
+    }
 
     public string TagList => Tags?.Any() == true 
         ? string.Join(", ", Tags) 

@@ -382,7 +382,7 @@
         <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Text="Performance Metrics" Classes="section-header"/>
+              <TextBlock Grid.Column="0" Text="Admin Metrics" Classes="section-header"/>
               <Button Grid.Column="1" x:Name="ReportsButton" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
                       Command="{Binding ViewDetailedReportsCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
@@ -391,28 +391,25 @@
                 </StackPanel>
               </Button>
             </Grid>
-            <ItemsControl ItemsSource="{Binding PerformanceMetrics}">
+            <ItemsControl ItemsSource="{Binding AdminMetrics}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="vm:PerformanceMetricViewModel">
-                  <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,12">
+                <DataTemplate DataType="vm:AdminMetricViewModel">
+                  <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
                     <Border Grid.Column="0" Background="{DynamicResource GraySoftBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
                       <ic:FluentIcon Icon="{Binding Icon}" IconSize="Size20"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                       <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Classes="body-text"/>
-                      <TextBlock Text="{Binding Value, StringFormat={}{0:F1}%}" Classes="metric-value"/>
+                      <TextBlock Text="{Binding PrimaryValueText}" 
+                                  FontSize="16" 
+                                  FontWeight="Bold"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  Margin="0,2,0,0"/>
+                      <TextBlock Text="{Binding SecondaryText}" 
+                                  FontSize="11"
+                                  Foreground="{DynamicResource TextMutedBrush}"
+                                  IsVisible="{Binding SecondaryText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
-                    <TextBlock Grid.Column="2" Text="{Binding ChangeText}"
-                               Foreground="{Binding ChangeBrush}"
-                               FontWeight="SemiBold"
-                               Classes="body-text"
-                               VerticalAlignment="Center"
-                               Margin="0,0,8,0"/>
-                    <Path Grid.Column="3"
-                          Data="{Binding IsPositive, Converter={StaticResource BoolToArrowConverter}}"
-                          Fill="{Binding ChangeBrush}"
-                          Width="10" Height="5"
-                          VerticalAlignment="Center"/>
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -523,31 +520,27 @@
           </StackPanel>
         </Border>
 
-        <!-- Financial Overview -->
+        <!-- System Overview -->
         <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
           <StackPanel Spacing="16">
-            <TextBlock Text="Financial Overview" Classes="section-header"/>
+            <TextBlock Text="System Overview" Classes="section-header"/>
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
               <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
-                <TextBlock Text="Monthly Revenue" Classes="stat-title"/>
-                <TextBlock x:Name="MonthlyRevenueValue" Text="{Binding MonthlyRevenue, StringFormat=₱{0:N0}}" Classes="medium-text" Foreground="{DynamicResource SuccessBrush}"/>
+                <TextBlock Text="Buildings" Classes="stat-title"/>
+                <TextBlock x:Name="TotalBuildingsValue" Text="{Binding TotalBuildings, StringFormat={}{0} Total}" Classes="medium-text" Foreground="{DynamicResource InfoBrush}"/>
               </StackPanel>
               <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
-                <TextBlock Text="Operating Costs" Classes="stat-title"/>
-                <TextBlock x:Name="OperatingCostsValue" Text="{Binding OperatingCosts, StringFormat=₱{0:N0}}" Classes="medium-text" Foreground="{DynamicResource DangerBrush}"/>
+                <TextBlock Text="Rooms" Classes="stat-title"/>
+                <TextBlock x:Name="TotalRoomsValue" Text="{Binding TotalRooms, StringFormat={}{0} Total}" Classes="medium-text" Foreground="{DynamicResource InfoBrush}"/>
               </StackPanel>
               <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4" Grid.ColumnSpan="2">
-                <TextBlock Text="Net Revenue" Classes="stat-title"/>
-                <TextBlock x:Name="NetRevenueValue" Text="{Binding NetRevenue, StringFormat=₱{0:N0}}" Classes="large-text" Foreground="{DynamicResource InfoBrush}"/>
+                <TextBlock Text="Total Users" Classes="stat-title"/>
+                <TextBlock x:Name="TotalUsersValue" Text="{Binding TotalUsers, StringFormat={}{0:N0}}" Classes="large-text" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Text="Students, Teachers, Staff" Classes="small-text" Foreground="{DynamicResource TextMutedBrush}"/>
               </StackPanel>
               <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4" Grid.ColumnSpan="2">
-                <TextBlock Text="Budget Utilization" Classes="stat-title"/>
-                <ProgressBar x:Name="BudgetProgressBar"
-                           Classes="responsive-progress"
-                           Value="{Binding BudgetUtilization}"
-                           Minimum="0" Maximum="100"
-                           Foreground="{DynamicResource IndigoBrush}"/>
-                <TextBlock x:Name="BudgetUtilizationText" Text="{Binding BudgetUtilization, StringFormat={}{0:F1}% utilized}" Classes="small-text" Foreground="{DynamicResource TextMutedBrush}"/>
+                <TextBlock Text="Departments" Classes="stat-title"/>
+                <TextBlock x:Name="TotalDepartmentsValue" Text="{Binding TotalDepartments, StringFormat={}{0} Active}" Classes="medium-text" Foreground="{DynamicResource SuccessBrush}"/>
               </StackPanel>
             </Grid>
           </StackPanel>

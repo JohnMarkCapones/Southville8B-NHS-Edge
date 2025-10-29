@@ -7,13 +7,27 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SupabaseUser } from './interfaces/supabase-user.interface';
 import { LoginDto, TokenVerifyDto } from './dto/login.dto';
 import { SessionManagementService } from '../session-management/session-management.service';
+import { SupabaseAuthGuard } from './supabase-auth.guard';
+import { AuthUser } from './auth-user.decorator';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { UserRole } from '../users/dto/create-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AdminChangePasswordDto } from './dto/admin-change-password.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -186,5 +200,110 @@ export class AuthController {
     } catch (error) {
       throw error; // Let NestJS handle the error response
     }
+  }
+
+  @Post('reset-password')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Reset user password to default (Admin only)',
+    description:
+      'Resets password to birthday-based default for students/teachers, random for admins',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        temporaryPassword: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+    @AuthUser() admin: any,
+  ): Promise<{ message: string; temporaryPassword?: string }> {
+    return this.authService.resetPasswordToDefault(
+      resetPasswordDto.userId,
+      admin.id,
+    );
+  }
+
+  @Post('change-password')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Change own password',
+    description: 'User changes their own password (requires current password)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized or incorrect current password',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @AuthUser() user: any,
+  ): Promise<{ message: string }> {
+    return this.authService.changePassword(
+      user.id,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
+  }
+
+  @Post('admin-change-password')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Admin changes any user password',
+    description:
+      'Admin can change any user password without knowing current password',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async adminChangePassword(
+    @Body() adminChangePasswordDto: AdminChangePasswordDto,
+    @AuthUser() admin: any,
+  ): Promise<{ message: string }> {
+    return this.authService.adminChangePassword(
+      adminChangePasswordDto.userId,
+      adminChangePasswordDto.newPassword,
+      admin.id,
+    );
   }
 }

@@ -52,10 +52,22 @@ export class AnnouncementsService {
     const supabase = this.getSupabaseClient();
 
     try {
-      // Validate role IDs exist
-      const validRoles = await this.validateRoleIds(dto.targetRoleIds);
-      if (!validRoles) {
-        throw new BadRequestException('One or more role IDs are invalid');
+      // Validate role IDs exist (if provided)
+      if (dto.targetRoleIds && dto.targetRoleIds.length > 0) {
+        const validRoles = await this.validateRoleIds(dto.targetRoleIds);
+        if (!validRoles) {
+          throw new BadRequestException('One or more role IDs are invalid');
+        }
+      }
+
+      // Ensure at least one targeting method is provided
+      if (
+        (!dto.targetRoleIds || dto.targetRoleIds.length === 0) &&
+        (!dto.sectionIds || dto.sectionIds.length === 0)
+      ) {
+        throw new BadRequestException(
+          'Either targetRoleIds or sectionIds must be provided',
+        );
       }
 
       // Validate tag IDs exist (if provided)
@@ -63,6 +75,14 @@ export class AnnouncementsService {
         const validTags = await this.validateTagIds(dto.tagIds);
         if (!validTags) {
           throw new BadRequestException('One or more tag IDs are invalid');
+        }
+      }
+
+      // Validate section IDs exist (if provided)
+      if (dto.sectionIds && dto.sectionIds.length > 0) {
+        const validSections = await this.validateSectionIds(dto.sectionIds);
+        if (!validSections) {
+          throw new BadRequestException('One or more section IDs are invalid');
         }
       }
 
@@ -85,23 +105,30 @@ export class AnnouncementsService {
         throw new InternalServerErrorException('Failed to create announcement');
       }
 
-      // Create announcement targets
-      const targetInserts = dto.targetRoleIds.map((roleId) => ({
-        announcement_id: announcement.id,
-        role_id: roleId,
-      }));
+      // Create announcement targets (only if roles provided)
+      if (dto.targetRoleIds && dto.targetRoleIds.length > 0) {
+        const targetInserts = dto.targetRoleIds.map((roleId) => ({
+          announcement_id: announcement.id,
+          role_id: roleId,
+        }));
 
-      const { error: targetsError } = await supabase
-        .from('announcement_targets')
-        .insert(targetInserts);
+        const { error: targetsError } = await supabase
+          .from('announcement_targets')
+          .insert(targetInserts);
 
-      if (targetsError) {
-        this.logger.error('Error creating announcement targets:', targetsError);
-        // Rollback announcement
-        await supabase.from('announcements').delete().eq('id', announcement.id);
-        throw new InternalServerErrorException(
-          'Failed to create announcement targets',
-        );
+        if (targetsError) {
+          this.logger.error(
+            'Error creating announcement targets:',
+            targetsError,
+          );
+          await supabase
+            .from('announcements')
+            .delete()
+            .eq('id', announcement.id);
+          throw new InternalServerErrorException(
+            'Failed to create announcement targets',
+          );
+        }
       }
 
       // Create announcement tags (if provided)
@@ -117,17 +144,61 @@ export class AnnouncementsService {
 
         if (tagsError) {
           this.logger.error('Error creating announcement tags:', tagsError);
-          // Rollback announcement and targets
-          await supabase
-            .from('announcement_targets')
-            .delete()
-            .eq('announcement_id', announcement.id);
+          // Rollback announcement, targets, and sections
+          if (dto.targetRoleIds && dto.targetRoleIds.length > 0) {
+            await supabase
+              .from('announcement_targets')
+              .delete()
+              .eq('announcement_id', announcement.id);
+          }
           await supabase
             .from('announcements')
             .delete()
             .eq('id', announcement.id);
           throw new InternalServerErrorException(
             'Failed to create announcement tags',
+          );
+        }
+      }
+
+      // Create announcement sections (if provided)
+      this.logger.log(
+        `Creating announcement sections. sectionIds: ${JSON.stringify(dto.sectionIds)}`,
+      );
+      if (dto.sectionIds && dto.sectionIds.length > 0) {
+        const sectionInserts = dto.sectionIds.map((sectionId) => ({
+          announcement_id: announcement.id,
+          section_id: sectionId,
+        }));
+
+        const { error: sectionsError } = await supabase
+          .from('announcement_sections')
+          .insert(sectionInserts);
+
+        if (sectionsError) {
+          this.logger.error(
+            'Error creating announcement sections:',
+            sectionsError,
+          );
+          // Rollback announcement, targets, and tags
+          if (dto.tagIds && dto.tagIds.length > 0) {
+            await supabase
+              .from('announcement_tags')
+              .delete()
+              .eq('announcement_id', announcement.id);
+          }
+          if (dto.targetRoleIds && dto.targetRoleIds.length > 0) {
+            await supabase
+              .from('announcement_targets')
+              .delete()
+              .eq('announcement_id', announcement.id);
+          }
+          await supabase
+            .from('announcements')
+            .delete()
+            .eq('id', announcement.id);
+          throw new InternalServerErrorException(
+            'Failed to create announcement sections',
           );
         }
       }
@@ -168,6 +239,8 @@ export class AnnouncementsService {
       visibility,
       type,
       roleId,
+      teacherId,
+      sectionId,
       includeExpired = false,
     } = filters;
 
@@ -180,6 +253,9 @@ export class AnnouncementsService {
         ),
         targetRoles:announcement_targets(
           role:roles(id, name)
+        ),
+        sections:announcement_sections(
+          section:sections(id, name, grade_level)
         )
       `,
       { count: 'exact' },
@@ -217,6 +293,28 @@ export class AnnouncementsService {
       }
     }
 
+    if (teacherId) {
+      query = query.eq('user_id', teacherId);
+    }
+
+    if (sectionId) {
+      // Get announcement IDs that target this section
+      const { data: sectionAnnouncements } = await supabase
+        .from('announcement_sections')
+        .select('announcement_id')
+        .eq('section_id', sectionId);
+
+      const announcementIds =
+        sectionAnnouncements?.map((s) => s.announcement_id) || [];
+
+      if (announcementIds.length > 0) {
+        query = query.in('id', announcementIds);
+      } else {
+        // No announcements target this section, return empty result
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000'); // Non-existent ID
+      }
+    }
+
     // Apply pagination
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -247,6 +345,7 @@ export class AnnouncementsService {
         user: announcement.user,
         tags: announcement.tags?.map((t) => t.tag),
         targetRoles: announcement.targetRoles?.map((tr) => tr.role),
+        sections: announcement.sections?.map((s) => s.section) || [],
       })) || [];
 
     const result = {
@@ -453,12 +552,28 @@ export class AnnouncementsService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId: string, userRole: string): Promise<void> {
     const supabase = this.getSupabaseClient();
 
-    // Check if announcement exists
-    const existing = await this.findOne(id);
+    // Fetch the announcement to check ownership
+    const { data: announcement, error: fetchError } = await supabase
+      .from('announcements')
+      .select('user_id')
+      .eq('id', id)
+      .single();
 
+    if (fetchError || !announcement) {
+      throw new NotFoundException(`Announcement with ID ${id} not found`);
+    }
+
+    // Check ownership: Teachers can only delete their own, Admins can delete any
+    if (userRole !== 'Admin' && announcement.user_id !== userId) {
+      throw new ForbiddenException(
+        'You can only delete your own announcements',
+      );
+    }
+
+    // Proceed with deletion
     const { error } = await supabase
       .from('announcements')
       .delete()
@@ -466,7 +581,9 @@ export class AnnouncementsService {
 
     if (error) {
       this.logger.error('Error deleting announcement:', error);
-      throw new InternalServerErrorException('Failed to delete announcement');
+      throw new InternalServerErrorException(
+        `Failed to delete announcement: ${error.message}`,
+      );
     }
 
     // Invalidate caches
@@ -663,6 +780,53 @@ export class AnnouncementsService {
     this.logger.log(`Tag deleted successfully: ${id}`);
   }
 
+  async getStats(teacherId: string): Promise<any> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get total announcements by teacher
+      const { count: totalCount, error: totalError } = await supabase
+        .from('announcements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', teacherId);
+
+      if (totalError) {
+        this.logger.error('Error fetching total announcements:', totalError);
+        throw new InternalServerErrorException(
+          'Failed to fetch total announcements',
+        );
+      }
+
+      // Get active announcements (not expired, regardless of visibility)
+      const now = new Date().toISOString();
+      const { count: activeCount, error: activeError } = await supabase
+        .from('announcements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', teacherId)
+        .or(`expires_at.is.null,expires_at.gt.${now}`);
+
+      if (activeError) {
+        this.logger.error('Error fetching active announcements:', activeError);
+        throw new InternalServerErrorException(
+          'Failed to fetch active announcements',
+        );
+      }
+
+      return {
+        totalCount: totalCount || 0,
+        activeCount: activeCount || 0,
+        totalViews: 0, // Placeholder
+        engagementRate: 0, // Placeholder
+      };
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      this.logger.error('Unexpected error getting stats:', error);
+      throw new InternalServerErrorException('Failed to get stats');
+    }
+  }
+
   // Helper methods
   private async validateRoleIds(roleIds: string[]): Promise<boolean> {
     const supabase = this.getSupabaseClient();
@@ -682,6 +846,16 @@ export class AnnouncementsService {
       .in('id', tagIds);
 
     return !!(tags && tags.length === tagIds.length);
+  }
+
+  private async validateSectionIds(sectionIds: string[]): Promise<boolean> {
+    const supabase = this.getSupabaseClient();
+    const { data: sections } = await supabase
+      .from('sections')
+      .select('id')
+      .in('id', sectionIds);
+
+    return !!(sections && sections.length === sectionIds.length);
   }
 
   private async checkTagNameUnique(

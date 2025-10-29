@@ -316,7 +316,7 @@ export class SchedulesService {
           building: schedule.room?.floor?.building
             ? {
                 id: schedule.room.floor.building.id,
-                name: schedule.room.floor.building.building_name,
+                buildingName: schedule.room.floor.building.building_name,
               }
             : undefined,
         })) || [];
@@ -582,7 +582,9 @@ export class SchedulesService {
 
       if (error) {
         this.logger.error('Error fetching student schedules:', error);
-        throw new InternalServerErrorException('Failed to fetch student schedules');
+        throw new InternalServerErrorException(
+          'Failed to fetch student schedules',
+        );
       }
 
       const schedules =
@@ -613,7 +615,9 @@ export class SchedulesService {
       return schedules;
     } catch (error) {
       this.logger.error('Error fetching student schedules:', error);
-      throw new InternalServerErrorException('Failed to fetch student schedules');
+      throw new InternalServerErrorException(
+        'Failed to fetch student schedules',
+      );
     }
   }
 
@@ -807,7 +811,9 @@ export class SchedulesService {
 
       if (error) {
         this.logger.error('Error fetching teacher schedules:', error);
-        throw new InternalServerErrorException('Failed to fetch teacher schedules');
+        throw new InternalServerErrorException(
+          'Failed to fetch teacher schedules',
+        );
       }
 
       const schedules =
@@ -840,7 +846,9 @@ export class SchedulesService {
       return schedules;
     } catch (error) {
       this.logger.error('Error fetching teacher schedules:', error);
-      throw new InternalServerErrorException('Failed to fetch teacher schedules');
+      throw new InternalServerErrorException(
+        'Failed to fetch teacher schedules',
+      );
     }
   }
 }

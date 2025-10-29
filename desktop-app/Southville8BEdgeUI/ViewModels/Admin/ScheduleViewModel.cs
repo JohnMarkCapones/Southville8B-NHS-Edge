@@ -13,6 +13,7 @@ public partial class ScheduleViewModel : ViewModelBase
     public ScheduleViewModel(ScheduleDto schedule)
     {
         Schedule = schedule;
+        UpdateTimeRange();
     }
 
     // UI properties
@@ -20,9 +21,17 @@ public partial class ScheduleViewModel : ViewModelBase
     public string TeacherName => Schedule?.Teacher != null ? $"{Schedule.Teacher.FirstName} {Schedule.Teacher.LastName}" : "Unknown";
     public string SectionName => Schedule?.Section?.Name ?? "Unknown";
     public string RoomNumber => Schedule?.Room?.RoomNumber ?? "N/A";
-    public string BuildingName => Schedule?.Building?.BuildingName ?? "N/A";
-    public string TimeRange => Schedule != null ? $"{FormatTime(Schedule.StartTime)} - {FormatTime(Schedule.EndTime)}" : "N/A";
+    public string BuildingName => Schedule?.Building?.BuildingName ?? Schedule?.Room?.Floor?.Building?.BuildingName ?? "N/A";
+    [ObservableProperty]
+    private string _timeRange = "N/A";
+
+    public void UpdateTimeRange()
+    {
+        TimeRange = Schedule != null ? $"{FormatTime(Schedule.StartTime)} - {FormatTime(Schedule.EndTime)}" : "N/A";
+    }
     public string DisplayDay => Schedule?.DayOfWeek ?? "Unknown";
+    public string SchoolYear => Schedule?.SchoolYear ?? "N/A";
+    public string Semester => Schedule?.Semester ?? "N/A";
     public IBrush? SubjectColor 
     {
         get

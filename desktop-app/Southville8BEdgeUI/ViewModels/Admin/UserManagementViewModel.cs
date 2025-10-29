@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,6 +16,8 @@ public partial class UserManagementViewModel : ViewModelBase
 {
     private readonly IApiClient _apiClient;
     private readonly IToastService _toastService;
+    private readonly IDialogService _dialogService;
+    private bool _isInitialLoad = true;
     
     // Navigation callback supplied by shell
     public Action<ViewModelBase>? NavigateTo { get; set; }
@@ -34,6 +37,24 @@ public partial class UserManagementViewModel : ViewModelBase
     [ObservableProperty] private string? _selectedStatus;
     [ObservableProperty] private string? _selectedGrade;
 
+    // Loading state
+    [ObservableProperty] private bool _isLoading = false;
+
+    // Pagination properties
+    [ObservableProperty] private int _currentPage = 1;
+    [ObservableProperty] private int _pageSize = 25;
+    [ObservableProperty] private int _totalPages = 1;
+    [ObservableProperty] private int _totalItems = 0;
+
+    // Page size options
+    public ObservableCollection<int> PageSizeOptions { get; } = new() { 10, 25, 50, 100 };
+
+    // Computed properties
+    public bool CanGoToPreviousPage => CurrentPage > 1;
+    public bool CanGoToNextPage => CurrentPage < TotalPages;
+    public string PageInfo => $"Page {CurrentPage} of {TotalPages}";
+    public string ResultsInfo => $"Showing {((CurrentPage - 1) * PageSize) + 1}-{Math.Min(CurrentPage * PageSize, TotalItems)} of {TotalItems} users";
+
     public ObservableCollection<string> RoleOptions { get; } = new() { "All Roles", "Student", "Teacher", "Admin", "Staff" };
     public ObservableCollection<string> StatusOptions { get; } = new() { "All Status", "Active", "Inactive", "Suspended", "Pending" };
     public ObservableCollection<string> GradeOptions { get; } = new() { "All Grades", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12", "Faculty", "N/A" };
@@ -44,17 +65,74 @@ public partial class UserManagementViewModel : ViewModelBase
     public double ActivePercentage => TotalUsers > 0 ? (double)ActiveUsers / TotalUsers * 100 : 0;
     public bool HasFilteredUsers => FilteredUsers?.Any() == true;
 
-    public UserManagementViewModel(IApiClient apiClient, IToastService toastService)
+    public UserManagementViewModel(IApiClient apiClient, IToastService toastService, IDialogService dialogService)
     {
         _apiClient = apiClient;
         _toastService = toastService;
+        _dialogService = dialogService;
         
         // Initialize collections
         Users = new ObservableCollection<UserViewModel>();
         FilteredUsers = new ObservableCollection<UserViewModel>();
         
-        // Load metrics and users from API
-        _ = LoadKpiMetricsAsync();
+        // Only load on first creation
+        if (_isInitialLoad)
+        {
+            _ = LoadKpiMetricsAsync();
+            _ = LoadUsersAsync();
+            _isInitialLoad = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task RefreshUsers()
+    {
+        await LoadUsersAsync();
+        await LoadKpiMetricsAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoToPreviousPage))]
+    private async Task GoToFirstPage()
+    {
+        CurrentPage = 1;
+        await LoadUsersAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoToPreviousPage))]
+    private async Task GoToPreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadUsersAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoToNextPage))]
+    private async Task GoToNextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await LoadUsersAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoToNextPage))]
+    private async Task GoToLastPage()
+    {
+        CurrentPage = TotalPages;
+        await LoadUsersAsync();
+    }
+
+    public void ShowLoadingState()
+    {
+        IsLoading = true;
+    }
+
+    partial void OnPageSizeChanged(int value)
+    {
+        CurrentPage = 1; // Reset to first page when page size changes
         _ = LoadUsersAsync();
     }
 
@@ -62,18 +140,29 @@ public partial class UserManagementViewModel : ViewModelBase
     {
         try
         {
+            IsLoading = true;
             System.Diagnostics.Debug.WriteLine("=== Loading Users ===");
-            var response = await _apiClient.GetUsersAsync();
+            var response = await _apiClient.GetUsersAsync(
+                role: SelectedRole,
+                status: SelectedStatus,
+                page: CurrentPage,
+                limit: PageSize
+            );
             System.Diagnostics.Debug.WriteLine($"API Response: {response != null}");
             System.Diagnostics.Debug.WriteLine($"Users in response: {response?.Users?.Count ?? 0}");
             
             if (response?.Users != null)
             {
+                // Update pagination info
+                TotalItems = response.Pagination?.Total ?? 0;
+                TotalPages = response.Pagination?.TotalPages ?? 1;
+                
                 // Debug: Log first user raw data
                 if (response.Users.Count > 0)
                 {
                     var firstUser = response.Users[0];
-                    System.Diagnostics.Debug.WriteLine($"First user: ID={firstUser.Id}, Email={firstUser.Email}, FullName={firstUser.FullName}, Role={firstUser.Role}");
+                    System.Diagnostics.Debug.WriteLine($"First user: ID={firstUser.Id}, Email={firstUser.Email}, FullName={firstUser.FullName}, Role={firstUser.Role?.Name}");
+                    System.Diagnostics.Debug.WriteLine($"First user StudentId={firstUser.StudentId}, GradeLevel={firstUser.GradeLevel}");
                 }
                 
                 Users.Clear();
@@ -96,6 +185,15 @@ public partial class UserManagementViewModel : ViewModelBase
                 UpdateStatisticsFromUsers();
                 ApplyFilters();
                 
+                // Notify command state changes
+                GoToFirstPageCommand.NotifyCanExecuteChanged();
+                GoToPreviousPageCommand.NotifyCanExecuteChanged();
+                GoToNextPageCommand.NotifyCanExecuteChanged();
+                GoToLastPageCommand.NotifyCanExecuteChanged();
+                
+                OnPropertyChanged(nameof(PageInfo));
+                OnPropertyChanged(nameof(ResultsInfo));
+                
                 System.Diagnostics.Debug.WriteLine($"Filtered users count: {FilteredUsers.Count}");
             }
             else
@@ -112,6 +210,10 @@ public partial class UserManagementViewModel : ViewModelBase
             Users.Clear();
             FilteredUsers.Clear();
             UpdateStatisticsFromUsers();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
@@ -145,15 +247,16 @@ public partial class UserManagementViewModel : ViewModelBase
 
     private UserViewModel MapUserDtoToViewModel(UserDto dto)
     {
-        // Create a better display name fallback
-        string displayName = dto.FullName;
+        // Use the same approach as UserDetailViewModel - trust the backend API
+        // The backend should already be returning proper names from the students table
+        string displayName = dto.FullName ?? "";
         
-        // If full name is empty or looks like an ID/LRN, try to construct from other fields
+        // If FullName is empty or looks like an ID, try to construct from email
         if (string.IsNullOrEmpty(displayName) || 
             displayName.StartsWith("LRN-") || 
+            displayName.StartsWith("Lrn-") ||
             displayName.All(c => char.IsDigit(c) || c == '-' || c == '_'))
         {
-            // Try to construct name from email or use a more descriptive fallback
             if (!string.IsNullOrEmpty(dto.Email))
             {
                 var emailParts = dto.Email.Split('@')[0];
@@ -164,24 +267,45 @@ public partial class UserManagementViewModel : ViewModelBase
                         emailParts.Split('.')
                             .Select(part => char.ToUpper(part[0]) + part.Substring(1).ToLower()));
                 }
-                else
+                else if (emailParts.Length > 0)
                 {
+                    // Single word email - capitalize first letter
                     displayName = char.ToUpper(emailParts[0]) + emailParts.Substring(1).ToLower();
                 }
             }
-            else
+            
+            // If still no name, create a descriptive fallback
+            if (string.IsNullOrEmpty(displayName))
             {
-                displayName = dto.Role?.Name == "Student" ? "Student User" : 
-                             dto.Role?.Name == "Teacher" ? "Teacher User" : 
-                             dto.Role?.Name == "Admin" ? "Admin User" : "User";
+                var roleName = dto.Role?.Name ?? "User";
+                var id = !string.IsNullOrEmpty(dto.StudentId) ? dto.StudentId : 
+                        !string.IsNullOrEmpty(dto.EmployeeId) ? dto.EmployeeId : 
+                        dto.Id;
+                
+                displayName = $"{roleName} ({id})";
             }
+        }
+        
+        // Generate username - prefer LRN/Employee ID over email
+        string username = "";
+        if (!string.IsNullOrEmpty(dto.StudentId))
+        {
+            username = dto.StudentId;
+        }
+        else if (!string.IsNullOrEmpty(dto.EmployeeId))
+        {
+            username = dto.EmployeeId;
+        }
+        else
+        {
+            username = GenerateUsernameFromEmail(dto.Email);
         }
         
         return new UserViewModel
         {
             Id = dto.Id,
             FullName = displayName,
-            Username = GenerateUsernameFromEmail(dto.Email),
+            Username = username,
             Email = dto.Email,
             Role = dto.Role?.Name ?? "Unknown",
             Status = dto.Status,
@@ -316,7 +440,87 @@ public partial class UserManagementViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand] private void ResetPassword(UserViewModel user) { }
+    [RelayCommand]
+    private void ResetPassword(UserViewModel user)
+    {
+        _ = ResetPasswordAsync(user);
+    }
+
+    private async Task ResetPasswordAsync(UserViewModel user)
+    {
+        try
+        {
+            // Show confirmation dialog
+            var confirmed = await _dialogService.ShowConfirmAsync(
+                "Reset Password",
+                $"Are you sure you want to reset the password for {user.FullName}?\n\n" +
+                "For students and teachers, the password will be reset to their birthday (YYYYMMDD format).\n" +
+                "For admins, a secure random password will be generated.",
+                "Reset",
+                "Cancel"
+            );
+
+            if (!confirmed)
+                return;
+
+            IsLoading = true;
+            
+            var response = await _apiClient.ResetPasswordAsync(user.Id);
+            
+            if (response != null)
+            {
+                // Show success message
+                if (!string.IsNullOrEmpty(response.TemporaryPassword))
+                {
+                    // Admin password - show the temporary password
+                    await _dialogService.ShowInfoAsync(
+                        "Password Reset Successful",
+                        new Dictionary<string, string>
+                        {
+                            { "User", user.FullName },
+                            { "Temporary Password", response.TemporaryPassword },
+                            { "Note", "Please save this password and share it securely with the user." }
+                        }
+                    );
+                }
+                else
+                {
+                    // Student/Teacher - birthday-based password
+                    _toastService.Success(
+                        $"Password reset successfully for {user.FullName}",
+                        "Success"
+                    );
+                }
+            }
+            else
+            {
+                _toastService.Error(
+                    "Failed to reset password. The user may not exist in the system.",
+                    "Error"
+                );
+            }
+        }
+        catch (NotFoundException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"User not found: {ex.Message}");
+            _toastService.Error(
+                $"User not found. Please verify the user exists in the system.",
+                "User Not Found"
+            );
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error resetting password: {ex.Message}");
+            _toastService.Error(
+                $"An error occurred: {ex.Message}",
+                "Error"
+            );
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
     [RelayCommand] private void DeleteUser(UserViewModel user)
     {

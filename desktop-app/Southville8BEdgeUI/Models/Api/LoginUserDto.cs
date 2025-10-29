@@ -24,3 +24,4 @@ public class LoginUserDto
     [JsonPropertyName("user_metadata")]
     public Dictionary<string, object>? UserMetadata { get; set; }
 }
+

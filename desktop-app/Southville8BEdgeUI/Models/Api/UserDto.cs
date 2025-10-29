@@ -46,11 +46,32 @@ public class UserDto
     [JsonPropertyName("subjectSpecialization")]
     public string? SubjectSpecialization { get; set; }
 
+    [JsonPropertyName("teacher")]
+    public TeacherData? Teacher { get; set; }
+
     [JsonPropertyName("emailConfirmedAt")]
     public string? EmailConfirmedAt { get; set; }
 
     [JsonPropertyName("userMetadata")]
     public Dictionary<string, object>? UserMetadata { get; set; }
+}
+
+public class TeacherData
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("user_id")]
+    public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("first_name")]
+    public string FirstName { get; set; } = string.Empty;
+
+    [JsonPropertyName("last_name")]
+    public string LastName { get; set; } = string.Empty;
+
+    [JsonPropertyName("middle_name")]
+    public string? MiddleName { get; set; }
 }
 
 public class RoleDto

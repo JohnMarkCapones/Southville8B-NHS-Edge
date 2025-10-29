@@ -739,7 +739,7 @@ export class UsersService {
           id: user.id,
           email: user.email,
           fullName: user.full_name,
-          role: user.role?.name || '',
+          role: user.role ? { id: user.role.id, name: user.role.name } : null,
           status: user.status,
           createdAt: user.created_at,
           lastLogin: user.last_login || null,
@@ -826,7 +826,7 @@ export class UsersService {
       }) || [];
 
     return {
-      data: data || [],
+      data: transformedData,
       pagination: {
         page,
         limit: effectiveLimit,

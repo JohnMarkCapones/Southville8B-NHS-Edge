@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Southville8BEdgeUI.Utils;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Southville8BEdgeUI.Services;
@@ -131,5 +132,120 @@ public sealed class DialogService : IDialogService
             dlg.Show();
 
         return tcs.Task;
+    }
+
+    public Task ShowInfoAsync(string title, Dictionary<string, string> details)
+    {
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var dlg = new Window
+        {
+            CanResize = false,
+            SystemDecorations = SystemDecorations.BorderOnly,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            MinWidth = 400,
+            MaxWidth = 600
+        };
+
+        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        var themeScope = owner as StyledElement ?? (StyledElement)dlg;
+
+        var surfaceBrush = ThemeHelpers.GetBrush(themeScope, "CardBackgroundBrush", "#FFFFFF");
+        var borderBrush = ThemeHelpers.GetBrush(themeScope, "BorderBrush", "#E5E7EB");
+        var textPrimary = ThemeHelpers.GetBrush(themeScope, "TextPrimaryBrush", "#111827");
+        var textSecondary = ThemeHelpers.GetBrush(themeScope, "TextSecondaryBrush", "#6B7280");
+        var accentBrush = ThemeHelpers.GetBrush(themeScope, "AccentBrush", "#3B82F6");
+
+        var closeBtn = new Button
+        {
+            Content = "Close",
+            MinWidth = 92,
+            Padding = new Thickness(12, 8),
+            Background = accentBrush,
+            Foreground = Brushes.White,
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(8),
+            IsDefault = true,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        };
+
+        var titleText = new TextBlock
+        {
+            Text = title,
+            Foreground = textPrimary,
+            FontSize = 18,
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(0, 0, 0, 16)
+        };
+
+        var detailsPanel = new StackPanel
+        {
+            Spacing = 12
+        };
+
+        foreach (var kvp in details)
+        {
+            var labelText = new TextBlock
+            {
+                Text = kvp.Key,
+                Foreground = textSecondary,
+                FontSize = 12,
+                FontWeight = FontWeight.SemiBold
+            };
+
+            var valueText = new TextBlock
+            {
+                Text = kvp.Value,
+                Foreground = textPrimary,
+                FontSize = 14,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            var detailGroup = new StackPanel
+            {
+                Spacing = 4,
+                Children = { labelText, valueText }
+            };
+
+            detailsPanel.Children.Add(detailGroup);
+        }
+
+        var contentStack = new StackPanel
+        {
+            Spacing = 16,
+            Children = { titleText, detailsPanel, closeBtn }
+        };
+
+        dlg.Content = new Border
+        {
+            Background = surfaceBrush,
+            BorderBrush = borderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            BoxShadow = new BoxShadows(new BoxShadow { Blur = 12, Spread = 0, OffsetX = 0, OffsetY = 4, Color = Color.Parse("#20000000") }),
+            Padding = new Thickness(24),
+            Child = contentStack
+        };
+
+        closeBtn.Click += (_, __) => { if (!tcs.Task.IsCompleted) tcs.TrySetResult(true); dlg.Close(); };
+        dlg.Closed += (_, __) => { if (!tcs.Task.IsCompleted) tcs.TrySetResult(true); };
+
+        dlg.WindowStartupLocation = owner is not null ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen;
+
+        if (owner is not null)
+            _ = dlg.ShowDialog(owner);
+        else
+            dlg.Show();
+
+        return tcs.Task;
+    }
+
+    public Task<bool> ShowConfirmAsync(string title, string message, string confirmText = "OK", string cancelText = "Cancel")
+    {
+        return ConfirmDeleteAsync(title, message);
+    }
+
+    private Window? GetMainWindow()
+    {
+        return (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
     }
 }

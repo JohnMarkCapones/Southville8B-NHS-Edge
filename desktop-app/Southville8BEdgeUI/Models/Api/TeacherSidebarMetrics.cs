@@ -7,8 +7,8 @@ public class TeacherSidebarMetrics
     [JsonPropertyName("totalClasses")]
     public int TotalClasses { get; set; }
 
-    [JsonPropertyName("pendingAssignments")]
-    public int PendingAssignments { get; set; }
+    [JsonPropertyName("totalAnnouncements")]
+    public int TotalAnnouncements { get; set; }
 
     [JsonPropertyName("totalStudents")]
     public int TotalStudents { get; set; }

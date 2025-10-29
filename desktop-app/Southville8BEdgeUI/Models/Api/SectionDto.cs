@@ -11,10 +11,10 @@ public class SectionDto
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
     
-    [JsonPropertyName("gradeLevel")]
+    [JsonPropertyName("grade_level")]
     public string? GradeLevel { get; set; }
     
-    [JsonPropertyName("teacherId")]
+    [JsonPropertyName("teacher_id")]
     public string? TeacherId { get; set; }
     
     [JsonPropertyName("created_at")]
@@ -23,10 +23,10 @@ public class SectionDto
     [JsonPropertyName("updated_at")]
     public DateTime UpdatedAt { get; set; }
     
-    [JsonPropertyName("roomId")]
+    [JsonPropertyName("room_id")]
     public string? RoomId { get; set; }
     
-    [JsonPropertyName("buildingId")]
+    [JsonPropertyName("building_id")]
     public string? BuildingId { get; set; }
     
     // Relations

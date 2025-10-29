@@ -78,6 +78,19 @@ export class SectionsController {
     });
   }
 
+  @Get('my-sections')
+  @Roles(UserRole.TEACHER)
+  @ApiOperation({
+    summary: "Get teacher's assigned sections",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Teacher sections retrieved successfully',
+  })
+  getMySections(@AuthUser() user: SupabaseUser) {
+    return this.sectionsService.getMySections(user.id);
+  }
+
   @Get('teachers/available')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({

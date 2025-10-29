@@ -271,6 +271,25 @@ export class SectionsService {
     }
   }
 
+  async getMySections(userId: string): Promise<SectionWithDetails[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('sections_with_details')
+        .select('*')
+        .eq('teacher_id', userId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch sections for user: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   async getAvailableTeachers(): Promise<any[]> {
     try {
       const { data, error } = await this.supabase.rpc('get_available_teachers');
