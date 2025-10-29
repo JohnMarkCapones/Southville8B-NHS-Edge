@@ -11,6 +11,10 @@ type AuthSessionContextValue = {
   status: AuthStatus;
   tokens: StoredTokens | null;
   signIn: (payload: LoginRequest) => Promise<LoginResponse>;
+  signOut: () => void;
+  handleTokenExpiration: (error: any) => boolean;
+  isLoggingOut: boolean;
+  setIsLoggingOut: (value: boolean) => void;
 };
 
 const AuthSessionContext = createContext<AuthSessionContextValue | undefined>(undefined);
@@ -18,6 +22,7 @@ const AuthSessionContext = createContext<AuthSessionContextValue | undefined>(un
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [tokens, setTokens] = useState<StoredTokens | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     restoreAuthSession()
@@ -59,9 +64,43 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
+  const signOut = useCallback(() => {
+    console.log('[AuthSession] Signing out - setting status to unauthenticated');
+    setStatus('unauthenticated');
+    setTokens(null);
+  }, []);
+
+  const handleTokenExpiration = useCallback((error: any): boolean => {
+    if (!error) return false;
+    
+    const errorStr = error.toString().toLowerCase();
+    
+    // Check for authentication-related errors
+    const isAuthError = (
+      errorStr.includes('unauthorized') ||
+      errorStr.includes('token') ||
+      errorStr.includes('expired') ||
+      errorStr.includes('invalid') ||
+      errorStr.includes('401') ||
+      errorStr.includes('403') ||
+      errorStr.includes('forbidden') ||
+      errorStr.includes('jwt') ||
+      errorStr.includes('authentication') ||
+      errorStr.includes('no authentication token')
+    );
+    
+    if (isAuthError) {
+      console.log('[AuthSession] Token expired/invalid - clearing auth state automatically');
+      signOut(); // Immediately clear auth state
+      return true; // Indicates that auth state was cleared
+    }
+    
+    return false; // Not an auth error
+  }, [signOut]);
+
   const value = useMemo<AuthSessionContextValue>(() => {
-    return { status, tokens, signIn };
-  }, [status, tokens?.accessToken, tokens?.refreshToken]);
+    return { status, tokens, signIn, signOut, handleTokenExpiration, isLoggingOut, setIsLoggingOut };
+  }, [status, tokens?.accessToken, tokens?.refreshToken, signOut, handleTokenExpiration, isLoggingOut]);
 
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
 }

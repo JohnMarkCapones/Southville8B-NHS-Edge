@@ -1,27 +1,62 @@
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Text, Dimensions, ActivityIndicator } from 'react-native';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Text, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { ReusableHeader } from '@/components/ui/reusable-header';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useAuthSession } from '@/hooks/use-auth-session';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useAnnouncements } from '@/hooks/use-announcements';
 import { formatAnnouncementContent } from '@/utils/html-utils';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function AnnouncementsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const router = useRouter();
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch announcements from API
-  const { announcements, loading: announcementsLoading, error: announcementsError } = useAnnouncements({
+  const { announcements, loading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useAnnouncements({
     page: 1,
     limit: 20, // Show more announcements in the dedicated screen
     includeExpired: false,
   });
+
+  // Auth error handling
+  const { handleAuthError } = useAuthErrorHandler();
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchAnnouncements();
+    } catch (error) {
+      console.error('Error refreshing announcements:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchAnnouncements]);
+
+  // Auto-redirect to login on authentication errors
+  useEffect(() => {
+    console.log('[ANNOUNCEMENTS][AUTO-REDIRECT] Checking for auth errors', {
+      hasError: !!announcementsError
+    });
+    
+    // Check for authentication error using centralized handler
+    if (announcementsError) {
+      const wasRedirected = handleAuthError(announcementsError);
+      if (wasRedirected) {
+        console.log('[ANNOUNCEMENTS][AUTO-REDIRECT] Auth error handled - redirecting to login');
+      }
+    }
+  }, [announcementsError, handleAuthError]);
 
   // Helper function to get announcement type and styling
   const getAnnouncementType = (title: string) => {
@@ -53,8 +88,8 @@ export default function AnnouncementsScreen() {
         hour: '2-digit',
         minute: '2-digit'
       }),
-      priority: announcement.priority || 'medium',
-      category: announcement.category || 'General',
+      priority: (announcement as any).priority || 'medium',
+      category: (announcement as any).category || 'General',
     })),
     [announcements]
   );
@@ -89,11 +124,26 @@ export default function AnnouncementsScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }>
         
         {/* Creative Header */}
-        <View style={styles.creativeHeader}>
-          <View style={styles.headerIllustration}>
+        <View style={[styles.creativeHeader, { 
+          backgroundColor: isDark ? 'rgba(102, 126, 234, 0.8)' : '#667eea',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
+          <View style={[styles.headerIllustration, { 
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)' 
+          }]}>
             <Ionicons name="megaphone-outline" size={40} color="#FFFFFF" />
           </View>
           <Text style={styles.headerTitle}>Stay Updated</Text>
@@ -103,20 +153,20 @@ export default function AnnouncementsScreen() {
         {/* Announcements Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="newspaper-outline" size={24} color="#4A90E2" />
-            <Text style={styles.sectionTitle}>Latest Announcements</Text>
+            <Ionicons name="newspaper-outline" size={24} color={colors.tint} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Announcements</Text>
           </View>
           
           {announcementsLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4A90E2" />
-              <Text style={styles.loadingText}>Loading announcements...</Text>
+              <ActivityIndicator size="large" color={colors.tint} />
+              <Text style={[styles.loadingText, { color: colors.icon }]}>Loading announcements...</Text>
             </View>
           ) : announcementsError ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
-              <Text style={styles.errorText}>Failed to load announcements</Text>
-              <Text style={styles.errorSubtext}>Please check your connection and try again</Text>
+              <Text style={[styles.errorText, { color: '#FF6B6B' }]}>Failed to load announcements</Text>
+              <Text style={[styles.errorSubtext, { color: colors.icon }]}>Please check your connection and try again</Text>
             </View>
           ) : transformedAnnouncements.length > 0 ? (
             transformedAnnouncements.map((announcement) => {
@@ -128,13 +178,20 @@ export default function AnnouncementsScreen() {
                 key={announcement.id}
                 style={[
                   styles.announcementCard,
-                  { borderLeftColor: announcementType.color }
+                  { 
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                    borderWidth: 1,
+                    borderLeftColor: announcementType.color 
+                  }
                 ]}
                 onPress={() => handleCardExpand(announcement.id)}
                 activeOpacity={0.8}>
                 
                 <View style={styles.announcementCardHeader}>
-                  <View style={styles.announcementIconContainer}>
+                  <View style={[styles.announcementIconContainer, { 
+                    backgroundColor: isDark ? 'rgba(74, 144, 226, 0.2)' : 'rgba(74, 144, 226, 0.1)' 
+                  }]}>
                     <Ionicons 
                       name={announcementType.icon as any} 
                       size={20} 
@@ -142,7 +199,7 @@ export default function AnnouncementsScreen() {
                     />
                   </View>
                   <View style={styles.announcementHeaderContent}>
-                    <Text style={styles.announcementTitle}>{announcement.title}</Text>
+                    <Text style={[styles.announcementTitle, { color: colors.text }]}>{announcement.title}</Text>
                     <View style={styles.announcementMeta}>
                       <View style={[
                         styles.priorityBadge,
@@ -150,36 +207,38 @@ export default function AnnouncementsScreen() {
                       ]}>
                         <Text style={styles.priorityText}>{announcement.priority}</Text>
                       </View>
-                      <Text style={styles.announcementCategory}>{announcement.category}</Text>
+                      <Text style={[styles.announcementCategory, { color: colors.icon }]}>{announcement.category}</Text>
                     </View>
                   </View>
                   <Ionicons 
                     name={isExpanded ? "chevron-up" : "chevron-down"} 
                     size={20} 
-                    color="#666666" 
+                    color={colors.icon} 
                   />
                 </View>
 
                 <View style={styles.announcementContent}>
-                  <Text style={styles.announcementDescription}>
+                  <Text style={[styles.announcementDescription, { color: colors.text }]}>
                     {formatAnnouncementContent(announcement.description)}
                   </Text>
-                  <Text style={styles.announcementPosted}>{announcement.posted}</Text>
+                  <Text style={[styles.announcementPosted, { color: colors.icon }]}>{announcement.posted}</Text>
                 </View>
 
                 {isExpanded && (
-                  <View style={styles.expandedContent}>
+                  <View style={[styles.expandedContent, { 
+                    borderTopColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0' 
+                  }]}>
                     <View style={styles.expandedRow}>
-                      <Ionicons name="time-outline" size={16} color="#666666" />
-                      <Text style={styles.expandedText}>{announcement.posted}</Text>
+                      <Ionicons name="time-outline" size={16} color={colors.icon} />
+                      <Text style={[styles.expandedText, { color: colors.icon }]}>{announcement.posted}</Text>
                     </View>
                     <View style={styles.expandedRow}>
-                      <Ionicons name="folder-outline" size={16} color="#666666" />
-                      <Text style={styles.expandedText}>{announcement.category}</Text>
+                      <Ionicons name="folder-outline" size={16} color={colors.icon} />
+                      <Text style={[styles.expandedText, { color: colors.icon }]}>{announcement.category}</Text>
                     </View>
                     <View style={styles.expandedRow}>
-                      <Ionicons name="flag-outline" size={16} color="#666666" />
-                      <Text style={styles.expandedText}>Priority: {announcement.priority}</Text>
+                      <Ionicons name="flag-outline" size={16} color={colors.icon} />
+                      <Text style={[styles.expandedText, { color: colors.icon }]}>Priority: {announcement.priority}</Text>
                     </View>
                   </View>
                 )}
@@ -188,9 +247,9 @@ export default function AnnouncementsScreen() {
           })
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="megaphone-outline" size={60} color="#CCCCCC" />
-              <Text style={styles.emptyTitle}>No Announcements</Text>
-              <Text style={styles.emptyText}>Check back later for updates</Text>
+              <Ionicons name="megaphone-outline" size={60} color={colors.icon} />
+              <Text style={[styles.emptyTitle, { color: colors.icon }]}>No Announcements</Text>
+              <Text style={[styles.emptyText, { color: colors.icon }]}>Check back later for updates</Text>
             </View>
           )}
         </View>
@@ -198,16 +257,20 @@ export default function AnnouncementsScreen() {
         {/* Reminders Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="alarm-outline" size={24} color="#FF6B6B" />
-            <Text style={styles.sectionTitle}>Important Reminders</Text>
+            <Ionicons name="alarm-outline" size={24} color={colors.tint} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Important Reminders</Text>
           </View>
           
           {reminders.map((reminder) => (
-            <View key={reminder.id} style={styles.reminderCard}>
+            <View key={reminder.id} style={[styles.reminderCard, { 
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+              borderWidth: 1
+            }]}>
               <View style={[styles.reminderIconContainer, { backgroundColor: reminder.color }]}>
                 <Ionicons name={reminder.icon as any} size={20} color="#FFFFFF" />
               </View>
-              <Text style={styles.reminderText}>{reminder.text}</Text>
+              <Text style={[styles.reminderText, { color: colors.text }]}>{reminder.text}</Text>
             </View>
           ))}
         </View>
@@ -236,7 +299,6 @@ const styles = StyleSheet.create({
   
   // Creative Header
   creativeHeader: {
-    backgroundColor: '#667eea',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -247,7 +309,6 @@ const styles = StyleSheet.create({
   headerIllustration: {
     width: 80,
     height: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
@@ -281,12 +342,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1A1A1A',
   },
   
   // Announcement Cards
   announcementCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     borderLeftWidth: 4,
@@ -306,7 +365,6 @@ const styles = StyleSheet.create({
   announcementIconContainer: {
     width: 40,
     height: 40,
-    backgroundColor: 'rgba(74, 144, 226, 0.1)',
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -318,7 +376,6 @@ const styles = StyleSheet.create({
   announcementTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     lineHeight: 22,
   },
   announcementMeta: {
@@ -339,7 +396,6 @@ const styles = StyleSheet.create({
   },
   announcementCategory: {
     fontSize: 12,
-    color: '#666666',
     fontWeight: '500',
   },
   announcementContent: {
@@ -347,12 +403,10 @@ const styles = StyleSheet.create({
   },
   announcementDescription: {
     fontSize: 14,
-    color: '#333333',
     lineHeight: 20,
   },
   announcementPosted: {
     fontSize: 12,
-    color: '#999999',
     fontStyle: 'italic',
   },
   
@@ -361,7 +415,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
     gap: 8,
   },
   expandedRow: {
@@ -371,12 +424,10 @@ const styles = StyleSheet.create({
   },
   expandedText: {
     fontSize: 13,
-    color: '#666666',
   },
   
   // Reminder Cards
   reminderCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -399,7 +450,6 @@ const styles = StyleSheet.create({
   reminderText: {
     flex: 1,
     fontSize: 14,
-    color: '#333333',
     lineHeight: 20,
   },
   
@@ -412,11 +462,9 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#999999',
   },
   emptyText: {
     fontSize: 14,
-    color: '#CCCCCC',
     textAlign: 'center',
   },
   
@@ -428,7 +476,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666666',
     fontWeight: '500',
   },
   errorContainer: {
@@ -438,13 +485,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: '#FF6B6B',
     fontWeight: 'bold',
     textAlign: 'center',
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#999999',
     textAlign: 'center',
   },
 });
