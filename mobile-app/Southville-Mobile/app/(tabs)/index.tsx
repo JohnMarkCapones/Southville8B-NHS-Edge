@@ -1,6 +1,6 @@
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Image, Text, TextInput, Dimensions } from 'react-native';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Image, Text, TextInput, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { 
   useSharedValue, 
@@ -16,11 +16,14 @@ import Animated, {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
 import { useAnnouncements } from '@/hooks/use-announcements';
 import { useMySchedule, formatTime } from '@/hooks/use-my-schedule';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useUpcomingEvents } from '@/hooks/use-upcoming-events';
+import { Event } from '@/lib/types/event';
+import { useAuthSession } from '@/hooks/use-auth-session';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { ReusableHeader } from '@/components/ui/reusable-header';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { formatAnnouncementContent } from '@/utils/html-utils';
@@ -29,29 +32,34 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   // Fetch announcements
-  const { announcements, loading: announcementsLoading, error: announcementsError } = useAnnouncements({
+  const { announcements, loading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useAnnouncements({
     page: 1,
     limit: 5,
     includeExpired: false,
   });
 
   // Fetch schedule
-  const { todaysSchedules, loading: scheduleLoading, error: scheduleError, hasStudentProfile } = useMySchedule();
+  const { todaysSchedules, loading: scheduleLoading, error: scheduleError, hasStudentProfile, refetch: refetchSchedule } = useMySchedule();
 
   // Fetch current user
-  const { user, loading: userLoading, error: userError } = useCurrentUser();
+  const { user, loading: userLoading, error: userError, refetch: refetchUser } = useCurrentUser();
 
   // Fetch upcoming events
-  const { events, loading: eventsLoading, error: eventsError } = useUpcomingEvents();
+  const { events, loading: eventsLoading, error: eventsError, refetch: refetchEvents } = useUpcomingEvents();
+
+  // Auth error handling
+  const { handleAuthError } = useAuthErrorHandler();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [showAlertOverlay, setShowAlertOverlay] = useState(false);
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
+  const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Animation values
   const alertScale = useSharedValue(0);
@@ -140,6 +148,31 @@ export default function HomeScreen() {
     }
   }, [isBirthdayToday, user, showBirthdayPopup]);
 
+  // Auto-redirect to login on authentication errors
+  useEffect(() => {
+    console.log('[INDEX][AUTO-REDIRECT] Checking for auth errors', {
+      hasErrors: {
+        announcements: !!announcementsError,
+        schedule: !!scheduleError,
+        user: !!userError,
+        events: !!eventsError
+      }
+    });
+    
+    // Check for authentication errors using centralized handler
+    const errors = [announcementsError, scheduleError, userError, eventsError];
+    
+    for (const error of errors) {
+      if (error) {
+        const wasRedirected = handleAuthError(error);
+        if (wasRedirected) {
+          console.log('[INDEX][AUTO-REDIRECT] Auth error handled - redirecting to login');
+          break; // Stop checking other errors once redirect is triggered
+        }
+      }
+    }
+  }, [announcementsError, scheduleError, userError, eventsError, handleAuthError]);
+
   // Animated styles
   const alertAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -162,10 +195,45 @@ export default function HomeScreen() {
   });
 
 
+  // Helper function to get events for a specific date
+  const getEventsForDate = useCallback((date: Date) => {
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    return events.filter(event => {
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate.getTime() === targetDate.getTime() && event.status === 'published';
+    });
+  }, [events]);
+
+  // Helper function to check if a date has events
+  const hasEventsOnDate = useCallback((date: Date) => {
+    return getEventsForDate(date).length > 0;
+  }, [getEventsForDate]);
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchAnnouncements(),
+        refetchSchedule(),
+        refetchUser(),
+        refetchEvents()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchAnnouncements, refetchSchedule, refetchUser, refetchEvents]);
+
   // Helper function to get appropriate style for quick links
   const getQuickLinkStyle = (index: number) => {
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
-    return { backgroundColor: colors[index] };
+    const lightColors = ['rgba(255, 107, 107, 0.8)', 'rgba(78, 205, 196, 0.8)', 'rgba(69, 183, 209, 0.8)', 'rgba(150, 206, 180, 0.8)'];
+    const darkColors = ['rgba(255, 107, 107, 0.6)', 'rgba(78, 205, 196, 0.6)', 'rgba(69, 183, 209, 0.6)', 'rgba(150, 206, 180, 0.6)'];
+    return { backgroundColor: isDark ? darkColors[index] : lightColors[index] };
   };
 
   // Helper function to get appropriate icon for quick links
@@ -333,14 +401,25 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }
+      >
     
     {/* Reusable Header */}
     <ReusableHeader title="Home" showWelcomeSection={true} />
 
     {/* Creative Search Bar */}
     <View style={styles.searchSection}>
-      <View style={styles.searchCard}>
+      <View style={[styles.searchCard, { backgroundColor: isDark ? '#2A2A2A' : '#2196F3' }]}>
         <View style={styles.searchContent}>
           <View style={styles.searchTextContainer}>
             <Text style={styles.searchTitle}>Let's</Text>
@@ -348,17 +427,17 @@ export default function HomeScreen() {
           </View>
         </View>
         <View style={styles.searchBarContainer}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={16} color="#666666" style={styles.searchIcon} />
+          <View style={[styles.searchBar, { backgroundColor: isDark ? '#404040' : '#FFFFFF' }]}>
+            <Ionicons name="search" size={16} color={isDark ? '#FFFFFF' : '#666666'} style={styles.searchIcon} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#333333' }]}
               placeholder="search...."
-              placeholderTextColor="#999999"
+              placeholderTextColor={isDark ? '#CCCCCC' : '#999999'}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             <TouchableOpacity style={styles.filterButton}>
-              <Ionicons name="options-outline" size={16} color="#666666" />
+              <Ionicons name="options-outline" size={16} color={isDark ? '#FFFFFF' : '#666666'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -376,10 +455,10 @@ export default function HomeScreen() {
 
     {/* Creative Calendar Widget */}
     <View style={styles.calendarSection}>
-      <View style={styles.calendarCard}>
+      <View style={[styles.calendarCard, { backgroundColor: colors.background }]}>
         {/* Calendar Header */}
         <View style={styles.calendarHeader}>
-          <Text style={styles.calendarMonth}>
+          <Text style={[styles.calendarMonth, { color: colors.tint }]}>
             {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </Text>
           <View style={styles.streakContainer}>
@@ -390,45 +469,105 @@ export default function HomeScreen() {
 
         {/* Week View */}
         <View style={styles.weekContainer}>
-          {getCurrentWeek().map((day, index) => (
-            <View key={index} style={styles.dayColumn}>
-              <Text style={[
-                styles.dayName,
-                day.isToday && styles.todayDayName
-              ]}>
-                {day.dayName}
-              </Text>
-              <View style={[
-                styles.dateContainer,
-                day.isToday && styles.todayDateContainer
-              ]}>
+          {getCurrentWeek().map((day, index) => {
+            const hasEvents = hasEventsOnDate(day.fullDate);
+            const isSelected = selectedEventDate?.toDateString() === day.fullDate.toDateString();
+            
+            return (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.dayColumn}
+                onPress={() => {
+                  if (hasEvents) {
+                    setSelectedEventDate(isSelected ? null : day.fullDate);
+                  }
+                }}
+                disabled={!hasEvents}
+              >
                 <Text style={[
-                  styles.dateNumber,
-                  day.isToday && styles.todayDateNumber
+                  styles.dayName,
+                  { color: colors.icon },
+                  day.isToday && styles.todayDayName
                 ]}>
-                  {day.date}
+                  {day.dayName}
                 </Text>
-                {day.isToday && (
-                  <View style={styles.starIcon}>
-                    <Ionicons name="star" size={12} color="#FFD700" />
-                  </View>
-                )}
-              </View>
-            </View>
-          ))}
+                <View style={[
+                  styles.dateContainer,
+                  day.isToday && [
+                    styles.todayDateContainer,
+                    { 
+                      backgroundColor: isDark ? '#2A2A2A' : '#E3F2FD',
+                      shadowColor: colors.tint
+                    }
+                  ]
+                ]}>
+                  <Text style={[
+                    styles.dateNumber,
+                    { color: colors.text },
+                    day.isToday && [
+                      styles.todayDateNumber,
+                      { color: colors.tint }
+                    ]
+                  ]}>
+                    {day.date}
+                  </Text>
+                  {day.isToday && (
+                    <View style={styles.starIcon}>
+                      <Ionicons name="star" size={12} color="#FFD700" />
+                    </View>
+                  )}
+                  {hasEvents && (
+                    <View style={styles.eventDot} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Timeline Separator */}
         <View style={styles.timelineContainer}>
-          <View style={styles.timelineLine} />
-          <View style={styles.timelineHandle} />
+          <View style={[styles.timelineLine, { backgroundColor: colors.icon }]} />
+          <View style={[styles.timelineHandle, { backgroundColor: colors.tint }]} />
         </View>
       </View>
     </View>
 
+    {/* Event Dropdown */}
+    {selectedEventDate && (
+      <View style={[styles.eventDropdown, { backgroundColor: colors.background }]}>
+        <View style={styles.eventDropdownHeader}>
+          <Text style={[styles.eventDropdownTitle, { color: colors.text }]}>
+            Events on {selectedEventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </Text>
+          <TouchableOpacity onPress={() => setSelectedEventDate(null)}>
+            <Ionicons name="close-circle" size={20} color={colors.icon} />
+          </TouchableOpacity>
+        </View>
+        
+        {getEventsForDate(selectedEventDate).map((event: Event) => (
+          <View key={event.id} style={[styles.eventDropdownItem, { borderColor: colors.icon }]}>
+            <View style={styles.eventDropdownDot} />
+            <View style={styles.eventDropdownContent}>
+              <Text style={[styles.eventDropdownItemTitle, { color: colors.text }]}>
+                {event.title}
+              </Text>
+              <Text style={[styles.eventDropdownItemDate, { color: colors.icon }]}>
+                {new Date(event.date).toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    )}
+
       {/* Creative Quick Links Section */}
       <View style={styles.quickLinksSection}>
-        <Text style={styles.quickLinksTitle}>Quick Access</Text>
+        <Text style={[styles.quickLinksTitle, { color: colors.text }]}>Quick Access</Text>
         <View style={styles.quickLinksGrid}>
           {quickLinks.map(({ label, route }, index) => (
             <TouchableOpacity
@@ -437,7 +576,7 @@ export default function HomeScreen() {
               onPress={() => router.push(route)}
               activeOpacity={0.7}
               delayPressIn={50}>
-              <View style={styles.quickLinkIcon}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)' }]}>
                 <Ionicons 
                   name={getQuickLinkIcon(label) as any} 
                   size={24} 
@@ -520,26 +659,26 @@ export default function HomeScreen() {
           <View style={styles.announcementsHeaderIcon}>
             <Ionicons name="notifications-outline" size={28} color="#FFFFFF" />
           </View>
-          <Text style={styles.announcementsTitle}>School Updates</Text>
+          <Text style={[styles.announcementsTitle, { color: colors.text }]}>School Updates</Text>
           <View style={styles.announcementsHeaderAccent} />
         </View>
 
         {announcementsLoading ? (
           <View style={styles.announcementLoadingContainer}>
-            <View style={styles.announcementLoadingSpinner}>
-              <ActivityIndicator size="large" color="#007AFF" />
+            <View style={[styles.announcementLoadingSpinner, { backgroundColor: isDark ? '#2A2A2A' : '#F2F2F7' }]}>
+              <ActivityIndicator size="large" color={colors.tint} />
             </View>
-            <Text style={styles.announcementLoadingText}>Loading updates...</Text>
+            <Text style={[styles.announcementLoadingText, { color: colors.icon }]}>Loading updates...</Text>
           </View>
         ) : announcementsError ? (
           <View style={styles.announcementErrorContainer}>
-            <View style={styles.announcementErrorIcon}>
+            <View style={[styles.announcementErrorIcon, { backgroundColor: isDark ? '#2A2A2A' : '#FFF5F5' }]}>
               <Ionicons name="alert-circle" size={32} color="#FF3B30" />
             </View>
             <Text style={styles.announcementErrorText}>
               Unable to load announcements
             </Text>
-            <Text style={styles.announcementErrorSubtext}>
+            <Text style={[styles.announcementErrorSubtext, { color: colors.icon }]}>
               Please check your connection
             </Text>
           </View>
@@ -555,18 +694,24 @@ export default function HomeScreen() {
                 </View>
 
                 {/* Main Card */}
-                <View style={[styles.announcementCard, { backgroundColor: announcementType.bgColor }]}>
+                <View style={[
+                  styles.announcementCard, 
+                  { 
+                    backgroundColor: isDark ? '#2A2A2A' : announcementType.bgColor,
+                    borderColor: isDark ? '#404040' : 'rgba(0,0,0,0.05)'
+                  }
+                ]}>
                   <View style={styles.announcementCardContent}>
                     <View style={styles.announcementCardHeader}>
                       <View style={[styles.announcementCardIcon, { backgroundColor: announcementType.color }]}>
                         <Ionicons name={announcementType.icon as any} size={20} color="#FFFFFF" />
                       </View>
                       <View style={styles.announcementCardInfo}>
-                        <Text style={styles.announcementCardTitle}>
+                        <Text style={[styles.announcementCardTitle, { color: colors.text }]}>
                           {announcementType.type === 'urgent' ? 'URGENT NOTICE' : 
                            announcementType.type === 'academic' ? 'ACADEMIC UPDATE' : 'GENERAL ANNOUNCEMENT'}
                         </Text>
-                        <Text style={styles.announcementCardTime}>
+                        <Text style={[styles.announcementCardTime, { color: colors.icon }]}>
                           {new Date().toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric',
@@ -577,7 +722,7 @@ export default function HomeScreen() {
                       </View>
                     </View>
                     
-                    <Text style={styles.announcementCardText}>
+                    <Text style={[styles.announcementCardText, { color: colors.text }]}>
                       {formatAnnouncementContent(announcement)}
                     </Text>
                     
@@ -602,11 +747,11 @@ export default function HomeScreen() {
           })
         ) : (
           <View style={styles.announcementEmptyContainer}>
-            <View style={styles.announcementEmptyIcon}>
-              <Ionicons name="newspaper-outline" size={48} color="#C7C7CC" />
+            <View style={[styles.announcementEmptyIcon, { backgroundColor: isDark ? '#2A2A2A' : '#F2F2F7' }]}>
+              <Ionicons name="newspaper-outline" size={48} color={colors.icon} />
             </View>
-            <Text style={styles.announcementEmptyTitle}>No Updates Yet</Text>
-            <Text style={styles.announcementEmptyText}>
+            <Text style={[styles.announcementEmptyTitle, { color: colors.text }]}>No Updates Yet</Text>
+            <Text style={[styles.announcementEmptyText, { color: colors.icon }]}>
               Check back later for school announcements
             </Text>
           </View>
@@ -616,25 +761,25 @@ export default function HomeScreen() {
       {/* Events Section */}
       <View style={styles.eventsSection}>
         <View style={styles.eventsHeader}>
-          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
-          <Text style={styles.eventsTitle}>Events</Text>
-          <View style={styles.eventsHeaderLine} />
+          <Ionicons name="calendar-outline" size={24} color={colors.tint} />
+          <Text style={[styles.eventsTitle, { color: colors.text }]}>Events</Text>
+          <View style={[styles.eventsHeaderLine, { backgroundColor: colors.tint }]} />
         </View>
 
         {eventsLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#007AFF" />
-            <Text style={styles.loadingText}>Loading events...</Text>
+            <ActivityIndicator size="small" color={colors.tint} />
+            <Text style={[styles.loadingText, { color: colors.icon }]}>Loading events...</Text>
           </View>
         ) : eventsError ? (
           <View style={[styles.listCard, { borderColor: colors.icon }]}>
-            <Text style={styles.errorText}>Failed to load events</Text>
+            <Text style={[styles.errorText, { color: '#ff6b6b' }]}>Failed to load events</Text>
           </View>
         ) : transformedEvents.length > 0 ? (
           transformedEvents.map((event) => (
             <View key={event.id} style={styles.eventContainer}>
               {/* Main Event Card (Container 1) */}
-              <View style={styles.eventCard}>
+              <View style={[styles.eventCard, { backgroundColor: colors.background }]}>
                 <View style={styles.eventImageContainer}>
                   <Image source={event.image} style={styles.eventImage} resizeMode="cover" />
                   <View style={styles.eventTag}>
@@ -644,13 +789,13 @@ export default function HomeScreen() {
                 
                 <View style={styles.eventContent}>
                   <View style={styles.eventTitleRow}>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <Text style={[styles.eventTitle, { color: colors.text }]}>{event.title}</Text>
                     <View style={styles.eventDateTag}>
                       <Text style={styles.eventDateText}>{event.date}</Text>
                     </View>
                   </View>
                   
-                  <Text style={styles.eventDescription}>{event.description}</Text>
+                  <Text style={[styles.eventDescription, { color: colors.icon }]}>{event.description}</Text>
                 </View>
               </View>
 
@@ -662,7 +807,7 @@ export default function HomeScreen() {
           ))
         ) : (
           <View style={[styles.listCard, { borderColor: colors.icon }]}>
-            <Text style={styles.emptyText}>No upcoming events</Text>
+            <Text style={[styles.emptyText, { color: colors.icon }]}>No upcoming events</Text>
           </View>
         )}
       </View>
@@ -936,7 +1081,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   searchCard: {
-    backgroundColor: '#2196F3',
     borderRadius: 16,
     padding: 12,
     shadowColor: '#000000',
@@ -986,7 +1130,6 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -1003,7 +1146,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#333333',
   },
   filterButton: {
     marginLeft: 8,
@@ -1013,9 +1155,13 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -1026,7 +1172,6 @@ const styles = StyleSheet.create({
   calendarMonth: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2196F3',
   },
   streakContainer: {
     flexDirection: 'row',
@@ -1053,11 +1198,9 @@ const styles = StyleSheet.create({
   dayName: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666666',
     marginBottom: 4,
   },
   todayDayName: {
-    color: '#333333',
     fontWeight: '600',
   },
   dateContainer: {
@@ -1068,8 +1211,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   todayDateContainer: {
-    backgroundColor: '#E3F2FD',
-    shadowColor: '#2196F3',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1079,10 +1220,8 @@ const styles = StyleSheet.create({
   dateNumber: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333333',
   },
   todayDateNumber: {
-    color: '#2196F3',
     fontWeight: 'bold',
   },
   starIcon: {
@@ -1101,7 +1240,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: '#E0E0E0',
   },
   timelineHandle: {
     position: 'absolute',
@@ -1109,7 +1247,6 @@ const styles = StyleSheet.create({
     top: 6,
     width: 8,
     height: 8,
-    backgroundColor: '#2196F3',
     borderRadius: 2,
   },
   // Creative Quick Links Styles
@@ -1119,7 +1256,6 @@ const styles = StyleSheet.create({
   quickLinksTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333333',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -1148,7 +1284,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -1292,12 +1427,10 @@ const styles = StyleSheet.create({
   eventsTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   eventsHeaderLine: {
     flex: 1,
     height: 2,
-    backgroundColor: '#007AFF',
     borderRadius: 1,
   },
   eventContainer: {
@@ -1305,7 +1438,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   eventCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -1346,19 +1478,18 @@ const styles = StyleSheet.create({
   },
   eventContent: {
     flex: 1,
-    gap: 6,
-    height: 120,
-    justifyContent: 'space-between',
+    gap: 8,
+    justifyContent: 'flex-start',
   },
   eventTitleRow: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 6,
+    marginBottom: 4,
   },
   eventTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000000',
     flexWrap: 'wrap',
     lineHeight: 20,
   },
@@ -1375,8 +1506,9 @@ const styles = StyleSheet.create({
   },
   eventDescription: {
     fontSize: 12,
-    color: '#333333',
     lineHeight: 16,
+    flex: 1,
+    marginTop: 4,
   },
   eventAdditionalInfo: {
     borderRadius: 12,
@@ -1424,7 +1556,6 @@ const styles = StyleSheet.create({
   announcementsTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1C1C1E',
     flex: 1,
   },
   announcementsHeaderAccent: {
@@ -1469,7 +1600,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   announcementCardContent: {
     gap: 16,
@@ -1499,17 +1629,14 @@ const styles = StyleSheet.create({
   announcementCardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1C1C1E',
     letterSpacing: 0.5,
   },
   announcementCardTime: {
     fontSize: 12,
-    color: '#8E8E93',
     fontWeight: '500',
   },
   announcementCardText: {
     fontSize: 15,
-    color: '#1C1C1E',
     lineHeight: 22,
     fontWeight: '400',
   },
@@ -1547,13 +1674,11 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#F2F2F7',
     alignItems: 'center',
     justifyContent: 'center',
   },
   announcementLoadingText: {
     fontSize: 16,
-    color: '#8E8E93',
     fontWeight: '500',
   },
   announcementErrorContainer: {
@@ -1565,7 +1690,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FFF5F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1577,7 +1701,6 @@ const styles = StyleSheet.create({
   },
   announcementErrorSubtext: {
     fontSize: 14,
-    color: '#8E8E93',
     textAlign: 'center',
   },
   announcementEmptyContainer: {
@@ -1589,18 +1712,15 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F2F2F7',
     alignItems: 'center',
     justifyContent: 'center',
   },
   announcementEmptyTitle: {
     fontSize: 20,
-    color: '#1C1C1E',
     fontWeight: 'bold',
   },
   announcementEmptyText: {
     fontSize: 16,
-    color: '#8E8E93',
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -1911,5 +2031,62 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Event indicators and dropdown styles
+  eventDot: {
+    position: 'absolute',
+    bottom: -8,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FF3B30',
+  },
+  eventDropdown: {
+    marginTop: 12,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  eventDropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  eventDropdownTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  eventDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  eventDropdownDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#007AFF',
+  },
+  eventDropdownContent: {
+    flex: 1,
+    gap: 4,
+  },
+  eventDropdownItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  eventDropdownItemDate: {
+    fontSize: 12,
   },
 });

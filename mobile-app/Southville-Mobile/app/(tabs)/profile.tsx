@@ -1,46 +1,112 @@
 import { useRouter } from 'expo-router';
-import { useState, useCallback } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, Text, Dimensions } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, Text, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { clearAuthSession } from '@/services/auth';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const router = useRouter();
-  const { } = useAuthSession();
+  const { isLoggingOut: globalLoggingOut, setIsLoggingOut: setGlobalLoggingOut, signOut } = useAuthSession();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Fetch current user data
-  const { user, loading: userLoading, error: userError } = useCurrentUser();
+  const { user, loading: userLoading, error: userError, refetch: refetchUser } = useCurrentUser();
+
+  // Auth error handling
+  const { handleAuthError } = useAuthErrorHandler();
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchUser();
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchUser]);
+
+  // Auto-redirect to login on authentication errors
+  useEffect(() => {
+    console.log('[PROFILE][AUTO-REDIRECT] Checking for auth errors', {
+      isRedirecting,
+      globalLoggingOut,
+      hasError: !!userError
+    });
+    
+    // Skip if already redirecting OR if logout is in progress
+    if (isRedirecting || globalLoggingOut) {
+      console.log('[PROFILE][AUTO-REDIRECT] Skipping - already redirecting or logging out');
+      return;
+    }
+    
+    // Check for authentication error using centralized handler
+    if (userError) {
+      const wasRedirected = handleAuthError(userError);
+      if (wasRedirected) {
+        console.log('[PROFILE][AUTO-REDIRECT] Auth error handled - redirecting to login');
+        setIsRedirecting(true);
+      }
+    }
+  }, [userError, router, isRedirecting, globalLoggingOut, handleAuthError]);
 
   const handleLogout = useCallback(async () => {
-    // COMMENTED OUT: Prevent logout functionality
-    console.log('Logout button pressed - functionality disabled');
-    return;
-    
-    // if (isLoggingOut) {
-    //   return;
-    // }
+    // Prevent multiple logout attempts
+    if (isLoggingOut) {
+      console.log('[LOGOUT] Already logging out, skipping');
+      return;
+    }
 
-    // try {
-    //   setIsLoggingOut(true);
-    //   await signOut();
-    //   // Let the auth state change handle navigation automatically
-    // } catch (error) {
-    //   console.error('Logout error:', error);
-    //   setIsLoggingOut(false);
-    // }
-  }, [isLoggingOut]);
+    console.log('[LOGOUT] Starting logout process');
+    
+    // STEP 1: Immediately set auth status to unauthenticated (prevents API calls)
+    signOut();
+    
+    // STEP 2: Set flags to prevent re-entry
+    setIsLoggingOut(true);
+    setGlobalLoggingOut(true);
+    
+    try {
+      console.log('[LOGOUT] Clearing auth session');
+      // STEP 3: Clear authentication session (tokens from storage)
+      await clearAuthSession();
+      
+      console.log('[LOGOUT] Auth session cleared, waiting for smooth transition');
+      // STEP 4: Small delay for better UX (loading overlay visible)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('[LOGOUT] Navigating to login');
+      // STEP 5: Navigate to login screen
+      router.replace('/login');
+      console.log('[LOGOUT] Navigation initiated');
+      
+    } catch (error) {
+      console.error('[LOGOUT] Error:', error);
+    } finally {
+      // STEP 6: Always reset flags after a delay to prevent hanging
+      setTimeout(() => {
+        console.log('[LOGOUT] Resetting flags');
+        setIsLoggingOut(false);
+        setGlobalLoggingOut(false);
+      }, 2000); // 2 second delay to ensure navigation completes
+    }
+  }, [isLoggingOut, router, setGlobalLoggingOut, signOut]);
 
   // Helper function to get avatar initial
   const getAvatarInitial = () => {
@@ -104,7 +170,7 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
-          <ThemedText type="default" style={styles.loadingText}>
+          <ThemedText type="default" style={[styles.loadingText, { color: colors.icon }]}>
             Loading profile...
           </ThemedText>
         </View>
@@ -117,8 +183,11 @@ export default function ProfileScreen() {
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}>
-        <ThemedView style={[styles.errorCard, { borderColor: colors.icon }]}>
-          <ThemedText type="default" style={styles.errorText}>
+        <ThemedView style={[styles.errorCard, { 
+          backgroundColor: isDark ? 'rgba(255, 107, 107, 0.1)' : '#FFEBEE',
+          borderColor: isDark ? 'rgba(255, 107, 107, 0.3)' : '#FFCDD2'
+        }]}>
+          <ThemedText type="default" style={[styles.errorText, { color: '#F44336' }]}>
             Failed to load profile: {userError}
           </ThemedText>
         </ThemedView>
@@ -129,23 +198,41 @@ export default function ProfileScreen() {
   const contactInfo = getContactInfo();
 
   return (
-    <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}>
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+            progressBackgroundColor={colors.background}
+          />
+        }>
         
         {/* Blue Gradient Header Section */}
-        <View style={styles.headerSection}>
+        <View style={[styles.headerSection, { 
+          backgroundColor: isDark ? 'rgba(91, 163, 208, 0.8)' : '#5BA3D0',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
           <View style={styles.headerContent}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
+              <View style={[styles.avatar, { 
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.3)'
+              }]}>
                 <Text style={styles.avatarText}>{getAvatarInitial()}</Text>
               </View>
             </View>
             
             <View style={styles.headerInfo}>
               {/* Streak Badge */}
-              <View style={styles.streakBadge}>
+              <View style={[styles.streakBadge, { 
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)' 
+              }]}>
                 <Ionicons name="trophy-outline" size={16} color="#FFD700" />
                 <Text style={styles.streakText}>Highest 29 streak</Text>
               </View>
@@ -157,93 +244,120 @@ export default function ProfileScreen() {
               <Text style={styles.userEmail}>{user?.email || 'No email'}</Text>
               
               {/* Student Role */}
-              <Text style={styles.userRole}>Student</Text>
+              <Text style={[styles.userRole, { 
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)' 
+              }]}>Student</Text>
             </View>
           </View>
         </View>
 
         {/* Stats Cards Row */}
-        <View style={styles.statsContainer}>
+        <View style={[styles.statsContainer, { 
+          backgroundColor: isDark ? '#2A2A2A' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+          borderWidth: 1
+        }]}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{user?.student?.grade_level || '10'}</Text>
-            <Text style={styles.statLabel}>Grade</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{user?.student?.grade_level || '10'}</Text>
+            <Text style={[styles.statLabel, { color: colors.icon }]}>Grade</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0' }]} />
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{getSectionName()}</Text>
-            <Text style={styles.statLabel}>Section</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{getSectionName()}</Text>
+            <Text style={[styles.statLabel, { color: colors.icon }]}>Section</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0' }]} />
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{user?.student?.rank || 'N/A'}</Text>
-            <Text style={styles.statLabel}>Ranking</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{user?.student?.rank || 'N/A'}</Text>
+            <Text style={[styles.statLabel, { color: colors.icon }]}>Ranking</Text>
           </View>
         </View>
 
         {/* Personal Section Container */}
-        <View style={styles.personalSection}>
-          <Text style={styles.sectionTitle}>Personal</Text>
+        <View style={[styles.personalSection, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+          borderWidth: 1
+        }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal</Text>
           
           {/* Personal Information */}
           <TouchableOpacity style={styles.menuItem} onPress={handlePersonalInfo}>
-            <View style={styles.menuIcon}>
-              <Ionicons name="person-outline" size={20} color="#1976D2" />
+            <View style={[styles.menuIcon, { 
+              backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : '#E3F2FD' 
+            }]}>
+              <Ionicons name="person-outline" size={20} color={colors.tint} />
             </View>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>
-                <Text style={styles.menuTitleBlue}>Personal </Text>
-                <Text style={styles.menuTitleBlack}>Information</Text>
+                <Text style={[styles.menuTitleBlue, { color: colors.tint }]}>Personal </Text>
+                <Text style={[styles.menuTitleBlack, { color: colors.text }]}>Information</Text>
               </Text>
-              <Text style={styles.menuSubtitle}>Detail your personal data</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.icon }]}>Detail your personal data</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={20} color="#666666" />
+            <Ionicons name="chevron-forward-outline" size={20} color={colors.icon} />
           </TouchableOpacity>
 
           {/* Account Security */}
           <TouchableOpacity style={styles.menuItem} onPress={handleAccountSecurity}>
-            <View style={styles.menuIcon}>
-              <Ionicons name="shield-outline" size={20} color="#1976D2" />
+            <View style={[styles.menuIcon, { 
+              backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : '#E3F2FD' 
+            }]}>
+              <Ionicons name="shield-outline" size={20} color={colors.tint} />
             </View>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>
-                <Text style={styles.menuTitleBlue}>Account </Text>
-                <Text style={styles.menuTitleBlack}>Security</Text>
+                <Text style={[styles.menuTitleBlue, { color: colors.tint }]}>Account </Text>
+                <Text style={[styles.menuTitleBlack, { color: colors.text }]}>Security</Text>
               </Text>
-              <Text style={styles.menuSubtitle}>Manage your account security</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.icon }]}>Manage your account security</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={20} color="#666666" />
+            <Ionicons name="chevron-forward-outline" size={20} color={colors.icon} />
           </TouchableOpacity>
 
           {/* School Information */}
           <TouchableOpacity style={styles.menuItem} onPress={handleSchoolInfo}>
-            <View style={styles.menuIcon}>
-              <Ionicons name="school-outline" size={20} color="#1976D2" />
+            <View style={[styles.menuIcon, { 
+              backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : '#E3F2FD' 
+            }]}>
+              <Ionicons name="school-outline" size={20} color={colors.tint} />
             </View>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>
-                <Text style={styles.menuTitleBlue}>School </Text>
-                <Text style={styles.menuTitleBlack}>Information</Text>
+                <Text style={[styles.menuTitleBlue, { color: colors.tint }]}>School </Text>
+                <Text style={[styles.menuTitleBlack, { color: colors.text }]}>Information</Text>
               </Text>
-              <Text style={styles.menuSubtitle}>Check school informations</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.icon }]}>Check school informations</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={20} color="#666666" />
+            <Ionicons name="chevron-forward-outline" size={20} color={colors.icon} />
           </TouchableOpacity>
         </View>
 
         {/* Logout Button */}
         <TouchableOpacity
-          style={[styles.logoutButton, { opacity: isLoggingOut ? 0.6 : 1 }]}
+          style={[styles.logoutButton, { 
+            backgroundColor: isDark ? 'rgba(255, 107, 107, 0.8)' : '#FF6B6B',
+            borderColor: isDark ? 'rgba(255, 107, 107, 0.3)' : 'transparent',
+            borderWidth: isDark ? 1 : 0,
+            opacity: isLoggingOut ? 0.6 : 1 
+          }]}
           onPress={handleLogout}
           accessibilityRole="button"
           disabled={isLoggingOut}>
-          <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.logoutText}>LOGOUT</Text>
+          {isLoggingOut ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+          )}
+          <Text style={styles.logoutText}>
+            {isLoggingOut ? 'LOGGING OUT...' : 'LOGOUT'}
+          </Text>
         </TouchableOpacity>
         
       </ScrollView>
       
       {/* Loading Overlay */}
-      <LoadingOverlay visible={userLoading} variant="heart" />
+      <LoadingOverlay visible={userLoading || isLoggingOut || isRedirecting} variant="heart" />
     </View>
   );
 }
@@ -261,7 +375,6 @@ const styles = StyleSheet.create({
   
   // Blue Gradient Header Section
   headerSection: {
-    backgroundColor: '#5BA3D0',
     paddingTop: 50, // Account for status bar
     paddingBottom: 40,
     paddingHorizontal: 30,
@@ -278,11 +391,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   avatarText: {
     fontSize: 32,
@@ -295,7 +406,6 @@ const styles = StyleSheet.create({
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
@@ -320,7 +430,6 @@ const styles = StyleSheet.create({
   userRole: {
     fontSize: 10,
     color: '#FFFFFF',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
@@ -330,7 +439,6 @@ const styles = StyleSheet.create({
   
   // Stats Cards Row
   statsContainer: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: -30, // Pull up to overlap with blue header
     borderRadius: 16,
@@ -343,6 +451,7 @@ const styles = StyleSheet.create({
     elevation: 4,
     paddingVertical: 20,
     paddingHorizontal: 16,
+    borderWidth: 1,
   },
   statCard: {
     flex: 1,
@@ -352,24 +461,20 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#E0E0E0',
     marginHorizontal: 8,
   },
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666666',
     fontWeight: '500',
   },
   
   // Personal Section Container
   personalSection: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: 20, // Reduced margin since stats container overlaps
     borderRadius: 20,
@@ -380,11 +485,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     gap: 16,
+    borderWidth: 1,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   menuItem: {
@@ -397,7 +502,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -410,14 +514,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   menuTitleBlue: {
-    color: '#1976D2',
+    // color handled dynamically
   },
   menuTitleBlack: {
-    color: '#1A1A1A',
+    // color handled dynamically
   },
   menuSubtitle: {
     fontSize: 14,
-    color: '#666666',
   },
   
   // Logout Button
@@ -425,12 +528,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6B6B',
     marginHorizontal: 20,
     marginTop: 20,
     paddingVertical: 16,
     borderRadius: 25,
     gap: 8,
+    borderWidth: 1,
   },
   logoutText: {
     fontSize: 16,

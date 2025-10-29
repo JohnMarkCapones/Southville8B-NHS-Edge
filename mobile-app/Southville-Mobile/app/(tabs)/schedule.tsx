@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
-import { ScrollView, StyleSheet, View, ActivityIndicator, TouchableOpacity, Text, Image, Dimensions } from 'react-native';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, ActivityIndicator, TouchableOpacity, Text, Image, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -18,7 +19,9 @@ import { ThemedView } from '@/components/themed-view';
 import { ReusableHeader } from '@/components/ui/reusable-header';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useAuthSession } from '@/hooks/use-auth-session';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useWeeklySchedule, formatTime } from '@/hooks/use-weekly-schedule';
 import { Schedule, DayOfWeek } from '@/lib/types/schedule';
 
@@ -33,20 +36,52 @@ interface CalendarDay {
 }
 
 export default function ScheduleScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const router = useRouter();
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   // State management
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Animation values
   const translateY = useSharedValue(0);
   const cardScale = useSharedValue(1);
 
   // Fetch weekly schedule data
-  const { weeklySchedule, loading, error, hasStudentProfile } = useWeeklySchedule();
+  const { weeklySchedule, loading, error, hasStudentProfile, refetch: refetchSchedule } = useWeeklySchedule();
+
+  // Auth error handling
+  const { handleAuthError } = useAuthErrorHandler();
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchSchedule();
+    } catch (error) {
+      console.error('Error refreshing schedule:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchSchedule]);
+
+  // Auto-redirect to login on authentication errors
+  useEffect(() => {
+    console.log('[SCHEDULE][AUTO-REDIRECT] Checking for auth errors', {
+      hasError: !!error
+    });
+    
+    // Check for authentication error using centralized handler
+    if (error) {
+      const wasRedirected = handleAuthError(error);
+      if (wasRedirected) {
+        console.log('[SCHEDULE][AUTO-REDIRECT] Auth error handled - redirecting to login');
+      }
+    }
+  }, [error, handleAuthError]);
 
   // Generate calendar week data
   const calendarWeek = useMemo(() => {
@@ -294,29 +329,41 @@ export default function ScheduleScreen() {
       
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.icon} />
-          <ThemedText type="default" style={styles.loadingText}>
+          <ActivityIndicator size="large" color={colors.tint} />
+          <ThemedText type="default" style={[styles.loadingText, { color: colors.icon }]}>
             Loading your schedule...
               </ThemedText>
             </View>
       ) : error ? (
         <ThemedView style={[styles.errorCard, { borderColor: colors.icon }]}>
-          <ThemedText type="default" style={styles.errorText}>
+          <ThemedText type="default" style={[styles.errorText, { color: '#ff6b6b' }]}>
             {error}
           </ThemedText>
           {!hasStudentProfile && (
-            <ThemedText type="default" style={styles.errorHint}>
+            <ThemedText type="default" style={[styles.errorHint, { color: '#ff6b6b' }]}>
               Contact your administrator to set up your student profile.
             </ThemedText>
           )}
           {error.includes('database configuration') && (
-            <ThemedText type="default" style={styles.errorHint}>
+            <ThemedText type="default" style={[styles.errorHint, { color: '#ff6b6b' }]}>
               Note: There may be a backend database table naming issue that needs to be resolved.
             </ThemedText>
           )}
         </ThemedView>
       ) : (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.tint]}
+              tintColor={colors.tint}
+              progressBackgroundColor={colors.background}
+            />
+          }
+        >
           {/* Calendar Week Strip */}
           <View style={styles.calendarSection}>
             <Text style={styles.monthYear}>{currentMonthYear}</Text>
@@ -349,7 +396,7 @@ export default function ScheduleScreen() {
           </View>
 
           {/* Section Title */}
-          <Text style={styles.sectionTitle}>Scheduled Subject</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Scheduled Subject</Text>
 
           {/* Card Carousel */}
           {filteredSchedules.length > 0 ? (
@@ -370,6 +417,8 @@ export default function ScheduleScreen() {
                           styles.scheduleCard,
                           { 
                             backgroundColor: subjectColor[0],
+                            opacity: isDark ? 0.9 : 1,
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
                             height: isExpanded ? 380 : 280,
                           },
                           getCardAnimatedStyle(index)
@@ -380,7 +429,9 @@ export default function ScheduleScreen() {
                           {/* Top Section */}
                           <View style={styles.cardTop}>
                             {/* Subject Thumbnail */}
-                            <View style={styles.subjectThumbnail}>
+                            <View style={[styles.subjectThumbnail, { 
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
+                            }]}>
                               <Image
                                 source={getSubjectImage(schedule.subject?.subject_name || '')}
                                 style={styles.thumbnailImage}
@@ -390,10 +441,14 @@ export default function ScheduleScreen() {
                             
                             {/* Action Icons */}
                             <View style={styles.actionIcons}>
-                              <TouchableOpacity style={styles.actionIcon}>
+                              <TouchableOpacity style={[styles.actionIcon, { 
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
+                              }]}>
                                 <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
                               </TouchableOpacity>
-                              <TouchableOpacity style={styles.actionIcon}>
+                              <TouchableOpacity style={[styles.actionIcon, { 
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
+                              }]}>
                                 <Ionicons name="download-outline" size={20} color="#FFFFFF" />
                               </TouchableOpacity>
                             </View>
@@ -422,10 +477,16 @@ export default function ScheduleScreen() {
                           <View style={styles.cardBottom}>
                             {/* Read More Button */}
                             <TouchableOpacity
-                              style={styles.readMoreButton}
+                              style={[styles.readMoreButton, { 
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#FFFFFF',
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+                                borderWidth: 1
+                              }]}
                               onPress={() => handleCardExpand(schedule.id)}
                             >
-                              <Text style={styles.readMoreText}>
+                              <Text style={[styles.readMoreText, { 
+                                color: isDark ? '#FFFFFF' : '#333333' 
+                              }]}>
                                 {isExpanded ? 'Show less ↑' : 'Read more →'}
                               </Text>
                             </TouchableOpacity>
@@ -440,7 +501,9 @@ export default function ScheduleScreen() {
 
                           {/* Expanded Content */}
                           {isExpanded && (
-                            <Animated.View style={styles.expandedContent}>
+                            <Animated.View style={[styles.expandedContent, { 
+                              borderTopColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)' 
+                            }]}>
                               <View style={styles.expandedRow}>
                                 <Text style={styles.expandedLabel}>Room:</Text>
                                 <Text style={styles.expandedValue}>
@@ -470,19 +533,25 @@ export default function ScheduleScreen() {
 
               {/* Scroll Indicators */}
               <View style={styles.scrollIndicators}>
-                {/* Up Arrow - Show when not at first card */}
+                {/* Down Arrow - Show when not at first card */}
                 {currentCardIndex > 0 && (
-                  <View style={styles.scrollIndicator}>
-                    <Ionicons name="chevron-up" size={24} color="#1976D2" />
-                    <Text style={styles.scrollIndicatorText}>Previous</Text>
+                  <View style={[styles.scrollIndicator, { 
+                    backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)',
+                    borderColor: isDark ? 'rgba(25, 118, 210, 0.3)' : 'rgba(25, 118, 210, 0.2)'
+                  }]}>
+                    <Ionicons name="chevron-down" size={24} color={colors.tint} />
+                    <Text style={[styles.scrollIndicatorText, { color: colors.tint }]}>Previous</Text>
                   </View>
                 )}
                 
-                {/* Down Arrow - Show when not at last card */}
+                {/* Up Arrow - Show when not at last card */}
                 {currentCardIndex < filteredSchedules.length - 1 && (
-                  <View style={styles.scrollIndicator}>
-                    <Text style={styles.scrollIndicatorText}>Next</Text>
-                    <Ionicons name="chevron-down" size={24} color="#1976D2" />
+                  <View style={[styles.scrollIndicator, { 
+                    backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)',
+                    borderColor: isDark ? 'rgba(25, 118, 210, 0.3)' : 'rgba(25, 118, 210, 0.2)'
+                  }]}>
+                    <Text style={[styles.scrollIndicatorText, { color: colors.tint }]}>Next</Text>
+                    <Ionicons name="chevron-up" size={24} color={colors.tint} />
                   </View>
                 )}
               </View>
@@ -495,7 +564,8 @@ export default function ScheduleScreen() {
                       key={index}
                       style={[
                         styles.paginationDot,
-                        index === currentCardIndex && styles.paginationDotActive
+                        { backgroundColor: isDark ? '#404040' : '#E0E0E0' },
+                        index === currentCardIndex && [styles.paginationDotActive, { backgroundColor: colors.tint }]
                       ]}
                     />
                   ))}
@@ -505,7 +575,7 @@ export default function ScheduleScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={64} color={colors.icon} />
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: colors.icon }]}>
                 No classes scheduled for {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
               </Text>
             </View>
@@ -549,11 +619,9 @@ const styles = StyleSheet.create({
     margin: 20,
   },
   errorText: {
-    color: '#ff6b6b',
     opacity: 0.8,
   },
   errorHint: {
-    color: '#ff6b6b',
     opacity: 0.6,
     fontSize: 12,
     marginTop: 4,
@@ -612,7 +680,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333333',
     marginBottom: 20,
   },
 
@@ -637,9 +704,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 10,
-    // Enhanced visibility for background cards
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   cardContent: {
     flex: 1,
@@ -657,7 +722,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -673,7 +737,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -710,7 +773,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   readMoreButton: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -718,7 +780,6 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333333',
   },
   academicIllustration: {
     flexDirection: 'row',
@@ -733,7 +794,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
   },
   expandedRow: {
     flexDirection: 'row',
@@ -768,15 +828,12 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: 'rgba(25, 118, 210, 0.1)',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(25, 118, 210, 0.2)',
   },
   scrollIndicatorText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1976D2',
   },
   
   // Pagination Dots
@@ -789,10 +846,9 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E0E0E0',
   },
   paginationDotActive: {
-    backgroundColor: '#1976D2',
+    // backgroundColor handled dynamically
   },
 
   // Empty State
@@ -803,7 +859,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     marginTop: 16,
     opacity: 0.8,

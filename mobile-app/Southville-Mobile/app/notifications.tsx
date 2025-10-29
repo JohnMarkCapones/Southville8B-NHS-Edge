@@ -1,14 +1,35 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useState, useCallback } from 'react';
 // import { useNotifications } from '@/hooks/use-notifications';
 import { Notification } from '@/lib/types/notification';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useNavigationLoading } from '@/hooks/use-navigation-loading';
+import { useTheme } from '@/contexts/theme-context';
+import { Colors } from '@/constants/theme';
 
 export default function NotificationsScreen() {
   // const { notifications, loading, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const { isLoading, navigateWithLoading, navigateBackWithLoading } = useNavigationLoading();
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // In a real implementation, this would call the notifications refetch function
+      // await refetchNotifications();
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
   
   // Mock data for now
   const notifications: Notification[] = [
@@ -75,7 +96,17 @@ export default function NotificationsScreen() {
     return (
       <TouchableOpacity
         key={notification.id}
-        style={[styles.notificationCard, !notification.read && styles.unreadCard]}
+        style={[
+          styles.notificationCard, 
+          { 
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+          },
+          !notification.read && {
+            backgroundColor: isDark ? 'rgba(25, 118, 210, 0.1)' : '#F8F9FF',
+            borderColor: colors.tint
+          }
+        ]}
         onPress={() => markAsRead(notification.id)}
       >
         <View style={[styles.iconContainer, { backgroundColor: icon.bg }]}>
@@ -83,12 +114,12 @@ export default function NotificationsScreen() {
         </View>
         <View style={styles.contentContainer}>
           <View style={styles.headerRow}>
-            <Text style={styles.title}>{notification.title}</Text>
-            <Text style={styles.timeAgo}>{timeAgo}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{notification.title}</Text>
+            <Text style={[styles.timeAgo, { color: colors.icon }]}>{timeAgo}</Text>
           </View>
-          <Text style={styles.message}>{notification.message}</Text>
+          <Text style={[styles.message, { color: colors.text }]}>{notification.message}</Text>
         </View>
-        {!notification.read && <View style={styles.unreadDot} />}
+        {!notification.read && <View style={[styles.unreadDot, { backgroundColor: colors.tint }]} />}
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => deleteNotification(notification.id)}
@@ -101,49 +132,58 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { 
+          backgroundColor: colors.background,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+        }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={24} color="#000" />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
           <TouchableOpacity onPress={() => router.push('/notification-settings')}>
-            <Ionicons name="settings-outline" size={24} color="#000" />
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+          <Text style={[styles.loadingText, { color: colors.icon }]}>Loading notifications...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { 
+        backgroundColor: colors.background,
+        borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+      }]}>
         <TouchableOpacity onPress={() => navigateBackWithLoading()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
         <TouchableOpacity onPress={() => navigateWithLoading('/notification-settings')}>
-          <Ionicons name="settings-outline" size={24} color="#000" />
+          <Ionicons name="settings-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { 
+        backgroundColor: colors.background,
+        borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+      }]}>
         <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>Inbox</Text>
+          <Text style={[styles.tabText, { color: colors.icon }]}>Inbox</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabActive}>
+        <TouchableOpacity style={[styles.tabActive, { backgroundColor: isDark ? '#404040' : colors.tint }]}>
           <Text style={styles.tabTextActive}>All</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>Unread</Text>
+          <Text style={[styles.tabText, { color: colors.icon }]}>Unread</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={markAllAsRead}>
-          <Text style={styles.markAllRead}>Mark all read</Text>
+          <Text style={[styles.markAllRead, { color: colors.tint }]}>Mark all read</Text>
         </TouchableOpacity>
       </View>
 
@@ -151,18 +191,28 @@ export default function NotificationsScreen() {
       {notifications.length === 0 ? (
         <View style={styles.emptyState}>
           <Image source={require('@/assets/subjects/Spider.png')} style={styles.emptyImage} />
-          <Text style={styles.emptyTitle}>No notification yet</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No notification yet</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.icon }]}>
             Your notification will appear here once you've receive them.
           </Text>
-          <Text style={styles.emptyHint}>Missing notification?</Text>
+          <Text style={[styles.emptyHint, { color: colors.icon }]}>Missing notification?</Text>
           <TouchableOpacity>
-            <Text style={styles.emptyLink}>Go to material notification.</Text>
+            <Text style={[styles.emptyLink, { color: colors.tint }]}>Go to material notification.</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView}>
-          <Text style={styles.sectionHeader}>Today</Text>
+        <ScrollView 
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.tint]}
+              tintColor={colors.tint}
+              progressBackgroundColor={colors.background}
+            />
+          }>
+          <Text style={[styles.sectionHeader, { color: colors.text }]}>Today</Text>
           {notifications.map(renderNotificationCard)}
         </ScrollView>
       )}
@@ -176,7 +226,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -185,23 +234,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
   },
   tabs: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   tab: {
     paddingHorizontal: 16,
@@ -212,12 +256,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 8,
-    backgroundColor: '#1976D2',
     borderRadius: 20,
   },
   tabText: {
     fontSize: 14,
-    color: '#666666',
   },
   tabTextActive: {
     fontSize: 14,
@@ -226,7 +268,6 @@ const styles = StyleSheet.create({
   },
   markAllRead: {
     fontSize: 14,
-    color: '#1976D2',
     fontWeight: '600',
     marginLeft: 'auto',
   },
@@ -237,7 +278,6 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
     marginTop: 16,
     marginBottom: 12,
   },
@@ -246,10 +286,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 16,
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -258,11 +296,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  unreadCard: {
-    backgroundColor: '#F8F9FF',
-    borderColor: '#1976D2',
-    borderWidth: 1,
   },
   iconContainer: {
     width: 48,
@@ -285,24 +318,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
     flex: 1,
     marginRight: 8,
   },
   timeAgo: {
     fontSize: 12,
-    color: '#666666',
   },
   message: {
     fontSize: 14,
-    color: '#333333',
     lineHeight: 20,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#1976D2',
     marginTop: 8,
   },
   deleteButton: {
@@ -324,25 +353,21 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000000',
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 16,
   },
   emptyHint: {
     fontSize: 14,
-    color: '#999999',
     marginBottom: 8,
   },
   emptyLink: {
     fontSize: 14,
-    color: '#1976D2',
     fontWeight: '600',
   },
   loadingContainer: {
@@ -352,6 +377,5 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666666',
   },
 });

@@ -6,17 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { HapticTab } from '@/components/haptic-tab';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { isDark } = useTheme();
   const { status } = useAuthSession();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   if (status === 'loading') {
     return (
       <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+        <ActivityIndicator size="large" color={colors.tint} />
       </ThemedView>
     );
   }
@@ -30,7 +31,12 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="index"
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: colors.tint,
+        tabBarInactiveTintColor: colors.icon,
+        tabBarStyle: {
+          backgroundColor: colors.background,
+          borderTopColor: isDark ? '#404040' : '#E0E0E0',
+        },
         headerShown: false,
         tabBarButton: HapticTab,
       }}>

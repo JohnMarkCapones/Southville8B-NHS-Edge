@@ -4,70 +4,83 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useNavigationLoading } from '@/hooks/use-navigation-loading';
+import { useTheme } from '@/contexts/theme-context';
+import { Colors } from '@/constants/theme';
 
 export default function NotificationSettingsScreen() {
   const [inAppEnabled, setInAppEnabled] = useState(true);
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
   const [eventEnabled, setEventEnabled] = useState(false);
   const { isLoading, navigateBackWithLoading } = useNavigationLoading();
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { 
+        backgroundColor: colors.background,
+        borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+      }]}>
         <TouchableOpacity onPress={() => navigateBackWithLoading()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notification Settings</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Notification Settings</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <Text style={styles.description}>
+        <Text style={[styles.description, { color: colors.icon }]}>
           Tell us the types of push notification you would like to get on this device. 
           You're free to change this at anytime
         </Text>
 
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { 
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+        }]}>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>In-app notifications</Text>
-            <Text style={styles.settingSubtitle}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>In-app notifications</Text>
+            <Text style={[styles.settingSubtitle, { color: colors.icon }]}>
               Tanging di ko din alam meaning neto basta notif to
             </Text>
           </View>
           <Switch 
             value={inAppEnabled} 
             onValueChange={setInAppEnabled}
-            trackColor={{ false: '#E0E0E0', true: '#1976D2' }}
+            trackColor={{ false: isDark ? '#404040' : '#E0E0E0', true: colors.tint }}
             thumbColor={inAppEnabled ? '#FFFFFF' : '#FFFFFF'}
           />
         </View>
 
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { 
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+        }]}>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Schedule notifications</Text>
-            <Text style={styles.settingSubtitle}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Schedule notifications</Text>
+            <Text style={[styles.settingSubtitle, { color: colors.icon }]}>
               You will receive regularly an notification about your subject schedule
             </Text>
           </View>
           <Switch 
             value={scheduleEnabled} 
             onValueChange={setScheduleEnabled}
-            trackColor={{ false: '#E0E0E0', true: '#1976D2' }}
+            trackColor={{ false: isDark ? '#404040' : '#E0E0E0', true: colors.tint }}
             thumbColor={scheduleEnabled ? '#FFFFFF' : '#FFFFFF'}
           />
         </View>
 
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { 
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#F0F0F0'
+        }]}>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Event notifications</Text>
-            <Text style={styles.settingSubtitle}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Event notifications</Text>
+            <Text style={[styles.settingSubtitle, { color: colors.icon }]}>
               You will receive regularly an notification about Events subject schedule
             </Text>
           </View>
           <Switch 
             value={eventEnabled} 
             onValueChange={setEventEnabled}
-            trackColor={{ false: '#E0E0E0', true: '#1976D2' }}
+            trackColor={{ false: isDark ? '#404040' : '#E0E0E0', true: colors.tint }}
             thumbColor={eventEnabled ? '#FFFFFF' : '#FFFFFF'}
           />
         </View>
@@ -82,7 +95,6 @@ export default function NotificationSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -91,14 +103,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -106,7 +115,6 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: '#666666',
     lineHeight: 24,
     marginTop: 24,
     marginBottom: 32,
@@ -117,7 +125,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   settingContent: {
     flex: 1,
@@ -126,12 +133,10 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
     marginBottom: 4,
   },
   settingSubtitle: {
     fontSize: 14,
-    color: '#666666',
     lineHeight: 20,
   },
 });

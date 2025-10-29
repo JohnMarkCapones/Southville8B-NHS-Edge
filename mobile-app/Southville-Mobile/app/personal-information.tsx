@@ -4,12 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 export default function PersonalInformationScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const router = useRouter();
   
   // Fetch current user data
@@ -42,15 +42,18 @@ export default function PersonalInformationScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
+          <View style={[styles.header, { 
+            backgroundColor: colors.background,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+          }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1976D2" />
+              <Ionicons name="arrow-back" size={24} color={colors.tint} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Personal Information</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Personal Information</Text>
             <View style={styles.placeholder} />
           </View>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading personal information...</Text>
+            <Text style={[styles.loadingText, { color: colors.icon }]}>Loading personal information...</Text>
           </View>
         </View>
       </>
@@ -62,15 +65,18 @@ export default function PersonalInformationScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
+          <View style={[styles.header, { 
+            backgroundColor: colors.background,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+          }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1976D2" />
+              <Ionicons name="arrow-back" size={24} color={colors.tint} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Personal Information</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Personal Information</Text>
             <View style={styles.placeholder} />
           </View>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Failed to load personal information: {userError}</Text>
+            <Text style={[styles.errorText, { color: '#F44336' }]}>Failed to load personal information: {userError}</Text>
           </View>
         </View>
       </>
@@ -80,123 +86,144 @@ export default function PersonalInformationScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { 
+          backgroundColor: colors.background,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+        }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1976D2" />
+            <Ionicons name="arrow-back" size={24} color={colors.tint} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Personal Information</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Personal Information</Text>
           <View style={styles.placeholder} />
         </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         
         {/* Profile Card */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{getAvatarInitial()}</Text>
+            <View style={[styles.avatar, { 
+              backgroundColor: isDark ? 'rgba(25, 118, 210, 0.2)' : '#E3F2FD',
+              borderColor: colors.tint
+            }]}>
+              <Text style={[styles.avatarText, { color: colors.tint }]}>{getAvatarInitial()}</Text>
             </View>
           </View>
-          <Text style={styles.profileName}>{getDisplayName()}</Text>
-          <Text style={styles.profileRole}>Student</Text>
+          <Text style={[styles.profileName, { color: colors.text }]}>{getDisplayName()}</Text>
+          <Text style={[styles.profileRole, { 
+            color: colors.icon,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#F0F0F0'
+          }]}>Student</Text>
         </View>
 
         {/* Personal Details */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>Personal Details</Text>
+        <View style={[styles.detailsCard, { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          borderWidth: isDark ? 1 : 0
+        }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Personal Details</Text>
           
           <View style={styles.detailRow}>
-            <Ionicons name="person-outline" size={20} color="#1976D2" />
+            <Ionicons name="person-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Full Name</Text>
-              <Text style={styles.detailValue}>{getDisplayName()}</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Full Name</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{getDisplayName()}</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="id-card-outline" size={20} color="#1976D2" />
+            <Ionicons name="id-card-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Student ID</Text>
-              <Text style={styles.detailValue}>{user?.student?.student_id || 'Not available'}</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Student ID</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{user?.student?.student_id || 'Not available'}</Text>
             </View>
           </View>
 
           {user?.student?.lrn_id && (
             <View style={styles.detailRow}>
-              <Ionicons name="card-outline" size={20} color="#1976D2" />
+              <Ionicons name="card-outline" size={20} color={colors.tint} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>LRN</Text>
-                <Text style={styles.detailValue}>{user.student.lrn_id}</Text>
+                <Text style={[styles.detailLabel, { color: colors.icon }]}>LRN</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.lrn_id}</Text>
               </View>
             </View>
           )}
 
           <View style={styles.detailRow}>
-            <Ionicons name="mail-outline" size={20} color="#1976D2" />
+            <Ionicons name="mail-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Email</Text>
-              <Text style={styles.detailValue}>{user?.email || 'Not provided'}</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Email</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{user?.email || 'Not provided'}</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="call-outline" size={20} color="#1976D2" />
+            <Ionicons name="call-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Phone Number</Text>
-              <Text style={styles.detailValue}>{user?.profile?.phone_number || 'Not provided'}</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Phone Number</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{user?.profile?.phone_number || 'Not provided'}</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="location-outline" size={20} color="#1976D2" />
+            <Ionicons name="location-outline" size={20} color={colors.tint} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Address</Text>
-              <Text style={styles.detailValue}>{user?.profile?.address || 'Not provided'}</Text>
+              <Text style={[styles.detailLabel, { color: colors.icon }]}>Address</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{user?.profile?.address || 'Not provided'}</Text>
             </View>
           </View>
         </View>
 
         {/* Academic Information */}
         {user?.student && (
-          <View style={styles.detailsCard}>
-            <Text style={styles.cardTitle}>Academic Information</Text>
+          <View style={[styles.detailsCard, { 
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+            borderWidth: isDark ? 1 : 0
+          }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Academic Information</Text>
             
             <View style={styles.detailRow}>
-              <Ionicons name="school-outline" size={20} color="#1976D2" />
+              <Ionicons name="school-outline" size={20} color={colors.tint} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Grade Level</Text>
-                <Text style={styles.detailValue}>{user.student.grade_level || 'Not specified'}</Text>
+                <Text style={[styles.detailLabel, { color: colors.icon }]}>Grade Level</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.grade_level || 'Not specified'}</Text>
               </View>
             </View>
 
             {user.student.section?.name && (
               <View style={styles.detailRow}>
-                <Ionicons name="people-outline" size={20} color="#1976D2" />
+                <Ionicons name="people-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Section</Text>
-                  <Text style={styles.detailValue}>{user.student.section.name}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Section</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.section.name}</Text>
                 </View>
               </View>
             )}
 
             {user.student.honor_status && (
               <View style={styles.detailRow}>
-                <Ionicons name="trophy-outline" size={20} color="#1976D2" />
+                <Ionicons name="trophy-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Honor Status</Text>
-                  <Text style={styles.detailValue}>{user.student.honor_status}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Honor Status</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{user.student.honor_status}</Text>
                 </View>
               </View>
             )}
 
             {user.student.rank && (
               <View style={styles.detailRow}>
-                <Ionicons name="medal-outline" size={20} color="#1976D2" />
+                <Ionicons name="medal-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Rank</Text>
-                  <Text style={styles.detailValue}>#{user.student.rank}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Rank</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>#{user.student.rank}</Text>
                 </View>
               </View>
             )}
@@ -205,15 +232,19 @@ export default function PersonalInformationScreen() {
 
         {/* Additional Profile Information */}
         {user?.profile && (
-          <View style={styles.detailsCard}>
-            <Text style={styles.cardTitle}>Additional Information</Text>
+          <View style={[styles.detailsCard, { 
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+            borderWidth: isDark ? 1 : 0
+          }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Additional Information</Text>
             
             {user.profile.birthday && (
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={20} color="#1976D2" />
+                <Ionicons name="calendar-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Birthday</Text>
-                  <Text style={styles.detailValue}>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Birthday</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>
                     {new Date(user.profile.birthday).toLocaleDateString()}
                   </Text>
                 </View>
@@ -222,10 +253,10 @@ export default function PersonalInformationScreen() {
 
             {user.profile.gender && (
               <View style={styles.detailRow}>
-                <Ionicons name="person-outline" size={20} color="#1976D2" />
+                <Ionicons name="person-outline" size={20} color={colors.tint} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Gender</Text>
-                  <Text style={styles.detailValue}>{user.profile.gender}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.icon }]}>Gender</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{user.profile.gender}</Text>
                 </View>
               </View>
             )}
@@ -249,7 +280,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -262,7 +292,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
   },
   placeholder: {
     width: 40,
@@ -277,7 +306,6 @@ const styles = StyleSheet.create({
   
   // Profile Card
   profileCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
@@ -294,27 +322,21 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#1976D2',
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1976D2',
   },
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 4,
   },
   profileRole: {
     fontSize: 16,
-    color: '#666666',
-    backgroundColor: '#F0F0F0',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
@@ -322,7 +344,6 @@ const styles = StyleSheet.create({
   
   // Details Cards
   detailsCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
@@ -335,7 +356,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   detailRow: {
@@ -350,12 +370,10 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#666666',
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 16,
-    color: '#1A1A1A',
     fontWeight: '600',
   },
   
@@ -368,7 +386,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666666',
   },
   errorContainer: {
     flex: 1,
@@ -378,7 +395,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#F44336',
     textAlign: 'center',
   },
 });

@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColor } from '@/hooks/use-theme-color';
 // import { useNotifications } from '@/hooks/use-notifications';
 import { LoadingOverlay } from './loading-overlay';
 import { useNavigationLoading } from '@/hooks/use-navigation-loading';
@@ -21,6 +23,10 @@ export function ReusableHeader({
   showWelcomeSection = false
 }: ReusableHeaderProps) {
   const { user, loading: userLoading } = useCurrentUser();
+  const { isDark, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const iconColor = useThemeColor({}, 'icon');
   // const { unreadCount } = useNotifications();
   const { isLoading, navigateWithLoading } = useNavigationLoading();
 
@@ -33,13 +39,22 @@ export function ReusableHeader({
   };
 
   return (
-    <View style={styles.headerSection}>
+    <View style={[styles.headerSection, { backgroundColor }]}>
       {/* Top Header Row */}
       <View style={styles.topHeader}>
         {/* User Avatar */}
         <TouchableOpacity style={styles.avatarContainer} onPress={onAvatarPress}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitial}>
+          <View style={[
+            styles.avatarCircle,
+            {
+              backgroundColor: isDark ? '#404040' : '#E3F2FD',
+              borderColor: isDark ? '#666666' : '#1976D2'
+            }
+          ]}>
+            <Text style={[
+              styles.avatarInitial,
+              { color: isDark ? '#FFFFFF' : '#1976D2' }
+            ]}>
               {userLoading ? '?' : (user?.full_name?.charAt(0) || 'S').toUpperCase()}
             </Text>
           </View>
@@ -47,27 +62,47 @@ export function ReusableHeader({
 
         {/* Page Title */}
         <View style={styles.titleContainer}>
-          <Text style={styles.pageTitle}>{title}</Text>
+          <Text style={[styles.pageTitle, { color: textColor }]}>{title}</Text>
         </View>
 
-        {/* Notification Bell */}
-        <TouchableOpacity style={styles.notificationContainer} onPress={handleNotificationPress}>
-          <View style={styles.notificationBell}>
-            <Ionicons name="notifications-outline" size={20} color="#000000" />
-            {/* {unreadCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )} */}
-          </View>
-        </TouchableOpacity>
+        {/* Right Side Controls */}
+        <View style={styles.rightControls}>
+          {/* Dark Mode Toggle */}
+          <TouchableOpacity style={styles.themeToggleContainer} onPress={toggleTheme}>
+            <View style={[
+              styles.themeToggleButton,
+              { backgroundColor: isDark ? '#404040' : '#F5F5F5' }
+            ]}>
+              <Ionicons 
+                name={isDark ? "sunny" : "moon"} 
+                size={20} 
+                color={iconColor} 
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Notification Bell */}
+          <TouchableOpacity style={styles.notificationContainer} onPress={handleNotificationPress}>
+            <View style={[
+              styles.notificationBell,
+              { backgroundColor: isDark ? '#404040' : '#F5F5F5' }
+            ]}>
+              <Ionicons name="notifications-outline" size={20} color={iconColor} />
+              {/* {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.badgeText}>{unreadCount}</Text>
+                </View>
+              )} */}
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Welcome Section - Only show if enabled */}
       {showWelcomeSection && (
         <View style={styles.welcomeSection}>
           <View style={styles.welcomeLeft}>
-            <Text style={styles.welcomeText}>Welcome to Edge</Text>
+            <Text style={[styles.welcomeText, { color: iconColor }]}>Welcome to Edge</Text>
             <View style={styles.studentTag}>
               <Text style={styles.studentTagText}>STUDENT</Text>
             </View>
@@ -78,7 +113,7 @@ export function ReusableHeader({
       {/* Greeting Section - Only show if enabled */}
       {showWelcomeSection && (
         <View style={styles.greetingSection}>
-          <Text style={styles.greetingText}>
+          <Text style={[styles.greetingText, { color: textColor }]}>
             Good {getGreeting()}, {user?.student?.first_name || 'Student'}
           </Text>
         </View>
@@ -103,7 +138,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
   },
   topHeader: {
     flexDirection: 'row',
@@ -121,16 +155,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#1976D2',
   },
   avatarInitial: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1976D2',
   },
   titleContainer: {
     flex: 1,
@@ -140,8 +171,26 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     textAlign: 'center',
+  },
+  rightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  themeToggleContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  themeToggleButton: {
+    position: 'relative',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notificationContainer: {
     width: 40,
@@ -153,7 +202,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: 32,
     height: 32,
-    backgroundColor: '#F5F5F5',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -186,7 +234,6 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 16,
-    color: '#666666',
     fontWeight: '500',
   },
   studentTag: {
@@ -207,7 +254,6 @@ const styles = StyleSheet.create({
   greetingText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1A1A1A',
     textAlign: 'left',
   },
 });
