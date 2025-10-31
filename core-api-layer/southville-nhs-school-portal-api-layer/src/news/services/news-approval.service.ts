@@ -251,18 +251,87 @@ export class NewsApprovalService {
 
   /**
    * Publish article
-   * Changes status from approved to published
+   * Changes status from approved to published OR from pending to published (with auto-approval)
    * Sets published_date
    * Only Advisers and Co-Advisers can publish
+   * If review_status is pending and article is being published, it automatically approves it
    * @param newsId News article ID
    * @param publisherId User ID (must be Adviser/Co-Adviser)
+   * @param forceApprove Optional - if true, will auto-approve pending articles when publishing
    * @returns Promise<void>
    */
-  async publishArticle(newsId: string, publisherId: string): Promise<void> {
+  async publishArticle(
+    newsId: string,
+    publisherId: string,
+    forceApprove?: boolean,
+  ): Promise<void> {
     const supabase = this.supabaseService.getServiceClient();
 
     // Check if user can publish
     await this.newsAccessService.requireApprovalPermission(publisherId);
+
+    // Get article with review_status
+    const { data: article, error: fetchError } = await supabase
+      .from('news')
+      .select('status, review_status')
+      .eq('id', newsId)
+      .maybeSingle();
+
+    if (fetchError || !article) {
+      throw new NotFoundException(`Article with ID ${newsId} not found`);
+    }
+
+    // Build update payload
+    const updatePayload: any = {
+      status: 'published',
+      published_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // If review_status is pending and forceApprove is true, auto-approve it
+    if (
+      article.review_status === 'pending' &&
+      forceApprove &&
+      article.status !== 'approved'
+    ) {
+      updatePayload.review_status = 'approved';
+      this.logger.log(
+        `Auto-approving article ${newsId} with pending review status`,
+      );
+    } else if (article.status === 'approved') {
+      // If already approved, keep the review_status as approved
+      updatePayload.review_status = 'approved';
+    }
+
+    // Update article status to published
+    const { error: updateError } = await supabase
+      .from('news')
+      .update(updatePayload)
+      .eq('id', newsId);
+
+    if (updateError) {
+      this.logger.error('Error publishing article:', updateError);
+      throw new BadRequestException(
+        `Failed to publish article: ${updateError.message}`,
+      );
+    }
+
+    this.logger.log(`Article ${newsId} published by ${publisherId}`);
+  }
+
+  /**
+   * Unpublish article
+   * Changes status from published back to draft
+   * Only Advisers and Co-Advisers can unpublish
+   * @param newsId News article ID
+   * @param userId User ID (must be Adviser/Co-Adviser)
+   * @returns Promise<void>
+   */
+  async unpublishArticle(newsId: string, userId: string): Promise<void> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // Check if user can unpublish
+    await this.newsAccessService.requireApprovalPermission(userId);
 
     // Get article
     const { data: article, error: fetchError } = await supabase
@@ -276,30 +345,29 @@ export class NewsApprovalService {
     }
 
     // Check current status
-    if (article.status !== 'approved') {
+    if (article.status !== 'published') {
       throw new BadRequestException(
-        `Article is ${article.status}. Only approved articles can be published.`,
+        `Article is ${article.status}. Only published articles can be unpublished.`,
       );
     }
 
-    // Update article status to published
+    // Update article status to draft
     const { error: updateError } = await supabase
       .from('news')
       .update({
-        status: 'published',
-        published_date: new Date().toISOString(),
+        status: 'draft',
         updated_at: new Date().toISOString(),
       })
       .eq('id', newsId);
 
     if (updateError) {
-      this.logger.error('Error publishing article:', updateError);
+      this.logger.error('Error unpublishing article:', updateError);
       throw new BadRequestException(
-        `Failed to publish article: ${updateError.message}`,
+        `Failed to unpublish article: ${updateError.message}`,
       );
     }
 
-    this.logger.log(`Article ${newsId} published by ${publisherId}`);
+    this.logger.log(`Article ${newsId} unpublished by ${userId}`);
   }
 
   /**

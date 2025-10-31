@@ -124,7 +124,7 @@ export default function SubjectsPage() {
       if (!acc[subjectId]) {
         // Create new subject entry
         const teacher = schedule.teacher
-          ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
+          ? `${schedule.teacher.firstName || ''} ${schedule.teacher.lastName || ''}`.trim() || 'N/A'
           : 'N/A'
 
         acc[subjectId] = {
@@ -140,7 +140,7 @@ export default function SubjectsPage() {
             startTime: schedule.startTime,
             endTime: schedule.endTime,
           }],
-          color: hexToGradientClass(schedule.subject?.colorHex),
+          color: hexToGradientClass(schedule.subject?.color_hex),
           description: schedule.subject?.description || 'No description available',
           progress: 0, // Placeholder - would need separate API
           grade: null, // Placeholder - would need GWA/grades API

@@ -70,7 +70,17 @@ export class BuildingsService {
       this.logger.log(
         `Building created successfully: ${building.building_name}`,
       );
-      return building;
+
+      // Transform database fields to API response format
+      return {
+        id: building.id,
+        buildingName: building.building_name,
+        code: building.code,
+        capacity: building.capacity,
+        createdAt: building.created_at,
+        updatedAt: building.updated_at,
+        floors: [],
+      };
     } catch (error) {
       if (
         error instanceof ConflictException ||
@@ -280,7 +290,16 @@ export class BuildingsService {
     }
 
     this.logger.log(`Building updated successfully: ${building.building_name}`);
-    return building;
+
+    // Transform database fields to API response format
+    return {
+      id: building.id,
+      buildingName: building.building_name,
+      code: building.code,
+      capacity: building.capacity,
+      createdAt: building.created_at,
+      updatedAt: building.updated_at,
+    };
   }
 
   async remove(id: string): Promise<void> {

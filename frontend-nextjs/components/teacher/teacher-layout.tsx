@@ -8,6 +8,9 @@ import { useTeacherSidebar } from "@/lib/teacher-sidebar-store"
 import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/toaster"
 import { useUser } from "@/hooks/useUser"
+import { useState, useMemo } from "react"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 interface TeacherLayoutProps {
   children: React.ReactNode
@@ -16,6 +19,7 @@ interface TeacherLayoutProps {
 export function TeacherLayout({ children }: TeacherLayoutProps) {
   const { isCollapsed } = useTeacherSidebar()
   const { data: user, isLoading, isError } = useUser()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Extract teacher data with fallbacks
   const teacherName = user?.teacher
@@ -28,13 +32,17 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
 
   return (
     <div className="flex h-screen bg-[hsl(var(--teacher-background))]">
-      <TeacherSidebar />
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">
+        <TeacherSidebar />
+      </div>
       <div className="flex-1 flex flex-col overflow-hidden">
         <TeacherHeader 
           teacherName={teacherName}
           teacherAvatar={teacherAvatar}
           department={department}
           teacherId={teacherId}
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
         <main
           className={cn(
@@ -49,6 +57,16 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
         </main>
       </div>
       <Toaster />
+
+      {/* Mobile menu drawer */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="p-0 w-[256px] lg:hidden">
+          <SheetTitle>
+            <VisuallyHidden>Teacher navigation</VisuallyHidden>
+          </SheetTitle>
+          <TeacherSidebar />
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

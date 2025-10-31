@@ -4,7 +4,7 @@ export interface Section {
   id: string;
   name: string;
   grade_level: string;
-  teacher_id?: string;
+  adviser_id?: string;
   building_id?: string;
   floor_id?: string;
   room_id?: string;
@@ -14,18 +14,19 @@ export interface Section {
 }
 
 export interface SectionWithDetails extends Section {
-  // Teacher details
-  teacher_full_name?: string;
-  teacher_email?: string;
-  
+  // Adviser (teacher) details - matches backend database columns
+  adviser_first_name?: string;
+  adviser_last_name?: string;
+  adviser_email?: string;
+
   // Building details
   building_name?: string;
   building_code?: string;
-  
+
   // Floor details
   floor_name?: string;
   floor_number?: number;
-  
+
   // Room details
   room_number?: string;
   room_name?: string;
@@ -46,7 +47,7 @@ export interface SectionWithStudents extends SectionWithDetails {
 export interface CreateSectionRequest {
   name: string;
   grade_level: string;
-  teacher_id?: string;
+  adviser_id?: string;
   building_id?: string;
   floor_id?: string;
   room_id?: string;
@@ -56,7 +57,7 @@ export interface CreateSectionRequest {
 export interface UpdateSectionRequest {
   name?: string;
   grade_level?: string;
-  teacher_id?: string;
+  adviser_id?: string;
   building_id?: string;
   floor_id?: string;
   room_id?: string;
@@ -163,11 +164,11 @@ export const deleteSection = async (id: string): Promise<void> => {
   });
 };
 
-export const getTeacherSections = async (teacherUserId: string): Promise<SectionWithDetails[]> => {
-  const response = await apiClient.request(`/sections/teacher/${teacherUserId}`, {
+export const getTeacherSections = async (teacherUserId: string): Promise<SectionWithStudents[]> => {
+  const response = await apiClient.request<SectionWithStudents[]>(`/sections/teacher/${teacherUserId}`, {
     method: 'GET',
     requiresAuth: true,
   });
 
-  return response.data;
+  return response || []; // Backend returns array directly, not wrapped in { data: ... }
 };

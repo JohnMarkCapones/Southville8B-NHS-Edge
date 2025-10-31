@@ -330,6 +330,16 @@ export class StudentsService {
       sortOrder = 'asc',
     } = filters;
 
+    console.log('[STUDENTS SERVICE] findAll called with filters:', {
+      page,
+      limit,
+      search,
+      gradeLevel,
+      sectionId,
+      sortBy,
+      sortOrder,
+    });
+
     let query = supabase.from('students').select(
       `
         *,
@@ -341,14 +351,17 @@ export class StudentsService {
 
     // Apply filters
     if (search) {
+      console.log('[STUDENTS SERVICE] Applying search filter:', search);
       query = query.or(
         `first_name.ilike.%${search}%,last_name.ilike.%${search}%,student_id.ilike.%${search}%,lrn_id.ilike.%${search}%`,
       );
     }
     if (gradeLevel) {
+      console.log('[STUDENTS SERVICE] Applying gradeLevel filter:', gradeLevel);
       query = query.eq('grade_level', gradeLevel);
     }
     if (sectionId) {
+      console.log('[STUDENTS SERVICE] Applying sectionId filter:', sectionId);
       query = query.eq('section_id', sectionId);
     }
 
@@ -362,10 +375,30 @@ export class StudentsService {
 
     const { data, error, count } = await query;
 
+    console.log('[STUDENTS SERVICE] Query result:', {
+      hasData: !!data,
+      dataLength: data?.length || 0,
+      hasError: !!error,
+      errorMessage: error?.message,
+      count: count,
+    });
+
     if (error) {
+      console.error('[STUDENTS SERVICE] Query error:', error);
       this.logger.error('Error fetching students:', error);
       throw new InternalServerErrorException('Failed to fetch students');
     }
+
+    console.log('[STUDENTS SERVICE] Returning data:', {
+      dataLength: data?.length || 0,
+      firstStudent: data?.[0] || null,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    });
 
     return {
       data,

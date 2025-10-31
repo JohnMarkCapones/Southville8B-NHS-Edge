@@ -14,6 +14,7 @@ import {
   Tag,
   Globe,
   Users,
+  GraduationCap,
   BookOpen,
   Clock,
   FileText,
@@ -21,9 +22,12 @@ import {
   Upload,
   X,
   UserCircle,
+  CalendarX,
+  CheckCircle,
   Edit3,
-  Database,
-  AlertCircle,
+  Heart,
+  Share2,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,6 +40,7 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { TiptapEditor } from "@/components/ui/tiptap-editor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AnimatedButton } from "@/components/ui/animated-button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,41 +51,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useCreateNews } from "@/hooks/useNewsMutations"
+import type { CreateNewsDto } from "@/lib/api/endpoints/news"
+import { newsApi } from "@/lib/api/endpoints/news"
+import type { NewsCategory } from "@/types/news"
 
 interface ArticleFormData {
   title: string
-  slug: string
-  excerpt: string
-  content: string
-  category: string
+  description: string
+  articleHtml: string
+  articleJson: object | null
+  categoryId: string
   tags: string[]
-  featuredImage: string
-  status: "draft" | "scheduled" | "published"
-  visibility: "public" | "students" | "teachers"
+  featuredImageUrl: string
+  visibility: "public" | "students" | "teachers" | "private"
   scheduledDate: string
-  author: string
-  coAuthors: string[]
-  credits: string
-  expirationDate: string
+  coAuthorNames: string[]
+  // UI-only fields (not sent to backend)
+  slug?: string
+  author?: string
+  credits?: string
+  expirationDate?: string
 }
-
-const categories = [
-  { value: "academic", label: "Academic News", icon: BookOpen },
-  { value: "events", label: "Events", icon: Calendar },
-  { value: "sports", label: "Sports", icon: Users },
-  { value: "announcements", label: "Announcements", icon: Send },
-]
 
 const visibilityOptions = [
   { value: "public", label: "Public", icon: Globe, description: "Visible to everyone" },
-  { value: "students", label: "Students Only", icon: Users, description: "Only students can view" },
+  { value: "students", label: "Students Only", icon: GraduationCap, description: "Only students can view" },
   { value: "teachers", label: "Teachers Only", icon: Users, description: "Only teachers can view" },
+  { value: "private", label: "Private", icon: BookOpen, description: "Admin and staff only" },
 ]
 
 export default function CreateArticlePage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const { mutateAsync: createNews, isPending } = useCreateNews()
   const [currentTag, setCurrentTag] = useState("")
   const [currentCoAuthor, setCurrentCoAuthor] = useState("")
   const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved")
@@ -89,28 +93,55 @@ export default function CreateArticlePage() {
   const [readingTime, setReadingTime] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit")
-  const [showPublishConfirm, setShowPublishConfirm] = useState(false)
+  const [categories, setCategories] = useState<NewsCategory[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  const [showNoImageWarning, setShowNoImageWarning] = useState(false)
+  const [pendingSaveAsDraft, setPendingSaveAsDraft] = useState(false)
+  const [hasDateError, setHasDateError] = useState(false)
 
   const [formData, setFormData] = useState<ArticleFormData>({
     title: "",
-    slug: "",
-    excerpt: "",
-    content: "",
-    category: "",
+    description: "",
+    articleHtml: "",
+    articleJson: null,
+    categoryId: "",
     tags: [],
-    featuredImage: "",
-    status: "draft",
+    featuredImageUrl: "",
     visibility: "public",
     scheduledDate: "",
-    author: "Teacher Name", // TODO: Get from auth context
-    coAuthors: [],
+    coAuthorNames: [],
+    // UI-only fields (not sent to backend)
+    slug: "",
+    author: "",
     credits: "",
     expirationDate: "",
   })
 
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true)
+        const categoriesData = await newsApi.getCategories()
+        setCategories(categoriesData)
+      } catch (error) {
+        console.error('[CreateArticlePage] Error fetching categories:', error)
+        toast({
+          title: "⚠️ Failed to load categories",
+          description: "Categories could not be loaded. You can still create the article without a category.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    fetchCategories()
+  }, [toast])
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (formData.title || formData.content) {
+      if (formData.title || formData.articleHtml) {
         setAutoSaveStatus("saving")
         setTimeout(() => {
           setAutoSaveStatus("saved")
@@ -122,7 +153,7 @@ export default function CreateArticlePage() {
   }, [formData])
 
   useEffect(() => {
-    const text = formData.content.replace(/<[^>]*>/g, "")
+    const text = formData.articleHtml.replace(/<[^>]*>/g, "")
     const words = text
       .trim()
       .split(/\s+/)
@@ -130,7 +161,7 @@ export default function CreateArticlePage() {
     setWordCount(words.length)
     setCharCount(text.length)
     setReadingTime(Math.ceil(words.length / 200))
-  }, [formData.content])
+  }, [formData.articleHtml])
 
   const generateSlug = (title: string) => {
     return title
@@ -167,10 +198,10 @@ export default function CreateArticlePage() {
   }
 
   const addCoAuthor = () => {
-    if (currentCoAuthor.trim() && !formData.coAuthors.includes(currentCoAuthor.trim())) {
+    if (currentCoAuthor.trim() && !formData.coAuthorNames.includes(currentCoAuthor.trim())) {
       setFormData((prev) => ({
         ...prev,
-        coAuthors: [...prev.coAuthors, currentCoAuthor.trim()],
+        coAuthorNames: [...prev.coAuthorNames, currentCoAuthor.trim()],
       }))
       setCurrentCoAuthor("")
     }
@@ -179,57 +210,166 @@ export default function CreateArticlePage() {
   const removeCoAuthor = (authorToRemove: string) => {
     setFormData((prev) => ({
       ...prev,
-      coAuthors: prev.coAuthors.filter((author) => author !== authorToRemove),
+      coAuthorNames: prev.coAuthorNames.filter((author) => author !== authorToRemove),
     }))
   }
 
-  const handleSave = async (status: "draft" | "published" | "scheduled") => {
-    setIsLoading(true)
-
-    // TODO: Replace with actual database save
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    if (status === "published") {
-      toast({
-        title: "✅ Article Published Successfully",
-        description: `"${formData.title || "Untitled Article"}" is now live and visible to ${formData.visibility === "public" ? "everyone" : formData.visibility}.`,
-      })
-      setTimeout(() => {
-        router.push("/teacher/news")
-      }, 500)
-    } else if (status === "scheduled") {
-      toast({
-        title: "✅ Article Scheduled Successfully",
-        description: `"${formData.title || "Untitled Article"}" will be published on ${new Date(formData.scheduledDate).toLocaleString()}.`,
-      })
-      setTimeout(() => {
-        router.push("/teacher/news")
-      }, 500)
-    } else {
-      toast({
-        title: "✅ Draft Saved Successfully",
-        description: `"${formData.title || "Untitled Article"}" has been saved as a draft.`,
-      })
+  // Check if article has any images (featured image or images in content)
+  const hasImages = () => {
+    // Check for featured image
+    if (formData.featuredImageUrl && formData.featuredImageUrl.trim()) {
+      return true
     }
-
-    setIsLoading(false)
+    // Check for images in HTML content
+    const imgRegex = /<img[^>]+src=[\"']([^\"'>]+)[\"']/i
+    return imgRegex.test(formData.articleHtml)
   }
 
-  const handlePublishClick = () => {
-    if (!formData.title || !formData.content) {
+  const handleSave = async (saveAsDraft: boolean = true) => {
+    // Validation
+    if (!formData.title.trim()) {
       toast({
-        title: "Missing Required Fields",
-        description: "Please add a title and content before publishing.",
+        title: "⚠️ Validation Error",
+        description: "Please enter an article title",
         variant: "destructive",
       })
       return
     }
-    setShowPublishConfirm(true)
+
+    if (!formData.articleHtml.trim() || !formData.articleJson) {
+      toast({
+        title: "⚠️ Validation Error",
+        description: "Please write some content for your article",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate expiration date vs scheduled date
+    if (formData.scheduledDate && formData.expirationDate) {
+      const scheduledTime = new Date(formData.scheduledDate).getTime()
+      const expirationTime = new Date(formData.expirationDate).getTime()
+
+      if (expirationTime < scheduledTime) {
+        setHasDateError(true)
+        toast({
+          title: "⚠️ Invalid Date Range",
+          description: "Expiration date cannot be before the scheduled publication date. Please adjust the dates.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    // Clear date error if validation passes
+    setHasDateError(false)
+
+    // Check for images - show warning but allow to proceed
+    if (!hasImages()) {
+      setPendingSaveAsDraft(saveAsDraft)
+      setShowNoImageWarning(true)
+      return
+    }
+
+    // Proceed with save
+    await performSave(saveAsDraft)
   }
 
-  const handleConfirmPublish = async () => {
-    setShowPublishConfirm(false)
-    await handleSave(formData.status)
+  const performSave = async (saveAsDraft: boolean = true) => {
+    try {
+      // Build the DTO matching backend expectations
+      const createDto: CreateNewsDto = {
+        title: formData.title,
+        description: formData.description || undefined,
+        articleJson: formData.articleJson,
+        articleHtml: formData.articleHtml,
+        // Only send categoryId if it's a valid UUID (not empty string or mock value)
+        categoryId: formData.categoryId && formData.categoryId.length > 0 &&
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formData.categoryId)
+                    ? formData.categoryId : undefined,
+        tags: formData.tags.length > 0 ? formData.tags : undefined,
+        visibility: formData.visibility,
+        featuredImageUrl: formData.featuredImageUrl || undefined,
+        coAuthorNames: formData.coAuthorNames.length > 0 ? formData.coAuthorNames : undefined,
+        scheduledDate: formData.scheduledDate || undefined,
+        authorName: formData.author || undefined,
+        credits: formData.credits || undefined,
+      }
+
+      // Call the real API
+      const newArticle = await createNews(createDto)
+
+      // Success toast
+      if (saveAsDraft) {
+        toast({
+          title: "✅ Draft Saved Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">
+                "{newArticle.title}" has been saved as a draft.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  <FileText className="w-3 h-3" />
+                </div>
+                <span>{wordCount} words</span>
+                <span>•</span>
+                <span>Last saved: {new Date().toLocaleTimeString()}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-600 bg-gray-500/10 px-2 py-1 rounded-md w-fit">
+                <CheckCircle className="w-3 h-3" />
+                <span>Continue editing anytime</span>
+              </div>
+            </div>
+          ),
+          variant: "default",
+          duration: 5000,
+          className: "border-gray-500/20 bg-gray-500/5 backdrop-blur-md",
+        })
+      } else {
+        toast({
+          title: "✅ Article Created Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">
+                "{newArticle.title}" has been created and saved.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  <FileText className="w-3 h-3" />
+                </div>
+                <span>{wordCount} words</span>
+                <span>•</span>
+                <span>{readingTime} min read</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
+                <CheckCircle className="w-3 h-3" />
+                <span>Article created successfully</span>
+              </div>
+            </div>
+          ),
+          variant: "default",
+          duration: 6000,
+          className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
+        })
+      }
+
+      // Navigate back to news list
+      router.push("/teacher/news")
+    } catch (error: any) {
+      console.error("Error creating article:", error)
+      toast({
+        title: "❌ Failed to Create Article",
+        description: error?.message || "An error occurred while creating the article. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
+  }
+
+  const handlePreview = () => {
+    // window.open("/preview/article", "_blank") // Removed this as tabs handle preview now
+    setActiveTab("preview")
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -252,37 +392,21 @@ export default function CreateArticlePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 transition-colors duration-300">
       <div className="container mx-auto px-6 py-8">
-        {/* Database Connection Notice */}
-        <Card className="mb-6 bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20 dark:border-blue-500/30">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Database className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Database Connection Required</p>
-                <p className="text-blue-700 dark:text-blue-300">
-                  Connect your database to save and publish articles. All data entered here is currently stored locally
-                  and will be lost on page refresh.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.back()}
-              className="hover:bg-white/80 dark:hover:bg-slate-800/80"
+              className="hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 hover:scale-105"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to News
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create New Article</h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors">Create New Article</h1>
               <div className="flex items-center gap-4 mt-1">
                 <p className="text-gray-600 dark:text-gray-400">Write and publish school news articles</p>
                 <div className="flex items-center gap-2 text-sm">
@@ -293,7 +417,7 @@ export default function CreateArticlePage() {
                     </span>
                   )}
                   {autoSaveStatus === "saved" && (
-                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1 animate-in fade-in duration-300">
                       <CheckCircle2 className="h-3 w-3" />
                       Saved
                     </span>
@@ -305,26 +429,37 @@ export default function CreateArticlePage() {
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex items-center gap-3 mr-4">
-              <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <Badge
+                variant="secondary"
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm transition-all duration-200 hover:scale-105"
+              >
                 <FileText className="h-3 w-3 mr-1" />
                 {wordCount} words
               </Badge>
-              <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <Badge
+                variant="secondary"
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm transition-all duration-200 hover:scale-105"
+              >
                 <Clock className="h-3 w-3 mr-1" />
                 {readingTime} min read
               </Badge>
             </div>
-            <Button variant="outline" onClick={() => handleSave("draft")} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={() => handleSave(true)}
+              disabled={isPending}
+              className="hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 hover:scale-105"
+            >
               <Save className="h-4 w-4 mr-2" />
-              Save Draft
+              {isPending ? "Saving..." : "Save Draft"}
             </Button>
             <Button
-              onClick={handlePublishClick}
-              disabled={isLoading || !formData.title || !formData.content}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              onClick={() => handleSave(false)}
+              disabled={isPending || !formData.title || !formData.articleHtml}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 transition-all duration-200 hover:scale-105 hover:shadow-lg"
             >
               <Send className="h-4 w-4 mr-2" />
-              {formData.status === "scheduled" ? "Schedule" : "Publish"}
+              {isPending ? "Creating..." : "Create Article"}
             </Button>
           </div>
         </div>
@@ -345,16 +480,16 @@ export default function CreateArticlePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-6">
-                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                       <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       Article Content
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="title" className="dark:text-gray-200">
+                      <Label htmlFor="title" className="text-sm font-medium dark:text-gray-200">
                         Title *
                       </Label>
                       <Input
@@ -362,44 +497,48 @@ export default function CreateArticlePage() {
                         value={formData.title}
                         onChange={(e) => handleTitleChange(e.target.value)}
                         placeholder="Enter article title..."
-                        className="text-lg font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-gray-500"
+                        className="text-lg font-medium transition-all duration-200 focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-gray-400"
                       />
                       <p
-                        className={`text-xs ${formData.title.length > 60 ? "text-orange-600 dark:text-orange-400" : "text-gray-500 dark:text-gray-400"}`}
+                        className={`text-xs transition-colors ${
+                          formData.title.length > 60
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
                       >
-                        {formData.title.length}/60 characters
+                        {formData.title.length}/60 characters {formData.title.length > 60 && "(Consider shortening)"}
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="excerpt" className="dark:text-gray-200">
+                      <Label htmlFor="description" className="text-sm font-medium dark:text-gray-200">
                         Description
                       </Label>
                       <Textarea
-                        id="excerpt"
-                        value={formData.excerpt}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, excerpt: e.target.value }))}
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                         placeholder="Brief description of the article..."
                         rows={3}
-                        className="dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-gray-500"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-gray-400"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formData.excerpt.length}/200 characters
+                        {formData.description.length}/500 characters
                       </p>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border-0 dark:bg-slate-900/80 bg-white/80 backdrop-blur-sm">
+                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                       <UserCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                       Author Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="author" className="dark:text-gray-200">
+                      <Label htmlFor="author" className="text-sm font-medium dark:text-gray-200">
                         Author Name *
                       </Label>
                       <Input
@@ -407,32 +546,38 @@ export default function CreateArticlePage() {
                         value={formData.author}
                         onChange={(e) => setFormData((prev) => ({ ...prev, author: e.target.value }))}
                         placeholder="Enter author name..."
-                        className="dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-gray-500"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-gray-400"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-200">Co-Authors</Label>
+                      <Label className="text-sm font-medium dark:text-gray-200">Co-Authors</Label>
                       <div className="flex gap-2">
                         <Input
                           value={currentCoAuthor}
                           onChange={(e) => setCurrentCoAuthor(e.target.value)}
                           placeholder="Add co-author..."
                           onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addCoAuthor())}
-                          className="flex-1 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-gray-500"
+                          className="flex-1 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         />
-                        <Button type="button" variant="outline" size="sm" onClick={addCoAuthor}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addCoAuthor}
+                          className="transition-all duration-200 hover:scale-105 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:hover:bg-slate-700 bg-transparent"
+                        >
                           Add
                         </Button>
                       </div>
 
-                      {formData.coAuthors.length > 0 && (
+                      {formData.coAuthorNames.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {formData.coAuthors.map((author) => (
+                          {formData.coAuthorNames.map((author) => (
                             <Badge
                               key={author}
                               variant="secondary"
-                              className="cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 dark:bg-slate-800"
+                              className="cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105 dark:bg-slate-800 dark:text-white"
                               onClick={() => removeCoAuthor(author)}
                             >
                               {author} <X className="h-3 w-3 ml-1" />
@@ -443,7 +588,7 @@ export default function CreateArticlePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="credits" className="dark:text-gray-200">
+                      <Label htmlFor="credits" className="text-sm font-medium dark:text-gray-200">
                         Credits
                       </Label>
                       <Textarea
@@ -452,8 +597,11 @@ export default function CreateArticlePage() {
                         onChange={(e) => setFormData((prev) => ({ ...prev, credits: e.target.value }))}
                         placeholder="Additional credits (photographers, contributors, etc.)..."
                         rows={3}
-                        className="dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-gray-500"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-gray-400"
                       />
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Acknowledge photographers, contributors, or sources
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -461,61 +609,81 @@ export default function CreateArticlePage() {
 
               {/* Sidebar */}
               <div className="space-y-6">
-                <Card className="shadow-lg border-0 dark:bg-slate-900/80 bg-white/80 backdrop-blur-sm">
+                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                       <Send className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                       Publishing
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-200">Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}
-                      >
-                        <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="scheduledDate" className="text-sm font-medium dark:text-gray-200">
+                        Publish Date (Optional)
+                      </Label>
+                      <Input
+                        id="scheduledDate"
+                        type="datetime-local"
+                        value={formData.scheduledDate}
+                        onChange={(e) => {
+                          setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))
+                          setHasDateError(false)
+                        }}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className={`dark:bg-slate-800 dark:border-slate-700 dark:text-white ${
+                          hasDateError ? "border-red-500 dark:border-red-500 focus:ring-red-500" : ""
+                        }`}
+                      />
                     </div>
 
-                    {formData.status === "scheduled" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="scheduledDate" className="dark:text-gray-200">
-                          Publish Date
-                        </Label>
-                        <Input
-                          id="scheduledDate"
-                          type="datetime-local"
-                          value={formData.scheduledDate}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))}
-                          className="dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                        />
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="expirationDate"
+                        className="text-sm font-medium dark:text-gray-200 flex items-center gap-2"
+                      >
+                        <CalendarX className="h-4 w-4 text-red-500" />
+                        Expiration Date (Optional)
+                      </Label>
+                      <Input
+                        id="expirationDate"
+                        type="datetime-local"
+                        value={formData.expirationDate}
+                        onChange={(e) => {
+                          setFormData((prev) => ({ ...prev, expirationDate: e.target.value }))
+                          setHasDateError(false)
+                        }}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className={`dark:bg-slate-800 dark:border-slate-700 dark:text-white ${
+                          hasDateError ? "border-red-500 dark:border-red-500 focus:ring-red-500" : ""
+                        }`}
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        Article will be automatically unpublished after this date
+                      </p>
+                    </div>
 
                     <Separator className="dark:bg-slate-700" />
 
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-200">Visibility</Label>
+                      <Label className="text-sm font-medium dark:text-gray-200">Visibility</Label>
                       <Select
                         value={formData.visibility}
                         onValueChange={(value: any) => setFormData((prev) => ({ ...prev, visibility: value }))}
                       >
-                        <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                          <SelectValue />
+                        <SelectTrigger className="transition-all duration-200 dark:bg-slate-800 dark:border-slate-700 dark:text-white">
+                          <SelectValue placeholder="Select visibility" />
                         </SelectTrigger>
                         <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                           {visibilityOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              className="dark:text-white dark:focus:bg-slate-700"
+                            >
+                              <div className="flex items-center gap-2">
+                                <option.icon className="h-4 w-4" />
+                                {option.label}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -524,9 +692,9 @@ export default function CreateArticlePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border-0 dark:bg-slate-900/80 bg-white/80 backdrop-blur-sm">
+                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                       <ImageIcon className="h-5 w-5 text-pink-600 dark:text-pink-400" />
                       Featured Image
                     </CardTitle>
@@ -536,59 +704,81 @@ export default function CreateArticlePage() {
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer ${
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 cursor-pointer ${
                         isDragging
                           ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 scale-105"
-                          : "border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600"
+                          : "border-gray-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500"
                       }`}
                     >
-                      <Upload className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-2" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {isDragging ? "Drop image here" : "Click to upload or drag and drop"}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG up to 10MB</p>
+                      <div className="flex flex-col items-center gap-2">
+                        <div
+                          className={`transition-all duration-300 ${isDragging ? "scale-110 text-blue-500" : "text-gray-400 dark:text-gray-500"}`}
+                        >
+                          <Upload className="h-12 w-12 mx-auto" />
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {isDragging ? "Drop image here" : "Click to upload or drag and drop"}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">PNG, JPG up to 10MB</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border-0 dark:bg-slate-900/80 bg-white/80 backdrop-blur-sm">
+                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                       <Tag className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                       Organization
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-200">Category</Label>
+                      <Label className="text-sm font-medium dark:text-gray-200">Category</Label>
                       <Select
-                        value={formData.category}
-                        onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
+                        value={formData.categoryId}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
+                        disabled={isLoadingCategories}
                       >
-                        <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                          <SelectValue placeholder="Select category" />
+                        <SelectTrigger className="transition-all duration-200 dark:bg-slate-800 dark:border-slate-700 dark:text-white">
+                          <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select category (optional)"} />
                         </SelectTrigger>
                         <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                           {categories.map((category) => (
-                            <SelectItem key={category.value} value={category.value}>
-                              {category.label}
+                            <SelectItem
+                              key={category.id}
+                              value={category.id}
+                              className="dark:text-white dark:focus:bg-slate-700"
+                            >
+                              {category.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {categories.length === 0 && !isLoadingCategories && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          No categories available. You can still create the article without a category.
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-200">Tags</Label>
+                      <Label className="text-sm font-medium dark:text-gray-200">Tags</Label>
                       <div className="flex gap-2">
                         <Input
                           value={currentTag}
                           onChange={(e) => setCurrentTag(e.target.value)}
                           placeholder="Add tag..."
                           onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                          className="flex-1 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-gray-500"
+                          className="flex-1 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         />
-                        <Button type="button" variant="outline" size="sm" onClick={addTag}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addTag}
+                          className="transition-all duration-200 hover:scale-105 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:hover:bg-slate-700 bg-transparent"
+                        >
                           Add
                         </Button>
                       </div>
@@ -599,7 +789,7 @@ export default function CreateArticlePage() {
                             <Badge
                               key={tag}
                               variant="secondary"
-                              className="cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 dark:bg-slate-800"
+                              className="cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105 dark:bg-slate-800 dark:text-white"
                               onClick={() => removeTag(tag)}
                             >
                               {tag} <X className="h-3 w-3 ml-1" />
@@ -615,17 +805,17 @@ export default function CreateArticlePage() {
 
             {/* TipTap Editor */}
             <div className="mt-8">
-              <Card className="shadow-lg border-0 dark:bg-slate-900/80 bg-white/80 backdrop-blur-sm">
+              <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 dark:text-white">
+                  <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                     <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     Article Content
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <TiptapEditor
-                    content={formData.content}
-                    onChange={(content) => setFormData((prev) => ({ ...prev, content }))}
+                    content={formData.articleHtml}
+                    onChange={(html, json) => setFormData((prev) => ({ ...prev, articleHtml: html, articleJson: json }))}
                   />
                 </CardContent>
               </Card>
@@ -652,9 +842,9 @@ export default function CreateArticlePage() {
                 <header className="mb-12">
                   {/* Article Meta */}
                   <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
-                    {formData.category && (
+                    {formData.categoryId && (
                       <Badge variant="outline" className="text-primary border-primary">
-                        {categories.find((c) => c.value === formData.category)?.label || formData.category}
+                        {categories.find((c) => c.id === formData.categoryId)?.name || "Category"}
                       </Badge>
                     )}
                     <div className="flex items-center gap-1">
@@ -675,11 +865,37 @@ export default function CreateArticlePage() {
                     {formData.title || "Article Title"}
                   </h1>
 
-                  {formData.excerpt && (
+                  {formData.description && (
                     <p className="text-xl sm:text-2xl leading-relaxed text-muted-foreground mb-8 break-words">
-                      {formData.excerpt}
+                      {formData.description}
                     </p>
                   )}
+
+                  {/* Article Stats & Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-4 h-4" />0 views
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" />0 likes
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />0 comments
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <AnimatedButton variant="outline" size="sm">
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </AnimatedButton>
+                      <AnimatedButton variant="outline" size="sm">
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        Save
+                      </AnimatedButton>
+                    </div>
+                  </div>
 
                   {/* Tags */}
                   {formData.tags.length > 0 && (
@@ -695,11 +911,11 @@ export default function CreateArticlePage() {
                 </header>
 
                 {/* Featured Image */}
-                {formData.featuredImage && (
+                {formData.featuredImageUrl && (
                   <div className="relative mb-12">
                     <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
                       <img
-                        src={formData.featuredImage || "/placeholder.svg"}
+                        src={formData.featuredImageUrl || "/placeholder.svg"}
                         alt={formData.title}
                         className="w-full h-full object-cover"
                       />
@@ -708,24 +924,24 @@ export default function CreateArticlePage() {
                 )}
 
                 <div className="mb-16">
-                  {formData.content ? (
+                  {formData.articleHtml ? (
                     <div
                       className="prose prose-lg dark:prose-invert max-w-none break-words"
-                      dangerouslySetInnerHTML={{ __html: formData.content }}
+                      dangerouslySetInnerHTML={{ __html: formData.articleHtml }}
                     />
                   ) : (
                     <p className="text-muted-foreground italic">No content yet. Start writing in the Edit tab.</p>
                   )}
                 </div>
 
-                {formData.coAuthors.length > 0 && (
+                {formData.coAuthorNames.length > 0 && (
                   <div className="mb-8 border-l-4 border-primary pl-6">
                     <h3 className="font-semibold mb-3 text-lg">Co-Authors</h3>
                     <div className="flex flex-wrap gap-2">
-                      {formData.coAuthors.map((author) => (
-                        <Badge key={author} variant="secondary" className="break-words max-w-full">
+                      {formData.coAuthorNames.map((authorName) => (
+                        <Badge key={authorName} variant="secondary" className="break-words max-w-full">
                           <UserCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="break-words">{author}</span>
+                          <span className="break-words">{authorName}</span>
                         </Badge>
                       ))}
                     </div>
@@ -751,6 +967,17 @@ export default function CreateArticlePage() {
                         <p className="text-sm text-muted-foreground">Article Author</p>
                       </div>
                     </div>
+
+                    <div className="flex gap-2">
+                      <AnimatedButton variant="outline" size="sm">
+                        <Heart className="w-4 h-4 mr-2" />
+                        Like
+                      </AnimatedButton>
+                      <AnimatedButton variant="outline" size="sm">
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </AnimatedButton>
+                    </div>
                   </div>
                 </footer>
               </article>
@@ -759,46 +986,47 @@ export default function CreateArticlePage() {
         </Tabs>
       </div>
 
-      {/* Publish Confirmation Modal */}
-      <AlertDialog open={showPublishConfirm} onOpenChange={setShowPublishConfirm}>
-        <AlertDialogContent>
+      {/* No Image Warning Dialog */}
+      <AlertDialog open={showNoImageWarning} onOpenChange={setShowNoImageWarning}>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
-              {formData.status === "scheduled" ? "Schedule Article?" : "Publish Article?"}
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              No Images Found
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {formData.status === "scheduled" ? (
-                <>
-                  Are you sure you want to schedule <strong>"{formData.title}"</strong> to be published on{" "}
-                  <strong>
-                    {formData.scheduledDate ? new Date(formData.scheduledDate).toLocaleString() : "the selected date"}
-                  </strong>
-                  ?
-                  <br />
-                  <br />
-                  The article will be visible to{" "}
-                  <strong>{formData.visibility === "public" ? "everyone" : formData.visibility}</strong> when published.
-                </>
-              ) : (
-                <>
-                  Are you sure you want to publish <strong>"{formData.title}"</strong>? The article will be immediately
-                  visible to <strong>{formData.visibility === "public" ? "everyone" : formData.visibility}</strong>.
-                  <br />
-                  <br />
-                  You can edit or unpublish it later from the news management page.
-                </>
-              )}
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-base">
+                <p className="text-slate-700 dark:text-slate-300">
+                  This article doesn't have any images. Articles with images perform better and are more engaging for readers.
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-1">
+                    💡 Best Practices:
+                  </p>
+                  <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                    <li>Add a featured image for better visibility</li>
+                    <li>Include images in your article content</li>
+                    <li>Images improve engagement and sharing</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+                  You can still publish without images, but it's recommended to add at least one.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setShowNoImageWarning(false)}>
+              Go Back & Add Image
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmPublish}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => {
+                setShowNoImageWarning(false)
+                performSave(pendingSaveAsDraft)
+              }}
+              className="bg-amber-600 hover:bg-amber-700"
             >
-              {isLoading ? "Publishing..." : formData.status === "scheduled" ? "Schedule Article" : "Publish Article"}
+              Continue Without Image
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

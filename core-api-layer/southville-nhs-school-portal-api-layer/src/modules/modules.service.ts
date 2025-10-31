@@ -292,13 +292,13 @@ export class ModulesService {
         sortOrder = 'desc',
       } = query;
 
-      let queryBuilder = this.supabaseService.getClient().from('modules')
+      let queryBuilder = this.supabaseService.getServiceClient().from('modules')
         .select(`
           *,
-          uploader:uploaded_by(id, full_name, email),
-          subject:subject_id(id, subject_name, description),
+          uploader:users!modules_uploaded_by_fkey(id, full_name, email),
+          subject:subjects!modules_subject_id_fkey(id, subject_name, description),
           sections:section_modules(
-            section:section_id(id, name, grade_level)
+            section:sections!section_modules_section_id_fkey(id, name, grade_level)
           )
         `);
 
@@ -386,10 +386,10 @@ export class ModulesService {
         .select(
           `
           *,
-          uploader:uploaded_by(id, full_name, email),
-          subject:subject_id(id, subject_name, description),
+          uploader:users!modules_uploaded_by_fkey(id, full_name, email),
+          subject:subjects!modules_subject_id_fkey(id, subject_name, description),
           sections:section_modules(
-            section:section_id(id, name, grade_level)
+            section:sections!section_modules_section_id_fkey(id, name, grade_level)
           )
         `,
         )
@@ -526,7 +526,12 @@ export class ModulesService {
   async generateDownloadUrl(
     moduleId: string,
     userId: string,
-  ): Promise<{ downloadUrl: string; expiresAt: string }> {
+  ): Promise<{
+    downloadUrl?: string;
+    slideUrls?: string[];
+    fileType: 'pdf' | 'pptx';
+    expiresAt: string;
+  }> {
     try {
       const module = await this.findOne(moduleId);
       if (!module) {
@@ -537,16 +542,9 @@ export class ModulesService {
         throw new BadRequestException('Module file not found');
       }
 
-      // Check access permissions
-      const accessResult =
-        await this.moduleAccessService.canStudentAccessModule(userId, moduleId);
-      if (!accessResult.canAccess) {
-        throw new ForbiddenException(
-          accessResult.reason || 'Access denied to this module',
-        );
-      }
+      // Allow anyone to download modules - no access restrictions
 
-      // Generate presigned URL
+      // Generate presigned URL using the r2_file_key directly
       const downloadResult =
         await this.moduleStorageService.generateDownloadUrl(
           module.id,
@@ -562,7 +560,9 @@ export class ModulesService {
       );
 
       return {
-        downloadUrl: downloadResult.downloadUrl,
+        downloadUrl: downloadResult.downloadUrl || undefined,
+        slideUrls: downloadResult.slideUrls || undefined,
+        fileType: downloadResult.fileType,
         expiresAt: downloadResult.expiresAt,
       };
     } catch (error) {
@@ -580,12 +580,22 @@ export class ModulesService {
     assignedBy: string,
   ): Promise<void> {
     try {
+      // Debug logging
+      console.log('[MODULES SERVICE] assignModuleToSections called with:');
+      console.log('  moduleId:', moduleId);
+      console.log('  sectionIds:', sectionIds);
+      console.log('  sectionIds type:', typeof sectionIds);
+      console.log('  sectionIds isArray:', Array.isArray(sectionIds));
+      console.log('  assignedBy:', assignedBy);
+
       const assignments = sectionIds.map((sectionId) => ({
         module_id: moduleId,
         section_id: sectionId,
         assigned_by: assignedBy,
         visible: true,
       }));
+
+      console.log('[MODULES SERVICE] Generated assignments:', assignments);
 
       const { error } = await this.supabaseService
         .getServiceClient() // Use service role to bypass RLS for trusted operations
@@ -666,20 +676,65 @@ export class ModulesService {
           .select(
             `
             *,
-            uploader:uploaded_by(id, full_name, email),
-            subject:subject_id(id, subject_name, description)
+            uploader:users!modules_uploaded_by_fkey(id, full_name, email),
+            subject:subjects!modules_subject_id_fkey(id, subject_name, description)
           `,
           );
 
-        // Build the OR condition properly
-        if (teacherSubject) {
-          // Teacher has a subject specialization
-          queryBuilder = queryBuilder.or(
-            `uploaded_by.eq.${userId},and(is_global.eq.true,subject_id.eq.${teacherSubject})`,
+        // If sectionId is provided, show modules assigned to that section
+        if (query.sectionId) {
+          console.log(
+            '[MODULES SERVICE] Filtering by sectionId:',
+            query.sectionId,
           );
+
+          // Get modules assigned to this specific section
+          const { data: sectionModules, error: sectionError } =
+            await this.supabaseService
+              .getClient()
+              .from('section_modules')
+              .select('module_id')
+              .eq('section_id', query.sectionId)
+              .eq('visible', true);
+
+          console.log('[MODULES SERVICE] Section modules query result:', {
+            sectionModules,
+            sectionError,
+          });
+
+          if (sectionError) {
+            console.error(
+              '[MODULES SERVICE] Error fetching section modules:',
+              sectionError,
+            );
+            throw new BadRequestException('Failed to fetch section modules');
+          }
+
+          if (sectionModules && sectionModules.length > 0) {
+            const moduleIds = sectionModules.map((sm) => sm.module_id);
+            console.log('[MODULES SERVICE] Module IDs for section:', moduleIds);
+            queryBuilder = queryBuilder.in('id', moduleIds);
+          } else {
+            console.log(
+              '[MODULES SERVICE] No modules found for section, returning empty result',
+            );
+            // No modules assigned to this section - return empty result
+            queryBuilder = queryBuilder.eq(
+              'id',
+              '00000000-0000-0000-0000-000000000000',
+            ); // Non-existent ID
+          }
         } else {
-          // Teacher has no subject specialization - can only see their own modules
-          queryBuilder = queryBuilder.eq('uploaded_by', userId);
+          // No sectionId - show teacher's own modules and global modules for their subject
+          if (teacherSubject) {
+            // Teacher has a subject specialization
+            queryBuilder = queryBuilder.or(
+              `uploaded_by.eq.${userId},is_global.eq.true.and.subject_id.eq.${teacherSubject}`,
+            );
+          } else {
+            // Teacher has no subject specialization - can only see their own modules
+            queryBuilder = queryBuilder.eq('uploaded_by', userId);
+          }
         }
 
         queryBuilder = queryBuilder.eq('is_deleted', false);
@@ -730,56 +785,125 @@ export class ModulesService {
           };
         }
 
-        let queryBuilder = this.supabaseService
-          .getClient()
-          .from('modules')
-          .select(
-            `
+        // If subjectId is provided, we need to handle both global modules and section-assigned modules
+        if (query.subjectId) {
+          console.log(
+            '[MODULES SERVICE] Student filtering by subjectId:',
+            query.subjectId,
+          );
+
+          // Create a query that gets both global modules for the subject AND section-assigned modules for the subject
+          // First get global modules for this subject
+          const { data: globalModules, error: globalError } =
+            await this.supabaseService
+              .getClient()
+              .from('modules')
+              .select(
+                `
             *,
-            uploader:uploaded_by(id, full_name, email),
-            subject:subject_id(id, subject_name, description),
+            uploader:users!modules_uploaded_by_fkey(id, full_name, email),
+            subject:subjects!modules_subject_id_fkey(id, subject_name, description),
+            section_modules(visible)
+          `,
+              )
+              .eq('is_deleted', false)
+              .eq('subject_id', query.subjectId)
+              .eq('is_global', true);
+
+          // Then get section-specific modules for this subject
+          const { data: sectionModules, error: sectionError } =
+            await this.supabaseService
+              .getClient()
+              .from('modules')
+              .select(
+                `
+            *,
+            uploader:users!modules_uploaded_by_fkey(id, full_name, email),
+            subject:subjects!modules_subject_id_fkey(id, subject_name, description),
             section_modules!inner(visible)
           `,
-          )
-          .eq('section_modules.section_id', studentSection)
-          .eq('section_modules.visible', true)
-          .eq('is_deleted', false)
-          .or('is_global.eq.true');
+              )
+              .eq('is_deleted', false)
+              .eq('subject_id', query.subjectId)
+              .eq('is_global', false)
+              .eq('section_modules.section_id', studentSection)
+              .eq('section_modules.visible', true);
 
-        // Apply other filters
-        if (query.search) {
-          queryBuilder = queryBuilder.or(
-            `title.ilike.%${query.search}%,description.ilike.%${query.search}%`,
-          );
-        }
+          // Combine results
+          const modules = [...(globalModules || []), ...(sectionModules || [])];
+          const error = globalError || sectionError;
+          const count = modules.length;
 
-        const {
-          data: modules,
-          error,
-          count,
-        } = await queryBuilder
-          .order(query.sortBy || 'created_at', {
-            ascending: query.sortOrder === 'asc',
-          })
-          .range((page - 1) * limit, page * limit - 1);
+          if (error) {
+            this.logger.error(
+              'Failed to fetch student accessible modules:',
+              error,
+            );
+            throw new BadRequestException('Failed to fetch accessible modules');
+          }
 
-        if (error) {
-          this.logger.error(
-            'Failed to fetch student accessible modules:',
+          const totalPages = Math.ceil((count || 0) / limit);
+
+          return {
+            modules: modules || [],
+            total: count || 0,
+            page,
+            limit,
+            totalPages,
+          };
+        } else {
+          // No subjectId - show global modules and modules assigned to student's section
+          let queryBuilder = this.supabaseService
+            .getClient()
+            .from('modules')
+            .select(
+              `
+              *,
+              uploader:users!modules_uploaded_by_fkey(id, full_name, email),
+              subject:subjects!modules_subject_id_fkey(id, subject_name, description),
+              section_modules!inner(visible)
+            `,
+            )
+            .eq('section_modules.section_id', studentSection)
+            .eq('section_modules.visible', true)
+            .eq('is_deleted', false)
+            .or('is_global.eq.true');
+
+          // Apply other filters
+          if (query.search) {
+            queryBuilder = queryBuilder.or(
+              `title.ilike.%${query.search}%,description.ilike.%${query.search}%`,
+            );
+          }
+
+          const {
+            data: modules,
             error,
-          );
-          throw new BadRequestException('Failed to fetch accessible modules');
+            count,
+          } = await queryBuilder
+            .order(query.sortBy || 'created_at', {
+              ascending: query.sortOrder === 'asc',
+            })
+            .range((page - 1) * limit, page * limit - 1);
+
+          if (error) {
+            this.logger.error(
+              'Failed to fetch student accessible modules:',
+              error,
+            );
+            throw new BadRequestException('Failed to fetch accessible modules');
+          }
+
+          const totalPages = Math.ceil((count || 0) / limit);
+
+          return {
+            modules: modules || [],
+            total: count || 0,
+            page,
+            limit,
+            totalPages,
+          };
         }
-
-        const totalPages = Math.ceil((count || 0) / limit);
-
-        return {
-          modules: modules || [],
-          total: count || 0,
-          page,
-          limit,
-          totalPages,
-        };
       }
 
       return {

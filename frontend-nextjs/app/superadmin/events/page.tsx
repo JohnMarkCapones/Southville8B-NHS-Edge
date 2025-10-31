@@ -691,11 +691,7 @@ const EventsPage = () => {
   }
 
   const handleViewEvent = (event: any) => {
-    toast({
-      title: "📅 Event Details",
-      description: `Opening details for "${event.title}"`,
-      duration: 3000,
-    })
+    router.push(`/superadmin/events/view/${event.id}`)
   }
 
   const handleEditEvent = (event: any) => {

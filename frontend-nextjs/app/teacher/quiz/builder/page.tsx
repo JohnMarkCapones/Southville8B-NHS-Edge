@@ -4,7 +4,8 @@ import type React from "react"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import {
   ArrowLeft,
   Plus,
@@ -869,6 +870,9 @@ export default function QuizBuilderPage() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0">
+        <VisuallyHidden>
+          <SheetTitle>Questions Sidebar</SheetTitle>
+        </VisuallyHidden>
         <QuestionsSidebar />
       </SheetContent>
     </Sheet>

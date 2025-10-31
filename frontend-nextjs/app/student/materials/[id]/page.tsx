@@ -31,17 +31,22 @@ import {
   Loader2,
   AlertCircle,
   FileText,
+  Presentation,
+  FileSpreadsheet,
+  Image,
   Calendar,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { getSubject, type Subject } from "@/lib/api/endpoints/subjects"
 import { getModules, getModuleDownloadUrl, type Module } from "@/lib/api/endpoints/modules"
+import { useUser } from "@/hooks/useUser"
 
 export default function SubjectMaterialsPage() {
   const params = useParams()
   const router = useRouter()
   const subjectId = params.id as string
+  const { data: user } = useUser()
   const [bookmarkedItems, setBookmarkedItems] = useState<string[]>([])
   const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false)
   const [selectedModule, setSelectedModule] = useState<{ id: string; title: string } | null>(null)
@@ -54,21 +59,26 @@ export default function SubjectMaterialsPage() {
   // Fetch subject and modules data
   useEffect(() => {
     const fetchData = async () => {
-      if (!subjectId) return
+      if (!subjectId || !user?.student?.section_id) return
 
       try {
         setLoading(true)
         setError(null)
         console.log('[SubjectMaterials] Fetching subject:', subjectId)
+        console.log('[SubjectMaterials] Student section ID:', user.student.section_id)
 
         // Fetch subject data
         const subjectData = await getSubject(subjectId)
         setSubject(subjectData)
         console.log('[SubjectMaterials] ✅ Subject loaded:', subjectData.subject_name)
 
-        // Fetch modules for this subject
-        console.log('[SubjectMaterials] Fetching modules for subject:', subjectId)
-        const modulesData = await getModules({ subjectId, limit: 100 })
+        // Fetch modules for this subject and section
+        console.log('[SubjectMaterials] Fetching modules for subject:', subjectId, 'and section:', user.student.section_id)
+        const modulesData = await getModules({ 
+          subjectId, 
+          sectionId: user.student.section_id,
+          limit: 100 
+        })
         setModules(modulesData.modules)
         console.log('[SubjectMaterials] ✅ Loaded', modulesData.modules.length, 'modules')
       } catch (err) {
@@ -80,25 +90,86 @@ export default function SubjectMaterialsPage() {
     }
 
     fetchData()
-  }, [subjectId])
+  }, [subjectId, user?.student?.section_id])
 
   // Fallback helper function
-  const fallback = (value: any, defaultValue: string = '-april') => {
+  const fallback = (value: any, defaultValue: string = 'N/A') => {
     if (value === null || value === undefined || value === '') {
       return defaultValue
     }
     return value
   }
 
+  // Determine file type based on mime string
+  const getFileType = (mime?: string): 'pdf' | 'doc' | 'ppt' | 'xls' | 'image' | 'other' => {
+    if (!mime) return 'other'
+    const lower = mime.toLowerCase()
+    if (lower.includes('pdf')) return 'pdf'
+    if (lower.includes('presentation') || lower.includes('powerpoint') || lower.includes('ppt')) return 'ppt'
+    if (lower.includes('spreadsheet') || lower.includes('excel') || lower.includes('sheet') || lower.includes('xls')) return 'xls'
+    if (lower.includes('image')) return 'image'
+    if (lower.includes('word') || lower.includes('document')) return 'doc'
+    return 'other'
+  }
+
+  // Visual presets for each file type
+  const getFileVisuals = (mime?: string) => {
+    const type = getFileType(mime)
+    switch (type) {
+      case 'pdf':
+        return {
+          icon: <FileText className="w-20 h-20 text-red-600/70" />,
+          bg: 'from-rose-50 to-red-50',
+          badgeClass: 'bg-red-600 text-white',
+          label: 'PDF',
+        }
+      case 'ppt':
+        return {
+          icon: <Presentation className="w-20 h-20 text-orange-600/80" />,
+          bg: 'from-amber-50 to-orange-50',
+          badgeClass: 'bg-orange-600 text-white',
+          label: 'PPT',
+        }
+      case 'xls':
+        return {
+          icon: <FileSpreadsheet className="w-20 h-20 text-emerald-600/80" />,
+          bg: 'from-emerald-50 to-green-50',
+          badgeClass: 'bg-emerald-600 text-white',
+          label: 'Spreadsheet',
+        }
+      case 'image':
+        return {
+          icon: <Image className="w-20 h-20 text-purple-600/80" />,
+          bg: 'from-violet-50 to-purple-50',
+          badgeClass: 'bg-purple-600 text-white',
+          label: 'Image',
+        }
+      case 'doc':
+        return {
+          icon: <FileText className="w-20 h-20 text-blue-600/80" />,
+          bg: 'from-sky-50 to-blue-50',
+          badgeClass: 'bg-blue-600 text-white',
+          label: 'Document',
+        }
+      default:
+        return {
+          icon: <FileText className="w-20 h-20 text-slate-400" />,
+          bg: 'from-slate-50 to-slate-100',
+          badgeClass: 'bg-slate-600 text-white',
+          label: 'File',
+        }
+    }
+  }
+
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '-april Unknown'
+    if (!bytes) return 'Unknown'
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return '-april Unknown'
+    if (!dateString) return 'Unknown'
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -106,7 +177,7 @@ export default function SubjectMaterialsPage() {
         day: 'numeric'
       })
     } catch {
-      return '-april Invalid'
+      return 'Invalid'
     }
   }
 
@@ -239,12 +310,12 @@ export default function SubjectMaterialsPage() {
                   <GraduationCap className="w-10 h-10 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold mb-2 text-white">{fallback(subject.subject_name, '-april Untitled Subject')}</h1>
-                  <p className="text-white/90 text-lg mb-2">{fallback(subject.description, '-april No description available')}</p>
+                  <h1 className="text-4xl font-bold mb-2 text-white">{fallback(subject.subject_name, 'Untitled Subject')}</h1>
+                  <p className="text-white/90 text-lg mb-2">{fallback(subject.description, 'No description available')}</p>
                   <div className="flex items-center gap-4 text-white/80">
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4" />
-                      <span>Code: {fallback(subject.code, '-april N/A')}</span>
+                      <span>Code: {fallback(subject.code, 'N/A')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Trophy className="w-4 h-4" />
@@ -256,7 +327,7 @@ export default function SubjectMaterialsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-2">
-                    <Badge className="bg-white/20 text-white border-white/30">{fallback(subject.status, '-april unknown')}</Badge>
+                    <Badge className="bg-white/20 text-white border-white/30">{fallback(subject.status, 'Unknown')}</Badge>
                     {subject.grade_levels && subject.grade_levels.length > 0 && (
                       <Badge className="bg-white/10 text-white border-white/20">
                         Grades: {subject.grade_levels.join(', ')}
@@ -309,7 +380,7 @@ export default function SubjectMaterialsPage() {
               <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
                 {modules.length > 0
                   ? `Access ${modules.length} comprehensive study materials and resources`
-                  : '-april No modules available for this subject yet'}
+                  : 'No modules available for this subject yet'}
               </p>
             </div>
 
@@ -318,7 +389,7 @@ export default function SubjectMaterialsPage() {
                 <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No Modules Available</h3>
                 <p className="text-slate-600 dark:text-slate-400">
-                  -april There are no modules uploaded for this subject yet. Please check back later.
+                  There are no modules uploaded for this subject yet. Please check back later.
                 </p>
               </Card>
             ) : (
@@ -329,11 +400,13 @@ export default function SubjectMaterialsPage() {
                     className="group hover:-translate-y-2 transition-all duration-500 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-2xl hover:shadow-blue-500/10 overflow-hidden"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-8 h-48 flex items-center justify-center">
-                      <FileText className="w-20 h-20 text-primary/40" />
+                    <div className={`relative bg-gradient-to-br ${getFileVisuals(module.mime_type).bg} p-8 h-48 flex items-center justify-center`}>
+                      {getFileVisuals(module.mime_type).icon}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                       <div className="absolute top-4 left-4">
-                        <Badge className="bg-primary text-white border-0">{fallback(module.mime_type, '-april PDF')}</Badge>
+                        <Badge className={`${getFileVisuals(module.mime_type).badgeClass} border-0`}>
+                          {fallback(getFileVisuals(module.mime_type).label, 'File')}
+                        </Badge>
                       </div>
                       <div className="absolute top-4 right-4">
                         <Button
@@ -342,7 +415,7 @@ export default function SubjectMaterialsPage() {
                           className="text-primary hover:bg-white/20 backdrop-blur-sm"
                           onClick={() => toggleBookmark(module.id)}
                         >
-                          <Bookmark className={`w-4 h-4 ${bookmarkedItems.includes(module.id) ? "fill-current" : ""}`} />
+                          <Bookmark className={`${bookmarkedItems.includes(module.id) ? "fill-current" : ""} w-4 h-4`} />
                         </Button>
                       </div>
                       <div className="absolute bottom-4 left-4 right-4">
@@ -355,10 +428,10 @@ export default function SubjectMaterialsPage() {
 
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors line-clamp-2">
-                        {fallback(module.title, '-april Untitled Module')}
+                        {fallback(module.title, 'Untitled Module')}
                       </CardTitle>
                       <CardDescription className="text-slate-600 dark:text-slate-400 line-clamp-2">
-                        {fallback(module.description, '-april No description available')}
+                        {fallback(module.description, 'No description available')}
                       </CardDescription>
                     </CardHeader>
 
@@ -366,11 +439,11 @@ export default function SubjectMaterialsPage() {
                       <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
                         <div className="flex items-center gap-1">
                           <Download className="w-4 h-4" />
-                          <span>{fallback(module.downloadStats?.totalDownloads?.toString(), '-april 0')} downloads</span>
+                          <span>{fallback(module.downloadStats?.totalDownloads?.toString(), '0')} downloads</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Users className="w-4 h-4" />
-                          <span>{fallback(module.uploader?.full_name, '-april Unknown')}</span>
+                          <span>{fallback(module.uploader?.full_name, 'Unknown')}</span>
                         </div>
                       </div>
 

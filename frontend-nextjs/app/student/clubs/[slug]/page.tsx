@@ -49,9 +49,17 @@ import {
   Pin,
   PinOff,
   AlertCircle,
+  Loader2,
+  Sparkles,
+  CheckCircle2,
+  Gift,
+  Star,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
-import { useState, useEffect, useMemo } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useState, useEffect, useMemo, use } from "react"
+import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +72,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+import { useQuery } from "@tanstack/react-query"
+import { getClubBySlug, getClubAnnouncements, getAllClubMemberships } from "@/lib/api/endpoints/clubs"
+import { useEventsByClubId } from "@/hooks/useEvents"
+import { useClubBenefits } from "@/hooks/useClubBenefits"
+import { useClubFaqs } from "@/hooks/useClubFaqs"
 
 const clubsData = {
   "math-club": {
@@ -245,16 +258,22 @@ const availableStudents = [
   { id: 105, name: "Lucas Brown", grade: "Grade 8-B", avatar: "/placeholder.svg?height=40&width=40&text=LB" },
 ]
 
-export default function ClubDetailPage() {
-  const params = useParams()
+interface ClubDetailPageProps {
+  params: Promise<{
+    slug: string
+  }>
+}
+
+export default function ClubDetailPage({ params }: ClubDetailPageProps) {
+  const resolvedParams = use(params)
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("overview")
   const [isFollowing, setIsFollowing] = useState(false)
   const [showNotifications, setShowNotifications] = useState(true)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+  const [expandedFaqId, setExpandedFaqId] = useState<string | null>(null)
 
-  const [members, setMembers] = useState<any[]>([])
   const [memberSearchTerm, setMemberSearchTerm] = useState("")
   const [memberFilterGrade, setMemberFilterGrade] = useState("all")
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false)
@@ -262,7 +281,6 @@ export default function ClubDetailPage() {
   const [selectedMemberToRemove, setSelectedMemberToRemove] = useState<any>(null)
   const [studentSearchTerm, setStudentSearchTerm] = useState("")
 
-  const [announcements, setAnnouncements] = useState<any[]>([])
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null)
   const [deleteAnnouncementDialogOpen, setDeleteAnnouncementDialogOpen] = useState(false)
@@ -277,21 +295,131 @@ export default function ClubDetailPage() {
   })
   const [announcementSearchTerm, setAnnouncementSearchTerm] = useState("")
 
-  const club = clubsData[params.slug as keyof typeof clubsData]
+  // Fetch club data
+  const { data: rawClub, isLoading: clubLoading, error: clubError } = useQuery({
+    queryKey: ['club', resolvedParams.slug],
+    queryFn: () => getClubBySlug(resolvedParams.slug),
+    staleTime: 5 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    if (!club) {
-      router.push("/student/clubs")
-    } else {
-      setMembers(club.members_list || [])
-      setAnnouncements(club.announcements || [])
+  // Fetch club events (moved before club normalization)
+  const { data: eventsData, isLoading: loadingEvents, error: eventsError } = useEventsByClubId(rawClub?.id || '', {
+    status: 'published',
+    limit: 50
+  })
+
+  // Normalize club data with defaults for UI fields
+  const club = useMemo(() => {
+    if (!rawClub) return null
+    
+    // Transform events data to match the expected format
+    const transformedEvents = eventsData?.data?.map(event => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      type: event.tags?.[0]?.tag?.name || 'Event',
+      status: event.status,
+      visibility: event.visibility,
+      is_featured: event.is_featured,
+      event_image: event.event_image,
+      created_at: event.created_at,
+      updated_at: event.updated_at,
+      organizer: event.organizer,
+      club: event.club
+    })) || []
+    
+    return {
+      ...rawClub,
+      color: "bg-indigo-500",
+      coverImage: "/placeholder.svg?height=300&width=800",
+      slug: resolvedParams.slug,
+      role: "Member",
+      joined: new Date().toISOString(),
+      engagement: 0,
+      upcomingEvents: transformedEvents.length,
+      category: rawClub.domain?.name || "General",
+      advisor: rawClub.advisor?.full_name || "No advisor assigned",
+      meetingFrequency: "Weekly",
+      socialLinks: {},
+      gallery: [],
+      members: 0,
+      nextMeeting: "TBA",
+      location: "TBA",
+      achievements: [],
+      members_list: [],
+      events: transformedEvents,
+      resources: [],
     }
-  }, [club, router])
+  }, [rawClub, resolvedParams.slug, eventsData])
+
+  // Fetch club members
+  const { data: membershipsData = [] } = useQuery({
+    queryKey: ['club-memberships', club?.id],
+    queryFn: () => getAllClubMemberships(club!.id),
+    enabled: !!club?.id,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Fetch club announcements
+  const { data: announcementsData = [] } = useQuery({
+    queryKey: ['club-announcements', club?.id],
+    queryFn: () => getClubAnnouncements(club!.id),
+    enabled: !!club?.id,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Fetch club benefits
+  const { data: benefitsData = [], isLoading: loadingBenefits } = useClubBenefits(club?.id || '')
+
+  // Fetch club FAQs
+  const { data: faqsData = [], isLoading: loadingFaqs } = useClubFaqs(club?.id || '')
+
+  // Redirect if club not found
+  useEffect(() => {
+    if (clubError || (!clubLoading && !club)) {
+      toast({
+        title: "Club not found",
+        description: "The club you're looking for doesn't exist.",
+        variant: "destructive",
+      })
+      router.push("/student/clubs")
+    }
+  }, [club, clubLoading, clubError, router, toast])
+
+  // Transform membership data to members
+  const members = useMemo(() => {
+    return membershipsData.map((m: any) => ({
+      id: m.id,
+      name: m.student ? `${m.student.first_name} ${m.student.last_name}` : 'Unknown',
+      role: m.position?.name || 'Member',
+      avatar: "/placeholder.svg?height=40&width=40",
+      grade: m.student?.grade_level ? `Grade ${m.student.grade_level}` : 'N/A',
+      joinDate: new Date(m.joined_at).toLocaleDateString(),
+    }))
+  }, [membershipsData])
+
+  // Transform announcement data
+  const announcements = useMemo(() => {
+    return announcementsData.map((a: any) => ({
+      id: a.id,
+      title: a.title,
+      content: a.content,
+      date: new Date(a.created_at).toLocaleDateString(),
+      priority: a.priority,
+      category: 'Update',
+      isPinned: false,
+      author: a.author?.full_name || 'Unknown',
+      status: 'published',
+    }))
+  }, [announcementsData])
 
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
       const matchesSearch = member.name.toLowerCase().includes(memberSearchTerm.toLowerCase())
-      const matchesGrade = memberFilterGrade === "all" || member.grade === memberFilterGrade
+      const matchesGrade = memberFilterGrade === "all" || member.grade.includes(memberFilterGrade)
       return matchesSearch && matchesGrade
     })
   }, [members, memberSearchTerm, memberFilterGrade])
@@ -447,6 +575,21 @@ export default function ClubDetailPage() {
     router.push("/student/clubs")
   }
 
+  // Show loading state
+  if (clubLoading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-indigo-500" />
+            <p className="text-gray-600 dark:text-gray-400">Loading club details...</p>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Show error state
   if (!club) {
     return (
       <StudentLayout>
@@ -467,12 +610,12 @@ export default function ClubDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
         <div className="relative h-80 overflow-hidden">
           <div
-            className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-            style={{
-              backgroundImage: `url(${club.coverImage})`,
+            className={`absolute inset-0 ${club.club_image ? '' : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500'}`}
+            style={club.club_image ? {
+              backgroundImage: `url(${club.club_image})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
-            }}
+            } : {}}
           >
             <div className="absolute inset-0 bg-black/40"></div>
           </div>
@@ -505,11 +648,21 @@ export default function ClubDetailPage() {
 
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               <div className="flex items-end gap-6">
-                <div
-                  className={`w-24 h-24 ${club.color} rounded-3xl flex items-center justify-center shadow-2xl border-4 border-white/20 backdrop-blur-sm`}
-                >
-                  <Users className="w-12 h-12 text-white" />
-                </div>
+                {club.club_logo ? (
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 backdrop-blur-sm bg-white">
+                    <img
+                      src={club.club_logo}
+                      alt={`${club.name} logo`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`w-24 h-24 ${club.color} rounded-3xl flex items-center justify-center shadow-2xl border-4 border-white/20 backdrop-blur-sm`}
+                  >
+                    <Users className="w-12 h-12 text-white" />
+                  </div>
+                )}
 
                 <div className="text-white">
                   <h1 className="text-4xl font-bold mb-2">{club.name}</h1>
@@ -655,6 +808,74 @@ export default function ClubDetailPage() {
                         </CardContent>
                       </Card>
 
+                      {/* Benefits Section */}
+                      {loadingBenefits ? (
+                        <Card className="border-0 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20">
+                          <CardContent className="p-12 flex items-center justify-center">
+                            <div className="flex items-center space-x-2">
+                              <Loader2 className="w-5 h-5 animate-spin text-violet-600" />
+                              <span className="text-gray-600 dark:text-gray-400">Loading benefits...</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : benefitsData && benefitsData.length > 0 ? (
+                        <Card className="border-0 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 overflow-hidden group">
+                          <CardHeader className="relative">
+                            <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-violet-400/20 to-purple-400/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+                            <CardTitle className="flex items-center text-violet-700 dark:text-violet-300 relative z-10">
+                              <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
+                              {club.benefits_title || 'Membership Benefits'}
+                            </CardTitle>
+                            {club.benefits_description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 relative z-10">
+                                {club.benefits_description}
+                              </p>
+                            )}
+                          </CardHeader>
+                          <CardContent className="relative z-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {benefitsData.map((benefit, index) => {
+                                const icons = [Gift, Star, CheckCircle2, Trophy, Sparkles, Heart]
+                                const Icon = icons[index % icons.length]
+                                const gradients = [
+                                  'from-pink-400 to-rose-500',
+                                  'from-amber-400 to-orange-500',
+                                  'from-emerald-400 to-green-500',
+                                  'from-blue-400 to-indigo-500',
+                                  'from-purple-400 to-violet-500',
+                                  'from-cyan-400 to-teal-500',
+                                ]
+                                const gradient = gradients[index % gradients.length]
+
+                                return (
+                                  <div
+                                    key={benefit.id}
+                                    className="group/item relative p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl hover:bg-white/90 dark:hover:bg-gray-800/90 transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer"
+                                  >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5 rounded-xl opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
+                                    <div className="relative z-10">
+                                      <div className="flex items-start gap-3 mb-2">
+                                        <div className={`w-10 h-10 bg-gradient-to-br ${gradient} rounded-lg flex items-center justify-center shrink-0 group-hover/item:rotate-12 transition-transform duration-300`}>
+                                          <Icon className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-semibold text-gray-800 dark:text-gray-200 group-hover/item:text-violet-600 dark:group-hover/item:text-violet-400 transition-colors line-clamp-1">
+                                            {benefit.title}
+                                          </h4>
+                                        </div>
+                                      </div>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 pl-13">
+                                        {benefit.description}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : null}
+
                       <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
                         <CardHeader>
                           <CardTitle className="flex items-center text-purple-700 dark:text-purple-300">
@@ -693,6 +914,77 @@ export default function ClubDetailPage() {
                           ))}
                         </CardContent>
                       </Card>
+
+                      {/* FAQs Section */}
+                      {loadingFaqs ? (
+                        <Card className="border-0 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20">
+                          <CardContent className="p-12 flex items-center justify-center">
+                            <div className="flex items-center space-x-2">
+                              <Loader2 className="w-5 h-5 animate-spin text-cyan-600" />
+                              <span className="text-gray-600 dark:text-gray-400">Loading FAQs...</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : faqsData && faqsData.length > 0 ? (
+                        <Card className="border-0 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 overflow-hidden">
+                          <CardHeader>
+                            <CardTitle className="flex items-center text-cyan-700 dark:text-cyan-300">
+                              <HelpCircle className="w-5 h-5 mr-2" />
+                              Frequently Asked Questions
+                            </CardTitle>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                              Got questions? We've got answers! Click on any question to expand.
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {faqsData.map((faq, index) => {
+                              const isExpanded = expandedFaqId === faq.id
+                              return (
+                                <div
+                                  key={faq.id}
+                                  className="group/faq bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-600 transition-all duration-300"
+                                >
+                                  <button
+                                    onClick={() => setExpandedFaqId(isExpanded ? null : faq.id)}
+                                    className="w-full text-left p-4 flex items-start justify-between gap-3 hover:bg-cyan-50/50 dark:hover:bg-cyan-900/10 transition-colors"
+                                  >
+                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center shrink-0 mt-0.5 group-hover/faq:scale-110 transition-transform duration-300">
+                                        <span className="text-white font-bold text-sm">{index + 1}</span>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 group-hover/faq:text-cyan-600 dark:group-hover/faq:text-cyan-400 transition-colors">
+                                          {faq.question}
+                                        </h4>
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 mt-1">
+                                      {isExpanded ? (
+                                        <ChevronUp className="w-5 h-5 text-cyan-600 dark:text-cyan-400 group-hover/faq:scale-110 transition-transform" />
+                                      ) : (
+                                        <ChevronDown className="w-5 h-5 text-gray-400 group-hover/faq:text-cyan-600 dark:group-hover/faq:text-cyan-400 group-hover/faq:scale-110 transition-all" />
+                                      )}
+                                    </div>
+                                  </button>
+                                  <div
+                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                      isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                    }`}
+                                  >
+                                    <div className="px-4 pb-4 pl-15">
+                                      <div className="p-4 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-lg border-l-4 border-cyan-500">
+                                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                          {faq.answer}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </CardContent>
+                        </Card>
+                      ) : null}
                     </div>
 
                     <div className="space-y-6">
@@ -785,41 +1077,103 @@ export default function ClubDetailPage() {
                 </TabsContent>
 
                 <TabsContent value="events" className="p-6">
-                  <div className="space-y-4">
-                    {club.events.map((event) => (
-                      <Card
-                        key={event.id}
-                        className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:shadow-lg transition-all duration-300"
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            <div className="space-y-2">
-                              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{event.title}</h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>{event.date}</span>
+                  {loadingEvents ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                        <span className="text-gray-600 dark:text-gray-400">Loading events...</span>
+                      </div>
+                    </div>
+                  ) : eventsError ? (
+                    <div className="text-center py-12">
+                      <Alert className="max-w-md mx-auto">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Failed to load events. Please try refreshing the page.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  ) : club.events.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Events Yet</h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        This club hasn't scheduled any events yet. Check back later for updates!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {club.events.map((event) => (
+                        <Card
+                          key={event.id}
+                          className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:shadow-lg transition-all duration-300"
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                              <div className="space-y-3 flex-1">
+                                <div className="flex items-start justify-between">
+                                  <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{event.title}</h3>
+                                  {event.is_featured && (
+                                    <Badge variant="default" className="bg-yellow-500 text-white">
+                                      Featured
+                                    </Badge>
+                                  )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-4 h-4" />
-                                  <span>{event.time}</span>
+                                {event.description && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                                    {event.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>{new Date(event.date).toLocaleDateString()}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-4 h-4" />
+                                    <span>{event.time}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-4 h-4" />
+                                    <span>{event.location}</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="w-4 h-4" />
-                                  <span>{event.location}</span>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary">{event.type}</Badge>
+                                  <Badge 
+                                    variant={event.status === 'published' ? 'default' : 'outline'}
+                                    className={event.status === 'published' ? 'bg-green-100 text-green-800' : ''}
+                                  >
+                                    {event.status}
+                                  </Badge>
                                 </div>
+                                {event.organizer && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Organized by: {event.organizer.full_name}
+                                  </div>
+                                )}
                               </div>
-                              <Badge variant="secondary">{event.type}</Badge>
+                              <div className="flex flex-col gap-2">
+                                <Button className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600">
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Add to Calendar
+                                </Button>
+                                {event.event_image && (
+                                  <div className="w-24 h-16 rounded-lg overflow-hidden">
+                                    <img 
+                                      src={event.event_image} 
+                                      alt={event.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <Button className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600">
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Add to Calendar
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="members-management" className="p-6 space-y-6">

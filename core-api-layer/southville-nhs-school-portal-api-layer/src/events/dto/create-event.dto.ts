@@ -317,6 +317,15 @@ export class CreateEventDto {
   organizerId: string;
 
   @IsOptional()
+  @IsUUID('4')
+  @ApiProperty({
+    required: false,
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    description: 'Club ID for club-specific events (optional)',
+  })
+  clubId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(500)
   @ApiProperty({
@@ -326,6 +335,44 @@ export class CreateEventDto {
     maxLength: 500,
   })
   eventImage?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    example: 'abc123-def456-ghi789',
+    description: 'Cloudflare Images ID',
+  })
+  cfImageId?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    example:
+      'https://imagedelivery.net/kslzpqjNVD4TQGhwBAY6ew/abc123-def456-ghi789/public',
+    description: 'Cloudflare Images delivery URL',
+  })
+  cfImageUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @ApiProperty({
+    required: false,
+    example: 2048576,
+    description: 'Image file size in bytes',
+  })
+  imageFileSize?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    example: 'image/jpeg',
+    description: 'Image MIME type',
+  })
+  imageMimeType?: string;
 
   @IsEnum(EventStatus)
   @ApiProperty({

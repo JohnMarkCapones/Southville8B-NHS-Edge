@@ -9,9 +9,10 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
   ValidationArguments,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { DayOfWeek, Semester } from '../entities/schedule.entity';
+import { DayOfWeek, Semester, GradingPeriod } from '../entities/schedule.entity';
 
 @ValidatorConstraint({ name: 'isValidTimeFormat', async: false })
 class IsValidTimeFormatConstraint implements ValidatorConstraintInterface {
@@ -85,20 +86,20 @@ export class CreateScheduleDto {
   sectionId: string;
 
   @IsUUID('4')
-  @IsNotEmpty()
   @ApiProperty({
-    description: 'Room ID',
+    description: 'Room ID (optional)',
     example: '123e4567-e89b-12d3-a456-426614174003',
+    required: false,
   })
-  roomId: string;
+  roomId?: string;
 
   @IsUUID('4')
-  @IsNotEmpty()
   @ApiProperty({
-    description: 'Building ID',
+    description: 'Building ID (optional)',
     example: '123e4567-e89b-12d3-a456-426614174004',
+    required: false,
   })
-  buildingId: string;
+  buildingId?: string;
 
   @IsEnum(DayOfWeek)
   @IsNotEmpty()
@@ -137,12 +138,21 @@ export class CreateScheduleDto {
   })
   schoolYear: string;
 
-  @IsEnum(Semester)
+  @IsEnum(GradingPeriod)
   @IsNotEmpty()
   @ApiProperty({
-    description: 'Semester',
-    enum: Semester,
-    example: Semester.FIRST,
+    description: 'Grading period (quarters)',
+    enum: GradingPeriod,
+    example: GradingPeriod.Q1,
   })
-  semester: Semester;
+  gradingPeriod: GradingPeriod;
+
+  @IsOptional()
+  @IsEnum(Semester)
+  @ApiProperty({
+    description: 'Semester (legacy, optional)',
+    enum: Semester,
+    required: false,
+  })
+  semester?: Semester;
 }

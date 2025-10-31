@@ -88,16 +88,15 @@ export class NewsImageService {
    * Validate featured image
    * If user provides featured image, use it
    * If not, extract from article HTML
-   * If no images at all, throw error (required)
+   * If no images at all, return null (images are optional but recommended)
    * @param featuredImageUrl User-provided featured image URL (optional)
    * @param articleHtml Article HTML content
-   * @returns string - Featured image URL
-   * @throws BadRequestException if no images found
+   * @returns string | null - Featured image URL or null if no images found
    */
   validateAndGetFeaturedImage(
     featuredImageUrl: string | undefined,
     articleHtml: string,
-  ): string {
+  ): string | null {
     // If user provided featured image, use it
     if (featuredImageUrl && featuredImageUrl.trim()) {
       this.logger.debug('Using user-provided featured image');
@@ -108,9 +107,10 @@ export class NewsImageService {
     const firstImage = this.extractFirstImage(articleHtml);
 
     if (!firstImage) {
-      throw new BadRequestException(
-        'Article must have at least one image. Either upload a featured image or add an image to your article content.',
+      this.logger.debug(
+        'No images found in article - proceeding without featured image',
       );
+      return null;
     }
 
     this.logger.debug('Using first article image as featured image');

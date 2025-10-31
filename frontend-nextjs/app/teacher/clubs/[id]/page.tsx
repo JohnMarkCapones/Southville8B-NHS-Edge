@@ -53,6 +53,7 @@ import {
   Edit2,
   X,
   Loader2,
+  Upload,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -68,14 +69,19 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from "@/components/ui/switch"
 import {
+  useClub,
   useClubMemberships,
   useClubMembershipMutations,
   useClubPositions,
+  useUpdateClub,
 } from "@/hooks"
 import { useClubForms, useClubForm } from "@/hooks/useClubForms"
 import { useClubFormMutations } from "@/hooks/useClubFormMutations"
 import { useFormResponses } from "@/hooks/useFormResponses"
 import { useFormResponseMutations } from "@/hooks/useFormResponseMutations"
+import { useEventsByClubId, useArchiveEvent } from "@/hooks/useEvents"
+import { useClubBenefits, useCreateClubBenefit, useUpdateClubBenefit, useDeleteClubBenefit } from "@/hooks/useClubBenefits"
+import { useClubFaqs, useCreateClubFaq, useUpdateClubFaq, useDeleteClubFaq } from "@/hooks/useClubFaqs"
 import { AddMemberDialog } from "@/components/teacher/clubs/AddMemberDialog"
 import {
   QuestionType,
@@ -88,10 +94,14 @@ import {
   createClubAnnouncement,
   updateClubAnnouncement,
   deleteClubAnnouncement,
+  getClubById,
+  updateClub,
   approveClubApplication,
   rejectClubApplication,
   type ClubAnnouncement,
   type CreateClubAnnouncementDto,
+  type Club,
+  uploadClubImage,
 } from "@/lib/api/endpoints/clubs"
 
 const clubData = {
@@ -248,68 +258,12 @@ const clubData = {
   ],
 }
 
-const clubApplications = [
-  {
-    id: 1,
-    studentId: "2024001",
-    studentName: "Maria Santos",
-    gradeLevel: "Grade 10",
-    email: "maria.santos@student.com",
-    appliedDate: "2024-03-10",
-    status: "pending",
-    reason:
-      "I've always been passionate about drama and theater. I participated in our elementary school plays and would love to continue developing my acting skills.",
-    experience: "Participated in 3 school plays, Drama workshop attendee",
-    availability: "Weekdays after 3 PM, Weekends",
-    goals: "Improve public speaking, participate in school productions, build confidence",
-    gpa: 3.8,
-    attendance: 95,
-    currentClubs: ["Science Club"],
-    teacherRecommendation: "Excellent student with great potential",
-  },
-  {
-    id: 2,
-    studentId: "2024002",
-    studentName: "Juan Dela Cruz",
-    gradeLevel: "Grade 9",
-    email: "juan.delacruz@student.com",
-    appliedDate: "2024-03-12",
-    status: "pending",
-    reason:
-      "I want to explore creative expression through theater and meet like-minded students who share my passion for the arts.",
-    experience: "First time joining a drama club, but very enthusiastic",
-    availability: "Monday, Wednesday, Friday after school",
-    goals: "Learn acting techniques, overcome stage fright, make new friends",
-    gpa: 3.5,
-    attendance: 92,
-    currentClubs: [],
-    teacherRecommendation: "Motivated and eager to learn",
-  },
-  {
-    id: 3,
-    studentId: "2024003",
-    studentName: "Sofia Reyes",
-    gradeLevel: "Grade 11",
-    email: "sofia.reyes@student.com",
-    appliedDate: "2024-03-08",
-    status: "approved",
-    reason:
-      "Theater has been my passion since childhood. I want to contribute to the club and help organize productions.",
-    experience: "5 years of theater experience, won best actress in inter-school competition",
-    availability: "Fully available, very flexible",
-    goals: "Take on leadership roles, mentor new members, participate in competitions",
-    gpa: 3.9,
-    attendance: 98,
-    currentClubs: ["Art Club", "Student Council"],
-    teacherRecommendation: "Outstanding student and natural leader",
-    reviewedDate: "2024-03-09",
-    reviewedBy: "Ms. Torres",
-  },
-]
-
 export default function ClubPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: clubId } = use(params)
   const { toast } = useToast()
+
+  // Fetch club data from API
+  const { data: club, isLoading: loadingClub } = useClub(clubId)
 
   // Fetch club members and positions from API
   const { data: memberships = [], isLoading: loadingMembers } = useClubMemberships(clubId)
@@ -319,6 +273,20 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
   // Club forms hooks
   const { data: forms, isLoading: formsLoading } = useClubForms(clubId)
   const activeForm = forms?.find((f) => f.isActive) || forms?.[0]
+
+  // Club Benefits & FAQs API hooks
+  const { data: apiBenefits = [], isLoading: benefitsLoading } = useClubBenefits(clubId)
+  const { data: apiFaqs = [], isLoading: faqsLoading } = useClubFaqs(clubId)
+  const createBenefit = useCreateClubBenefit()
+  const updateBenefit = useUpdateClubBenefit()
+  const deleteBenefit = useDeleteClubBenefit()
+  const createFaq = useCreateClubFaq()
+  const updateFaq = useUpdateClubFaq()
+  const deleteFaq = useDeleteClubFaq()
+
+  // Club update mutation
+  const updateClubMutation = useUpdateClub(clubId)
+
   const {
     data: formData,
     isLoading: formLoading,
@@ -328,8 +296,15 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
   const {
     data: formResponses = [],
     isLoading: responsesLoading,
+    refetch: refetchFormResponses,
   } = useFormResponses(clubId, activeForm?.id || '', !!activeForm?.id)
   const responseMutations = useFormResponseMutations(clubId, activeForm?.id || '')
+
+  // Fetch events for this club
+  const { data: eventsData, isLoading: loadingEvents } = useEventsByClubId(clubId)
+
+  // Event mutations
+  const archiveEventMutation = useArchiveEvent()
 
   // UI State
   const [activeSection, setActiveSection] = useState("overview")
@@ -342,38 +317,85 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
   const [membersPerPage] = useState(10)
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
 
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
-  const [eventToDelete, setEventToDelete] = useState<number | null>(null)
+  // Form state for club settings
+  const [clubSettings, setClubSettings] = useState({
+    name: '',
+    description: '',
+    mission_title: '',
+    mission_description: '',
+    mission_statement: '',
+    email: '',
+    championshipWins: 0,
+    benefits_title: '',
+    benefits_description: '',
+    club_image: '',
+    club_logo: '',
+  })
 
-  const [events, setEvents] = useState([
-    {
-      id: 1,
-      title: "Regional Math Olympiad",
-      date: "2024-03-15",
-      status: "Published",
-      attendance: "24/30",
-      type: "Competition",
-    },
-    {
-      id: 2,
-      title: "Advanced Calculus Workshop",
-      date: "2024-03-08",
-      status: "Draft",
-      attendance: "0/25",
-      type: "Workshop",
-    },
-    {
-      id: 3,
-      title: "Study Group Session",
-      date: "2024-03-22",
-      status: "Published",
-      attendance: "18/20",
-      type: "Meeting",
-    },
-  ])
+  // Local editable state for benefits and FAQs
+  const [localBenefits, setLocalBenefits] = useState<any[]>([])
+  const [localFaqs, setLocalFaqs] = useState<any[]>([])
+
+  // Update form state when club data loads
+  useEffect(() => {
+    if (club) {
+      setClubSettings({
+        name: club.name || '',
+        description: club.description || '',
+        mission_title: club.mission_title || '',
+        mission_description: club.mission_description || '',
+        mission_statement: club.mission_statement || '',
+        email: club.email || '',
+        championshipWins: club.championship_wins || 0,
+        benefits_title: club.benefits_title || '',
+        benefits_description: club.benefits_description || '',
+        club_image: club.club_image || '',
+        club_logo: club.club_logo || '',
+      })
+      setHasUnsavedChanges(false)
+    }
+  }, [club])
+
+  // Sync local benefits when API data loads
+  useEffect(() => {
+    if (apiBenefits && apiBenefits.length > 0) {
+      setLocalBenefits(JSON.parse(JSON.stringify(apiBenefits))) // Deep copy
+    }
+  }, [apiBenefits])
+
+  // Sync local FAQs when API data loads
+  useEffect(() => {
+    if (apiFaqs && apiFaqs.length > 0) {
+      setLocalFaqs(JSON.parse(JSON.stringify(apiFaqs))) // Deep copy
+    }
+  }, [apiFaqs])
+
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null)
+
+  // Use real events data from API
+  const events = eventsData?.data || []
+
+  // Calculate event statistics
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+
+  const totalEventsCount = events.length
+  const upcomingEvents = events.filter(event => {
+    const eventDate = new Date(event.date)
+    return eventDate >= now
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const upcomingEventsCount = upcomingEvents.length
+  const nextEventDate = upcomingEvents.length > 0
+    ? new Date(upcomingEvents[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : 'No upcoming events'
+  const thisMonthEventsCount = events.filter(event => {
+    const eventDate = new Date(event.date)
+    return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear
+  }).length
 
   const [announcements, setAnnouncements] = useState<ClubAnnouncement[]>([])
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false)
@@ -671,7 +693,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
     totalMembers: members.length, // Use the 'members' state here
     activeMembers: members.filter((m) => m.attendance > 80).length, // Use the 'members' state here
     engagementScore: Math.round(members.reduce((acc, m) => acc + m.attendance, 0) / members.length), // Use the 'members' state here
-    upcomingEvents: clubData.upcomingEvents.length,
+    upcomingEvents: upcomingEventsCount, // Use real upcoming events count
     monthlyGrowth: 12,
     engagementRate: 87,
   }
@@ -883,37 +905,162 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  const handleSave = () => {
-    setShowSaveConfirmation(true)
+  const handleSave = async () => {
+    let hasError = false
+    let savedCount = 0
+
+    // Save club data
+    try {
+      await updateClubMutation.mutateAsync({
+        name: clubSettings.name || null,
+        description: clubSettings.description || null,
+        mission_statement: clubSettings.mission_statement || null,
+        email: clubSettings.email || null,
+        championship_wins: clubSettings.championshipWins || 0,
+        benefits_title: clubSettings.benefits_title || null,
+        benefits_description: clubSettings.benefits_description || null,
+        club_image: clubSettings.club_image || null,
+        club_logo: clubSettings.club_logo || null,
+      })
+      savedCount++
+    } catch (error: any) {
+      hasError = true
+      toast({
+        title: "Error saving club data",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+
+    // Save all benefits from LOCAL state
+    for (const benefit of localBenefits) {
+      try {
+        await updateBenefit.mutateAsync({
+          clubId,
+          benefitId: benefit.id,
+          data: {
+            title: benefit.title,
+            description: benefit.description,
+          },
+        })
+        savedCount++
+      } catch (error: any) {
+        hasError = true
+        toast({
+          title: "Error saving benefit",
+          description: `Failed to save "${benefit.title}": ${error.message}`,
+          variant: "destructive",
+        })
+      }
+    }
+
+    // Save all FAQs from LOCAL state
+    for (const faq of localFaqs) {
+      try {
+        await updateFaq.mutateAsync({
+          clubId,
+          faqId: faq.id,
+          data: {
+            question: faq.question,
+            answer: faq.answer,
+          },
+        })
+        savedCount++
+      } catch (error: any) {
+        hasError = true
+        toast({
+          title: "Error saving FAQ",
+          description: `Failed to save FAQ: ${error.message}`,
+          variant: "destructive",
+        })
+      }
+    }
+
+    // Show final result
+    if (!hasError) {
+      toast({
+        title: "Success!",
+        description: `All settings saved successfully (${savedCount} items)`,
+      })
+      setHasUnsavedChanges(false)
+    } else {
+      toast({
+        title: "Partially saved",
+        description: `${savedCount} items saved, but some failed. Check errors above.`,
+        variant: "destructive",
+      })
+    }
   }
 
-  const confirmSave = () => {
-    // Save logic here
-    console.log("Saving all club settings...")
-    setShowSaveConfirmation(false)
-    // Add success toast or notification here
+  const handleReset = () => {
+    if (club) {
+      setClubSettings({
+        name: club.name || '',
+        description: club.description || '',
+        mission_title: club.mission_title || '',
+        mission_description: club.mission_description || '',
+        mission_statement: club.mission_statement || '',
+        email: club.email || '',
+        championshipWins: club.championship_wins || 0,
+        benefits_title: club.benefits_title || '',
+        benefits_description: club.benefits_description || '',
+      })
+      setHasUnsavedChanges(false)
+      toast({
+        title: "Reset",
+        description: "All changes have been reset",
+      })
+    }
   }
 
-  const handleDeleteEvent = (eventId: number) => {
+  const confirmSave = async () => {
+    if (!club) return
+    
+    try {
+      await updateClub(clubId, {
+        name: clubSettings.name,
+        description: clubSettings.description,
+        mission_title: clubSettings.mission_title,
+        mission_description: clubSettings.mission_description,
+        mission_statement: clubSettings.mission_statement,
+      })
+
+      toast({
+        title: "Settings Saved",
+        description: "Club settings have been updated successfully.",
+      })
+      
+      setShowSaveConfirmation(false)
+      setHasUnsavedChanges(false)
+    } catch (error) {
+      console.error('Error saving club settings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save club settings. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteEvent = (eventId: string) => {
     setEventToDelete(eventId)
     setShowDeleteConfirmation(true)
   }
 
-  const confirmDeleteEvent = () => {
+  const confirmDeleteEvent = async () => {
     if (eventToDelete === null) return
 
-    console.log("[v0] Deleting event:", eventToDelete)
-
-    setEvents(events.filter((event) => event.id !== eventToDelete))
-
-    toast({
-      title: "Event Deleted",
-      description: "The event has been successfully deleted.",
-      variant: "default",
-    })
-
-    setShowDeleteConfirmation(false)
-    setEventToDelete(null)
+    try {
+      await archiveEventMutation.mutateAsync(eventToDelete)
+      // Success toast is already shown by the mutation hook
+      setShowDeleteConfirmation(false)
+      setEventToDelete(null)
+    } catch (error: any) {
+      // Error toast is already shown by the mutation hook
+      // Just close the dialog
+      setShowDeleteConfirmation(false)
+      setEventToDelete(null)
+    }
   }
 
   const handleCreateAnnouncement = async () => {
@@ -1197,7 +1344,9 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                   <Trophy className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">{clubData.name}</h1>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {loadingClub ? 'Loading...' : club?.name || 'Club'}
+                  </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Club Management Dashboard</p>
                 </div>
               </div>
@@ -1503,7 +1652,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <div>
                             <p className="text-orange-100 text-sm font-medium">Upcoming Events</p>
                             <p className="text-3xl font-bold">{analytics.upcomingEvents}</p>
-                            <p className="text-orange-200 text-xs mt-1">Next: March 15</p>
+                            <p className="text-orange-200 text-xs mt-1">Next: {nextEventDate}</p>
                           </div>
                           <Calendar className="w-8 h-8 text-orange-200" />
                         </div>
@@ -2095,7 +2244,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Total Events</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">12</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalEventsCount}</p>
                           </div>
                           <Calendar className="w-8 h-8 text-purple-500" />
                         </div>
@@ -2106,7 +2255,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Upcoming</p>
-                            <p className="text-2xl font-bold text-green-600">3</p>
+                            <p className="text-2xl font-bold text-green-600">{upcomingEventsCount}</p>
                           </div>
                           <Clock className="w-8 h-8 text-green-500" />
                         </div>
@@ -2128,7 +2277,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">This Month</p>
-                            <p className="text-2xl font-bold text-orange-600">5</p>
+                            <p className="text-2xl font-bold text-orange-600">{thisMonthEventsCount}</p>
                           </div>
                           <TrendingUp className="w-8 h-8 text-orange-500" />
                         </div>
@@ -2175,9 +2324,6 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                   Status
                                 </th>
                                 <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                                  Attendance
-                                </th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
                                   Actions
                                 </th>
                               </tr>
@@ -2191,36 +2337,26 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                   <td className="py-4 px-4">
                                     <div>
                                       <p className="font-medium text-gray-900 dark:text-white">{event.title}</p>
-                                      <Badge variant="outline" className="text-xs mt-1">
-                                        {event.type}
-                                      </Badge>
                                     </div>
                                   </td>
-                                  <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{event.date}</td>
+                                  <td className="py-4 px-4 text-gray-600 dark:text-gray-400">
+                                    {new Date(event.date).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })}
+                                  </td>
                                   <td className="py-4 px-4">
                                     <Badge
-                                      variant={event.status === "Published" ? "default" : "secondary"}
+                                      variant={event.status === "published" ? "default" : "secondary"}
                                       className={
-                                        event.status === "Published"
+                                        event.status === "published"
                                           ? "bg-green-100 text-green-800"
                                           : "bg-yellow-100 text-yellow-800"
                                       }
                                     >
                                       {event.status}
                                     </Badge>
-                                  </td>
-                                  <td className="py-4 px-4">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-900 dark:text-white">{event.attendance}</span>
-                                      <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                        <div
-                                          className="bg-purple-500 h-2 rounded-full"
-                                          style={{
-                                            width: `${(Number.parseInt(event.attendance.split("/")[0]) / Number.parseInt(event.attendance.split("/")[1])) * 100}%`,
-                                          }}
-                                        ></div>
-                                      </div>
-                                    </div>
                                   </td>
                                   <td className="py-4 px-4">
                                     <div className="flex gap-2">
@@ -2436,6 +2572,48 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
+                      {/* Club Background Image Upload */}
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Club Header Background</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          This image will be displayed as the full background in the club header.
+                        </p>
+                        <ClubImageUpload
+                          clubId={clubId}
+                          inputId="club-background-input"
+                          currentImage={clubSettings.club_image}
+                          onImageUploaded={(url) => {
+                            setClubSettings(prev => ({ ...prev, club_image: url }))
+                            setHasUnsavedChanges(true)
+                            toast({
+                              title: "Background image uploaded!",
+                              description: "Don't forget to click 'Save All Settings' to save changes.",
+                            })
+                          }}
+                        />
+                      </div>
+
+                      {/* Club Logo Upload */}
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Club Logo</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          This logo will be displayed next to the club name in the header.
+                        </p>
+                        <ClubImageUpload
+                          clubId={clubId}
+                          inputId="club-logo-input"
+                          currentImage={clubSettings.club_logo}
+                          onImageUploaded={(url) => {
+                            setClubSettings(prev => ({ ...prev, club_logo: url }))
+                            setHasUnsavedChanges(true)
+                            toast({
+                              title: "Logo uploaded!",
+                              description: "Don't forget to click 'Save All Settings' to save changes.",
+                            })
+                          }}
+                        />
+                      </div>
+
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="clubName" className="text-gray-700 dark:text-gray-300 font-medium">
@@ -2443,7 +2621,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           </Label>
                           <Input
                             id="clubName"
-                            defaultValue={clubData.name}
+                            value={clubSettings.name}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, name: e.target.value }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           />
                         </div>
@@ -2454,7 +2636,8 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <Input
                             id="activeMembers"
                             type="number"
-                            defaultValue={clubData.memberCount}
+                            value={memberships?.length || 0}
+                            disabled
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           />
                         </div>
@@ -2465,7 +2648,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <Input
                             id="clubEmail"
                             type="email"
-                            defaultValue={clubData.email}
+                            value={clubSettings.email}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, email: e.target.value }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           />
                         </div>
@@ -2476,7 +2663,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <Input
                             id="championshipWins"
                             type="number"
-                            defaultValue={clubData.championshipWins}
+                            value={clubSettings.championshipWins}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, championshipWins: parseInt(e.target.value) || 0 }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           />
                         </div>
@@ -2488,7 +2679,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                         </Label>
                         <Textarea
                           id="clubDescription"
-                          defaultValue={clubData.description}
+                          value={clubSettings.description}
+                          onChange={(e) => {
+                            setClubSettings(prev => ({ ...prev, description: e.target.value }))
+                            setHasUnsavedChanges(true)
+                          }}
                           className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           rows={4}
                         />
@@ -2500,7 +2695,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                         </Label>
                         <Textarea
                           id="clubMission"
-                          defaultValue={clubData.mission.description}
+                          value={clubSettings.mission_description}
+                          onChange={(e) => {
+                            setClubSettings(prev => ({ ...prev, mission_description: e.target.value }))
+                            setHasUnsavedChanges(true)
+                          }}
                           className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           rows={3}
                         />
@@ -2513,7 +2712,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           </Label>
                           <Input
                             id="missionTitle"
-                            defaultValue={clubData.mission.title}
+                            value={clubSettings.mission_title}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, mission_title: e.target.value }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           />
                         </div>
@@ -2523,7 +2726,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           </Label>
                           <Input
                             id="missionDescription"
-                            defaultValue="Brief mission statement"
+                            value={clubSettings.mission_statement}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, mission_statement: e.target.value }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
                           />
                         </div>
@@ -2549,6 +2756,18 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           ))}
                         </div>
                       </div>
+
+                      {/* Save Button */}
+                      <div className="mt-6 flex justify-end">
+                        <Button
+                          onClick={handleSave}
+                          disabled={!hasUnsavedChanges}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Changes
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -2568,8 +2787,13 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           </Label>
                           <Input
                             id="benefitsTitle"
-                            defaultValue="Why Join Our Club?"
+                            value={clubSettings.benefits_title}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, benefits_title: e.target.value }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
+                            placeholder="Why Join Our Club?"
                           />
                         </div>
                         <div>
@@ -2578,44 +2802,98 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           </Label>
                           <Input
                             id="benefitsDescription"
-                            defaultValue="Discover the amazing benefits of being part of our community"
+                            value={clubSettings.benefits_description}
+                            onChange={(e) => {
+                              setClubSettings(prev => ({ ...prev, benefits_description: e.target.value }))
+                              setHasUnsavedChanges(true)
+                            }}
                             className="mt-2 dark:bg-slate-800 dark:border-slate-600"
+                            placeholder="Discover the amazing benefits of being part of our community"
                           />
                         </div>
                       </div>
 
-                      {/* 6 Benefits with Title and Description */}
+                      {/* Individual Benefits with Add/Edit/Delete */}
                       <div className="space-y-4">
-                        <Label className="text-gray-700 dark:text-gray-300 font-medium">
-                          Membership Benefits (6 Benefits)
-                        </Label>
-                        {[1, 2, 3, 4, 5, 6].map((num) => (
-                          <div
-                            key={num}
-                            className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700"
+                        <div className="flex items-center justify-between">
+                          <Label className="text-gray-700 dark:text-gray-300 font-medium">
+                            Membership Benefits
+                          </Label>
+                          <Button
+                            onClick={() => {
+                              createBenefit.mutate(
+                                {
+                                  clubId,
+                                  data: {
+                                    title: "New Benefit",
+                                    description: "Describe this benefit here",
+                                    order_index: apiBenefits.length,
+                                  },
+                                },
+                                {
+                                  onSuccess: () => {
+                                    toast({
+                                      title: "Success!",
+                                      description: "Benefit added successfully",
+                                    })
+                                  },
+                                  onError: (error: any) => {
+                                    toast({
+                                      title: "Error",
+                                      description: `Failed to add benefit: ${error.message}`,
+                                      variant: "destructive",
+                                    })
+                                  },
+                                }
+                              )
+                            }}
+                            disabled={createBenefit.isPending}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
                           >
-                            <div className="grid md:grid-cols-2 gap-4">
-                              <div>
-                                <Label className="text-sm text-gray-600 dark:text-gray-400">Benefit {num} Title</Label>
-                                <Input
-                                  defaultValue={`Benefit ${num} Title`}
-                                  className="mt-1 dark:bg-slate-800 dark:border-slate-600"
-                                  placeholder={`Enter benefit ${num} title`}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm text-gray-600 dark:text-gray-400">
-                                  Benefit {num} Description
-                                </Label>
-                                <Input
-                                  defaultValue={`Description for benefit ${num}`}
-                                  className="mt-1 dark:bg-slate-800 dark:border-slate-600"
-                                  placeholder={`Enter benefit ${num} description`}
-                                />
-                              </div>
-                            </div>
+                            {createBenefit.isPending ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Benefit
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        {benefitsLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+                            <span className="ml-2 text-gray-600">Loading benefits...</span>
                           </div>
-                        ))}
+                        ) : (
+                          <>
+                            {localBenefits.map((benefit, index) => (
+                              <BenefitCardItem
+                                key={benefit.id}
+                                benefit={benefit}
+                                index={index}
+                                clubId={clubId}
+                                localBenefits={localBenefits}
+                                setLocalBenefits={setLocalBenefits}
+                                deleteBenefit={deleteBenefit}
+                                toast={toast}
+                              />
+                            ))}
+
+                            {localBenefits.length === 0 && (
+                              <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                                <p className="text-gray-500 dark:text-gray-400">
+                                  No benefits added yet. Click "Add Benefit" to get started.
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -2632,93 +2910,109 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                         </div>
                         <Button
                           onClick={() => {
-                            const newFaq = { id: Date.now(), question: "", answer: "" }
-                            setClubFaqs([...clubFaqs, newFaq])
+                            createFaq.mutate(
+                              {
+                                clubId,
+                                data: {
+                                  question: "New Question?",
+                                  answer: "Answer here...",
+                                  order_index: apiFaqs.length,
+                                },
+                              },
+                              {
+                                onSuccess: () => {
+                                  toast({
+                                    title: "Success!",
+                                    description: "FAQ added successfully",
+                                  })
+                                },
+                                onError: (error: any) => {
+                                  toast({
+                                    title: "Error",
+                                    description: `Failed to add FAQ: ${error.message}`,
+                                    variant: "destructive",
+                                  })
+                                },
+                              }
+                            )
                           }}
+                          disabled={createFaq.isPending}
                           className="bg-purple-600 hover:bg-purple-700"
                         >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add FAQ
+                          {createFaq.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add FAQ
+                            </>
+                          )}
                         </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <div className="space-y-4">
-                        {clubFaqs.map((faq, index) => (
-                          <div
-                            key={faq.id}
-                            className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <h4 className="font-medium text-gray-900 dark:text-white">FAQ {index + 1}</h4>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setClubFaqs(clubFaqs.filter((f) => f.id !== faq.id))
-                                }}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <Label className="text-sm text-gray-600 dark:text-gray-400">Question</Label>
-                                <Input
-                                  value={faq.question}
-                                  onChange={(e) => {
-                                    const updated = clubFaqs.map((f) =>
-                                      f.id === faq.id ? { ...f, question: e.target.value } : f,
-                                    )
-                                    setClubFaqs(updated)
-                                  }}
-                                  className="mt-1 dark:bg-slate-800 dark:border-slate-600"
-                                  placeholder="Enter your question here..."
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm text-gray-600 dark:text-gray-400">Answer</Label>
-                                <Textarea
-                                  value={faq.answer}
-                                  onChange={(e) => {
-                                    const updated = clubFaqs.map((f) =>
-                                      f.id === faq.id ? { ...f, answer: e.target.value } : f,
-                                    )
-                                    setClubFaqs(updated)
-                                  }}
-                                  className="mt-1 dark:bg-slate-800 dark:border-slate-600"
-                                  placeholder="Enter your answer here..."
-                                  rows={3}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                      {faqsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                          <span className="ml-2 text-gray-600">Loading FAQs...</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {localFaqs.map((faq, index) => (
+                            <FaqCardItem
+                              key={faq.id}
+                              faq={faq}
+                              index={index}
+                              clubId={clubId}
+                              localFaqs={localFaqs}
+                              setLocalFaqs={setLocalFaqs}
+                              deleteFaq={deleteFaq}
+                              toast={toast}
+                            />
+                          ))}
 
-                        {clubFaqs.length === 0 && (
-                          <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                            <p className="text-gray-500 dark:text-gray-400">
-                              No FAQs added yet. Click "Add FAQ" to get started.
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                          {localFaqs.length === 0 && (
+                            <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                              <p className="text-gray-500 dark:text-gray-400">
+                                No FAQs added yet. Click "Add FAQ" to get started.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
                   {/* Save Settings Button */}
                   <div className="flex justify-end space-x-3">
-                    <Button variant="outline" className="border-gray-300 dark:border-slate-600 bg-transparent">
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      disabled={!hasUnsavedChanges}
+                      className="border-gray-300 dark:border-slate-600 bg-transparent"
+                    >
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Reset Changes
                     </Button>
                     <Button
                       onClick={handleSave}
+                      disabled={!hasUnsavedChanges || updateClubMutation.isPending}
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                     >
-                      <Save className="w-4 h-4 mr-2" />
-                      Save All Settings
+                      {updateClubMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save All Settings
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -2991,7 +3285,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <div>
                             <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Applications</p>
                             <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                              {clubApplications.length}
+                              {formResponses.length}
                             </p>
                           </div>
                           <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
@@ -3005,7 +3299,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <div>
                             <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">Pending Review</p>
                             <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-                              {clubApplications.filter((app) => app.status === "pending").length}
+                              {formResponses.filter((r) => r.status === "pending").length}
                             </p>
                           </div>
                           <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
@@ -3019,7 +3313,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <div>
                             <p className="text-sm text-green-700 dark:text-green-300 font-medium">Approved</p>
                             <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                              {clubApplications.filter((app) => app.status === "approved").length}
+                              {formResponses.filter((r) => r.status === "approved").length}
                             </p>
                           </div>
                           <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -3033,7 +3327,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           <div>
                             <p className="text-sm text-red-700 dark:text-red-300 font-medium">Rejected</p>
                             <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                              {clubApplications.filter((app) => app.status === "rejected").length}
+                              {formResponses.filter((r) => r.status === "rejected").length}
                             </p>
                           </div>
                           <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
@@ -3056,14 +3350,14 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           variant="outline"
                           className="text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/30"
                         >
-                          {clubApplications.filter((app) => app.status === "pending").length} Pending
+                          {formResponses.filter((r) => r.status === "pending").length} Pending
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="p-6">
                       <div className="space-y-4">
-                        {clubApplications
-                          .filter((app) => app.status === "pending")
+                        {formResponses
+                          .filter((r) => r.status === "pending")
                           .map((application) => (
                             <Card
                               key={application.id}
@@ -3073,21 +3367,18 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                 <div className="flex items-start justify-between mb-4">
                                   <div className="flex items-start space-x-4">
                                     <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                      {application.studentName.charAt(0)}
+                                      {(application.user?.full_name || 'U').charAt(0)}
                                     </div>
                                     <div>
                                       <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {application.studentName}
+                                        {application.user?.full_name || 'Unknown Student'}
                                       </h3>
                                       <div className="flex items-center gap-3 mt-1">
                                         <Badge variant="outline" className="text-xs">
-                                          {application.gradeLevel}
-                                        </Badge>
-                                        <Badge variant="outline" className="text-xs">
-                                          ID: {application.studentId}
+                                          {application.user?.email || 'No email'}
                                         </Badge>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                                          Applied: {new Date(application.appliedDate).toLocaleDateString()}
+                                          Applied: {new Date(application.created_at).toLocaleDateString()}
                                         </span>
                                       </div>
                                     </div>
@@ -3098,78 +3389,22 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                   </Badge>
                                 </div>
 
-                                {/* Student Info Grid */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                  <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">GPA</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                      {application.gpa}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Attendance</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                      {application.attendance}%
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Current Clubs</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                      {application.currentClubs.length || "None"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                      {application.email}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Application Details */}
+                                {/* Application Answers */}
                                 <div className="space-y-3 mb-4">
-                                  <div>
-                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                      Why do you want to join?
-                                    </p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-3 rounded-lg">
-                                      {application.reason}
-                                    </p>
-                                  </div>
-                                  <div className="grid md:grid-cols-2 gap-3">
-                                    <div>
+                                  {application.answers?.map((answer) => (
+                                    <div key={answer.id}>
                                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                        Experience
+                                        {answer.question?.question_text || 'Question'}
                                       </p>
                                       <p className="text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-3 rounded-lg">
-                                        {application.experience}
+                                        {answer.answer_text || answer.answer_value || 'No answer provided'}
                                       </p>
                                     </div>
-                                    <div>
-                                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                        Availability
-                                      </p>
-                                      <p className="text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-3 rounded-lg">
-                                        {application.availability}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Goals</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-3 rounded-lg">
-                                      {application.goals}
+                                  ))}
+                                  {(!application.answers || application.answers.length === 0) && (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                                      No answers provided
                                     </p>
-                                  </div>
-                                  {application.teacherRecommendation && (
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                                      <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center">
-                                        <Star className="w-4 h-4 mr-1" />
-                                        Teacher Recommendation
-                                      </p>
-                                      <p className="text-sm text-blue-600 dark:text-blue-400">
-                                        {application.teacherRecommendation}
-                                      </p>
-                                    </div>
                                   )}
                                 </div>
 
@@ -3177,42 +3412,67 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                 <div className="flex items-center gap-3 pt-4 border-t dark:border-gray-700">
                                   <Button
                                     className="flex-1 bg-green-600 hover:bg-green-700"
-                                    onClick={() => {
-                                      console.log("[v0] Approving application:", application.id)
-                                      // TODO: Connect to your backend API
+                                    onClick={async () => {
+                                      if (!activeForm?.id) return
+                                      setProcessingApplication(true)
+                                      try {
+                                        await responseMutations.reviewResponse.mutateAsync({
+                                          responseId: application.id,
+                                          data: {
+                                            status: 'approved',
+                                            review_notes: 'Approved by teacher',
+                                          },
+                                        })
+                                      } catch (error) {
+                                        console.error('Error approving:', error)
+                                      } finally {
+                                        setProcessingApplication(false)
+                                      }
                                     }}
+                                    disabled={processingApplication}
                                   >
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Approve Application
+                                    {processingApplication ? (
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                    )}
+                                    Approve
                                   </Button>
                                   <Button
                                     variant="outline"
                                     className="flex-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 bg-transparent"
-                                    onClick={() => {
-                                      console.log("[v0] Rejecting application:", application.id)
-                                      // TODO: Connect to your backend API
+                                    onClick={async () => {
+                                      if (!activeForm?.id) return
+                                      setProcessingApplication(true)
+                                      try {
+                                        await responseMutations.reviewResponse.mutateAsync({
+                                          responseId: application.id,
+                                          data: {
+                                            status: 'rejected',
+                                            review_notes: 'Rejected by teacher',
+                                          },
+                                        })
+                                      } catch (error) {
+                                        console.error('Error rejecting:', error)
+                                      } finally {
+                                        setProcessingApplication(false)
+                                      }
                                     }}
+                                    disabled={processingApplication}
                                   >
-                                    <XCircle className="w-4 h-4 mr-2" />
+                                    {processingApplication ? (
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                    )}
                                     Reject
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    className="bg-transparent"
-                                    onClick={() => {
-                                      console.log("[v0] Requesting more info from:", application.studentId)
-                                      // TODO: Connect to your messaging system
-                                    }}
-                                  >
-                                    <MessageCircle className="w-4 h-4 mr-2" />
-                                    Request Info
                                   </Button>
                                 </div>
                               </CardContent>
                             </Card>
                           ))}
 
-                        {clubApplications.filter((app) => app.status === "pending").length === 0 && (
+                        {formResponses.filter((r) => r.status === "pending").length === 0 && (
                           <div className="text-center py-12">
                             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                               <CheckCircle className="w-8 h-8 text-gray-400" />
@@ -3235,8 +3495,8 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                     </CardHeader>
                     <CardContent className="p-6">
                       <div className="space-y-3">
-                        {clubApplications
-                          .filter((app) => app.status !== "pending")
+                        {formResponses
+                          .filter((r) => r.status !== "pending")
                           .map((application) => (
                             <div
                               key={application.id}
@@ -3244,15 +3504,15 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                             >
                               <div className="flex items-center space-x-4">
                                 <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white font-bold">
-                                  {application.studentName.charAt(0)}
+                                  {(application.user?.full_name || 'U').charAt(0)}
                                 </div>
                                 <div>
                                   <p className="font-semibold text-gray-900 dark:text-white">
-                                    {application.studentName}
+                                    {application.user?.full_name || 'Unknown'}
                                   </p>
                                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {application.gradeLevel} • Applied{" "}
-                                    {new Date(application.appliedDate).toLocaleDateString()}
+                                    Applied {new Date(application.created_at).toLocaleDateString()}
+                                    {application.reviewed_at && ` • Reviewed ${new Date(application.reviewed_at).toLocaleDateString()}`}
                                   </p>
                                 </div>
                               </div>
@@ -3645,6 +3905,431 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
         clubId={clubId}
         currentMembers={memberships}
       />
+    </div>
+  )
+}
+
+// ========================================
+// BENEFIT CARD ITEM COMPONENT
+// ========================================
+interface BenefitCardItemProps {
+  benefit: any
+  index: number
+  clubId: string
+  localBenefits: any[]
+  setLocalBenefits: (benefits: any[]) => void
+  deleteBenefit: any
+  toast: any
+}
+
+function BenefitCardItem({ benefit, index, clubId, localBenefits, setLocalBenefits, deleteBenefit, toast }: BenefitCardItemProps) {
+  // Update benefit data in local state
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const updatedBenefits = [...localBenefits]
+    updatedBenefits[index] = { ...updatedBenefits[index], title: e.target.value }
+    setLocalBenefits(updatedBenefits)
+  }
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const updatedBenefits = [...localBenefits]
+    updatedBenefits[index] = { ...updatedBenefits[index], description: e.target.value }
+    setLocalBenefits(updatedBenefits)
+  }
+
+  const handleDelete = () => {
+    if (confirm('Delete this benefit?')) {
+      deleteBenefit.mutate(
+        { clubId, benefitId: benefit.id },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Deleted",
+              description: "Benefit removed successfully",
+            })
+          },
+          onError: (error: any) => {
+            toast({
+              title: "Error",
+              description: `Failed to delete benefit: ${error.message}`,
+              variant: "destructive",
+            })
+          },
+        }
+      )
+    }
+  }
+
+  return (
+    <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+      <div className="flex items-start justify-between mb-3">
+        <h4 className="font-medium text-gray-900 dark:text-white">Benefit {index + 1}</h4>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleDelete}
+          disabled={deleteBenefit.isPending}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          {deleteBenefit.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-3">
+        <div>
+          <Label className="text-sm text-gray-600 dark:text-gray-400">Title</Label>
+          <Input
+            value={benefit.title}
+            onChange={handleTitleChange}
+            className="mt-1 dark:bg-slate-800 dark:border-slate-600"
+            placeholder="Enter benefit title"
+          />
+        </div>
+        <div>
+          <Label className="text-sm text-gray-600 dark:text-gray-400">Description</Label>
+          <Textarea
+            value={benefit.description}
+            onChange={handleDescriptionChange}
+            className="mt-1 dark:bg-slate-800 dark:border-slate-600"
+            placeholder="Enter benefit description"
+            rows={2}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ========================================
+// FAQ CARD ITEM COMPONENT
+// ========================================
+interface FaqCardItemProps {
+  faq: any
+  index: number
+  clubId: string
+  localFaqs: any[]
+  setLocalFaqs: (faqs: any[]) => void
+  deleteFaq: any
+  toast: any
+}
+
+function FaqCardItem({ faq, index, clubId, localFaqs, setLocalFaqs, deleteFaq, toast }: FaqCardItemProps) {
+  // Update FAQ data in local state
+  const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const updatedFaqs = [...localFaqs]
+    updatedFaqs[index] = { ...updatedFaqs[index], question: e.target.value }
+    setLocalFaqs(updatedFaqs)
+  }
+
+  const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const updatedFaqs = [...localFaqs]
+    updatedFaqs[index] = { ...updatedFaqs[index], answer: e.target.value }
+    setLocalFaqs(updatedFaqs)
+  }
+
+  const handleDelete = () => {
+    if (confirm('Delete this FAQ?')) {
+      deleteFaq.mutate(
+        { clubId, faqId: faq.id },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Deleted",
+              description: "FAQ removed successfully",
+            })
+          },
+          onError: (error: any) => {
+            toast({
+              title: "Error",
+              description: `Failed to delete FAQ: ${error.message}`,
+              variant: "destructive",
+            })
+          },
+        }
+      )
+    }
+  }
+
+  return (
+    <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+      <div className="flex items-start justify-between mb-3">
+        <h4 className="font-medium text-gray-900 dark:text-white">FAQ {index + 1}</h4>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleDelete}
+          disabled={deleteFaq.isPending}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          {deleteFaq.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-3">
+        <div>
+          <Label className="text-sm text-gray-600 dark:text-gray-400">Question</Label>
+          <Input
+            value={faq.question}
+            onChange={handleQuestionChange}
+            className="mt-1 dark:bg-slate-800 dark:border-slate-600"
+            placeholder="Enter question"
+          />
+        </div>
+        <div>
+          <Label className="text-sm text-gray-600 dark:text-gray-400">Answer</Label>
+          <Textarea
+            value={faq.answer}
+            onChange={handleAnswerChange}
+            className="mt-1 dark:bg-slate-800 dark:border-slate-600"
+            placeholder="Enter answer"
+            rows={3}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ========================================
+// CLUB IMAGE UPLOAD COMPONENT
+// ========================================
+interface ClubImageUploadProps {
+  clubId: string
+  currentImage?: string
+  onImageUploaded: (url: string) => void
+  inputId?: string // Unique ID for the file input to avoid conflicts
+}
+
+function ClubImageUpload({ clubId, currentImage, onImageUploaded, inputId = 'club-image-input' }: ClubImageUploadProps) {
+  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState<string | null>(currentImage || null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const { toast } = useToast()
+
+  // Update preview when currentImage changes
+  useEffect(() => {
+    setPreview(currentImage || null)
+  }, [currentImage])
+
+  const selectFile = (file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (PNG, JPG, GIF)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image size must be less than 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Save file and show preview
+    setSelectedFile(file)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const uploadFile = async () => {
+    if (!selectedFile) return
+
+    setUploading(true)
+    try {
+      console.log("📤 Uploading club image to Cloudflare...")
+      const result = await uploadClubImage(selectedFile)
+      console.log("✅ Cloudflare upload response:", result)
+
+      // Update with Cloudflare Images URL
+      onImageUploaded(result.url || result.cf_image_url)
+      setSelectedFile(null)
+
+      toast({
+        title: "Success!",
+        description: "Club image uploaded to cloud storage",
+      })
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      selectFile(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      selectFile(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleRemove = () => {
+    setPreview(null)
+    onImageUploaded('')
+    toast({
+      title: "Image removed",
+      description: "Club image has been removed",
+    })
+  }
+
+  return (
+    <div>
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={`relative border-2 border-dashed rounded-xl transition-all duration-300 ${
+          isDragging
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-105'
+            : 'border-gray-300 dark:border-slate-600 hover:border-blue-400'
+        }`}
+      >
+        {preview ? (
+          // Preview mode with image
+          <div className="relative">
+            <div className="aspect-video rounded-xl overflow-hidden">
+              <img
+                src={preview}
+                alt="Club logo preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {/* Action buttons */}
+            <div className="absolute top-3 right-3 flex gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                id={inputId}
+                disabled={uploading}
+              />
+              <Button
+                type="button"
+                onClick={() => document.getElementById(inputId)?.click()}
+                disabled={uploading}
+                variant="secondary"
+                size="sm"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Change
+              </Button>
+              <Button
+                type="button"
+                onClick={handleRemove}
+                disabled={uploading}
+                variant="destructive"
+                size="sm"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Remove
+              </Button>
+            </div>
+          </div>
+        ) : (
+          // Upload mode
+          <label
+            htmlFor={inputId}
+            className="flex flex-col items-center justify-center p-12 cursor-pointer"
+          >
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id={inputId}
+              disabled={uploading}
+            />
+            <div
+              className={`transition-all duration-300 ${
+                isDragging ? 'scale-110 text-blue-500' : 'text-gray-400'
+              }`}
+            >
+              <Upload className="w-16 h-16 mx-auto mb-4" />
+            </div>
+            <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {isDragging ? 'Drop image here' : 'Click to select image or drag and drop'}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              PNG, JPG, GIF up to 5MB
+            </p>
+          </label>
+        )}
+      </div>
+
+      {/* Upload button - shows when file is selected but not uploaded yet */}
+      {selectedFile && (
+        <div className="mt-4 flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+              {preview && <img src={preview} alt="Selected" className="w-full h-full object-cover" />}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedFile.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            onClick={uploadFile}
+            disabled={uploading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading to Cloud...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload to Cloud Storage
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

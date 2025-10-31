@@ -6,6 +6,7 @@
 export * from './auth';
 export * from './user';
 export * from './announcements';
+export * from './banners';
 export * from './events';
 export * from './clubs';
 export * from './academic-calendar';

@@ -60,6 +60,12 @@ export class SchedulesService {
       // Check for conflicts
       await this.checkConflicts(dto);
 
+      // Map grading period to semester for backwards compatibility
+      // Q1, Q2 → 1st semester; Q3, Q4 → 2nd semester
+      const semester = dto.gradingPeriod
+        ? (dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2') ? '1st' : '2nd'
+        : '1st'; // Default to 1st semester if not provided
+
       const { data, error } = await supabase
         .from('schedules')
         .insert({
@@ -72,7 +78,8 @@ export class SchedulesService {
           start_time: dto.startTime,
           end_time: dto.endTime,
           school_year: dto.schoolYear,
-          semester: dto.semester,
+          semester: semester,
+          grading_period: dto.gradingPeriod,
         })
         .select()
         .single();
@@ -83,6 +90,9 @@ export class SchedulesService {
           `Failed to create schedule: ${error.message}`,
         );
       }
+
+      // Audit log
+      await this.logAudit({ action: 'create', scheduleId: (data as any)?.id, actorUserId: null, before: null, after: data, changedFields: null })
 
       // Invalidate related caches
       await this.invalidateRelatedCaches(dto);
@@ -158,6 +168,11 @@ export class SchedulesService {
       end_time,
       school_year,
       semester,
+      status,
+      is_published,
+      published_at,
+      recurring_rule,
+      version,
       created_at,
       updated_at,
       subject:subjects(
@@ -187,6 +202,7 @@ export class SchedulesService {
       room:rooms(
         id,
         room_number,
+        name,
         capacity,
         floor_id,
         floor:floors(
@@ -217,6 +233,9 @@ export class SchedulesService {
       }
       if (semester) {
         query = query.eq('semester', semester);
+      }
+      if ((filters as any).status) {
+        query = query.eq('status', (filters as any).status);
       }
       if (search) {
         query = query.or(
@@ -365,7 +384,14 @@ export class SchedulesService {
         subject:subjects(*),
         teacher:teachers(*),
         section:sections(*),
-        room:rooms(*)
+        room:rooms(
+          *,
+          floor:floors(
+            *,
+            building:buildings(*)
+          )
+        ),
+        building:buildings(*)
       `,
         )
         .eq('id', id)
@@ -410,7 +436,20 @@ export class SchedulesService {
       if (dto.startTime !== undefined) updateData.start_time = dto.startTime;
       if (dto.endTime !== undefined) updateData.end_time = dto.endTime;
       if (dto.schoolYear !== undefined) updateData.school_year = dto.schoolYear;
+
+      // Handle grading period and auto-map to semester
+      if (dto.gradingPeriod !== undefined) {
+        updateData.grading_period = dto.gradingPeriod;
+        // Auto-map grading period to semester if semester not explicitly provided
+        if (dto.semester === undefined) {
+          updateData.semester = (dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2') ? '1st' : '2nd';
+        }
+      }
+
       if (dto.semester !== undefined) updateData.semester = dto.semester;
+
+      // before snapshot
+      const before = await this.findOne(id).catch(()=>null)
 
       const { data, error } = await supabase
         .from('schedules')
@@ -423,6 +462,9 @@ export class SchedulesService {
         this.logger.error('Error updating schedule:', error);
         throw new InternalServerErrorException('Failed to update schedule');
       }
+
+      // Audit log
+      await this.logAudit({ action: 'update', scheduleId: id, actorUserId: null, before, after: data, changedFields: updateData })
 
       // Invalidate cache
       await this.cacheManager.del(cacheKey);
@@ -444,12 +486,18 @@ export class SchedulesService {
       // Check if schedule exists
       await this.findOne(id);
 
+      // before snapshot
+      const before = await this.findOne(id).catch(()=>null)
+
       const { error } = await supabase.from('schedules').delete().eq('id', id);
 
       if (error) {
         this.logger.error('Error deleting schedule:', error);
         throw new InternalServerErrorException('Failed to delete schedule');
       }
+
+      // Audit log
+      await this.logAudit({ action: 'delete', scheduleId: id, actorUserId: null, before, after: null, changedFields: null })
 
       // Invalidate cache
       await this.cacheManager.del(`schedule:${id}`);
@@ -504,7 +552,7 @@ export class SchedulesService {
       }));
 
       const { error } = await supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .insert(assignments);
 
       if (error) {
@@ -534,7 +582,7 @@ export class SchedulesService {
       await this.findOne(scheduleId);
 
       const { error } = await supabase
-        .from('student_schedules')
+        .from('student_schedule')
         .delete()
         .eq('schedule_id', scheduleId)
         .in('student_id', studentIds);
@@ -565,55 +613,97 @@ export class SchedulesService {
       this.logger.log(`Cache miss for student schedules: ${studentId}`);
 
       const supabase = this.getSupabaseClient();
+
+      // First, get the student's section_id
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('section_id')
+        .eq('id', studentId)
+        .single();
+
+      if (studentError || !student) {
+        this.logger.error('Error fetching student:', studentError);
+        throw new NotFoundException('Student not found');
+      }
+
+      if (!student.section_id) {
+        this.logger.warn(`Student ${studentId} has no section assigned`);
+        return [];
+      }
+
+      // Get all schedules for the student's section
       const { data, error } = await supabase
-        .from('student_schedules')
+        .from('schedules')
         .select(
           `
-        schedule:schedules(
           *,
           subject:subjects(*),
-          teacher:teachers(*),
+          teacher:teachers(
+            *,
+            user:users(
+              id,
+              full_name,
+              email
+            )
+          ),
           section:sections(*),
-          room:rooms(*)
+          room:rooms(
+            *,
+            floor:floors(
+              *,
+              building:buildings(*)
+            )
+          ),
+          building:buildings(*)
+        `,
         )
-      `,
-        )
-        .eq('student_id', studentId);
+        .eq('section_id', student.section_id)
+        .eq('status', 'published') // Only show published schedules
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
 
       if (error) {
         this.logger.error('Error fetching student schedules:', error);
-        throw new InternalServerErrorException('Failed to fetch student schedules');
+        throw new InternalServerErrorException(
+          'Failed to fetch student schedules',
+        );
       }
 
       const schedules =
         data?.map((item: any) => ({
-          id: item.schedule.id,
-          subjectId: item.schedule.subject_id,
-          teacherId: item.schedule.teacher_id,
-          sectionId: item.schedule.section_id,
-          roomId: item.schedule.room_id,
-          buildingId: item.schedule.building_id,
-          dayOfWeek: item.schedule.day_of_week,
-          startTime: item.schedule.start_time,
-          endTime: item.schedule.end_time,
-          schoolYear: item.schedule.school_year,
-          semester: item.schedule.semester,
-          createdAt: item.schedule.created_at,
-          updatedAt: item.schedule.updated_at,
-          subject: item.schedule.subject,
-          teacher: item.schedule.teacher,
-          section: item.schedule.section,
-          room: item.schedule.room,
-          building: item.schedule.building,
+          id: item.id,
+          subjectId: item.subject_id,
+          teacherId: item.teacher_id,
+          sectionId: item.section_id,
+          roomId: item.room_id,
+          buildingId: item.building_id,
+          dayOfWeek: item.day_of_week,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          schoolYear: item.school_year,
+          semester: item.semester,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          subject: item.subject,
+          teacher: item.teacher,
+          section: item.section,
+          room: item.room,
+          building: item.building,
         })) || [];
 
       // Cache the result
       await this.cacheManager.set(cacheKey, schedules, this.DETAILED_CACHE_TTL);
 
+      this.logger.log(`Found ${schedules.length} schedules for student ${studentId} in section ${student.section_id}`);
       return schedules;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.error('Error fetching student schedules:', error);
-      throw new InternalServerErrorException('Failed to fetch student schedules');
+      throw new InternalServerErrorException(
+        'Failed to fetch student schedules',
+      );
     }
   }
 
@@ -798,7 +888,14 @@ export class SchedulesService {
         *,
         subject:subjects(*),
         section:sections(*),
-        room:rooms(*)
+        room:rooms(
+          *,
+          floor:floors(
+            *,
+            building:buildings(*)
+          )
+        ),
+        building:buildings(*)
       `,
         )
         .eq('teacher_id', teacherId)
@@ -807,7 +904,9 @@ export class SchedulesService {
 
       if (error) {
         this.logger.error('Error fetching teacher schedules:', error);
-        throw new InternalServerErrorException('Failed to fetch teacher schedules');
+        throw new InternalServerErrorException(
+          'Failed to fetch teacher schedules',
+        );
       }
 
       const schedules =
@@ -825,6 +924,11 @@ export class SchedulesService {
           semester: item.semester,
           createdAt: item.created_at,
           updatedAt: item.updated_at,
+          status: item.status,
+          is_published: item.is_published,
+          published_at: item.published_at,
+          recurring_rule: item.recurring_rule,
+          version: item.version,
           subject: item.subject,
           section: item.section,
           room: item.room,
@@ -840,7 +944,292 @@ export class SchedulesService {
       return schedules;
     } catch (error) {
       this.logger.error('Error fetching teacher schedules:', error);
-      throw new InternalServerErrorException('Failed to fetch teacher schedules');
+      throw new InternalServerErrorException(
+        'Failed to fetch teacher schedules',
+      );
     }
   }
+
+  async listTeachersBySubject(subjectId: string): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+
+    const seen = new Set<string>();
+    const result: any[] = [];
+
+    // If no subjectId provided, return all teachers
+    if (!subjectId) {
+      this.logger.log('[listTeachersBySubject] No subjectId provided, fetching all teachers');
+
+      const { data: allTeachers, error: allTeachersError } = await supabase
+        .from('teachers')
+        .select('id, first_name, last_name, middle_name, user_id')
+        .is('deleted_at', null)
+        .order('first_name', { ascending: true });
+
+      if (allTeachersError) {
+        this.logger.error('[listTeachersBySubject] Error fetching all teachers', allTeachersError);
+        return [];
+      }
+
+      if (allTeachers) {
+        // Get user data for all teachers in one query
+        const userIds = allTeachers.map((t: any) => t.user_id).filter(Boolean);
+        let userDataMap = new Map<string, any>();
+
+        if (userIds.length > 0) {
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, full_name, email')
+            .in('id', userIds);
+
+          if (!usersError && users) {
+            users.forEach((u: any) => {
+              userDataMap.set(u.id, u);
+            });
+          }
+        }
+
+        for (const t of allTeachers) {
+          const id = t?.id;
+          if (id) {
+            const userData = userDataMap.get(t.user_id);
+            result.push({
+              id,
+              first_name: t.first_name,
+              last_name: t.last_name,
+              middle_name: t.middle_name,
+              full_name: userData?.full_name,
+              email: userData?.email,
+            });
+          }
+        }
+      }
+
+      this.logger.log(`[listTeachersBySubject] Returning ${result.length} total teachers`);
+      return result;
+    }
+
+    this.logger.log(`[listTeachersBySubject] Looking for teachers for subject: ${subjectId}`);
+
+    // First, get teachers with subject_specialization_id matching the subject
+    // This is the primary way to find teachers qualified to teach a subject
+    const { data: teachersBySpecialization, error: specializationError } = await supabase
+      .from('teachers')
+      .select('id, first_name, last_name, middle_name, user_id')
+      .eq('subject_specialization_id', subjectId)
+      .is('deleted_at', null)
+      .order('first_name', { ascending: true });
+
+    if (specializationError) {
+      this.logger.error('[listTeachersBySubject] Error fetching teachers by specialization', {
+        subjectId,
+        error: specializationError,
+      });
+    } else {
+      this.logger.log(
+        `[listTeachersBySubject] Found ${teachersBySpecialization?.length || 0} teachers by specialization`,
+      );
+    }
+
+    if (!specializationError && teachersBySpecialization) {
+      // Get user data for all teachers in one query
+      const userIds = teachersBySpecialization.map((t: any) => t.user_id).filter(Boolean);
+      let userDataMap = new Map<string, any>();
+
+      if (userIds.length > 0) {
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        if (!usersError && users) {
+          users.forEach((u: any) => {
+            userDataMap.set(u.id, u);
+          });
+        }
+      }
+
+      for (const t of teachersBySpecialization) {
+        const id = t?.id;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          const userData = userDataMap.get(t.user_id);
+          result.push({
+            id,
+            first_name: t.first_name,
+            last_name: t.last_name,
+            middle_name: t.middle_name,
+            full_name: userData?.full_name,
+            email: userData?.email,
+          });
+        }
+      }
+    }
+
+    // Fallback: Also check teachers who have been scheduled to teach this subject
+    // This covers cases where teachers might teach subjects outside their specialization
+    const { data: schedulesData, error: schedulesError } = await supabase
+      .from('schedules')
+      .select('teacher_id')
+      .eq('subject_id', subjectId)
+      .not('teacher_id', 'is', null);
+
+    if (schedulesError) {
+      this.logger.error('[listTeachersBySubject] Error fetching schedules', {
+        subjectId,
+        error: schedulesError,
+      });
+    } else {
+      this.logger.log(
+        `[listTeachersBySubject] Found ${schedulesData?.length || 0} schedules for this subject`,
+      );
+    }
+
+    if (!schedulesError && schedulesData) {
+      const teacherIds = [...new Set(schedulesData.map((s: any) => s.teacher_id).filter(Boolean))];
+      
+      if (teacherIds.length > 0) {
+        const { data: teachersFromSchedules, error: teachersError } = await supabase
+          .from('teachers')
+          .select('id, first_name, last_name, middle_name, user_id')
+          .in('id', teacherIds)
+          .is('deleted_at', null);
+
+        if (!teachersError && teachersFromSchedules) {
+          // Get user data for these teachers
+          const userIds = teachersFromSchedules.map((t: any) => t.user_id).filter(Boolean);
+          let userDataMap = new Map<string, any>();
+
+          if (userIds.length > 0) {
+            const { data: users, error: usersError } = await supabase
+              .from('users')
+              .select('id, full_name, email')
+              .in('id', userIds);
+
+            if (!usersError && users) {
+              users.forEach((u: any) => {
+                userDataMap.set(u.id, u);
+              });
+            }
+          }
+
+          for (const t of teachersFromSchedules) {
+            const id = t?.id;
+            if (id && !seen.has(id)) {
+              seen.add(id);
+              const userData = userDataMap.get(t.user_id);
+              result.push({
+                id,
+                first_name: t.first_name,
+                last_name: t.last_name,
+                middle_name: t.middle_name,
+                full_name: userData?.full_name,
+                email: userData?.email,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    this.logger.log(
+      `[listTeachersBySubject] Returning ${result.length} teachers for subject: ${subjectId}`,
+    );
+
+    return result;
+  }
+
+  /**
+   * Admin – publish or unpublish a schedule
+   */
+  async setPublishState(id: string, publish: boolean): Promise<{ id: string; status: string; is_published: boolean; published_at: string | null }> {
+    const supabase = this.getSupabaseClient();
+
+    const updatePayload: any = publish
+      ? { status: 'published', is_published: true, published_at: new Date().toISOString() }
+      : { status: 'draft', is_published: false, published_at: null };
+
+    const before = await this.findOne(id).catch(()=>null)
+
+    const { data, error } = await supabase
+      .from('schedules')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('id,status,is_published,published_at')
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to update publish state');
+    }
+
+    await this.logAudit({ action: publish ? 'publish' : 'unpublish', scheduleId: id, actorUserId: null, before, after: data, changedFields: updatePayload })
+
+    await this.invalidateAllCaches();
+    return data as any;
+  }
+
+  async getAuditLogs(scheduleId: string): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+    const { data, error } = await supabase
+      .from('schedules_audit_log')
+      .select('id, action, changed_fields, before, after, note, created_at, actor_user_id, actor:users!actor_user_id(id, full_name, email)')
+      .eq('schedule_id', scheduleId)
+      .order('created_at', { ascending: false })
+    if (error) {
+      this.logger.error('Failed to fetch audit logs', error)
+      return []
+    }
+    return data || []
+  }
+
+  private async logAudit(params: { action: 'create'|'update'|'delete'|'publish'|'unpublish'; scheduleId: string; actorUserId: string | null; before: any; after: any; changedFields: any }) {
+    try {
+      const supabase = this.getSupabaseClient();
+      await supabase.from('schedules_audit_log').insert({
+        schedule_id: params.scheduleId,
+        actor_user_id: params.actorUserId,
+        action: params.action,
+        before: params.before || null,
+        after: params.after || null,
+        changed_fields: params.changedFields || null,
+      })
+    } catch (e) {
+      this.logger.warn('Audit log insert failed', e as any)
+    }
+  }
+
+  /**
+   * Admin – templates CRUD (list/create minimal)
+   */
+  async listTemplates(): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+    const { data, error } = await supabase
+      .from('schedule_templates')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new InternalServerErrorException('Failed to fetch schedule templates');
+    }
+    return data || [];
+  }
+
+  async createTemplate(input: { name: string; description?: string; grade_level?: string; payload: any; created_by?: string }): Promise<any> {
+    const supabase = this.getSupabaseClient();
+    const { data, error } = await supabase
+      .from('schedule_templates')
+      .insert({
+        name: input.name,
+        description: input.description ?? null,
+        grade_level: input.grade_level ?? null,
+        payload: input.payload,
+        created_by: input.created_by ?? null,
+      })
+      .select('*')
+      .single();
+    if (error) {
+      throw new InternalServerErrorException('Failed to create schedule template');
+    }
+    return data;
+  }
 }
+   

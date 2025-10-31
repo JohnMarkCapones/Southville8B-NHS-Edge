@@ -3,16 +3,16 @@
  * EVENTS API ENDPOINTS
  * ========================================
  * API client functions for interacting with the Events backend.
- * 
+ *
  * Backend Source: core-api-layer/.../src/events/events.controller.ts
  * Base URL: http://localhost:3004/api/v1/events
- * 
+ *
  * Authentication: Most endpoints require JWT token
  * Permissions:
  * - GET endpoints: All authenticated users (some public)
  * - POST: Admin, Teacher only
  * - PATCH: Admin, Teacher (owner) only
- * - DELETE: Admin only
+ * - DELETE: Admin, Teacher only
  */
 
 import { apiClient } from '../client';
@@ -59,6 +59,7 @@ function transformBackendEventToFrontend(backendEvent: any): Event {
     time: backendEvent.time,
     location: backendEvent.location,
     organizerId: backendEvent.organizer_id,
+    clubId: backendEvent.club_id, // ← Add club_id mapping!
     eventImage: backendEvent.event_image,
     status: backendEvent.status,
     visibility: backendEvent.visibility,
@@ -216,6 +217,51 @@ export async function getEventsByOrganizer(
 }
 
 /**
+ * Get events by club ID
+ * 
+ * @param clubId - Club ID
+ * @param params - Pagination and filter parameters
+ * @returns Paginated list of club events
+ * 
+ * @example
+ * ```ts
+ * const clubEvents = await getEventsByClubId('club-uuid-123', {
+ *   page: 1,
+ *   limit: 10,
+ *   status: 'published'
+ * });
+ * ```
+ */
+export async function getEventsByClubId(
+  clubId: string,
+  params?: { 
+    page?: number; 
+    limit?: number;
+    status?: string;
+    visibility?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }
+): Promise<EventListResponse> {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.visibility) queryParams.append('visibility', params.visibility);
+  if (params?.startDate) queryParams.append('startDate', params.startDate);
+  if (params?.endDate) queryParams.append('endDate', params.endDate);
+  if (params?.search) queryParams.append('search', params.search);
+
+  const queryString = queryParams.toString();
+  const endpoint = `/events/club/${clubId}${queryString ? `?${queryString}` : ''}`;
+
+  const backendResponse = await apiClient.get<any>(endpoint);
+  return transformBackendEventListToFrontend(backendResponse);
+}
+
+/**
  * Get a single event by ID
  * 
  * @param id - Event UUID
@@ -358,7 +404,7 @@ export async function updateEvent(
 /**
  * Delete an event (PERMANENT - use for archived events only)
  *
- * **Permissions**: Admin only
+ * **Permissions**: Admin, Teacher only
  *
  * @param id - Event UUID
  * @returns Success message
@@ -376,7 +422,7 @@ export async function deleteEvent(id: string): Promise<DeleteResponse> {
 /**
  * Archive an event (soft delete - moves to archived)
  *
- * **Permissions**: Admin only
+ * **Permissions**: Admin, Teacher only
  *
  * @param id - Event UUID
  * @returns Success message
@@ -951,6 +997,37 @@ export function getCategoryColor(event: Event): string {
  * @param event - Event object
  * @returns Category name
  */
+/**
+ * Upload event image to Cloudflare Images
+ *
+ * **Permissions**: Admin, Teacher only
+ *
+ * @param file - Image file to upload
+ * @returns Upload result with Cloudflare Images URL
+ *
+ * @example
+ * ```ts
+ * const result = await uploadEventImage(imageFile);
+ * console.log(result.url); // Cloudflare Images URL
+ * ```
+ */
+export async function uploadEventImage(
+  file: File
+): Promise<{ url: string; cf_image_id: string; cf_image_url: string; fileName: string; fileSize: number; mimeType: string }> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await apiClient.request<any>('/events/upload-image', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      // Don't set Content-Type - let browser set it with boundary for multipart/form-data
+    },
+  });
+
+  return response;
+}
+
 export function getCategoryName(event: Event): string {
   const tagNames = event.tags?.map(t => t.name.toLowerCase()) || []
 

@@ -4,12 +4,14 @@
  * React Query mutations for club form operations:
  * - Create/update/delete forms
  * - Add/update/delete questions
+ * - Review form responses (approve/reject)
  *
  * Usage:
  * ```tsx
  * const mutations = useClubFormMutations(clubId);
  * await mutations.createForm.mutateAsync({ name: 'Application Form' });
  * await mutations.addQuestion.mutateAsync({ formId, data: {...} });
+ * await mutations.reviewResponse.mutateAsync({ formId, responseId, data: { status: 'approved' } });
  * ```
  */
 
@@ -23,10 +25,12 @@ import {
   addFormQuestion,
   updateFormQuestion,
   deleteFormQuestion,
+  reviewFormResponse,
   type CreateClubFormDto,
   type UpdateClubFormDto,
   type CreateFormQuestionDto,
   type UpdateFormQuestionDto,
+  type ReviewFormResponseDto,
 } from '@/lib/api/endpoints/club-forms';
 import { useToast } from '@/hooks/use-toast';
 
@@ -132,21 +136,25 @@ export function useClubFormMutations(clubId: string) {
    * Add a question to a form
    */
   const addQuestion = useMutation({
-    mutationFn: ({ formId, data }: { formId: string; data: CreateFormQuestionDto }) =>
+    mutationFn: ({ formId, data, silent }: { formId: string; data: CreateFormQuestionDto; silent?: boolean }) =>
       addFormQuestion(clubId, formId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['club-form', clubId, variables.formId] });
-      toast({
-        title: 'Success',
-        description: 'Question added successfully',
-      });
+      if (!(variables as any).silent) {
+        toast({
+          title: 'Success',
+          description: 'Question added successfully',
+        });
+      }
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error?.message || 'Failed to add question',
-        variant: 'destructive',
-      });
+    onError: (error: any, variables) => {
+      if (!(variables as any).silent) {
+        toast({
+          title: 'Error',
+          description: error?.message || 'Failed to add question',
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -158,24 +166,30 @@ export function useClubFormMutations(clubId: string) {
       formId,
       questionId,
       data,
+      silent,
     }: {
       formId: string;
       questionId: string;
       data: UpdateFormQuestionDto;
+      silent?: boolean;
     }) => updateFormQuestion(clubId, formId, questionId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['club-form', clubId, variables.formId] });
-      toast({
-        title: 'Success',
-        description: 'Question updated successfully',
-      });
+      if (!variables.silent) {
+        toast({
+          title: 'Success',
+          description: 'Question updated successfully',
+        });
+      }
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error?.message || 'Failed to update question',
-        variant: 'destructive',
-      });
+    onError: (error: any, variables) => {
+      if (!variables.silent) {
+        toast({
+          title: 'Error',
+          description: error?.message || 'Failed to update question',
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -183,7 +197,7 @@ export function useClubFormMutations(clubId: string) {
    * Delete a question
    */
   const deleteQuestion = useMutation({
-    mutationFn: ({ formId, questionId }: { formId: string; questionId: string }) =>
+    mutationFn: ({ formId, questionId, silent }: { formId: string; questionId: string; silent?: boolean }) =>
       deleteFormQuestion(clubId, formId, questionId),
     throwOnError: false,
     onMutate: async ({ formId, questionId }) => {
@@ -206,10 +220,12 @@ export function useClubFormMutations(clubId: string) {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['club-form', clubId, variables.formId] });
-      toast({
-        title: 'Success',
-        description: 'Question deleted successfully',
-      });
+      if (!variables.silent) {
+        toast({
+          title: 'Success',
+          description: 'Question deleted successfully',
+        });
+      }
     },
     onError: (error: any, variables, context) => {
       // Rollback on error
@@ -217,9 +233,48 @@ export function useClubFormMutations(clubId: string) {
         queryClient.setQueryData(['club-form', clubId, variables.formId], context.previousForm);
       }
 
+      if (!variables.silent) {
+        toast({
+          title: 'Error',
+          description: error?.message || 'Failed to delete question',
+          variant: 'destructive',
+        });
+      }
+    },
+  });
+
+  // ============================================================================
+  // RESPONSE REVIEW MUTATIONS
+  // ============================================================================
+
+  /**
+   * Review a form response (approve/reject)
+   */
+  const reviewResponse = useMutation({
+    mutationFn: ({
+      formId,
+      responseId,
+      data,
+    }: {
+      formId: string;
+      responseId: string;
+      data: ReviewFormResponseDto;
+    }) => reviewFormResponse(clubId, formId, responseId, data),
+    onSuccess: (_, variables) => {
+      // Invalidate both the responses list and the specific response
+      queryClient.invalidateQueries({ queryKey: ['form-responses', clubId, variables.formId] });
+      queryClient.invalidateQueries({ queryKey: ['form-response', clubId, variables.formId, variables.responseId] });
+
+      const action = variables.data.status === 'approved' ? 'approved' : 'rejected';
+      toast({
+        title: 'Success',
+        description: `Application has been ${action}`,
+      });
+    },
+    onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to delete question',
+        description: error?.message || 'Failed to review application',
         variant: 'destructive',
       });
     },
@@ -232,5 +287,6 @@ export function useClubFormMutations(clubId: string) {
     addQuestion,
     updateQuestion,
     deleteQuestion,
+    reviewResponse,
   };
 }

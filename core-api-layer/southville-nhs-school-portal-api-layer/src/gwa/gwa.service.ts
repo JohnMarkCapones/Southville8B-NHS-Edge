@@ -46,6 +46,31 @@ export class GwaService {
     return this.supabase;
   }
 
+  async getStudentGwaHistory(studentId: string): Promise<any[]> {
+    try {
+      this.logger.log(`Getting GWA history for student: ${studentId}`);
+
+      const { data: gwaRecords, error } = await this.supabase
+        .from('students_gwa')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching GWA history:', error);
+        throw new Error(`Failed to fetch GWA history: ${error.message}`);
+      }
+
+      this.logger.log(
+        `Found ${gwaRecords?.length || 0} GWA records for student: ${studentId}`,
+      );
+      return gwaRecords || [];
+    } catch (error) {
+      this.logger.error('Error in getStudentGwaHistory:', error);
+      throw error;
+    }
+  }
+
   async getAdvisoryStudentsWithGwa(
     teacherId: string,
     gradingPeriod: string,

@@ -136,10 +136,10 @@ export async function getStudentCount(): Promise<UserCountResponse> {
     });
 
     // Count active and inactive students (we'll need to fetch all for accurate counts)
-    // For better performance, we fetch with a higher limit
+    // Backend caps limit at 1000, so we use that maximum
     const fullResponse = await getUsers({
       role: 'Student',
-      limit: 10000, // Large limit to get all students in one request
+      limit: 1000, // Backend maximum limit
       page: 1,
     });
 
@@ -173,10 +173,10 @@ export async function getStudentCount(): Promise<UserCountResponse> {
  */
 export async function getTeacherCount(): Promise<UserCountResponse> {
   try {
-    // Fetch with a high limit to get all teachers
+    // Backend caps limit at 1000, so we use that maximum
     const response = await getUsers({
       role: 'Teacher',
-      limit: 10000,
+      limit: 1000,
       page: 1,
     });
 
@@ -203,9 +203,10 @@ export async function getTeacherCount(): Promise<UserCountResponse> {
  */
 export async function getAdminCount(): Promise<UserCountResponse> {
   try {
+    // Backend caps limit at 1000, so we use that maximum
     const response = await getUsers({
       role: 'Admin',
-      limit: 10000,
+      limit: 1000,
       page: 1,
     });
 
@@ -265,9 +266,9 @@ export async function getAllUsersStats(): Promise<{
   newThisMonth: number;
 }> {
   try {
-    // Fetch all users with high limit
+    // Backend caps limit at 1000, so we use that maximum
     const response = await getUsers({
-      limit: 10000,
+      limit: 1000,
       page: 1,
     });
 

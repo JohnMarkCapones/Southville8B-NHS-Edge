@@ -61,7 +61,18 @@ export class FileStorageService {
       let queryBuilder = this.supabaseService
         .getClient()
         .from('teacher_files')
-        .select('*', { count: 'exact' })
+        .select(
+          `
+          *,
+          folder:teacher_folders!inner(
+            id,
+            name,
+            parent_id
+          ),
+          uploader:users!uploaded_by(id, full_name, email)
+        `,
+          { count: 'exact' },
+        )
         .eq('is_deleted', false);
 
       // Apply filters

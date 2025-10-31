@@ -9,6 +9,7 @@ import {
   NewsCategoriesController,
   JournalismMembershipController,
 } from './controllers';
+import { NewsKpiController } from './controllers/news-kpi.controller';
 
 // Services
 import {
@@ -20,6 +21,8 @@ import {
   NewsImageService,
   JournalismMembershipService,
 } from './services';
+import { NewsKpiService } from './services/news-kpi.service';
+import { NewsReviewCommentsService } from './services/news-review-comments.service';
 
 /**
  * News/Journalism Module
@@ -32,6 +35,7 @@ import {
     NewsController,
     NewsCategoriesController,
     JournalismMembershipController,
+    NewsKpiController,
   ],
   providers: [
     // Core service
@@ -44,6 +48,8 @@ import {
     TagsService,
     NewsImageService,
     JournalismMembershipService,
+    NewsReviewCommentsService,
+    NewsKpiService,
   ],
   exports: [
     // Export services for use in other modules

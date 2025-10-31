@@ -43,30 +43,33 @@ export function EventFAQAccordion({
   defaultOpen = false,
   variant = 'default'
 }: EventFAQAccordionProps) {
+  // Safety check for undefined/null faqs
+  const safeFaqs = Array.isArray(faqs) ? faqs : [];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [openItems, setOpenItems] = useState<Set<string>>(
-    defaultOpen ? new Set(faqs.map(faq => faq.id)) : new Set()
+    defaultOpen ? new Set(safeFaqs.map(faq => faq.id)) : new Set()
   );
 
   // Filter FAQs based on search query
   const filteredFaqs = useMemo(() => {
-    if (!searchQuery.trim()) return faqs;
-    
+    if (!searchQuery.trim()) return safeFaqs;
+
     const query = searchQuery.toLowerCase();
-    return faqs.filter(faq => 
+    return safeFaqs.filter(faq =>
       faq.question.toLowerCase().includes(query) ||
       faq.answer.toLowerCase().includes(query)
     );
-  }, [faqs, searchQuery]);
+  }, [safeFaqs, searchQuery]);
 
   // Get FAQ statistics
   const stats = useMemo(() => {
-    const total = faqs.length;
+    const total = safeFaqs.length;
     const filtered = filteredFaqs.length;
     const open = openItems.size;
-    
+
     return { total, filtered, open };
-  }, [faqs.length, filteredFaqs.length, openItems.size]);
+  }, [safeFaqs.length, filteredFaqs.length, openItems.size]);
 
   const toggleItem = (id: string) => {
     setOpenItems(prev => {
@@ -88,7 +91,7 @@ export function EventFAQAccordion({
     }
   };
 
-  if (!faqs.length) {
+  if (!safeFaqs.length) {
     return (
       <div className={cn("text-center py-8", className)}>
         <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -297,14 +300,17 @@ export function EventFAQAccordion({
  * Event FAQ Summary Component
  * Shows a quick overview of available FAQs
  */
-export function EventFAQSummary({ 
-  faqs, 
-  className 
-}: { 
-  faqs: EventFaq[]; 
-  className?: string; 
+export function EventFAQSummary({
+  faqs,
+  className
+}: {
+  faqs: EventFaq[];
+  className?: string;
 }) {
-  if (!faqs.length) {
+  // Safety check for undefined/null faqs
+  const safeFaqs = Array.isArray(faqs) ? faqs : [];
+
+  if (!safeFaqs.length) {
     return null;
   }
 
@@ -312,7 +318,7 @@ export function EventFAQSummary({
     <div className={cn("flex items-center gap-4 text-sm text-muted-foreground", className)}>
       <div className="flex items-center gap-1">
         <HelpCircle className="h-4 w-4" />
-        <span>{faqs.length} FAQ{faqs.length !== 1 ? 's' : ''} available</span>
+        <span>{safeFaqs.length} FAQ{safeFaqs.length !== 1 ? 's' : ''} available</span>
       </div>
     </div>
   );

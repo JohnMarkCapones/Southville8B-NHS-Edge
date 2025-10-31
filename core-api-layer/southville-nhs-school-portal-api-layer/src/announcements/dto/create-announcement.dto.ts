@@ -17,7 +17,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import sanitizeHtml from 'sanitize-html';
+const sanitizeHtml = require('sanitize-html');
 
 export enum AnnouncementVisibility {
   PUBLIC = 'public',

@@ -367,7 +367,7 @@ export default function ResourcesPage() {
   })
 
   // Local UI state (not managed by API)
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
 
   // Dialog states
@@ -433,14 +433,24 @@ export default function ResourcesPage() {
 
   const getFolderPath = useCallback(
     (folderId: string): FolderType[] => {
+      if (!folderId || folderId === "root") {
+        return []
+      }
+
       const path: FolderType[] = []
       let currentId: string | null = folderId
 
       while (currentId) {
         const folder = folders.find((f) => f.id === currentId)
         if (folder) {
-          path.unshift(folder)
-          currentId = folder.parentId
+          // Convert API folder to FolderType format
+          path.unshift({
+            id: folder.id,
+            name: folder.name,
+            parentId: folder.parent_id,
+            description: folder.description,
+          } as FolderType)
+          currentId = folder.parent_id
         } else {
           break
         }
@@ -449,6 +459,22 @@ export default function ResourcesPage() {
       return path
     },
     [folders],
+  )
+
+  // Get folder statistics (file count and total size)
+  const getFolderStats = useCallback(
+    (folderId: string) => {
+      const folderFiles = resources.filter((f) => f.folder_id === folderId)
+      const fileCount = folderFiles.length
+      const totalSize = folderFiles.reduce((sum, file) => sum + (file.file_size_bytes || 0), 0)
+      const totalSizeMB = totalSize / (1024 * 1024) // Convert bytes to MB
+
+      return {
+        fileCount,
+        totalSizeMB: totalSizeMB.toFixed(2),
+      }
+    },
+    [resources],
   )
 
   const getSubfolders = useCallback(
@@ -473,6 +499,11 @@ export default function ResourcesPage() {
   // Resources are already filtered by the API, so we can use them directly
   const filteredResources = resources
 
+  // Debug: Log current folder and files
+  console.log('[Resources Debug] Current Folder ID:', apiCurrentFolderId)
+  console.log('[Resources Debug] Total files from API:', resources.length)
+  console.log('[Resources Debug] Files:', resources.map(r => ({ id: r.id, title: r.title, folder_id: r.folder_id })))
+
   // Pagination is handled by the API
   const paginatedResources = filteredResources
   const totalPages = pagination?.totalPages || 1
@@ -483,16 +514,30 @@ export default function ResourcesPage() {
     const currentFolderResources =
       apiCurrentFolderId === "root" || !apiCurrentFolderId ? resources : resources.filter((r) => r.folder_id === apiCurrentFolderId)
 
+    // Calculate total storage in bytes first, then convert to MB
+    const totalStorageBytes = currentFolderResources.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0)
+    const totalStorageMB = (totalStorageBytes / (1024 * 1024)).toFixed(2)
+
+    // Count subfolders - use parent_id field from API
+    const childFolders = !apiCurrentFolderId || apiCurrentFolderId === "root"
+      ? folders.filter(f => f.parent_id === null)
+      : folders.filter(f => f.parent_id === apiCurrentFolderId)
+
     return {
       totalFiles: currentFolderResources.length,
       totalDownloads: currentFolderResources.reduce((sum, r) => sum + (r.download_count || 0), 0),
-      totalFolders: getSubfolders(apiCurrentFolderId || "root").length,
-      totalStorage: currentFolderResources.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0).toFixed(2),
+      totalFolders: childFolders.length,
+      totalStorage: totalStorageMB,
     }
-  }, [resources, apiCurrentFolderId, getSubfolders])
+  }, [resources, apiCurrentFolderId, folders])
 
   // File type icon helper (works with MIME types from API)
-  const getFileIcon = (mimeType: string) => {
+  const getFileIcon = (mimeType?: string | null) => {
+    // Handle undefined or null mimeType
+    if (!mimeType) {
+      return <File className="w-5 h-5 text-gray-600" />
+    }
+
     if (mimeType.includes('pdf')) {
       return <FileText className="w-5 h-5 text-red-600" />
     } else if (mimeType.includes('word') || mimeType.includes('document')) {
@@ -1014,15 +1059,39 @@ export default function ResourcesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Storage Used</span>
-                <span className="font-medium">{stats.totalStorage} MB</span>
+                <span className="font-medium">
+                  {(() => {
+                    // Calculate total storage from ALL files (not just current folder)
+                    const totalBytes = resources.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0)
+                    const totalMB = (totalBytes / (1024 * 1024)).toFixed(2)
+                    return totalMB
+                  })()} MB
+                </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                  style={{ width: "45%" }}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${(() => {
+                      // Use analytics data if available, otherwise use a default limit
+                      const storageLimit = analytics?.storageLimit || 1000 // Default 1GB limit
+                      const totalBytes = resources.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0)
+                      const totalMB = totalBytes / (1024 * 1024)
+                      const percentage = (totalMB / storageLimit) * 100
+                      return Math.min(percentage, 100).toFixed(1)
+                    })()}%`
+                  }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">45% of 200 MB used</p>
+              <p className="text-xs text-muted-foreground">
+                {(() => {
+                  const storageLimit = analytics?.storageLimit || 1000
+                  const totalBytes = resources.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0)
+                  const totalMB = totalBytes / (1024 * 1024)
+                  const percentage = (totalMB / storageLimit) * 100
+                  return `${Math.min(percentage, 100).toFixed(1)}% of ${storageLimit} MB used`
+                })()}
+              </p>
             </div>
           </div>
         </div>
@@ -1152,54 +1221,135 @@ export default function ResourcesPage() {
               </Card>
             </div>
 
-            {(() => {
-              // Get current folder's children from the hierarchical structure
-              const currentFolder = folders.find(f => f.id === apiCurrentFolderId)
-              const childFolders = currentFolder?.children || folders.filter(f => f.parent_id === null)
-              return childFolders.length > 0
-            })() && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Folder className="w-5 h-5 text-primary" />
-                    Folders
-                  </CardTitle>
+            {/* Folders Section - Always Visible */}
+            <Card className="border-blue-500/20 bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-950/10">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Folder className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        Folders
+                        <Badge variant="secondary" className="ml-2">
+                          {(() => {
+                            const childFolders = !apiCurrentFolderId || apiCurrentFolderId === "root"
+                              ? folders.filter(f => f.parent_id === null)
+                              : folders.filter(f => f.parent_id === apiCurrentFolderId)
+                            return childFolders.length
+                          })()}
+                        </Badge>
+                      </CardTitle>
+                    </div>
+
+                    {/* Breadcrumbs */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <button
+                        onClick={() => setApiCurrentFolderId(null)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+                          !apiCurrentFolderId || apiCurrentFolderId === "root"
+                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium"
+                            : "hover:bg-accent text-muted-foreground"
+                        }`}
+                      >
+                        <Home className="w-3.5 h-3.5" />
+                        <span>All Folders</span>
+                      </button>
+
+                      {getFolderPath(apiCurrentFolderId || "root").map((folder, index, array) => (
+                        <div key={folder.id} className="flex items-center gap-2">
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          <button
+                            onClick={() => setApiCurrentFolderId(folder.id)}
+                            className={`px-2 py-1 rounded-md transition-colors ${
+                              index === array.length - 1
+                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium"
+                                : "hover:bg-accent text-muted-foreground"
+                            }`}
+                          >
+                            {folder.name}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-4 gap-4">
-                    {(() => {
-                      // Get current folder's children from the hierarchical structure
-                      const currentFolder = folders.find(f => f.id === apiCurrentFolderId)
-                      const childFolders = currentFolder?.children || folders.filter(f => f.parent_id === null)
-                      return childFolders.map((folder) => (
-                      <div
-                        key={folder.id}
-                        className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg cursor-pointer"
-                        onClick={() => setApiCurrentFolderId(folder.id)}
-                      >
-                        <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30">
-                          <div className="flex items-start justify-between mb-3">
-                            <div
-                              className={`w-12 h-12 rounded-xl bg-${folder.color}-500/10 flex items-center justify-center`}
-                            >
-                              <Folder className={`w-6 h-6 text-${folder.color}-600`} />
-                            </div>
-                            {folder.isStarred && <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />}
+                  {(() => {
+                    // Get child folders of current folder
+                    const childFolders = !apiCurrentFolderId || apiCurrentFolderId === "root"
+                      ? folders.filter(f => f.parent_id === null)
+                      : folders.filter(f => f.parent_id === apiCurrentFolderId)
+
+                    console.log('[Folders Debug] Current Folder ID:', apiCurrentFolderId)
+                    console.log('[Folders Debug] All folders:', folders)
+                    console.log('[Folders Debug] Looking for parent_id matching:', apiCurrentFolderId)
+                    console.log('[Folders Debug] Child folders found:', childFolders)
+
+                    // Check if maybe it's parentId instead of parent_id
+                    const testWithParentId = folders.filter(f => (f as any).parentId === apiCurrentFolderId)
+                    console.log('[Folders Debug] Test with parentId (camelCase):', testWithParentId)
+
+                    if (childFolders.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center mb-2">
+                            <Folder className="w-8 h-8 text-blue-400" />
                           </div>
-                          <h3 className="font-semibold text-sm mb-1 truncate">{folder.name}</h3>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{folder.description}</p>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{folder.fileCount} files</span>
-                            <span>{folder.totalSize?.toFixed(1)} MB</span>
-                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            No subfolders in this folder
+                          </p>
                         </div>
+                      )
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {childFolders.map((folder) => {
+                          const stats = getFolderStats(folder.id)
+                          return (
+                            <div
+                              key={folder.id}
+                              className="group relative rounded-lg overflow-hidden border border-border hover:border-blue-500/50 dark:hover:border-blue-400/50 transition-all duration-200 hover:shadow-lg cursor-pointer bg-white dark:bg-slate-900"
+                              onClick={() => {
+                                console.log('[Folder Click] Clicked folder:', folder.id, folder.name)
+                                setApiCurrentFolderId(folder.id)
+                              }}
+                            >
+                              <div className="p-4 bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-950/20 dark:to-transparent">
+                                <div className="flex items-start gap-3 mb-3">
+                                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                    <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm mb-1 truncate text-slate-900 dark:text-slate-100">
+                                      {folder.name}
+                                    </h3>
+                                    {folder.description && (
+                                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                                        {folder.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <FileText className="w-3.5 h-3.5" />
+                                    {stats.fileCount} {stats.fileCount === 1 ? 'file' : 'files'}
+                                  </span>
+                                  <span className="text-slate-600 dark:text-slate-400">
+                                    {stats.totalSizeMB} MB
+                                  </span>
+                                </div>
+                              </div>
+                              {/* Hover effect overlay */}
+                              <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                            </div>
+                          )
+                        })}
                       </div>
-                      ))
-                    })()}
-                  </div>
+                    )
+                  })()}
                 </CardContent>
               </Card>
-            )}
 
             {/* Filters and Search */}
             <Card>
@@ -1328,18 +1478,29 @@ export default function ResourcesPage() {
             </Card>
 
             {/* Resources Display */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
+            <Card className="border-slate-200 dark:border-slate-800">
+              <CardHeader className="pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <CardTitle>Files</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <FileText className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                      Files
+                      <Badge variant="secondary" className="ml-2">
+                        {pagination?.total || 0}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="mt-1">
                       Showing {startIndex + 1}-{Math.min(endIndex, pagination?.total || 0)} of{" "}
                       {pagination?.total || 0} files
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {selectedResources.length > 0 && (
+                      <Badge variant="default" className="bg-blue-600">
+                        {selectedResources.length} selected
+                      </Badge>
+                    )}
+                    <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5">
                       <span className="text-sm text-muted-foreground">Show:</span>
                       <Select
                         value={pagination?.limit?.toString() || "12"}
@@ -1348,7 +1509,7 @@ export default function ResourcesPage() {
                           setApiPage(1)
                         }}
                       >
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className="w-[100px] h-8 border-0">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1358,44 +1519,68 @@ export default function ResourcesPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 cursor-pointer hover:bg-accent transition-colors" onClick={handleSelectAll}>
                       <Checkbox
                         checked={
                           selectedResources.length === paginatedResources.length && paginatedResources.length > 0
                         }
                         onCheckedChange={handleSelectAll}
                       />
-                      <span className="text-sm text-muted-foreground">Select All</span>
+                      <span className="text-sm">Select All</span>
                     </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {viewMode === "grid" ? (
-                  <div className="grid grid-cols-4 gap-4">
+                {paginatedResources.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                      <FileText className="w-12 h-12 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                      No files in this folder
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-md">
+                      {apiCurrentFolderId && apiCurrentFolderId !== "root"
+                        ? "This folder is empty. Upload files to get started."
+                        : "No files found. Upload your first file to get started."}
+                    </p>
+                    <Button onClick={() => setUploadDialogOpen(true)} className="gap-2">
+                      <CloudUpload className="w-4 h-4" />
+                      Upload File
+                    </Button>
+                  </div>
+                ) : viewMode === "grid" ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {paginatedResources.map((resource) => {
                       const folder = folders.find((f) => f.id === resource.folderId)
                       return (
                         <div
                           key={resource.id}
-                          className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                          className="group relative rounded-xl overflow-hidden border border-border hover:border-slate-400 dark:hover:border-slate-600 transition-all duration-300 hover:shadow-lg bg-white dark:bg-slate-900"
                         >
+                          {/* Checkbox - Always visible but subtle */}
                           <div className="absolute top-2 left-2 z-10">
                             <Checkbox
                               checked={selectedResources.includes(resource.id)}
                               onCheckedChange={() => handleSelectResource(resource.id)}
-                              className="bg-white dark:bg-gray-900 border-2"
+                              className="bg-white dark:bg-slate-900 border-2 shadow-sm"
                             />
                           </div>
-                          <div className="absolute top-2 right-2 z-10 flex gap-1">
+
+                          {/* Action buttons - Show on hover */}
+                          <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               size="icon"
                               variant="secondary"
-                              className="h-8 w-8 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm"
-                              onClick={() => handleToggleStar(resource.id)}
+                              className="h-7 w-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-md hover:bg-white dark:hover:bg-slate-800"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleStar(resource.id)
+                              }}
                             >
                               <Star
-                                className={`h-4 w-4 ${resource.isStarred ? "fill-yellow-500 text-yellow-500" : ""}`}
+                                className={`h-3.5 w-3.5 ${resource.isStarred ? "fill-yellow-500 text-yellow-500" : "text-slate-600"}`}
                               />
                             </Button>
                             <DropdownMenu>
@@ -1403,9 +1588,10 @@ export default function ResourcesPage() {
                                 <Button
                                   size="icon"
                                   variant="secondary"
-                                  className="h-8 w-8 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm"
+                                  className="h-7 w-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-md hover:bg-white dark:hover:bg-slate-800"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <MoreVertical className="h-4 w-4" />
+                                  <MoreVertical className="h-3.5 w-3.5 text-slate-600" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -1444,6 +1630,13 @@ export default function ResourcesPage() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
+
+                          {/* Star indicator - Always visible if starred */}
+                          {resource.isStarred && (
+                            <div className="absolute top-2 right-2 z-10 group-hover:opacity-0 transition-opacity pointer-events-none">
+                              <Star className="h-4 w-4 fill-yellow-500 text-yellow-500 drop-shadow-sm" />
+                            </div>
+                          )}
 
                           <div className="aspect-[4/3] relative overflow-hidden bg-muted flex items-center justify-center">
                             <div className="w-20 h-20">{getFileIcon(resource.mime_type)}</div>

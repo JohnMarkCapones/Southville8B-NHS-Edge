@@ -1,413 +1,261 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import {
-  ArrowLeft,
   Save,
-  Send,
-  ImageIcon,
-  Tag,
-  BookOpen,
-  Clock,
-  FileText,
-  CheckCircle2,
-  Upload,
-  X,
+  Eye,
+  ArrowLeft,
+  Loader2,
   AlertCircle,
-  UserCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { TiptapEditor } from "@/components/ui/tiptap-editor"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import StudentLayout from "@/components/student/student-layout"
+import { TiptapEditor } from "@/components/ui/tiptap-editor"
+import { newsApi, UpdateNewsDto, ReviewComment } from "@/lib/api/endpoints/news"
+import { NewsArticle } from "@/types/news"
 
 interface ArticleFormData {
   title: string
-  excerpt: string
   content: string
-  category: string
-  tags: string[]
-  featuredImage: string
-  author: string
-  coAuthors: string[]
-  credits: string
-}
-
-const categories = [
-  { value: "academic", label: "Academic News" },
-  { value: "events", label: "Events" },
-  { value: "sports", label: "Sports" },
-  { value: "announcements", label: "Announcements" },
-]
-
-// Mock data - TODO: Replace with actual database fetch
-const mockArticle = {
-  id: "1",
-  title: "Science Fair Winners Announced",
-  excerpt: "Congratulations to all participants in this year's science fair competition...",
-  content: "<p>Full article content goes here with rich text formatting...</p>",
-  category: "academic",
-  tags: ["science", "competition", "students"],
-  featuredImage: "",
-  author: "Juan Dela Cruz",
-  coAuthors: ["Maria Santos"],
-  credits: "Photography by: Pedro Reyes",
+  contentJson: any
 }
 
 export default function EditArticlePage() {
   const router = useRouter()
   const params = useParams()
-  const articleId = params.id as string
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [currentTag, setCurrentTag] = useState("")
-  const [currentCoAuthor, setCurrentCoAuthor] = useState("")
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved")
-  const [wordCount, setWordCount] = useState(0)
-  const [readingTime, setReadingTime] = useState(0)
-  const [isDragging, setIsDragging] = useState(false)
-  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
+  const articleId = params.id as string
 
   const [formData, setFormData] = useState<ArticleFormData>({
     title: "",
-    excerpt: "",
     content: "",
-    category: "",
-    tags: [],
-    featuredImage: "",
-    author: "",
-    coAuthors: [],
-    credits: "",
+    contentJson: null,
   })
 
-  useEffect(() => {
-    // TODO: Fetch actual article data from database using articleId
-    setFormData({
-      title: mockArticle.title,
-      excerpt: mockArticle.excerpt,
-      content: mockArticle.content,
-      category: mockArticle.category,
-      tags: mockArticle.tags,
-      featuredImage: mockArticle.featuredImage,
-      author: mockArticle.author,
-      coAuthors: mockArticle.coAuthors,
-      credits: mockArticle.credits,
-    })
-  }, [articleId])
+  const [reviewComments, setReviewComments] = useState<ReviewComment[]>([])
+  const [articleStatus, setArticleStatus] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
+  // Fetch article data and categories
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (formData.title || formData.content) {
-        setAutoSaveStatus("saving")
-        setTimeout(() => {
-          setAutoSaveStatus("saved")
-        }, 500)
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // Fetch article and review comments in parallel
+        const [article, comments] = await Promise.all([
+          newsApi.getNewsById(articleId),
+          newsApi.getReviewComments(articleId).catch(() => []), // Don't fail if no comments
+        ])
+
+        if (!article) {
+          setError("Article not found")
+          return
+        }
+
+        setReviewComments(comments)
+        setArticleStatus(article.status)
+
+        // Populate form with article data
+        setFormData({
+          title: article.title || "",
+          content: article.content || "",
+          contentJson: article.articleJson || null,
+        })
+      } catch (error: any) {
+        console.error('Failed to fetch article data:', error)
+        setError(error?.message || "Failed to load article")
+        toast({
+          title: "Failed to load article",
+          description: error?.message || "Unable to load the article for editing.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
       }
-    }, 2000)
-
-    return () => clearTimeout(timer)
-  }, [formData])
-
-  useEffect(() => {
-    const text = formData.content.replace(/<[^>]*>/g, "")
-    const words = text
-      .trim()
-      .split(/\s+/)
-      .filter((word) => word.length > 0)
-    setWordCount(words.length)
-    setReadingTime(Math.ceil(words.length / 200))
-  }, [formData.content])
-
-  const addTag = () => {
-    if (currentTag.trim() && !formData.tags.includes(currentTag.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, currentTag.trim()],
-      }))
-      setCurrentTag("")
     }
-  }
 
-  const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }))
-  }
-
-  const addCoAuthor = () => {
-    if (currentCoAuthor.trim() && !formData.coAuthors.includes(currentCoAuthor.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        coAuthors: [...prev.coAuthors, currentCoAuthor.trim()],
-      }))
-      setCurrentCoAuthor("")
+    if (articleId) {
+      fetchData()
     }
-  }
+  }, [articleId, toast])
 
-  const removeCoAuthor = (authorToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      coAuthors: prev.coAuthors.filter((author) => author !== authorToRemove),
-    }))
-  }
-
-  const handleSaveDraft = async () => {
-    setIsLoading(true)
-    // TODO: Update article in database
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    toast({
-      title: "Draft Saved",
-      description: "Your changes have been saved as a draft.",
-    })
-    setIsLoading(false)
-  }
-
-  const handleSubmitClick = () => {
-    if (!formData.title || !formData.content || !formData.category) {
+  const handleSave = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
       toast({
         title: "Missing Required Fields",
-        description: "Please fill in title, content, and category before submitting.",
+        description: "Please fill in title and content before saving.",
         variant: "destructive",
       })
       return
     }
-    setShowSubmitConfirm(true)
-  }
 
-  const handleConfirmSubmit = async () => {
-    setShowSubmitConfirm(false)
-    setIsLoading(true)
-    // TODO: Update article in database
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    toast({
-      title: "Article Updated",
-      description: "Your article has been updated successfully.",
-    })
-    setTimeout(() => {
+    try {
+      setIsSaving(true)
+      
+      const updateData: UpdateNewsDto = {
+        title: formData.title,
+        articleHtml: formData.content,
+        articleJson: formData.contentJson || undefined,
+      }
+
+      await newsApi.updateNews(articleId, updateData)
+      
+      toast({
+        title: "Article Updated",
+        description: "Your article has been successfully updated.",
+      })
+      
+      // Navigate back to publisher dashboard
       router.push("/student/publisher")
-    }, 500)
-    setIsLoading(false)
+    } catch (error: any) {
+      console.error('Failed to update article:', error)
+      toast({
+        title: "Failed to update article",
+        description: error?.message || "Unable to update the article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
+
+  if (isLoading) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-12">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-600 mb-4" />
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">Loading article...</h3>
+              <p className="text-slate-500 dark:text-slate-400">Please wait while we fetch the article for editing</p>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
   }
 
-  const handleDragLeave = () => {
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    // TODO: Implement actual image upload
-    toast({
-      title: "Image uploaded",
-      description: "Featured image has been uploaded successfully",
-    })
+  if (error) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-12">
+              <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">Error Loading Article</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-6">{error}</p>
+              <Button onClick={() => router.push("/student/publisher")} variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Publisher
+              </Button>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
   }
 
   return (
     <StudentLayout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => router.back()}
-                className="hover:bg-white/80 dark:hover:bg-slate-800/80"
+                onClick={() => router.push("/student/publisher")}
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   Edit Article
                 </h1>
-                <div className="flex items-center gap-4 mt-1">
-                  <p className="text-slate-600 dark:text-slate-400">Update your article</p>
-                  {autoSaveStatus === "saving" && (
-                    <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 animate-pulse text-sm">
-                      <Clock className="h-3 w-3" />
-                      Saving...
-                    </span>
-                  )}
-                  {autoSaveStatus === "saved" && (
-                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1 text-sm">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Saved
-                    </span>
-                  )}
-                </div>
+                <p className="text-slate-600 dark:text-slate-400 mt-1">Update your article content and settings</p>
+                {articleStatus && (articleStatus === 'published' || articleStatus === 'archived') && (
+                  <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Note:</strong> This article is {articleStatus}. You may not be able to edit it depending on your permissions.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-3 mr-4">
-                <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80">
-                  <FileText className="h-3 w-3 mr-1" />
-                  {wordCount} words
-                </Badge>
-                <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {readingTime} min read
-                </Badge>
-              </div>
-              <Button variant="outline" onClick={handleSaveDraft} disabled={isLoading}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Draft
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/student/publisher/preview/${articleId}`)}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
               </Button>
               <Button
-                onClick={handleSubmitClick}
-                disabled={isLoading || !formData.title || !formData.content || !formData.category}
+                onClick={handleSave}
+                disabled={isSaving || !formData.title || !formData.content}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
-                <Send className="h-4 w-4 mr-2" />
-                Update Article
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </div>
 
+          {/* Form */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Article Title */}
               <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    Article Details
+                    <span className="text-red-500">*</span>
+                    Article Title
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="Enter article title..."
-                      className="text-lg font-medium dark:bg-slate-800 dark:border-slate-700"
-                    />
-                    <p className={`text-xs ${formData.title.length > 60 ? "text-orange-600" : "text-slate-500"}`}>
-                      {formData.title.length}/60 characters
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="excerpt">Brief Description</Label>
-                    <Textarea
-                      id="excerpt"
-                      value={formData.excerpt}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, excerpt: e.target.value }))}
-                      placeholder="Brief description of your article..."
-                      rows={3}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
+                <CardContent>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter your article title..."
+                    className="text-lg font-medium"
+                  />
                 </CardContent>
               </Card>
 
-              {/* Author Information Card */}
+              {/* Article Content */}
               <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <UserCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    Author Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="author">Author Name *</Label>
-                    <Input
-                      id="author"
-                      value={formData.author}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, author: e.target.value }))}
-                      placeholder="Enter your name..."
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Co-Authors</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={currentCoAuthor}
-                        onChange={(e) => setCurrentCoAuthor(e.target.value)}
-                        placeholder="Add co-author..."
-                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addCoAuthor())}
-                        className="flex-1 dark:bg-slate-800 dark:border-slate-700"
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={addCoAuthor}>
-                        Add
-                      </Button>
-                    </div>
-
-                    {formData.coAuthors.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {formData.coAuthors.map((author) => (
-                          <Badge
-                            key={author}
-                            variant="secondary"
-                            className="cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 dark:bg-slate-800"
-                            onClick={() => removeCoAuthor(author)}
-                          >
-                            {author} <X className="h-3 w-3 ml-1" />
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="credits">Credits</Label>
-                    <Textarea
-                      id="credits"
-                      value={formData.credits}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, credits: e.target.value }))}
-                      placeholder="Additional credits (photographers, contributors, etc.)..."
-                      rows={3}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Editor */}
-              <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    Article Content *
+                    <span className="text-red-500">*</span>
+                    Article Content
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <TiptapEditor
                     content={formData.content}
-                    onChange={(content) => setFormData((prev) => ({ ...prev, content }))}
+                    onChange={(html, json) => setFormData((prev) => ({ ...prev, content: html, contentJson: json }))}
+                    placeholder="Write your article content here..."
+                    className="min-h-[400px]"
                   />
                 </CardContent>
               </Card>
@@ -415,137 +263,66 @@ export default function EditArticlePage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Review Status */}
               <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5 text-pink-600 dark:text-pink-400" />
-                    Featured Image
+                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    Review Status
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer ${
-                      isDragging
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 scale-105"
-                        : "border-slate-300 dark:border-slate-700 hover:border-blue-400"
-                    }`}
-                  >
-                    <Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" />
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {isDragging ? "Drop image here" : "Click to upload or drag and drop"}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">PNG, JPG up to 10MB</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tag className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    Category & Tags
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
-                    >
-                      <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Tags</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={currentTag}
-                        onChange={(e) => setCurrentTag(e.target.value)}
-                        placeholder="Add tag..."
-                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                        className="flex-1 dark:bg-slate-800 dark:border-slate-700"
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={addTag}>
-                        Add
-                      </Button>
-                    </div>
-
-                    {formData.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {formData.tags.map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="secondary"
-                            className="cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30"
-                            onClick={() => removeTag(tag)}
-                          >
-                            {tag} <X className="h-3 w-3 ml-1" />
-                          </Badge>
-                        ))}
+                  {reviewComments.length === 0 ? (
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 mx-auto bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-3">
+                        <AlertCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Update Notice</p>
-                      <p className="text-blue-700 dark:text-blue-300">
-                        Your updated article will be saved. Major changes may require teacher review before
-                        republication.
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        No review comments yet
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                        Your article is pending review
                       </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                        {reviewComments.length} comment{reviewComments.length !== 1 ? 's' : ''} from reviewer{reviewComments.length !== 1 ? 's' : ''}
+                      </div>
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {reviewComments.map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                                  {comment.author.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {comment.author}
+                                </span>
+                              </div>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {new Date(comment.timestamp).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                              {comment.comment}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
             </div>
           </div>
         </div>
       </div>
-
-      {/* Submit Confirmation Dialog */}
-      <AlertDialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-blue-600" />
-              Update Article?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to update <strong>"{formData.title}"</strong>? Your changes will be saved and the
-              article will be updated.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmSubmit}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isLoading ? "Updating..." : "Update Article"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </StudentLayout>
   )
 }

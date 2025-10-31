@@ -27,9 +27,8 @@ export class FolderService {
     accessToken?: string,
   ): Promise<TeacherFolder[]> {
     try {
-      const client = accessToken
-        ? this.supabaseService.getClientWithAuth(accessToken)
-        : this.supabaseService.getClient();
+      // Use service client to bypass RLS and get ALL folders (including nested ones)
+      const client = this.supabaseService.getServiceClient();
 
       let query = client
         .from('teacher_folders')

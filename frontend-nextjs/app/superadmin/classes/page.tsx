@@ -432,7 +432,7 @@ export default function GradeLevelsPage() {
       const sectionData = {
         name: createSectionForm.name,
         grade_level: `Grade ${selectedGrade}`,
-        teacher_id: createSectionForm.adviser,
+        adviser_id: createSectionForm.adviser,
         building_id: selectedBuilding,
         floor_id: selectedFloor,
         room_id: selectedRoom,
@@ -885,19 +885,25 @@ export default function GradeLevelsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Adviser *</Label>
-                <Select 
-                  value={createSectionForm.adviser} 
+                <Select
+                  value={createSectionForm.adviser}
                   onValueChange={(value) => setCreateSectionForm(prev => ({ ...prev, adviser: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select adviser" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableTeachers?.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.full_name}
-                      </SelectItem>
-                    )) || []}
+                    {availableTeachers && availableTeachers.length > 0 ? (
+                      availableTeachers.map((teacher) => (
+                        <SelectItem key={teacher.id} value={teacher.id}>
+                          {teacher.full_name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                        No available teachers
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -911,11 +917,17 @@ export default function GradeLevelsPage() {
                     <SelectValue placeholder="Select building" />
                   </SelectTrigger>
                   <SelectContent>
-                    {buildings?.map((building) => (
-                      <SelectItem key={building.id} value={building.id}>
-                        {building.buildingName}
-                      </SelectItem>
-                    )) || []}
+                    {buildings && buildings.length > 0 ? (
+                      buildings.map((building) => (
+                        <SelectItem key={building.id} value={building.id}>
+                          {building.buildingName}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                        No buildings available
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -928,13 +940,20 @@ export default function GradeLevelsPage() {
                       <SelectValue placeholder="Select floor" />
                     </SelectTrigger>
                     <SelectContent>
-                      {buildings
-                        ?.find(b => b.id === selectedBuilding)
-                        ?.floors?.map((floor) => (
-                          <SelectItem key={floor.id} value={floor.id}>
-                            {floor.floorName}
-                          </SelectItem>
-                        )) || []}
+                      {(() => {
+                        const floors = buildings?.find(b => b.id === selectedBuilding)?.floors || [];
+                        return floors.length > 0 ? (
+                          floors.map((floor) => (
+                            <SelectItem key={floor.id} value={floor.id}>
+                              {floor.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                            No floors available in this building
+                          </div>
+                        );
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>
@@ -948,14 +967,23 @@ export default function GradeLevelsPage() {
                       <SelectValue placeholder="Select room" />
                     </SelectTrigger>
                     <SelectContent>
-                      {buildings
-                        ?.find(b => b.id === selectedBuilding)
-                        ?.floors?.find(f => f.id === selectedFloor)
-                        ?.rooms?.map((room) => (
-                          <SelectItem key={room.id} value={room.id}>
-                            {room.roomNumber} - {room.roomName}
-                          </SelectItem>
-                        )) || []}
+                      {(() => {
+                        const rooms = buildings
+                          ?.find(b => b.id === selectedBuilding)
+                          ?.floors?.find(f => f.id === selectedFloor)
+                          ?.rooms || [];
+                        return rooms.length > 0 ? (
+                          rooms.map((room) => (
+                            <SelectItem key={room.id} value={room.id}>
+                              {room.roomNumber}{room.name ? ` - ${room.name}` : ''}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                            No rooms available on this floor
+                          </div>
+                        );
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>

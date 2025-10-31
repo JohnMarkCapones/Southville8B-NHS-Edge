@@ -25,6 +25,29 @@ export class NewsAccessService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   /**
+   * Check if user has Admin role
+   * @param userId User ID
+   * @returns Promise<boolean>
+   */
+  private async isUserAdmin(userId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('role:roles!inner(name)')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error || !data) {
+      this.logger.debug(`Could not fetch role for user ${userId}`);
+      return false;
+    }
+
+    const role = data.role as any;
+    return role?.name === 'Admin';
+  }
+
+  /**
    * Get the journalism domain ID
    * @returns Promise<string | null>
    */
@@ -122,11 +145,19 @@ export class NewsAccessService {
 
   /**
    * Check if user has a publishing position
-   * (Writer, Publisher, EIC, Co-EIC, Adviser, Co-Adviser)
+   * (Writer, Publisher, EIC, Co-EIC, Adviser, Co-Adviser, OR Admin role)
    * @param userId User ID
    * @returns Promise<boolean>
    */
   async canPublishNews(userId: string): Promise<boolean> {
+    // First check if user is Admin (can always publish)
+    const isAdmin = await this.isUserAdmin(userId);
+    if (isAdmin) {
+      this.logger.debug(`User ${userId} is Admin, can publish`);
+      return true;
+    }
+
+    // Otherwise check journalism position
     const position = await this.getJournalismPosition(userId);
 
     if (!position) {
@@ -144,11 +175,19 @@ export class NewsAccessService {
 
   /**
    * Check if user can approve articles
-   * Only Adviser and Co-Adviser (Teachers) can approve
+   * Only Adviser, Co-Adviser (Teachers), and Admins can approve
    * @param userId User ID
    * @returns Promise<boolean>
    */
   async canApproveNews(userId: string): Promise<boolean> {
+    // Admins can always approve
+    const isAdmin = await this.isUserAdmin(userId);
+    if (isAdmin) {
+      this.logger.debug(`User ${userId} is Admin, can approve`);
+      return true;
+    }
+
+    // Otherwise check journalism position
     const position = await this.getJournalismPosition(userId);
 
     if (!position) {
@@ -168,12 +207,20 @@ export class NewsAccessService {
    * Rules:
    * - Author can edit their own drafts/pending articles
    * - Advisers can edit any draft/pending article
-   * - Published articles cannot be edited
+   * - Admins can edit any article
+   * - Published articles cannot be edited (except by Admins)
    * @param userId User ID
    * @param newsId News article ID
    * @returns Promise<boolean>
    */
   async canEditArticle(userId: string, newsId: string): Promise<boolean> {
+    // Admins can edit any article (even published)
+    const isAdmin = await this.isUserAdmin(userId);
+    if (isAdmin) {
+      this.logger.debug(`User ${userId} is Admin, can edit article ${newsId}`);
+      return true;
+    }
+
     const supabase = this.supabaseService.getServiceClient();
 
     // Get article details
@@ -188,7 +235,7 @@ export class NewsAccessService {
       return false;
     }
 
-    // Published articles cannot be edited
+    // Published articles cannot be edited (except by Admins - already checked above)
     if (article.status === 'published' || article.status === 'archived') {
       this.logger.debug(
         `Article ${newsId} is ${article.status}, cannot be edited`,
@@ -219,12 +266,22 @@ export class NewsAccessService {
    * Rules:
    * - Author can delete their own drafts
    * - Advisers can delete any draft
-   * - Cannot delete pending/approved/published articles
+   * - Admins can delete any article (any status)
+   * - Cannot delete pending/approved/published articles (except Admins)
    * @param userId User ID
    * @param newsId News article ID
    * @returns Promise<boolean>
    */
   async canDeleteArticle(userId: string, newsId: string): Promise<boolean> {
+    // Admins can delete any article (any status)
+    const isAdmin = await this.isUserAdmin(userId);
+    if (isAdmin) {
+      this.logger.debug(
+        `User ${userId} is Admin, can delete article ${newsId}`,
+      );
+      return true;
+    }
+
     const supabase = this.supabaseService.getServiceClient();
 
     // Get article details
@@ -238,7 +295,7 @@ export class NewsAccessService {
       return false;
     }
 
-    // Can only delete drafts
+    // Can only delete drafts (except Admins - already checked above)
     if (article.status !== 'draft') {
       this.logger.debug(
         `Article ${newsId} is ${article.status}, cannot be deleted`,

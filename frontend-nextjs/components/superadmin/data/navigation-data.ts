@@ -29,6 +29,7 @@ import {
   Server,
   CalendarDays,
   FolderOpen,
+  Sparkles,
 } from "lucide-react"
 
 export const primaryNavItems = [
@@ -83,7 +84,9 @@ export const primaryNavItems = [
     label: "Schedule & Calendar Management",
     content: [
       { icon: CalendarIcon, label: "Academic Calendar", description: "Academic year calendar" },
+      { icon: Calendar, label: "Schedule Management", description: "Manage all schedules, templates, and publishing" },
       { icon: ClockIcon, label: "Class Schedules", description: "Class scheduling system" },
+      { icon: Sparkles, label: "Schedule Wizard", description: "Step-by-step schedule creation wizard" },
     ],
   },
   {

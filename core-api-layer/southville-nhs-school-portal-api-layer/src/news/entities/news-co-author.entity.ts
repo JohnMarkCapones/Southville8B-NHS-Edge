@@ -17,8 +17,8 @@ export class NewsCoAuthor {
   @Column({ type: 'uuid', nullable: false })
   news_id: string;
 
-  @Column({ type: 'uuid', nullable: false })
-  user_id: string;
+  @Column({ type: 'varchar', length: 255, nullable: false })
+  co_author_name: string;
 
   @Column({
     type: 'varchar',
@@ -35,6 +35,5 @@ export class NewsCoAuthor {
   added_by: string;
 
   // Virtual fields for populated data
-  user?: any;
   added_by_user?: any;
 }

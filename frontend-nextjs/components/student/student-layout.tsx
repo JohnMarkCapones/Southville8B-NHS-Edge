@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import StudentHeader from "@/components/student/student-header"
 import StudentFooter from "@/components/student/student-footer"
 import Link from "next/link"
@@ -12,7 +13,9 @@ import { usePathname } from "next/navigation"
 import { useTranslation } from "@/lib/i18n"
 import { useSidebarStore } from "@/lib/stores/sidebar-store"
 import { BotChat } from "@/components/chat/bot-chat"
-import { useUser } from "@/hooks/useUser"
+import { useQuery } from '@tanstack/react-query'
+import { getCurrentUser } from '@/lib/api/endpoints'
+import type { UserProfileResponse } from '@/lib/api/types'
 import {
   BookOpen,
   CalendarIcon,
@@ -240,31 +243,42 @@ const NavigationItem = ({
   isActive: boolean
   sidebarCollapsed: boolean
   isMobile: boolean
-}) => (
-  <Link href={item.href}>
-    <div className="relative group">
-      <Button
-        variant="ghost"
-        className={`relative w-full ${sidebarCollapsed && !isMobile ? "justify-center px-3" : "justify-start"} transition-all duration-300 min-h-[56px] rounded-2xl font-medium text-base border-2 ${
-          isActive
-            ? `bg-gradient-to-r ${item.gradient} text-white shadow-xl border-transparent`
-            : "hover:bg-white/80 dark:hover:bg-slate-800/80 hover:shadow-lg backdrop-blur-sm border-transparent hover:border-violet-200/30 dark:hover:border-violet-700/30 text-slate-700 dark:text-slate-300"
-        }`}
-        title={sidebarCollapsed && !isMobile ? item.label : undefined}
-      >
-        <div className={`flex items-center ${sidebarCollapsed && !isMobile ? "" : "w-full"}`}>
-          <div className="relative">
-            <item.icon
-              className={`w-6 h-6 ${isActive ? "text-white" : "text-slate-600 dark:text-slate-400"} transition-all duration-200`}
-            />
-          </div>
+}) => {
+  const handleClick = () => {
+    // Remove focus from the button after click to prevent auto-scroll
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
+    }, 0)
+  }
 
-          {(!sidebarCollapsed || isMobile) && <span className="ml-4 flex-1 text-left font-semibold">{item.label}</span>}
-        </div>
-      </Button>
-    </div>
-  </Link>
-)
+  return (
+    <Link href={item.href} onClick={handleClick}>
+      <div className="relative group">
+        <Button
+          variant="ghost"
+          className={`relative w-full ${sidebarCollapsed && !isMobile ? "justify-center px-3" : "justify-start"} transition-all duration-300 min-h-[56px] rounded-2xl font-medium text-base border-2 ${
+            isActive
+              ? `bg-gradient-to-r ${item.gradient} text-white shadow-xl border-transparent`
+              : "hover:bg-white/80 dark:hover:bg-slate-800/80 hover:shadow-lg backdrop-blur-sm border-transparent hover:border-violet-200/30 dark:hover:border-violet-700/30 text-slate-700 dark:text-slate-300"
+          }`}
+          title={sidebarCollapsed && !isMobile ? item.label : undefined}
+        >
+          <div className={`flex items-center ${sidebarCollapsed && !isMobile ? "" : "w-full"}`}>
+            <div className="relative">
+              <item.icon
+                className={`w-6 h-6 ${isActive ? "text-white" : "text-slate-600 dark:text-slate-400"} transition-all duration-200`}
+              />
+            </div>
+
+            {(!sidebarCollapsed || isMobile) && <span className="ml-4 flex-1 text-left font-semibold">{item.label}</span>}
+          </div>
+        </Button>
+      </div>
+    </Link>
+  )
+}
 
 const SectionPopover = ({ section, children }: { section: any; children: React.ReactNode }) => {
   const [showPopover, setShowPopover] = useState(false)
@@ -471,11 +485,19 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const sidebarScrollRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
-  const { restoreScrollPosition, saveScrollPosition, setIsUserScrolling } = useSidebarStore()
+  const { expandedSections, toggleSection } = useSidebarStore()
   const { t } = useTranslation()
 
-  // Fetch current user data
-  const { data: user, isLoading, isError } = useUser()
+  // Fetch current user data - with refetchOnWindowFocus DISABLED to prevent scroll jumps
+  const { data: user, isLoading, isError } = useQuery<UserProfileResponse, Error>({
+    queryKey: ['user', 'me'],
+    queryFn: getCurrentUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3,
+    refetchOnWindowFocus: false, // DISABLED - prevents re-render when clicking sidebar
+    refetchOnReconnect: true,
+  })
 
   // Extract student data with fallbacks
   const studentName = user?.student
@@ -504,34 +526,10 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  useEffect(() => {
-    const element = sidebarScrollRef.current
-    if (!element) return
+  // NO SCROLL RESTORATION - Just let the sidebar scroll naturally
 
-    const handleScroll = () => {
-      setIsUserScrolling(true)
-      saveScrollPosition(element.scrollTop)
-
-      const timer = setTimeout(() => {
-        setIsUserScrolling(false)
-      }, 150)
-
-      return () => clearTimeout(timer)
-    }
-
-    element.addEventListener("scroll", handleScroll)
-    return () => element.removeEventListener("scroll", handleScroll)
-  }, [saveScrollPosition, setIsUserScrolling])
-
-  useEffect(() => {
-    const element = sidebarScrollRef.current
-    if (element) {
-      restoreScrollPosition(element)
-    }
-  }, [pathname, restoreScrollPosition])
-
-  // Build navigation with translations
-  const NAV = [
+  // Build navigation with translations - useMemo to prevent recreating on every render!
+  const NAV = useMemo(() => [
     {
       type: "single" as const,
       icon: Home,
@@ -602,65 +600,7 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
         { icon: User, label: t('student.profile'), href: "/student/profile" },
       ],
     },
-  ] as const
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white/95 backdrop-blur-2xl dark:bg-slate-900/95">
-      <SidebarHeader
-        sidebarCollapsed={sidebarCollapsed}
-        isMobile={isMobile}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-
-      <StudentProfile
-        sidebarCollapsed={sidebarCollapsed}
-        isMobile={isMobile}
-        studentName={studentName}
-        studentId={studentId}
-        gradeLevel={gradeLevel}
-        section={section}
-        gwa={gwa}
-        notifications={notifications}
-        achievements={achievements}
-      />
-
-      <nav
-        ref={sidebarScrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-slate-50/30 to-white/20 dark:from-slate-800/30 dark:to-slate-900/20 scrollbar-thin scrollbar-thumb-violet-300 dark:scrollbar-thumb-violet-600 scrollbar-track-transparent hover:scrollbar-thumb-violet-400 dark:hover:scrollbar-thumb-violet-500 scrollbar-thumb-rounded-full"
-      >
-        {NAV.map((section) => {
-          if (section.type === "single") {
-            const isActive = pathname === section.href
-            return (
-              <NavigationItem
-                key={section.label}
-                item={section}
-                isActive={isActive}
-                sidebarCollapsed={sidebarCollapsed}
-                isMobile={isMobile}
-              />
-            )
-          }
-
-          if (section.type === "section") {
-            return (
-              <NavigationSection
-                key={section.key}
-                section={section}
-                pathname={pathname}
-                sidebarCollapsed={sidebarCollapsed}
-                isMobile={isMobile}
-              />
-            )
-          }
-
-          return null
-        })}
-      </nav>
-
-      <InviteFriendsSection sidebarCollapsed={sidebarCollapsed} isMobile={isMobile} />
-    </div>
-  )
+  ] as const, [t])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-violet-50 dark:from-slate-900 dark:to-slate-800 flex flex-col">
@@ -670,7 +610,75 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
             sidebarCollapsed ? "w-20" : "w-80"
           }`}
         >
-          <SidebarContent />
+          <div className="flex flex-col h-full bg-white/95 backdrop-blur-2xl dark:bg-slate-900/95">
+            <SidebarHeader
+              sidebarCollapsed={sidebarCollapsed}
+              isMobile={isMobile}
+              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            />
+
+            <StudentProfile
+              sidebarCollapsed={sidebarCollapsed}
+              isMobile={isMobile}
+              studentName={studentName}
+              studentId={studentId}
+              gradeLevel={gradeLevel}
+              section={section}
+              gwa={gwa}
+              notifications={notifications}
+              achievements={achievements}
+            />
+
+            <div
+              ref={sidebarScrollRef}
+              className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-slate-50/30 to-white/20 dark:from-slate-800/30 dark:to-slate-900/20 scrollbar-thin scrollbar-thumb-violet-300 dark:scrollbar-thumb-violet-600 scrollbar-track-transparent hover:scrollbar-thumb-violet-400 dark:hover:scrollbar-thumb-violet-500 scrollbar-thumb-rounded-full"
+              style={{ scrollBehavior: 'auto', overflowAnchor: 'none' }}
+            >
+              {NAV.map((section) => {
+                if (section.type === "single") {
+                  const isActive = pathname === section.href
+                  return (
+                    <NavigationItem
+                      key={section.label}
+                      item={section}
+                      isActive={isActive}
+                      sidebarCollapsed={sidebarCollapsed}
+                      isMobile={isMobile}
+                    />
+                  )
+                }
+
+                if (section.type === "section") {
+                  return (
+                    <NavigationSection
+                      key={section.key}
+                      section={section}
+                      pathname={pathname}
+                      sidebarCollapsed={sidebarCollapsed}
+                      isMobile={isMobile}
+                    />
+                  )
+                }
+
+                return null
+              })}
+            </div>
+
+            <InviteFriendsSection sidebarCollapsed={sidebarCollapsed} isMobile={isMobile} />
+          </div>
+
+          {/* Floating Collapse/Uncollapse Button */}
+          <Button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="absolute top-1/2 -right-8 transform -translate-y-1/2 w-8 h-16 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-violet-600 dark:text-violet-400 rounded-r-2xl shadow-2xl border-2 border-violet-200 dark:border-violet-700 transition-all duration-300 hover:scale-110 z-50 flex items-center justify-center p-0"
+            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="w-5 h-5" />
+            ) : (
+              <ChevronLeft className="w-5 h-5" />
+            )}
+          </Button>
         </aside>
       )}
 
@@ -689,7 +697,65 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
             side="left"
             className="w-80 p-0 border-r border-violet-200/50 dark:border-violet-700/20 flex flex-col"
           >
-            <SidebarContent />
+            <VisuallyHidden>
+              <SheetTitle>Navigation Menu</SheetTitle>
+            </VisuallyHidden>
+            <div className="flex flex-col h-full bg-white/95 backdrop-blur-2xl dark:bg-slate-900/95">
+              <SidebarHeader
+                sidebarCollapsed={sidebarCollapsed}
+                isMobile={isMobile}
+                onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+              />
+
+              <StudentProfile
+                sidebarCollapsed={sidebarCollapsed}
+                isMobile={isMobile}
+                studentName={studentName}
+                studentId={studentId}
+                gradeLevel={gradeLevel}
+                section={section}
+                gwa={gwa}
+                notifications={notifications}
+                achievements={achievements}
+              />
+
+              <div
+                ref={sidebarScrollRef}
+                className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-slate-50/30 to-white/20 dark:from-slate-800/30 dark:to-slate-900/20 scrollbar-thin scrollbar-thumb-violet-300 dark:scrollbar-thumb-violet-600 scrollbar-track-transparent hover:scrollbar-thumb-violet-400 dark:hover:scrollbar-thumb-violet-500 scrollbar-thumb-rounded-full"
+                style={{ scrollBehavior: 'auto', overflowAnchor: 'none' }}
+              >
+                {NAV.map((section) => {
+                  if (section.type === "single") {
+                    const isActive = pathname === section.href
+                    return (
+                      <NavigationItem
+                        key={section.label}
+                        item={section}
+                        isActive={isActive}
+                        sidebarCollapsed={sidebarCollapsed}
+                        isMobile={isMobile}
+                      />
+                    )
+                  }
+
+                  if (section.type === "section") {
+                    return (
+                      <NavigationSection
+                        key={section.key}
+                        section={section}
+                        pathname={pathname}
+                        sidebarCollapsed={sidebarCollapsed}
+                        isMobile={isMobile}
+                      />
+                    )
+                  }
+
+                  return null
+                })}
+              </div>
+
+              <InviteFriendsSection sidebarCollapsed={sidebarCollapsed} isMobile={isMobile} />
+            </div>
           </SheetContent>
         </Sheet>
       )}

@@ -7,6 +7,7 @@ import { AuthModule } from '../auth/auth.module';
 import { ModuleAccessService } from './services/module-access.service';
 import { ModuleStorageService } from './services/module-storage.service';
 import { ModuleDownloadLoggerService } from './services/module-download-logger.service';
+import { PPTXImageConverterService } from './services/pptx-image-converter.service';
 import { ModuleUploadThrottleGuard } from './guards/module-upload-throttle.guard';
 
 @Module({
@@ -17,6 +18,7 @@ import { ModuleUploadThrottleGuard } from './guards/module-upload-throttle.guard
     ModuleAccessService,
     ModuleStorageService,
     ModuleDownloadLoggerService,
+    PPTXImageConverterService,
     ModuleUploadThrottleGuard,
   ],
   exports: [
@@ -24,6 +26,7 @@ import { ModuleUploadThrottleGuard } from './guards/module-upload-throttle.guard
     ModuleAccessService,
     ModuleStorageService,
     ModuleDownloadLoggerService,
+    PPTXImageConverterService,
   ],
 })
 export class ModulesModule {}

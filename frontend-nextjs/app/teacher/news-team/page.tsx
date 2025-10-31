@@ -63,17 +63,23 @@ import {
   GraduationCap,
   BookOpen,
 } from "lucide-react"
-import { newsTeamData, type NewsTeamMember } from "@/components/superadmin/data/news-team-data"
-import { studentData, type StudentData } from "@/components/superadmin/data/student-data"
+import type { NewsTeamMember } from "@/components/superadmin/data/news-team-data"
+import { useEffect, useMemo } from "react"
+import { newsApi } from "@/lib/api/endpoints/news"
+import type { StudentData } from "@/components/superadmin/data/student-data"
 import { cn } from "@/lib/utils"
+import { useStudentSearch } from "@/hooks/useStudentSearch"
 
 export default function TeacherNewsTeamPage() {
   const { toast } = useToast()
-  const [members, setMembers] = useState<NewsTeamMember[]>(newsTeamData)
+  const [members, setMembers] = useState<NewsTeamMember[]>([])
+  const [kpis, setKpis] = useState<{
+    totalMembers: number
+    membersByPosition: { position: string; count: number }[]
+    activeContributors30d: number
+  } | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [positionFilter, setPositionFilter] = useState("all")
-  const [departmentFilter, setDepartmentFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
@@ -88,25 +94,95 @@ export default function TeacherNewsTeamPage() {
   const [studentSearchValue, setStudentSearchValue] = useState("")
   const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null)
 
-  const [newMember, setNewMember] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    position: "Staff Writer",
-    department: "English",
-  })
+ const [newMember, setNewMember] = useState({
+   position: "Staff Writer",
+ })
 
-  // Calculate statistics
+  // Shared: map UI role to default permissions expected by the page controls
+  const getDefaultPermissions = (
+    position: string,
+  ): ("approve" | "publish" | "edit" | "write" | "review")[] => {
+    switch (position) {
+      case "Editor-in-Chief":
+        return ["approve", "publish", "edit", "write", "review"]
+      case "Managing Editor":
+        return ["approve", "publish", "edit", "write", "review"]
+      case "Section Editor":
+        return ["edit", "write", "review"]
+      case "Staff Writer":
+      case "Photographer":
+      case "Layout Designer":
+        return ["write"]
+      case "Faculty Adviser":
+        return ["approve", "publish", "edit", "write", "review"]
+      default:
+        return ["write"]
+    }
+  }
+
+  // Load live members and KPIs
+  const fetchMembersAndKpis = async () => {
+      try {
+        console.log('[news-team] Fetching members and KPIs...')
+        const [apiMembers, apiKpis] = await Promise.all([
+          newsApi.getJournalismMembers(),
+          newsApi.getJournalismKpis(),
+        ])
+
+        console.log('[news-team] API Members:', apiMembers)
+        console.log('[news-team] API KPIs:', apiKpis)
+
+        // Map API members to UI shape with safe defaults
+        const mapped: NewsTeamMember[] = apiMembers.map((m) => ({
+          id: m.membershipId ?? `${m.userId}:${m.position}`,
+          userId: m.userId,
+          name: m.userName,
+          email: m.userEmail,
+          position: m.position as any,
+          department: "Journalism",
+          status: "Active",
+          articlesWritten: 0,
+          articlesPublished: 0,
+          joinDate: new Date().toISOString(),
+          avatar: undefined,
+          permissions: getDefaultPermissions(m.position),
+          employeeId: m.userId,
+          joinedDate: new Date().toISOString().split("T")[0],
+          articlesEdited: 0,
+          monthlyQuota: 0,
+          performance: 0,
+          specialization: [],
+        }))
+        
+        console.log('[news-team] Mapped members:', mapped)
+        setMembers(mapped)
+
+        setKpis({
+          totalMembers: apiKpis.totalMembers,
+          membersByPosition: apiKpis.membersByPosition,
+          activeContributors30d: apiKpis.activeContributors30d,
+        })
+      } catch (error: any) {
+        console.error('[news-team] failed to load members/kpis', error)
+        toast({ title: 'Failed to load news team', description: error?.message || 'Please try again.', variant: 'destructive' })
+      }
+  }
+
+  useEffect(() => {
+    fetchMembersAndKpis()
+  }, [toast])
+
+  // Calculate statistics (fallback to KPIs when available)
   const stats = {
-    totalMembers: members.length,
+    totalMembers: kpis?.totalMembers ?? members.length,
     activeMembers: members.filter((m) => m.status === "Active").length,
-    avgArticlesPerMonth: Math.round(members.reduce((sum, m) => sum + m.articlesWritten, 0) / members.length) || 0,
+    avgArticlesPerMonth: Math.round(members.reduce((sum, m) => sum + (m.articlesWritten || 0), 0) / (members.length || 1)) || 0,
     avgApprovalRate:
       Math.round(
         members.reduce(
-          (sum, m) => sum + (m.articlesWritten > 0 ? (m.articlesPublished / m.articlesWritten) * 100 : 0),
+          (sum, m) => sum + (m.articlesWritten > 0 ? ((m.articlesPublished || 0) / (m.articlesWritten || 1)) * 100 : 0),
           0,
-        ) / members.length,
+        ) / (members.length || 1),
       ) || 0,
   }
 
@@ -118,10 +194,7 @@ export default function TeacherNewsTeamPage() {
       member.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesPosition = positionFilter === "all" || member.position === positionFilter
-    const matchesDepartment = departmentFilter === "all" || member.department === departmentFilter
-    const matchesStatus = statusFilter === "all" || member.status === statusFilter
-
-    return matchesSearch && matchesPosition && matchesDepartment && matchesStatus
+    return matchesSearch && matchesPosition
   })
 
   // Pagination
@@ -146,7 +219,24 @@ export default function TeacherNewsTeamPage() {
     }
   }
 
-  const handleAddMember = () => {
+  const mapUiPositionToBackend = (pos: string): string => {
+    switch (pos) {
+      case 'Staff Writer':
+      case 'Photographer':
+      case 'Layout Designer':
+      case 'Section Editor':
+      case 'Managing Editor':
+        return 'Writer'
+      case 'Editor-in-Chief':
+        return 'Editor-in-Chief'
+      case 'Faculty Adviser':
+        return 'Adviser'
+      default:
+        return 'Writer'
+    }
+  }
+
+  const handleAddMember = async () => {
     const getDefaultPermissions = (position: string): ("approve" | "publish" | "edit" | "write" | "review")[] => {
       switch (position) {
         case "Editor-in-Chief":
@@ -168,41 +258,22 @@ export default function TeacherNewsTeamPage() {
       }
     }
 
-    const member: NewsTeamMember = {
-      id: `T${members.length + 1}`,
-      name: newMember.name,
-      email: newMember.email,
-      employeeId: `EMP${String(members.length + 1).padStart(4, "0")}`,
-      position: newMember.position as any,
-      department: newMember.department,
-      joinedDate: new Date().toISOString().split("T")[0],
-      status: "Active",
-      avatar: "/placeholder.svg?height=40&width=40",
-      permissions: getDefaultPermissions(newMember.position),
-      articlesWritten: 0,
-      articlesEdited: 0,
-      articlesPublished: 0,
-      monthlyQuota: 0,
-      performance: 0,
-      specialization: [],
+    try {
+      if (!selectedStudent?.id) throw new Error('Select a student to add')
+      const backendPosition = mapUiPositionToBackend(newMember.position)
+      await newsApi.addJournalismMember({ userId: selectedStudent.id, position: backendPosition })
+
+      await fetchMembersAndKpis()
+
+      setAddMemberDialogOpen(false)
+      setSelectedStudent(null)
+      setStudentSearchValue("")
+      setNewMember({ position: "Staff Writer" })
+
+      toast({ title: 'Member Added', description: `${selectedStudent.name} added as ${backendPosition}.` })
+    } catch (error: any) {
+      toast({ title: 'Failed to add member', description: error?.message || 'Please try again.', variant: 'destructive' })
     }
-
-    setMembers([...members, member])
-    setAddMemberDialogOpen(false)
-    setSelectedStudent(null)
-    setStudentSearchValue("")
-    setNewMember({
-      name: "",
-      email: "",
-      phone: "",
-      position: "Staff Writer",
-      department: "English",
-    })
-
-    toast({
-      title: "Member Added",
-      description: `${member.name} has been added to the news team.`,
-    })
   }
 
   const handleEditMember = (member: NewsTeamMember) => {
@@ -210,17 +281,19 @@ export default function TeacherNewsTeamPage() {
     setEditMemberDialogOpen(true)
   }
 
-  const handleUpdateMember = () => {
+  const handleUpdateMember = async () => {
     if (!selectedMember) return
-
-    setMembers(members.map((m) => (m.id === selectedMember.id ? selectedMember : m)))
-    setEditMemberDialogOpen(false)
-    setSelectedMember(null)
-
-    toast({
-      title: "Member Updated",
-      description: "Member information has been updated successfully.",
-    })
+    try {
+      const backendPosition = mapUiPositionToBackend(selectedMember.position as unknown as string)
+      const selectedUserId = (selectedMember as any).userId || selectedMember.id
+      await newsApi.updateJournalismMember(selectedUserId, { position: backendPosition })
+      await fetchMembersAndKpis()
+      setEditMemberDialogOpen(false)
+      setSelectedMember(null)
+      toast({ title: 'Member Updated', description: 'Position updated successfully.' })
+    } catch (error: any) {
+      toast({ title: 'Failed to update member', description: error?.message || 'Please try again.', variant: 'destructive' })
+    }
   }
 
   const handleDeleteMember = (member: NewsTeamMember) => {
@@ -228,18 +301,18 @@ export default function TeacherNewsTeamPage() {
     setDeleteMemberDialogOpen(true)
   }
 
-  const confirmDeleteMember = () => {
+  const confirmDeleteMember = async () => {
     if (!selectedMember) return
-
-    setMembers(members.filter((m) => m.id !== selectedMember.id))
-    setDeleteMemberDialogOpen(false)
-    setSelectedMember(null)
-
-    toast({
-      title: "Member Removed",
-      description: "Member has been removed from the news team.",
-      variant: "destructive",
-    })
+    try {
+      const selectedUserId = (selectedMember as any).userId || selectedMember.id
+      await newsApi.removeJournalismMember(selectedUserId)
+      await fetchMembersAndKpis()
+      setDeleteMemberDialogOpen(false)
+      setSelectedMember(null)
+      toast({ title: 'Member Removed', description: 'Member removed from journalism.', variant: 'destructive' })
+    } catch (error: any) {
+      toast({ title: 'Failed to remove member', description: error?.message || 'Please try again.', variant: 'destructive' })
+    }
   }
 
   const handleViewMember = (member: NewsTeamMember) => {
@@ -297,39 +370,80 @@ export default function TeacherNewsTeamPage() {
   }
 
   const handleStudentSelect = (student: StudentData) => {
-    setSelectedStudent(student)
-    setStudentSearchValue(student.name)
-    setNewMember({
-      ...newMember,
-      name: student.name,
-      email: student.email,
-      phone: student.phone,
-    })
+    // Toggle selection: clicking the same student deselects
+    if (selectedStudent?.id === student.id) {
+      setSelectedStudent(null)
+      setStudentSearchValue("")
+    } else {
+      setSelectedStudent(student)
+      setStudentSearchValue(student.name)
+    }
+    // Member creation only needs user + position; keep popover closed behavior consistent
     setStudentSearchOpen(false)
   }
 
-  const filteredStudents = studentData.filter((student) => {
-    const searchLower = studentSearchValue.toLowerCase()
-    return (
-      student.name.toLowerCase().includes(searchLower) ||
-      student.id.toLowerCase().includes(searchLower) ||
-      student.email.toLowerCase().includes(searchLower) ||
-      student.grade.toLowerCase().includes(searchLower) ||
-      student.section.toLowerCase().includes(searchLower)
-    )
-  })
+  // Fetch students using the hook
+  const {
+    data: studentsData,
+    isLoading: loadingStudents,
+    updateSearch: updateStudentSearch,
+    updateFilters: updateStudentFilters,
+  } = useStudentSearch({ limit: 100 })
 
-  const getRecommendedStudents = () => {
-    return studentData
-      .filter((student) => {
-        if (!student.grades || !Array.isArray(student.grades) || student.grades.length === 0) {
-          return false
-        }
-        const avgGrade = student.grades.reduce((sum, g) => sum + g.grade, 0) / student.grades.length
-        return avgGrade >= 85 && student.attendance >= 90
-      })
-      .slice(0, 5)
-  }
+  // Search and filters for student list
+  const [studentSearchTerm, setStudentSearchTerm] = useState("")
+  const [studentGradeFilter, setStudentGradeFilter] = useState("__all__")
+  const [studentSectionFilter, setStudentSectionFilter] = useState("__all__")
+
+  // Stable option caches so filters don't collapse after applying filters
+  const [gradeOptionsAll, setGradeOptionsAll] = useState<string[]>([])
+  const [sectionOptionsAll, setSectionOptionsAll] = useState<[string, string][]>([])
+
+  // Map API students to StudentData format
+  const filteredStudents: StudentData[] = useMemo(() => {
+    if (!studentsData?.data) return []
+    
+    return studentsData.data.map((student) => ({
+      id: student.user_id, // Use user_id for API calls, not student.id
+      name: student.user?.full_name || `${student.first_name} ${student.last_name}`,
+      email: student.user?.email || "",
+      grade: student.grade_level || student.section?.grade_level || "",
+      section: student.section?.name || "",
+      status: student.user?.status || "Active",
+      enrollmentDate: student.user?.created_at || "",
+      guardian: "",
+      phone: "",
+      address: "",
+    }))
+  }, [studentsData])
+
+  // Update caches with any newly seen grades/sections (union, never shrink)
+  useEffect(() => {
+    if (!studentsData?.data) return
+    const nextGrades = new Set(gradeOptionsAll)
+    const nextSections = new Map(sectionOptionsAll)
+
+    studentsData.data.forEach((s) => {
+      const g = s.grade_level || s.section?.grade_level
+      if (g) nextGrades.add(g)
+      if (s.section?.id && s.section?.name) {
+        nextSections.set(s.section.id, s.section.name)
+      }
+    })
+
+    const gradesArr = Array.from(nextGrades).sort()
+    const sectionsArr = Array.from(nextSections.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+
+    // Only update state if changed to avoid loops
+    if (gradesArr.length !== gradeOptionsAll.length || gradesArr.some((g, i) => g !== gradeOptionsAll[i])) {
+      setGradeOptionsAll(gradesArr)
+    }
+    if (sectionsArr.length !== sectionOptionsAll.length || sectionsArr.some((e, i) => e[0] !== sectionOptionsAll[i]?.[0])) {
+      setSectionOptionsAll(sectionsArr)
+    }
+  }, [studentsData, gradeOptionsAll, sectionOptionsAll])
+
+  const getRecommendedStudents = () => [] as StudentData[]
 
   const recommendedStudents = getRecommendedStudents()
 
@@ -474,29 +588,6 @@ export default function TeacherNewsTeamPage() {
                 <SelectItem value="Faculty Adviser">Faculty Adviser</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={departmentFilter} onValueChange={(value) => setDepartmentFilter(value)}>
-              <SelectTrigger className="w-full sm:w-[180px] h-11 border-gray-300">
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="English">English</SelectItem>
-                <SelectItem value="Filipino">Filipino</SelectItem>
-                <SelectItem value="Science">Science</SelectItem>
-                <SelectItem value="Mathematics">Mathematics</SelectItem>
-                <SelectItem value="Social Studies">Social Studies</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
-              <SelectTrigger className="w-full sm:w-[150px] h-11 border-gray-300">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Bulk Actions */}
@@ -539,9 +630,6 @@ export default function TeacherNewsTeamPage() {
                   </TableHead>
                   <TableHead className="font-semibold">Member</TableHead>
                   <TableHead className="font-semibold">Position</TableHead>
-                  <TableHead className="font-semibold">Department</TableHead>
-                  <TableHead className="font-semibold">Performance</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -571,20 +659,6 @@ export default function TeacherNewsTeamPage() {
                       </div>
                     </TableCell>
                     <TableCell>{getPositionBadge(member.position)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">{member.department}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {/* Updated to show articlesWritten */}
-                        <div className="text-sm font-medium">{member.articlesWritten} articles</div>
-                        {/* Updated to correctly calculate and display approval rate */}
-                        <div className="text-xs text-muted-foreground">
-                          {Math.round((member.articlesPublished / member.articlesWritten) * 100) || 0}% approval rate
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(member.status)}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -692,136 +766,95 @@ export default function TeacherNewsTeamPage() {
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="space-y-3">
-              <Label htmlFor="student-search" className="text-base font-semibold">
-                Search Student
-              </Label>
-              <Popover open={studentSearchOpen} onOpenChange={setStudentSearchOpen}>
-                <PopoverTrigger asChild>
+              {/* Search and Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="col-span-2 flex gap-2">
+                  <Input
+                    placeholder="Search students by name or ID"
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  />
                   <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={studentSearchOpen}
-                    className="w-full justify-between h-12 bg-transparent border-2 hover:border-purple-300 transition-colors"
+                    variant="secondary"
+                    onClick={() => updateStudentSearch(studentSearchTerm)}
+                    disabled={loadingStudents}
                   >
-                    {selectedStudent ? (
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-7 h-7">
-                          <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
-                            {selectedStudent.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate font-medium">{selectedStudent.name}</span>
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {selectedStudent.id}
-                        </Badge>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Search for a student...</span>
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    Search
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-full p-0"
-                  align="start"
-                  style={{ width: "var(--radix-popover-trigger-width)" }}
-                >
-                  <Command>
-                    <CommandInput
-                      placeholder="Search by name, ID, grade, or section..."
-                      value={studentSearchValue}
-                      onValueChange={setStudentSearchValue}
-                      className="h-12"
-                    />
-                    <CommandList>
-                      <CommandEmpty>No student found.</CommandEmpty>
+                </div>
+                <div>
+                  <Select
+                    value={studentGradeFilter}
+                    onValueChange={(val) => {
+                      setStudentGradeFilter(val)
+                      updateStudentFilters({ gradeLevel: val === "__all__" ? undefined : val })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All Grades</SelectItem>
+                      {gradeOptionsAll.map((g) => (
+                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Select
+                    value={studentSectionFilter}
+                    onValueChange={(val) => {
+                      setStudentSectionFilter(val)
+                      updateStudentFilters({ sectionId: val === "__all__" ? undefined : val })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All Sections</SelectItem>
+                      {sectionOptionsAll.map(([id, name]) => (
+                        <SelectItem key={id} value={id}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-                      {!studentSearchValue && recommendedStudents.length > 0 && (
-                        <CommandGroup heading="Recommended Students (High Performers)">
-                          {recommendedStudents.map((student) => {
-                            const avgGrade =
-                              student.grades && student.grades.length > 0
-                                ? student.grades.reduce((sum, g) => sum + g.grade, 0) / student.grades.length
-                                : 0
-                            return (
-                              <CommandItem
-                                key={student.id}
-                                value={student.name}
-                                onSelect={() => handleStudentSelect(student)}
-                                className="cursor-pointer py-3"
-                              >
-                                <div className="flex items-center gap-3 w-full">
-                                  <Avatar className="w-10 h-10">
-                                    <AvatarFallback className="text-sm bg-purple-100 text-purple-700">
-                                      {student.name.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate flex items-center gap-2">
-                                      {student.name}
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-green-50 text-green-700 border-green-300 text-xs"
-                                      >
-                                        {avgGrade.toFixed(1)}
-                                      </Badge>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {student.id} • {student.grade} - {student.section} • {student.attendance}%
-                                      attendance
-                                    </div>
-                                  </div>
-                                  <Check
-                                    className={cn(
-                                      "ml-auto h-4 w-4",
-                                      selectedStudent?.id === student.id ? "opacity-100" : "opacity-0",
-                                    )}
-                                  />
-                                </div>
-                              </CommandItem>
-                            )
-                          })}
-                        </CommandGroup>
-                      )}
-
-                      <CommandGroup heading={studentSearchValue ? "Search Results" : "All Students"}>
-                        {filteredStudents.slice(0, 10).map((student) => {
-                          const avgGrade =
-                            student.grades && student.grades.length > 0
-                              ? student.grades.reduce((sum, g) => sum + g.grade, 0) / student.grades.length
-                              : 0
-                          return (
-                            <CommandItem
-                              key={student.id}
-                              value={student.name}
-                              onSelect={() => handleStudentSelect(student)}
-                              className="cursor-pointer py-3"
-                            >
-                              <div className="flex items-center gap-3 w-full">
-                                <Avatar className="w-10 h-10">
-                                  <AvatarFallback className="text-sm">{student.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium truncate">{student.name}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {student.id} • {student.grade} - {student.section} • Avg: {avgGrade.toFixed(1)}
-                                  </div>
-                                </div>
-                                <Check
-                                  className={cn(
-                                    "ml-auto h-4 w-4",
-                                    selectedStudent?.id === student.id ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                              </div>
-                            </CommandItem>
-                          )
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Label className="text-base font-semibold">Select Student</Label>
+              <div className="max-h-72 overflow-auto rounded-lg border">
+                {loadingStudents ? (
+                  <div className="p-4 text-sm text-muted-foreground text-center">Loading students...</div>
+                ) : filteredStudents.length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground">No students available.</div>
+                ) : (
+                  <div className="divide-y">
+                    {filteredStudents.slice(0, 50).map((student) => (
+                      <button
+                        key={student.id}
+                        type="button"
+                        onClick={() => handleStudentSelect(student)}
+                        className={cn(
+                          "w-full text-left p-3 hover:bg-purple-50 dark:hover:bg-purple-950/20",
+                          selectedStudent?.id === student.id && "bg-purple-50 dark:bg-purple-950/30",
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="text-xs">{student.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{student.name}</div>
+                            <div className="text-xs text-muted-foreground">{student.id}</div>
+                          </div>
+                          {selectedStudent?.id === student.id && <Check className="w-4 h-4" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {selectedStudent && (
                 <div className="mt-3 p-4 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 rounded-xl border-2 border-purple-200 dark:border-purple-800">
@@ -841,17 +874,7 @@ export default function TeacherNewsTeamPage() {
                         </Badge>
                         <Badge variant="outline" className="bg-white">
                           <BookOpen className="w-3 h-3 mr-1" />
-                          Avg:{" "}
-                          {selectedStudent.grades && selectedStudent.grades.length > 0
-                            ? (
-                                selectedStudent.grades.reduce((sum, g) => sum + g.grade, 0) /
-                                selectedStudent.grades.length
-                              ).toFixed(1)
-                            : "N/A"}
-                        </Badge>
-                        <Badge variant="outline" className="bg-white">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          {selectedStudent.attendance}% attendance
+                          Avg: N/A
                         </Badge>
                       </div>
                     </div>
@@ -859,45 +882,7 @@ export default function TeacherNewsTeamPage() {
                 </div>
               )}
             </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                  placeholder="Enter full name"
-                  disabled={!!selectedStudent}
-                  className={selectedStudent ? "bg-muted" : ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                  placeholder="email@example.com"
-                  disabled={!!selectedStudent}
-                  className={selectedStudent ? "bg-muted" : ""}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={newMember.phone}
-                  onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                  placeholder="+63 XXX XXX XXXX"
-                  disabled={!!selectedStudent}
-                  className={selectedStudent ? "bg-muted" : ""}
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="position">Position</Label>
                 <Select
@@ -920,24 +905,6 @@ export default function TeacherNewsTeamPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <Select
-                value={newMember.department}
-                onValueChange={(value) => setNewMember({ ...newMember, department: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="English">English</SelectItem>
-                  <SelectItem value="Filipino">Filipino</SelectItem>
-                  <SelectItem value="Science">Science</SelectItem>
-                  <SelectItem value="Mathematics">Mathematics</SelectItem>
-                  <SelectItem value="Social Studies">Social Studies</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
               <div className="flex items-start gap-3">
@@ -964,7 +931,7 @@ export default function TeacherNewsTeamPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleAddMember} className="bg-purple-600 hover:bg-purple-700" disabled={!newMember.name}>
+            <Button onClick={handleAddMember} className="bg-purple-600 hover:bg-purple-700" disabled={!selectedStudent || !newMember.position}>
               <UserPlus className="w-4 h-4 mr-2" />
               Add Member
             </Button>
@@ -986,29 +953,20 @@ export default function TeacherNewsTeamPage() {
                   <Label htmlFor="edit-name">Full Name</Label>
                   <Input
                     id="edit-name"
-                    value={selectedMember.name}
-                    onChange={(e) => setSelectedMember({ ...selectedMember, name: e.target.value })}
+                    value={selectedMember?.name || ""}
+                    onChange={(e) => setSelectedMember(selectedMember ? { ...selectedMember, name: e.target.value } : selectedMember)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-email">Email</Label>
                   <Input
                     id="edit-email"
-                    type="email"
-                    value={selectedMember.email}
-                    onChange={(e) => setSelectedMember({ ...selectedMember, email: e.target.value })}
+                    value={selectedMember?.email || ""}
+                    onChange={(e) => setSelectedMember(selectedMember ? { ...selectedMember, email: e.target.value } : selectedMember)}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone</Label>
-                  <Input
-                    id="edit-phone"
-                    value={selectedMember.phone}
-                    onChange={(e) => setSelectedMember({ ...selectedMember, phone: e.target.value })}
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-position">Position</Label>
                   <Select
@@ -1029,24 +987,6 @@ export default function TeacherNewsTeamPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-department">Department</Label>
-                <Select
-                  value={selectedMember.department}
-                  onValueChange={(value) => setSelectedMember({ ...selectedMember, department: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="English">English</SelectItem>
-                    <SelectItem value="Filipino">Filipino</SelectItem>
-                    <SelectItem value="Science">Science</SelectItem>
-                    <SelectItem value="Mathematics">Mathematics</SelectItem>
-                    <SelectItem value="Social Studies">Social Studies</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-3">
                 <Label>Permissions</Label>
@@ -1160,7 +1100,6 @@ export default function TeacherNewsTeamPage() {
                   <h3 className="text-2xl font-bold">{selectedMember.name}</h3>
                   <div className="flex items-center gap-2 mt-2">
                     {getPositionBadge(selectedMember.position)}
-                    {getStatusBadge(selectedMember.status)}
                   </div>
                   <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
@@ -1176,44 +1115,6 @@ export default function TeacherNewsTeamPage() {
                 </div>
               </div>
 
-              {/* Performance Metrics */}
-              <div>
-                <h4 className="font-semibold mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Performance Metrics
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      {/* Updated to show articlesWritten */}
-                      <div className="text-2xl font-bold text-blue-600">{selectedMember.articlesWritten}</div>
-                      <div className="text-xs text-muted-foreground">Articles Written</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-green-600">{selectedMember.articlesPublished}</div>
-                      <div className="text-xs text-muted-foreground">Published</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      {/* Updated to correctly calculate and display approval rate */}
-                      <div className="text-2xl font-bold text-purple-600">
-                        {Math.round((selectedMember.articlesPublished / selectedMember.articlesWritten) * 100) || 0}%
-                      </div>
-                      <div className="text-xs text-muted-foreground">Approval Rate</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      {/* Updated to show performance */}
-                      <div className="text-2xl font-bold text-orange-600">{selectedMember.performance}%</div>
-                      <div className="text-xs text-muted-foreground">Performance</div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
 
               {/* Permissions */}
               <div>

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { useAllNews, useDeleteNews, useRestoreNews } from "@/hooks"
+import { newsApi } from "@/lib/api/endpoints/news"
 import {
   Search,
   Plus,
@@ -99,13 +100,30 @@ const NewsPage = () => {
   const [showArchivedSection, setShowArchivedSection] = useState(false)
   const [selectedArchivedArticles, setSelectedArchivedArticles] = useState<string[]>([])
   const [itemsPerPage, setItemsPerPage] = useState(20)
+  const [archivedItemsPerPage, setArchivedItemsPerPage] = useState(10)
 
   // Computed values for pagination display
   const filteredArticles = articles || []
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const paginatedArticles = filteredArticles.slice(startIndex, endIndex)
-  
+
+  // Computed values for archived articles pagination
+  const filteredArchivedArticles = archivedArticles || []
+  const archivedStartIndex = (archivedCurrentPage - 1) * archivedItemsPerPage
+  const archivedEndIndex = archivedStartIndex + archivedItemsPerPage
+  const paginatedArchivedArticles = filteredArchivedArticles.slice(archivedStartIndex, archivedEndIndex)
+  const archivedTotalPages = Math.ceil(filteredArchivedArticles.length / archivedItemsPerPage)
+
+  // Debug: Log articles when they change
+  useEffect(() => {
+    if (articles && articles.length > 0) {
+      console.log('[NewsPage] Articles loaded:', articles.length)
+      console.log('[NewsPage] First article:', articles[0])
+      console.log('[NewsPage] Article IDs:', articles.map(a => ({ id: a.id, title: a.title })))
+    }
+  }, [articles])
+
   // Safety checks for undefined arrays
   const safeArchivedArticles = archivedArticles || []
   const [restoreConfirmation, setRestoreConfirmation] = useState<{
@@ -152,6 +170,12 @@ const NewsPage = () => {
     isOpen: boolean
     article: any
   }>({ isOpen: false, article: null })
+
+  const [scheduleModal, setScheduleModal] = useState<{
+    isOpen: boolean
+    article: any
+    scheduledDate: string
+  }>({ isOpen: false, article: null, scheduledDate: "" })
 
   // Compute stats from API data
   const stats = useMemo(() => {
@@ -307,18 +331,27 @@ const NewsPage = () => {
 
   const getCategoryBadge = (category: string) => {
     const colors = {
-      Academic: "bg-purple-500/10 text-purple-700 border-purple-500/20 hover:bg-purple-500/20",
-      Sports: "bg-orange-500/10 text-orange-700 border-orange-500/20 hover:bg-orange-500/20",
-      Announcements: "bg-blue-500/10 text-blue-700 border-blue-500/20 hover:bg-blue-500/20",
-      Events: "bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500/20",
-      "Student Life": "bg-pink-500/10 text-pink-700 border-pink-500/20 hover:bg-pink-500/20",
+      Academic: "bg-purple-500 text-white hover:bg-purple-600 border-purple-600",
+      "Academic Excellence": "bg-violet-600 text-white hover:bg-violet-700 border-violet-700",
+      Sports: "bg-orange-500 text-white hover:bg-orange-600 border-orange-600",
+      Announcements: "bg-blue-500 text-white hover:bg-blue-600 border-blue-600",
+      Events: "bg-green-500 text-white hover:bg-green-600 border-green-600",
+      "Student Life": "bg-pink-500 text-white hover:bg-pink-600 border-pink-600",
+      General: "bg-slate-600 text-white hover:bg-slate-700 border-slate-700",
+      News: "bg-cyan-500 text-white hover:bg-cyan-600 border-cyan-600",
+      Technology: "bg-indigo-500 text-white hover:bg-indigo-600 border-indigo-600",
+      Arts: "bg-rose-500 text-white hover:bg-rose-600 border-rose-600",
+      Science: "bg-teal-500 text-white hover:bg-teal-600 border-teal-600",
+      Community: "bg-amber-500 text-white hover:bg-amber-600 border-amber-600",
+      Culture: "bg-fuchsia-500 text-white hover:bg-fuchsia-600 border-fuchsia-600",
+      Health: "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600",
     }
 
     return (
       <Badge
         className={
           colors[category as keyof typeof colors] ||
-          "bg-gray-500/10 text-gray-700 border-gray-500/20 hover:bg-gray-500/20"
+          "bg-gray-500 text-white hover:bg-gray-600 border-gray-600"
         }
       >
         {category}
@@ -413,11 +446,9 @@ const NewsPage = () => {
   }
 
   const handleViewArticle = (article: any) => {
-    toast({
-      title: "📖 Article Preview",
-      description: `Opening preview for "${article.title}"`,
-      duration: 3000,
-    })
+    console.log('[handleViewArticle] Navigating to view page for article:', article)
+    console.log('[handleViewArticle] Article ID:', article.id)
+    router.push(`/superadmin/news/view/${article.id}`)
   }
 
   const handleEditArticle = (article: any) => {
@@ -593,45 +624,126 @@ const NewsPage = () => {
   }
 
   const handleStatusChange = (article: any, newStatus: string) => {
-    setStatusConfirmation({ isOpen: true, article, newStatus })
-    closeContextMenu()
+    // If changing to Scheduled, open schedule modal instead
+    if (newStatus === "Scheduled") {
+      const now = new Date()
+      now.setMinutes(now.getMinutes() + 30) // Default to 30 minutes from now
+      const defaultDate = now.toISOString().slice(0, 16) // Format for datetime-local input
+      setScheduleModal({
+        isOpen: true,
+        article,
+        scheduledDate: article.scheduledDate || defaultDate
+      })
+      closeContextMenu()
+    } else {
+      setStatusConfirmation({ isOpen: true, article, newStatus })
+      closeContextMenu()
+    }
   }
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (statusConfirmation.article) {
-      setArticles((prev) =>
-        prev.map((a) => (a.id === statusConfirmation.article.id ? { ...a, status: statusConfirmation.newStatus } : a)),
-      )
+      try {
+        // Map UI status labels to backend values
+        const statusMap: Record<string, string> = {
+          "Published": "published",
+          "Draft": "draft",
+          "Scheduled": "draft", // Scheduled would need scheduledDate, default to draft for now
+        }
 
-      toast({
-        title: `✅ Status Updated`,
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">Article status changed successfully</p>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                <FileText className="w-3.5 h-3.5" />
-                <span className="font-medium">{statusConfirmation.article.title}</span>
+        const backendStatus = statusMap[statusConfirmation.newStatus] || statusConfirmation.newStatus.toLowerCase()
+
+        // Call API to update status
+        await newsApi.updateStatus(statusConfirmation.article.id, backendStatus)
+
+        // Refetch to get updated data
+        await refetch()
+
+        toast({
+          title: `✅ Status Updated`,
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium">Article status changed successfully</p>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="font-medium">{statusConfirmation.article.title}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">New status:</span>
+                <div className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-700 font-medium">
+                  {statusConfirmation.newStatus}
+                </div>
+              </div>
+              {statusConfirmation.newStatus === "Draft" && (
+                <div className="text-xs text-muted-foreground italic">
+                  Note: Visibility settings don't apply to draft articles
+                </div>
+              )}
+            </div>
+          ),
+          className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20 backdrop-blur-sm",
+          duration: 4000,
+        })
+      } catch (error) {
+        console.error('[confirmStatusChange] Error:', error)
+        toast({
+          title: "❌ Failed to update status",
+          description: error instanceof Error ? error.message : "An error occurred",
+          variant: "destructive",
+        })
+      } finally {
+        setStatusConfirmation({ isOpen: false, article: null, newStatus: "" })
+      }
+    }
+  }
+
+  const confirmScheduleChange = async () => {
+    if (scheduleModal.article && scheduleModal.scheduledDate) {
+      try {
+        // Call API to update status to draft and set scheduled date
+        await newsApi.updateNews(scheduleModal.article.id, {
+          status: "draft",
+          scheduledDate: scheduleModal.scheduledDate
+        })
+
+        // Refetch to get updated data
+        await refetch()
+
+        toast({
+          title: `✅ Article Scheduled`,
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium">Article scheduled successfully</p>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="font-medium">{scheduleModal.article.title}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span className="text-muted-foreground">Scheduled for:</span>
+                <span className="font-medium text-blue-700">
+                  {new Date(scheduleModal.scheduledDate).toLocaleString()}
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">New status:</span>
-              <div className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-700 font-medium">
-                {statusConfirmation.newStatus}
-              </div>
-            </div>
-            {statusConfirmation.newStatus === "Draft" && (
-              <div className="text-xs text-muted-foreground italic">
-                Note: Visibility settings don't apply to draft articles
-              </div>
-            )}
-          </div>
-        ),
-        className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20 backdrop-blur-sm",
-        duration: 4000,
-      })
-
-      setStatusConfirmation({ isOpen: false, article: null, newStatus: "" })
+          ),
+          className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
+          duration: 5000,
+        })
+      } catch (error) {
+        console.error('[confirmScheduleChange] Error:', error)
+        toast({
+          title: "❌ Failed to schedule article",
+          description: error instanceof Error ? error.message : "An error occurred",
+          variant: "destructive",
+        })
+      } finally {
+        setScheduleModal({ isOpen: false, article: null, scheduledDate: "" })
+      }
     }
   }
 
@@ -640,38 +752,57 @@ const NewsPage = () => {
     closeContextMenu()
   }
 
-  const confirmVisibilityChange = () => {
+  const confirmVisibilityChange = async () => {
     if (visibilityConfirmation.article) {
-      setArticles((prev) =>
-        prev.map((a) =>
-          a.id === visibilityConfirmation.article.id ? { ...a, visibility: visibilityConfirmation.newVisibility } : a,
-        ),
-      )
+      try {
+        // Map UI visibility labels to backend values
+        const visibilityMap: Record<string, string> = {
+          "Public": "public",
+          "Students Only": "students",
+          "Teachers Only": "teachers",
+          "Private": "private",
+        }
 
-      toast({
-        title: `✅ Visibility Updated`,
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">Article visibility changed successfully</p>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                <FileText className="w-3.5 h-3.5" />
-                <span className="font-medium">{visibilityConfirmation.article.title}</span>
+        const backendVisibility = visibilityMap[visibilityConfirmation.newVisibility] || visibilityConfirmation.newVisibility.toLowerCase()
+
+        // Call API to update visibility
+        await newsApi.updateVisibility(visibilityConfirmation.article.id, backendVisibility)
+
+        // Refetch to get updated data
+        await refetch()
+
+        toast({
+          title: `✅ Visibility Updated`,
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium">Article visibility changed successfully</p>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="font-medium">{visibilityConfirmation.article.title}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">New visibility:</span>
+                <div className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 font-medium">
+                  {visibilityConfirmation.newVisibility}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">New visibility:</span>
-              <div className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 font-medium">
-                {visibilityConfirmation.newVisibility}
-              </div>
-            </div>
-          </div>
-        ),
-        className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
-        duration: 4000,
-      })
-
-      setVisibilityConfirmation({ isOpen: false, article: null, newVisibility: "" })
+          ),
+          className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
+          duration: 4000,
+        })
+      } catch (error) {
+        console.error('[confirmVisibilityChange] Error:', error)
+        toast({
+          title: "❌ Failed to update visibility",
+          description: error instanceof Error ? error.message : "An error occurred",
+          variant: "destructive",
+        })
+      } finally {
+        setVisibilityConfirmation({ isOpen: false, article: null, newVisibility: "" })
+      }
     }
   }
 
@@ -680,61 +811,63 @@ const NewsPage = () => {
     closeContextMenu()
   }
 
-  const confirmToggleFeatured = () => {
+  const confirmToggleFeatured = async () => {
     if (featuredConfirmation.article) {
-      setArticles((prev) =>
-        prev.map((a) => (a.id === featuredConfirmation.article.id ? { ...a, featured: !a.featured } : a)),
-      )
+      try {
+        // TODO: Implement backend API endpoint for toggling featured status
+        // For now, just show a success message and refetch
+        const isFeatured = featuredConfirmation.article.featured
 
-      toast({
-        title: featuredConfirmation.article.featured ? `⭐ Removed from Featured` : `⭐ Added to Featured`,
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">
-              {featuredConfirmation.article.featured
-                ? "Article removed from featured section"
-                : "Article added to featured section"}
-            </p>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="font-medium">{featuredConfirmation.article.title}</span>
+        // Refetch to get updated data (once backend is implemented)
+        await refetch()
+
+        toast({
+          title: isFeatured ? `⭐ Removed from Featured` : `⭐ Added to Featured`,
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium">
+                {isFeatured
+                  ? "Article removed from featured section"
+                  : "Article added to featured section"}
+              </p>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                  <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="font-medium">{featuredConfirmation.article.title}</span>
+                </div>
+              </div>
+              <div className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                Note: Backend API for featured toggle not yet implemented
               </div>
             </div>
-          </div>
-        ),
-        className: "border-yellow-500/20 bg-yellow-50/50 dark:bg-yellow-950/20 backdrop-blur-sm",
-        duration: 4000,
-      })
-
-      setFeaturedConfirmation({ isOpen: false, article: null })
+          ),
+          className: "border-yellow-500/20 bg-yellow-50/50 dark:bg-yellow-950/20 backdrop-blur-sm",
+          duration: 4000,
+        })
+      } catch (error) {
+        console.error('[confirmToggleFeatured] Error:', error)
+        toast({
+          title: "❌ Failed to toggle featured status",
+          description: error instanceof Error ? error.message : "An error occurred",
+          variant: "destructive",
+        })
+      } finally {
+        setFeaturedConfirmation({ isOpen: false, article: null })
+      }
     }
   }
 
   const handleDuplicateArticle = (article: any) => {
-    const newArticle = {
-      ...article,
-      id: `${Date.now()}`,
-      title: `${article.title} (Copy)`,
-      status: "Draft",
-      publishedDate: "",
-      views: 0,
-    }
-
-    setArticles((prev) => [newArticle, ...prev])
-
+    // TODO: Implement proper article duplication via backend API
+    // For now, redirect to create page where user can manually create a copy
     toast({
-      title: `📋 Article Duplicated`,
+      title: `📋 Duplicate Article`,
       description: (
         <div className="space-y-2">
-          <p className="font-medium">Article copied successfully</p>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 max-w-full overflow-hidden">
-              <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="font-medium">{newArticle.title}</span>
-            </div>
+          <p className="font-medium">Feature coming soon</p>
+          <div className="text-sm text-muted-foreground">
+            For now, you can create a new article and copy the content manually
           </div>
-          <div className="text-sm text-muted-foreground">The duplicate has been saved as a draft</div>
         </div>
       ),
       className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
@@ -1002,7 +1135,7 @@ const NewsPage = () => {
                   </TableHead>
                   <TableHead className="text-foreground">Article</TableHead>
                   <TableHead className="text-foreground">Author</TableHead>
-                  <TableHead className="text-foreground">Category</TableHead>
+                  <TableHead className="text-foreground text-center">Category</TableHead>
                   <TableHead className="text-foreground">Status</TableHead>
                   <TableHead className="text-foreground">Visibility</TableHead>
                   <TableHead className="text-foreground">Published</TableHead>
@@ -1016,8 +1149,9 @@ const NewsPage = () => {
                     key={article.id}
                     className="border-border cursor-pointer hover:bg-muted/50"
                     onContextMenu={(e) => handleContextMenu(e, article)}
+                    onClick={() => handleViewArticle(article)}
                   >
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedArticles.includes(article.id)}
                         onCheckedChange={(checked) => handleSelectArticle(article.id, checked as boolean)}
@@ -1037,9 +1171,9 @@ const NewsPage = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-foreground">{article.author}</TableCell>
-                    <TableCell>{getCategoryBadge(article.category)}</TableCell>
-                    <TableCell>{getStatusBadge(article.status, article)}</TableCell>
-                    <TableCell>{getVisibilityBadge(article.visibility, article)}</TableCell>
+                    <TableCell className="text-center">{getCategoryBadge(article.category)}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>{getStatusBadge(article.status, article)}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>{getVisibilityBadge(article.visibility, article)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {article.publishedDate ? (
                         <div className="flex items-center">
@@ -1056,7 +1190,7 @@ const NewsPage = () => {
                         {article.views.toLocaleString()}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -1071,6 +1205,10 @@ const NewsPage = () => {
                           <DropdownMenuItem className="text-foreground" onClick={() => handleEditArticle(article)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Edit Article
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-blue-600" onClick={() => handleCopyLink(article)}>
+                            <Link2 className="w-4 h-4 mr-2" />
+                            Copy Link
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteArticle(article)}>
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -1212,9 +1350,9 @@ const NewsPage = () => {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
                     placeholder="Search archived articles..."
-                    value={archivedSearchTerm}
+                    value={archivedSearchQuery}
                     onChange={(e) => {
-                      setArchivedSearchTerm(e.target.value)
+                      setArchivedSearchQuery(e.target.value)
                       goToArchivedPage(1)
                     }}
                     className="pl-10 bg-background border-border text-foreground"
@@ -1305,7 +1443,7 @@ const NewsPage = () => {
                     </TableHead>
                     <TableHead className="text-foreground">Article</TableHead>
                     <TableHead className="text-foreground">Author</TableHead>
-                    <TableHead className="text-foreground">Category</TableHead>
+                    <TableHead className="text-foreground text-center">Category</TableHead>
                     <TableHead className="text-foreground">Deleted Date</TableHead>
                     <TableHead className="text-foreground">Deleted By</TableHead>
                     <TableHead className="text-foreground">Reason</TableHead>
@@ -1322,8 +1460,12 @@ const NewsPage = () => {
                     </TableRow>
                   ) : (
                     paginatedArchivedArticles.map((article) => (
-                      <TableRow key={article.id} className="border-border hover:bg-muted/30">
-                        <TableCell>
+                      <TableRow
+                        key={article.id}
+                        className="border-border cursor-pointer hover:bg-muted/30"
+                        onClick={() => handleViewArticle(article)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedArchivedArticles.includes(article.id)}
                             onCheckedChange={(checked) => handleSelectArchivedArticle(article.id, checked as boolean)}
@@ -1336,7 +1478,7 @@ const NewsPage = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-foreground">{article.author}</TableCell>
-                        <TableCell>{getCategoryBadge(article.category)}</TableCell>
+                        <TableCell className="text-center">{getCategoryBadge(article.category)}</TableCell>
                         <TableCell className="text-muted-foreground">
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
@@ -1345,7 +1487,7 @@ const NewsPage = () => {
                         </TableCell>
                         <TableCell className="text-muted-foreground">{article.deletedBy}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{article.deletionReason}</TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
@@ -1356,6 +1498,10 @@ const NewsPage = () => {
                               <DropdownMenuItem className="text-foreground" onClick={() => handleViewArticle(article)}>
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-blue-600" onClick={() => handleCopyLink(article)}>
+                                <Link2 className="w-4 h-4 mr-2" />
+                                Copy Link
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-green-600"
@@ -2015,6 +2161,117 @@ const NewsPage = () => {
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Change Status
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {scheduleModal.isOpen && scheduleModal.article && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm animate-in fade-in-0 duration-300"
+            onClick={() => setScheduleModal({ isOpen: false, article: null, scheduledDate: "" })}
+          />
+
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="bg-card/95 backdrop-blur-md border border-border/50 rounded-2xl shadow-2xl max-w-md w-full animate-in fade-in-0 zoom-in-95 duration-300"
+              style={{
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-6 pb-4">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mr-4">
+                    <Clock className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground">Schedule Article</h3>
+                    <p className="text-sm text-muted-foreground">Set publication date and time</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-4"></div>
+
+                <div className="space-y-4">
+                  <p className="text-foreground">
+                    Schedule{" "}
+                    <span className="font-semibold text-indigo-600">{scheduleModal.article.title}</span> for automatic publication
+                  </p>
+
+                  {/* Article Info Card */}
+                  <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="font-medium text-foreground">{scheduleModal.article.title}</p>
+                        <p className="text-sm text-muted-foreground mt-1">by {scheduleModal.article.author}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getCategoryBadge(scheduleModal.article.category)}
+                        {getStatusBadge(scheduleModal.article.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date/Time Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-indigo-600" />
+                      Scheduled Publication Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduleModal.scheduledDate}
+                      onChange={(e) => setScheduleModal({ ...scheduleModal, scheduledDate: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Article will automatically publish at this date and time
+                    </p>
+                  </div>
+
+                  <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-4">
+                    <div className="flex items-start space-x-3">
+                      <AlertTriangle className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-indigo-700 dark:text-indigo-400">
+                        <p className="font-medium mb-1">About scheduled articles:</p>
+                        <ul className="space-y-1 text-xs">
+                          <li>• Article will be saved as draft until scheduled time</li>
+                          <li>• Article will automatically publish at the scheduled time</li>
+                          <li>• You can edit or cancel the schedule anytime</li>
+                          <li>• Visibility settings will apply when published</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 pt-0">
+                <div className="flex items-center justify-end space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setScheduleModal({ isOpen: false, article: null, scheduledDate: "" })}
+                    className="border-border bg-transparent hover:bg-muted/50 transition-all duration-200"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmScheduleChange}
+                    disabled={!scheduleModal.scheduledDate}
+                    className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    Schedule Article
                   </Button>
                 </div>
               </div>

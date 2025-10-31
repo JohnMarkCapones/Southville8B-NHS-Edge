@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   Clock,
   MapPin,
   User,
+  Building2,
   BookOpen,
   Download,
   ChevronLeft,
@@ -14,13 +15,40 @@ import {
   CalendarIcon,
   Printer,
   Share2,
+  RefreshCw,
 } from "lucide-react"
 import StudentLayout from "@/components/student/student-layout"
+import { useQuery } from "@tanstack/react-query"
+import { getMySchedule } from "@/lib/api/endpoints/schedules"
+import type { Schedule } from "@/lib/api/types/schedules"
+import ScheduleSkeleton from "@/components/ui/schedule-skeleton"
+import ScheduleError from "@/components/ui/schedule-error"
+import ScheduleEmpty from "@/components/ui/schedule-empty"
 
 export default function SchedulePage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
+  const [viewMode, setViewMode] = useState<'week' | 'agenda'>('week')
+  
+  // Get current day for highlighting
+  const getCurrentDay = () => {
+    const today = new Date()
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return dayNames[today.getDay()]
+  }
+  
+  const currentDay = getCurrentDay()
+
+  // Continuous timeline config (minute-precise)
+  const dayStartMinutes = 6 * 60 // 06:00
+  const dayEndMinutes = 16 * 60 // 16:00
+  const minutesPerDay = dayEndMinutes - dayStartMinutes
+  const pxPerMinute = 2.5 // taller tracks; mobile/desktop both scroll smoothly
+  const trackHeightPx = minutesPerDay * pxPerMinute
+  const headerOffsetPx = 128 // extra space for sticky day headers
+  const visualTrackHeightPx = headerOffsetPx + trackHeightPx
 
   const timeSlots = [
+    "6:00 AM",
     "7:00 AM",
     "8:00 AM",
     "9:00 AM",
@@ -35,48 +63,249 @@ export default function SchedulePage() {
 
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-  const scheduleData = {
-    Monday: {
-      "8:00 AM": { subject: "Mathematics", teacher: "Ms. Garcia", room: "Room 201", color: "bg-blue-500" },
-      "9:00 AM": { subject: "Science", teacher: "Mr. Santos", room: "Lab 1", color: "bg-green-500" },
-      "10:00 AM": { subject: "English", teacher: "Mrs. Cruz", room: "Room 105", color: "bg-purple-500" },
-      "11:00 AM": { subject: "Break", teacher: "", room: "", color: "bg-gray-300" },
-      "1:00 PM": { subject: "Filipino", teacher: "Mrs. Reyes", room: "Room 103", color: "bg-yellow-500" },
-      "2:00 PM": { subject: "PE", teacher: "Coach Martinez", room: "Gymnasium", color: "bg-red-500" },
+  // Fetch live schedule with enhanced error handling
+  const { 
+    data: schedules = [], 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isRefetching 
+  } = useQuery({
+    queryKey: ["my-schedules"],
+    queryFn: getMySchedule,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount, error) => {
+      // Don't retry on 401/403 errors
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false
+      }
+      return failureCount < 3
     },
-    Tuesday: {
-      "8:00 AM": { subject: "Araling Panlipunan", teacher: "Mr. Dela Cruz", room: "Room 204", color: "bg-cyan-500" },
-      "9:00 AM": { subject: "Mathematics", teacher: "Ms. Garcia", room: "Room 201", color: "bg-blue-500" },
-      "10:00 AM": { subject: "Science", teacher: "Mr. Santos", room: "Lab 1", color: "bg-green-500" },
-      "11:00 AM": { subject: "Break", teacher: "", room: "", color: "bg-gray-300" },
-      "1:00 PM": { subject: "English", teacher: "Mrs. Cruz", room: "Room 105", color: "bg-purple-500" },
-      "2:00 PM": { subject: "TLE", teacher: "Mr. Aquino", room: "Workshop", color: "bg-lime-500" },
-    },
-    Wednesday: {
-      "8:00 AM": { subject: "Filipino", teacher: "Mrs. Reyes", room: "Room 103", color: "bg-yellow-500" },
-      "9:00 AM": { subject: "Mathematics", teacher: "Ms. Garcia", room: "Room 201", color: "bg-blue-500" },
-      "10:00 AM": { subject: "MAPEH", teacher: "Ms. Torres", room: "Music Room", color: "bg-pink-500" },
-      "11:00 AM": { subject: "Break", teacher: "", room: "", color: "bg-gray-300" },
-      "1:00 PM": { subject: "Science", teacher: "Mr. Santos", room: "Lab 1", color: "bg-green-500" },
-      "2:00 PM": { subject: "ESP", teacher: "Mrs. Morales", room: "Room 102", color: "bg-indigo-500" },
-    },
-    Thursday: {
-      "8:00 AM": { subject: "English", teacher: "Mrs. Cruz", room: "Room 105", color: "bg-purple-500" },
-      "9:00 AM": { subject: "Araling Panlipunan", teacher: "Mr. Dela Cruz", room: "Room 204", color: "bg-cyan-500" },
-      "10:00 AM": { subject: "Mathematics", teacher: "Ms. Garcia", room: "Room 201", color: "bg-blue-500" },
-      "11:00 AM": { subject: "Break", teacher: "", room: "", color: "bg-gray-300" },
-      "1:00 PM": { subject: "TLE", teacher: "Mr. Aquino", room: "Workshop", color: "bg-lime-500" },
-      "2:00 PM": { subject: "PE", teacher: "Coach Martinez", room: "Gymnasium", color: "bg-red-500" },
-    },
-    Friday: {
-      "8:00 AM": { subject: "Science", teacher: "Mr. Santos", room: "Lab 1", color: "bg-green-500" },
-      "9:00 AM": { subject: "Filipino", teacher: "Mrs. Reyes", room: "Room 103", color: "bg-yellow-500" },
-      "10:00 AM": { subject: "ESP", teacher: "Mrs. Morales", room: "Room 102", color: "bg-indigo-500" },
-      "11:00 AM": { subject: "Break", teacher: "", room: "", color: "bg-gray-300" },
-      "1:00 PM": { subject: "MAPEH", teacher: "Ms. Torres", room: "Music Room", color: "bg-pink-500" },
-      "2:00 PM": { subject: "Club Activities", teacher: "", room: "Various", color: "bg-orange-500" },
-    },
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  // Map schedules to grid-friendly structure: day -> hour label -> item
+  const scheduleData = useMemo(() => {
+    const map: Record<string, Record<string, { subject: string; teacher?: string; room?: string; colorHex?: string; start: string; end: string }>> = {}
+    for (const day of weekDays) map[day] = {}
+
+    const toHourLabel = (t: string) => {
+      const [h, m] = t.split(":").map((x) => parseInt(x, 10))
+      const date = new Date()
+      date.setHours(h, m, 0, 0)
+      return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    }
+
+    schedules.forEach((s: Schedule) => {
+      const day = s.dayOfWeek
+      const label = toHourLabel(s.startTime)
+      const teacher = s.teacher ? `${s.teacher.firstName ?? (s as any).teacher?.first_name ?? ""} ${s.teacher.lastName ?? (s as any).teacher?.last_name ?? ""}`.trim() : undefined
+      const room = s.room?.roomNumber || (s as any).room?.room_number
+      const floorNumber = s.room?.floor?.floorNumber || (s as any).room?.floor?.number
+      const buildingName = s.room?.floor?.building?.name || s.building?.name
+      const locationText = buildingName ? 
+        (floorNumber ? `${buildingName}, Floor ${floorNumber}` : buildingName) : 
+        (room ? `Room ${room}` : 'TBA')
+      const colorHex = s.subject?.colorHex
+      map[day]![label] = {
+        subject: s.subject?.subjectName || "Class",
+        teacher,
+        room: locationText,
+        colorHex,
+        start: s.startTime,
+        end: s.endTime,
+      }
+    })
+    return map
+  }, [schedules])
+
+  // Precompute row spans per day/time index for multi-hour classes
+  const cellSpans = useMemo(() => {
+    const spans: Record<string, Array<{ cell?: { data: any; span: number }; skip?: boolean }>> = {}
+    for (const day of weekDays) {
+      spans[day] = Array(timeSlots.length).fill(null).map(() => ({}))
+      for (let i = 0; i < timeSlots.length; i++) {
+        const data = (scheduleData as any)[day]?.[timeSlots[i]]
+        if (data) {
+          // compute span based on end-start in hours using our grid slots
+          const parseToHours = (t: string) => {
+            const [h, m] = t.split(":").map((x: string) => parseInt(x, 10))
+            return h + (m >= 30 ? 0.5 : 0)
+          }
+          const startH = parseToHours(data.start)
+          const endH = parseToHours(data.end)
+          let rows = Math.max(1, Math.round(endH - startH))
+          // clamp within grid
+          rows = Math.min(rows, timeSlots.length - i)
+          spans[day][i] = { cell: { data, span: rows } }
+          for (let k = 1; k < rows && i + k < timeSlots.length; k++) {
+            spans[day][i + k] = { skip: true }
+          }
+        }
+      }
+    }
+    return spans
+  }, [scheduleData, timeSlots, weekDays])
+
+  // Utilities for minute-precise positioning
+  const parseTimeToMinutes = (t: string) => {
+    const [h, m, s] = t.split(":")
+    return parseInt(h, 10) * 60 + parseInt(m || "0", 10)
   }
+
+  const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
+
+  const formatMinutesToLabel = (totalMinutes: number) => {
+    const h = Math.floor(totalMinutes / 60)
+    const m = totalMinutes % 60
+    const date = new Date()
+    date.setHours(h, m, 0, 0)
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
+  const hexToRgb = (hex?: string) => {
+    if (!hex) return null
+    const m = hex.replace('#', '')
+    const value = m.length === 3
+      ? m.split('').map((c) => c + c).join('')
+      : m
+    const intVal = parseInt(value, 16)
+    const r = (intVal >> 16) & 255
+    const g = (intVal >> 8) & 255
+    const b = intVal & 255
+    return { r, g, b }
+  }
+
+  const getReadableTextColor = (bg?: string) => {
+    const rgb = hexToRgb(bg)
+    if (!rgb) return '#ffffff'
+    // Relative luminance
+    const srgb = [rgb.r, rgb.g, rgb.b].map((v) => {
+      const c = v / 255
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    })
+    const L = 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2]
+    return L > 0.55 ? '#111827' : '#ffffff' // slate-900 on light backgrounds, white otherwise
+  }
+
+  const getSubtleBorder = (bg?: string) => {
+    const rgb = hexToRgb(bg)
+    if (!rgb) return 'rgba(0,0,0,0.12)'
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`
+  }
+
+  // Build minute-precise events per day with lane assignment for overlaps
+  const positionedByDay = useMemo(() => {
+    type Positioned = {
+      id: string
+      subject: string
+      teacher?: string
+      room?: string
+      building?: string
+      color?: string
+      textColor: string
+      borderColor: string
+      startMin: number
+      endMin: number
+      topPx: number
+      heightPx: number
+      lane: number
+      totalLanes: number
+    }
+
+    const byDay: Record<string, Positioned[]> = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] }
+
+    for (const s of schedules) {
+      const startAbs = parseTimeToMinutes(s.startTime)
+      const endAbs = parseTimeToMinutes(s.endTime)
+      if (Number.isNaN(startAbs) || Number.isNaN(endAbs)) continue
+      // Clamp to visible window
+      const startMin = clamp(startAbs, dayStartMinutes, dayEndMinutes)
+      const endMin = clamp(endAbs, dayStartMinutes, dayEndMinutes)
+      if (endMin <= startMin) continue
+      const topPx = (startMin - dayStartMinutes) * pxPerMinute
+      const heightPx = Math.max(8, (endMin - startMin) * pxPerMinute) // ensure clickable
+
+      const bg = s.subject?.colorHex || undefined
+      const textColor = getReadableTextColor(bg)
+      const borderColor = getSubtleBorder(bg)
+      const teacher = s.teacher ? `${s.teacher.firstName ?? (s as any).teacher?.first_name ?? ''} ${s.teacher.lastName ?? (s as any).teacher?.last_name ?? ''}`.trim() : undefined
+      const room = s.room?.roomNumber || (s as any).room?.room_number
+      const floorNumber = s.room?.floor?.floorNumber || (s as any).room?.floor?.number
+      const buildingName = s.room?.floor?.building?.name || s.building?.name
+      const locationText = buildingName ? 
+        (floorNumber ? `${buildingName}, Floor ${floorNumber}` : buildingName) : 
+        (room ? `Room ${room}` : 'TBA')
+
+      byDay[s.dayOfWeek]?.push({
+        id: s.id,
+        subject: s.subject?.subjectName || 'Class',
+        teacher,
+        room,
+        building: locationText,
+        color: bg,
+        textColor,
+        borderColor,
+        startMin,
+        endMin,
+        topPx,
+        heightPx,
+        lane: 0,
+        totalLanes: 1,
+      })
+    }
+
+    // Lane assignment per day using sweep-line grouping
+    for (const day of weekDays) {
+      const evts = byDay[day] || []
+      evts.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin)
+      let active: Array<{ end: number; lane: number; ref: Positioned }> = []
+      let groupEvents: Positioned[] = []
+      let groupMax = 0
+
+      const closeFinished = (currentStart: number) => {
+        active = active.filter((x) => x.end > currentStart)
+      }
+
+      const finalizeGroup = () => {
+        if (groupEvents.length > 0) {
+          for (const e of groupEvents) e.totalLanes = Math.max(1, groupMax)
+        }
+        groupEvents = []
+        groupMax = 0
+      }
+
+      for (const e of evts) {
+        closeFinished(e.startMin)
+        if (active.length === 0) {
+          finalizeGroup()
+        }
+        // assign smallest free lane index
+        const used = new Set(active.map((a) => a.lane))
+        let lane = 0
+        while (used.has(lane)) lane++
+        e.lane = lane
+        active.push({ end: e.endMin, lane, ref: e })
+        groupEvents.push(e)
+        groupMax = Math.max(groupMax, active.length)
+      }
+      finalizeGroup()
+    }
+
+    return byDay
+  }, [schedules])
+
+  const hours = useMemo(() => {
+    const arr: Array<{ label: string; topPx: number }> = []
+    for (let m = dayStartMinutes; m <= dayEndMinutes; m += 60) {
+      const h = Math.floor(m / 60)
+      const label = new Date(0, 0, 0, h).toLocaleTimeString('en-US', { hour: 'numeric' })
+      arr.push({ label, topPx: (m - dayStartMinutes) * pxPerMinute })
+    }
+    return arr
+  }, [])
 
   const getDaysOfWeek = (date: Date) => {
     const week = []
@@ -104,7 +333,7 @@ export default function SchedulePage() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Class Schedule - Precious Danielle Mañalac</title>
+          <title>Class Schedule</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
@@ -121,14 +350,14 @@ export default function SchedulePage() {
         <body>
           <div class="header">
             <h1>Class Schedule</h1>
-            <h2>Precious Danielle Mañalac</h2>
+            <h2>My Schedule</h2>
             <p>Week of ${weekDates[0].toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
           <table class="schedule-table">
             <thead>
               <tr>
                 <th>Time</th>
-                ${weekDays.map((day) => `<th>${day}</th>`).join("")}
+                  ${weekDays.map((day) => `<th>${day}</th>`).join("")}
               </tr>
             </thead>
             <tbody>
@@ -139,18 +368,15 @@ export default function SchedulePage() {
                   <td><strong>${time}</strong></td>
                   ${weekDays
                     .map((day) => {
-                      const classData = scheduleData[day]?.[time]
+                      const classData = (scheduleData as any)[day]?.[time]
                       if (!classData) {
                         return "<td></td>"
-                      }
-                      if (classData.subject === "Break") {
-                        return '<td class="break-cell">Break</td>'
                       }
                       return `
                       <td>
                         <div class="subject-cell">${classData.subject}</div>
-                        <div class="teacher-cell">${classData.teacher}</div>
-                        <div class="room-cell">${classData.room}</div>
+                        <div class="teacher-cell">${classData.teacher || ''}</div>
+                        <div class="room-cell">${classData.room || ''}</div>
                       </td>
                     `
                     })
@@ -178,14 +404,96 @@ export default function SchedulePage() {
     }, 500)
   }
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            {/* Header */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                My Schedule
+              </h1>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                Loading your weekly class schedule...
+              </p>
+            </div>
+            <ScheduleSkeleton />
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Show error state
+  if (isError && error) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            {/* Header */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                My Schedule
+              </h1>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                There was an error loading your schedule.
+              </p>
+            </div>
+            <ScheduleError 
+              error={error} 
+              onRetry={() => refetch()} 
+              isRetrying={isRefetching}
+            />
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Show empty state
+  if (!isLoading && !isError && schedules.length === 0) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            {/* Header */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                My Schedule
+              </h1>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                Your weekly class schedule will appear here once it's available.
+              </p>
+            </div>
+            <ScheduleEmpty onRefresh={() => refetch()} />
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
   return (
     <StudentLayout>
       <div className="p-6 space-y-8 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800/50 min-h-screen">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-              Class Schedule
-            </h1>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                Class Schedule
+              </h1>
+              {isRefetching && (
+                <div className="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Updating...</span>
+                </div>
+              )}
+              <div className="ml-4 hidden md:flex bg-slate-100/70 dark:bg-slate-800/70 rounded-lg p-1 border border-slate-200/60 dark:border-slate-600/60">
+                <Button size="sm" variant={viewMode==='week'? 'default':'ghost'} className={`h-8 px-3 ${viewMode==='week'?'bg-white dark:bg-slate-700':''}`} onClick={() => setViewMode('week')}>Weekly</Button>
+                <Button size="sm" variant={viewMode==='agenda'? 'default':'ghost'} className={`h-8 px-3 ${viewMode==='agenda'?'bg-white dark:bg-slate-700':''}`} onClick={() => setViewMode('agenda')}>Agenda</Button>
+              </div>
+            </div>
             <p className="text-lg text-slate-600 dark:text-slate-300 font-medium">Your weekly academic schedule</p>
           </div>
           <div className="flex items-center gap-3">
@@ -259,72 +567,223 @@ export default function SchedulePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
+            {/* Mini day index + Now */}
+            <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3 bg-white/85 dark:bg-slate-800/85 backdrop-blur border-b border-slate-200/60 dark:border-slate-600/60">
+              {['Mon','Tue','Wed','Thu','Fri'].map((d,i)=> (
+                <Button key={d} variant="outline" size="sm" onClick={()=>{
+                  if (viewMode==='agenda') {
+                    const el = document.querySelector(`#student-agenda-day-${i}`)
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+                  } else {
+                    const el = document.querySelector(`#student-week-day-${i}`)
+                    const sc = document.querySelector('#student-week-scroll') as HTMLDivElement
+                    if (el && sc) el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+                  }
+                }}>
+                  {d}
+                </Button>
+              ))}
+              <Button variant="secondary" size="sm" onClick={()=>{
+                const now = new Date(); const mins = now.getHours()*60+now.getMinutes();
+                if (viewMode==='agenda') {
+                  // Jump to current day section in agenda
+                  const idx = Math.max(0, ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(currentDay))
+                  const el = document.querySelector(`#student-agenda-day-${idx}`)
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+                } else {
+                  const sc = document.querySelector('#student-week-scroll') as HTMLDivElement
+                  if (!sc) return
+                  const y = 128 + (mins - 360) * 2.5 // headerOffsetPx + (now - 6:00) * pxPerMinute
+                  sc.scrollTo({ top: Math.max(0, y-140), behavior: 'smooth' })
+                }
+              }}>Now</Button>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50/50 dark:bg-slate-700/50 border-b border-slate-200/50 dark:border-slate-600/50">
-                    <th className="p-6 text-left font-bold text-slate-700 dark:text-slate-200 w-32">Time</th>
-                    {weekDays.map((day, index) => (
-                      <th key={day} className="p-6 text-center font-bold text-slate-700 dark:text-slate-200 min-w-48">
-                        <div className="space-y-1">
-                          <div className="text-lg">{day}</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400 font-normal">
-                            {weekDates[index]?.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              {!isLoading && schedules.length === 0 ? (
+                <div className="p-10 text-center text-slate-500 dark:text-slate-400">
+                  No schedule yet. Your schedule will appear here once it's assigned.
+                </div>
+              ) : (
+                viewMode === 'agenda' ? (
+                  <div className="min-w-[720px] max-h-[calc(100vh-180px)] overflow-y-auto rounded-xl">
+                    {weekDays.map((day, idx) => {
+                      const items = (positionedByDay[day] || []).slice().sort((a, b) => a.startMin - b.startMin)
+                      const isCurrentDay = day === currentDay
+                      return (
+                        <div id={`student-agenda-day-${idx}`} key={day} className={`border-b ${
+                          isCurrentDay 
+                            ? 'border-blue-200/70 dark:border-blue-700/70 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-900/10 dark:to-indigo-900/5' 
+                            : 'border-slate-200/70 dark:border-slate-700/70'
+                        }`}>
+                          <div className={`sticky top-0 z-10 backdrop-blur-md px-4 py-3 flex items-center justify-between ${
+                            isCurrentDay 
+                              ? 'bg-gradient-to-r from-blue-100/90 to-indigo-100/80 dark:from-blue-800/40 dark:to-indigo-800/30' 
+                              : 'bg-white/85 dark:bg-slate-800/85'
+                          }`}>
+                            <div className={`text-sm font-semibold tracking-wide ${
+                              isCurrentDay 
+                                ? 'text-blue-800 dark:text-blue-200' 
+                                : 'text-slate-700 dark:text-slate-200'
+                            }`}>
+                              {day}
+                              {isCurrentDay && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+                                  Today
+                                </span>
+                              )}
+                            </div>
+                            <div className={`text-xs ${
+                              isCurrentDay 
+                                ? 'text-blue-600 dark:text-blue-300' 
+                                : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                              {weekDates[idx]?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </div>
+                          </div>
+                          {items.length === 0 ? (
+                            <div className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">No classes</div>
+                          ) : (
+                            <ul className="divide-y divide-slate-200/70 dark:divide-slate-700/70">
+                              {items.map((evt) => {
+                                const timeLabel = `${formatMinutesToLabel(evt.startMin)} – ${formatMinutesToLabel(evt.endMin)}`
+                                return (
+                                  <li key={evt.id} className="px-4 py-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                    <div className="flex items-start gap-4">
+                                      <div className="w-28 text-xs md:text-sm font-medium text-slate-700 dark:text-slate-200">{timeLabel}</div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: evt.color || '#4f46e5' }} />
+                                          <span className="text-sm md:text-base font-semibold text-slate-800 dark:text-slate-100">{evt.subject}</span>
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:text-xs text-slate-600 dark:text-slate-400">
+                                          {evt.teacher && <span className="inline-flex items-center"><User className="w-3 h-3 mr-1" />{evt.teacher}</span>}
+                                          {evt.room && <span className="inline-flex items-center"><MapPin className="w-3 h-3 mr-1" />{evt.room}</span>}
+                                          {evt.building && <span className="inline-flex items-center"><Building2 className="w-3 h-3 mr-1" />{evt.building}</span>}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                <div id="student-week-scroll" className="min-w-[1000px] max-h-[calc(100vh-180px)] overflow-y-auto rounded-xl bg-gradient-to-b from-white/70 to-white/40 dark:from-slate-800/60 dark:to-slate-800/30">
+                  <div className="grid grid-cols-[120px_repeat(5,1fr)]">
+                  {/* Time ruler */}
+                  <div className="relative border-r border-slate-200/70 dark:border-slate-700/70" style={{ height: visualTrackHeightPx }}>
+                    {hours.map((h) => (
+                      <div key={h.label} className="absolute left-0 right-0" style={{ top: h.topPx + headerOffsetPx }}>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 px-4 -translate-y-2 select-none">{h.label}</div>
+                        <div className="h-px bg-slate-200/70 dark:bg-slate-700/70" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Day columns */}
+                  {weekDays.map((day, idx) => {
+                    const isCurrentDay = day === currentDay
+                    return (
+                      <div 
+                        id={`student-week-day-${idx}`}
+                        key={day} 
+                        className={`relative border-r last:border-r-0 border-slate-200/70 dark:border-slate-700/70 ${
+                          isCurrentDay 
+                            ? 'bg-gradient-to-b from-blue-50/80 to-indigo-50/60 dark:from-blue-900/20 dark:to-indigo-900/10 border-blue-200/50 dark:border-blue-600/30' 
+                            : ''
+                        }`} 
+                        style={{ height: visualTrackHeightPx }}
+                      >
+                        {/* Day header */}
+                        <div className={`sticky top-0 z-10 backdrop-blur-md border-b px-4 py-3 ${
+                          isCurrentDay 
+                            ? 'bg-gradient-to-r from-blue-100/90 to-indigo-100/80 dark:from-blue-800/40 dark:to-indigo-800/30 border-blue-200/60 dark:border-blue-600/40' 
+                            : 'bg-white/85 dark:bg-slate-800/85 border-slate-200/60 dark:border-slate-600/60'
+                        }`}>
+                          <div className="text-center">
+                            <div className={`text-sm font-semibold tracking-wide ${
+                              isCurrentDay 
+                                ? 'text-blue-800 dark:text-blue-200' 
+                                : 'text-slate-700 dark:text-slate-200'
+                            }`}>
+                              {day}
+                              {isCurrentDay && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+                                  Today
+                                </span>
+                              )}
+                            </div>
+                            <div className={`text-xs ${
+                              isCurrentDay 
+                                ? 'text-blue-600 dark:text-blue-300' 
+                                : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                              {weekDates[idx]?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </div>
                           </div>
                         </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {timeSlots.map((time, timeIndex) => (
-                    <tr
-                      key={time}
-                      className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/30 dark:hover:bg-slate-700/30 transition-colors duration-200"
-                    >
-                      <td className="p-6 font-semibold text-slate-600 dark:text-slate-300 bg-slate-50/30 dark:bg-slate-700/30 border-r border-slate-200/50 dark:border-slate-600/50">
-                        {time}
-                      </td>
-                      {weekDays.map((day) => {
-                        const classData = scheduleData[day]?.[time]
+                      {/* Hour lines */}
+                      {hours.map((h, i) => (
+                        <div key={i} className="absolute left-0 right-0" style={{ top: h.topPx + headerOffsetPx }}>
+                          <div className="h-px bg-slate-100/70 dark:bg-slate-700/70" />
+                        </div>
+                      ))}
+                      {/* Subtle gradient to separate columns */}
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-slate-500/[0.02] to-transparent" />
+                      {/* Events */}
+                      {(positionedByDay[day] || []).map((evt) => {
+                        const laneWidthPct = 100 / Math.max(1, evt.totalLanes)
+                        const leftPct = evt.lane * laneWidthPct
+                        const timeLabel = `${formatMinutesToLabel(evt.startMin)} – ${formatMinutesToLabel(evt.endMin)}`
                         return (
-                          <td key={`${day}-${time}`} className="p-3">
-                            {classData ? (
-                              <div
-                                className={`${classData.color} text-white rounded-xl p-4 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer ${
-                                  classData.subject === "Break"
-                                    ? "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
-                                    : ""
-                                }`}
-                              >
-                                <div className="space-y-2">
-                                  <div className="font-bold text-sm">{classData.subject}</div>
-                                  {classData.teacher && (
-                                    <div className="text-xs opacity-90 flex items-center">
-                                      <User className="w-3 h-3 mr-1" />
-                                      {classData.teacher}
-                                    </div>
-                                  )}
-                                  {classData.room && (
-                                    <div className="text-xs opacity-90 flex items-center">
-                                      <MapPin className="w-3 h-3 mr-1" />
-                                      {classData.room}
-                                    </div>
-                                  )}
-                                </div>
+                          <div
+                            key={evt.id}
+                            className="absolute rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400/60 [animation:fadeIn_300ms_ease-out_forwards]"
+                            style={{
+                              top: evt.topPx + headerOffsetPx,
+                              height: evt.heightPx,
+                              left: `${leftPct}%`,
+                              width: `${laneWidthPct}%`,
+                              backgroundColor: evt.color || '#4f46e5',
+                              border: `1px solid ${evt.borderColor}`,
+                              transformOrigin: 'center',
+                            }}
+                            title={`${evt.subject} • ${timeLabel}${evt.teacher ? ` • ${evt.teacher}` : ''}${evt.room ? ` • ${evt.room}` : ''}`}
+                          >
+                            <div className="h-full w-full p-2 md:p-3 flex flex-col justify-between group" style={{ color: evt.textColor }}>
+                              <div className="text-[10px] md:text-xs opacity-90 leading-tight">{timeLabel}</div>
+                              <div className="text-xs md:text-sm font-semibold truncate group-hover:tracking-wide transition-all">{evt.subject}</div>
+                              <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-xs opacity-90">
+                                {evt.teacher && (
+                                  <span className="inline-flex items-center">
+                                    <User className="w-3 h-3 mr-1" />{evt.teacher}
+                                  </span>
+                                )}
+                                {evt.room && (
+                                  <span className="inline-flex items-center">
+                                    <MapPin className="w-3 h-3 mr-1" />{evt.room}
+                                  </span>
+                                )}
+                                {evt.building && (
+                                  <span className="inline-flex items-center">
+                                    <Building2 className="w-3 h-3 mr-1" />{evt.building}
+                                  </span>
+                                )}
                               </div>
-                            ) : (
-                              <div className="h-20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
-                                Free
-                              </div>
-                            )}
-                          </td>
+                            </div>
+                          </div>
                         )
                       })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </div>
+                    )
+                  })}
+                  </div>
+                </div>
+                )
+              )}
             </div>
           </CardContent>
         </Card>
@@ -335,7 +794,7 @@ export default function SchedulePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 dark:text-blue-200 text-sm font-medium">Total Classes</p>
-                  <p className="text-3xl font-bold">25</p>
+                  <p className="text-3xl font-bold">{schedules.length}</p>
                   <p className="text-blue-100 dark:text-blue-200 text-xs">Per week</p>
                 </div>
                 <BookOpen className="w-12 h-12 text-blue-200 dark:text-blue-300" />
@@ -348,7 +807,7 @@ export default function SchedulePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-100 dark:text-green-200 text-sm font-medium">Subjects</p>
-                  <p className="text-3xl font-bold">8</p>
+                  <p className="text-3xl font-bold">{new Set(schedules.map(s => s.subjectId)).size}</p>
                   <p className="text-green-100 dark:text-green-200 text-xs">Active subjects</p>
                 </div>
                 <BookOpen className="w-12 h-12 text-green-200 dark:text-green-300" />
@@ -361,7 +820,7 @@ export default function SchedulePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 dark:text-purple-200 text-sm font-medium">Daily Average</p>
-                  <p className="text-3xl font-bold">5</p>
+                  <p className="text-3xl font-bold">{Math.round((schedules.length / 5) || 0)}</p>
                   <p className="text-purple-100 dark:text-purple-200 text-xs">Classes per day</p>
                 </div>
                 <Clock className="w-12 h-12 text-purple-200 dark:text-purple-300" />

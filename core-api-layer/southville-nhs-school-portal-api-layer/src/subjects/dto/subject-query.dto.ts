@@ -23,7 +23,9 @@ export class SubjectQueryDto {
   @IsUUID()
   departmentId?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by department ID (alternative naming)' })
+  @ApiPropertyOptional({
+    description: 'Filter by department ID (alternative naming)',
+  })
   @IsOptional()
   @IsUUID()
   department_id?: string;

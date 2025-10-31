@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Plus,
@@ -16,6 +16,7 @@ import {
   Search,
   Filter,
   Calendar,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,13 +35,16 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import StudentLayout from "@/components/student/student-layout"
+import { newsApi } from "@/lib/api/endpoints/news"
+import { NewsArticle } from "@/types/news"
 
 interface Article {
   id: string
   title: string
   excerpt: string
   category: string
-  status: "draft" | "pending" | "published" | "rejected"
+  status: "draft" | "pending_approval" | "approved" | "published" | "rejected"
+  reviewStatus?: "pending" | "in_review" | "approved" | "rejected" | "needs_revision"
   views: number
   likes: number
   comments: number
@@ -49,70 +53,81 @@ interface Article {
   thumbnail?: string
 }
 
-// Sample data - TODO: Replace with actual database
-const sampleArticles: Article[] = [
-  {
-    id: "1",
-    title: "School Science Fair Winners Announced",
-    excerpt: "Students showcase innovative projects in annual science competition",
-    category: "Academic News",
-    status: "published",
-    views: 245,
-    likes: 32,
-    comments: 8,
-    createdAt: "2024-01-15",
-    publishedAt: "2024-01-16",
-  },
-  {
-    id: "2",
-    title: "Basketball Team Advances to Finals",
-    excerpt: "Southville 8B NHS basketball team secures spot in championship game",
-    category: "Sports",
-    status: "published",
-    views: 189,
-    likes: 45,
-    comments: 12,
-    createdAt: "2024-01-14",
-    publishedAt: "2024-01-14",
-  },
-  {
-    id: "3",
-    title: "Upcoming Cultural Festival Preview",
-    excerpt: "Get ready for our biggest cultural celebration of the year",
-    category: "Events",
-    status: "pending",
-    views: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2024-01-18",
-  },
-  {
-    id: "4",
-    title: "Student Council Election Guide",
-    excerpt: "Everything you need to know about the upcoming elections",
-    category: "Announcements",
-    status: "draft",
-    views: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2024-01-17",
-  },
-]
+// Helper function to transform NewsArticle to Article
+const transformNewsArticle = (newsArticle: NewsArticle): Article => {
+  // Normalize status to lowercase for consistent filtering
+  const normalizeStatus = (status: string): Article["status"] => {
+    const statusMap: Record<string, Article["status"]> = {
+      'draft': 'draft',
+      'pending_approval': 'pending_approval',
+      'approved': 'approved',
+      'published': 'published',
+      'rejected': 'rejected',
+      // Handle case variations
+      'Draft': 'draft',
+      'Pending_Approval': 'pending_approval',
+      'Approved': 'approved',
+      'Published': 'published',
+      'Rejected': 'rejected',
+    }
+    return statusMap[status] || 'draft'
+  }
+  
+  return {
+    id: newsArticle.id,
+    title: newsArticle.title,
+    excerpt: newsArticle.description || newsArticle.excerpt || "",
+    category: newsArticle.category?.name || "Uncategorized",
+    status: normalizeStatus(newsArticle.status),
+    reviewStatus: newsArticle.reviewStatus,
+    views: newsArticle.views || 0,
+    likes: newsArticle.likes || 0,
+    comments: newsArticle.commentsCount || 0,
+    createdAt: newsArticle.createdAt,
+    publishedAt: newsArticle.publishedAt,
+    thumbnail: newsArticle.featuredImageUrl,
+  }
+}
 
 export default function PublisherDashboard() {
   const router = useRouter()
   const { toast } = useToast()
-  const [articles, setArticles] = useState<Article[]>(sampleArticles)
+  const [articles, setArticles] = useState<Article[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Fetch articles on component mount
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        setIsLoading(true)
+        const newsArticles = await newsApi.getMyArticles()
+        const transformedArticles = newsArticles.map(transformNewsArticle)
+        setArticles(transformedArticles)
+      } catch (error: any) {
+        console.error('Failed to fetch articles:', error)
+        toast({
+          title: "Failed to load articles",
+          description: error?.message || "Unable to fetch your articles. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchArticles()
+  }, [toast])
 
   const stats = {
     totalArticles: articles.length,
     published: articles.filter((a) => a.status === "published").length,
-    pending: articles.filter((a) => a.status === "pending").length,
+    pending: articles.filter((a) => a.status === "pending_approval").length,
     drafts: articles.filter((a) => a.status === "draft").length,
     totalViews: articles.reduce((sum, a) => sum + a.views, 0),
     totalLikes: articles.reduce((sum, a) => sum + a.likes, 0),
@@ -130,26 +145,40 @@ export default function PublisherDashboard() {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
-    if (articleToDelete) {
+  const confirmDelete = async () => {
+    if (!articleToDelete) return
+
+    try {
+      setIsDeleting(true)
+      await newsApi.deleteNews(articleToDelete)
       setArticles(articles.filter((a) => a.id !== articleToDelete))
       toast({
         title: "Article Deleted",
         description: "Your article has been successfully deleted.",
       })
+    } catch (error: any) {
+      console.error('Failed to delete article:', error)
+      toast({
+        title: "Failed to delete article",
+        description: error?.message || "Unable to delete the article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setArticleToDelete(null)
     }
-    setDeleteDialogOpen(false)
-    setArticleToDelete(null)
   }
 
   const getStatusBadge = (status: Article["status"]) => {
     const variants = {
       draft: { color: "bg-gray-500", label: "Draft", icon: FileText },
-      pending: { color: "bg-yellow-500", label: "Pending Review", icon: Clock },
+      pending_approval: { color: "bg-yellow-500", label: "Pending Review", icon: Clock },
+      approved: { color: "bg-blue-500", label: "Approved", icon: CheckCircle },
       published: { color: "bg-green-500", label: "Published", icon: CheckCircle },
       rejected: { color: "bg-red-500", label: "Rejected", icon: XCircle },
     }
-    const variant = variants[status]
+    const variant = variants[status] || variants.draft
     const Icon = variant.icon
     return (
       <Badge className={`${variant.color} text-white border-0`}>
@@ -254,7 +283,8 @@ export default function PublisherDashboard() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="pending_approval">Pending Review</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="published">Published</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
@@ -284,7 +314,13 @@ export default function PublisherDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {filteredArticles.length === 0 ? (
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-600 mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">Loading your articles...</h3>
+                  <p className="text-slate-500 dark:text-slate-400">Please wait while we fetch your articles</p>
+                </div>
+              ) : filteredArticles.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
                   <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">No articles found</h3>
@@ -346,15 +382,18 @@ export default function PublisherDashboard() {
                           </div>
                         </div>
                         <div className="flex sm:flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => router.push(`/student/publisher/edit/${article.id}`)}
-                            className="flex-1 sm:flex-none"
-                          >
-                            <Edit className="w-4 h-4 sm:mr-2" />
-                            <span className="hidden sm:inline">Edit</span>
-                          </Button>
+                          {/* Only show edit button for draft/pending articles */}
+                          {(article.status === 'draft' || article.status === 'pending_approval') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.push(`/student/publisher/edit/${article.id}`)}
+                              className="flex-1 sm:flex-none"
+                            >
+                              <Edit className="w-4 h-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Edit</span>
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -364,15 +403,25 @@ export default function PublisherDashboard() {
                             <Eye className="w-4 h-4 sm:mr-2" />
                             <span className="hidden sm:inline">View</span>
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(article.id)}
-                            className="flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <Trash2 className="w-4 h-4 sm:mr-2" />
-                            <span className="hidden sm:inline">Delete</span>
-                          </Button>
+                          {/* Only show delete button for draft articles */}
+                          {article.status === 'draft' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(article.id)}
+                              disabled={isDeleting}
+                              className="flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                            >
+                              {isDeleting && articleToDelete === article.id ? (
+                                <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4 sm:mr-2" />
+                              )}
+                              <span className="hidden sm:inline">
+                                {isDeleting && articleToDelete === article.id ? "Deleting..." : "Delete"}
+                              </span>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -394,9 +443,20 @@ export default function PublisherDashboard() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
