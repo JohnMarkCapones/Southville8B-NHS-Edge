@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import { newsApi } from "@/lib/api/endpoints/news"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +26,10 @@ import {
   User,
   Facebook,
   Twitter,
+  ThumbsUp,
+  ThumbsDown,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -36,6 +42,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+// Utility functions
+const calculateWordCount = (html: string): number => {
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return text.split(' ').filter(word => word.length > 0).length
+}
+
+const calculateReadingTime = (wordCount: number): number => {
+  const wordsPerMinute = 200
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute))
+}
 
 export default function NewsPreviewPage() {
   const router = useRouter()
@@ -43,63 +68,91 @@ export default function NewsPreviewPage() {
   const { toast } = useToast()
   const [comment, setComment] = useState("")
   const [showPublishDialog, setShowPublishDialog] = useState(false)
+  const [showPublishWarningDialog, setShowPublishWarningDialog] = useState(false)
+  const [showApproveDialog, setShowApproveDialog] = useState(false)
+  const [showRejectDialog, setShowRejectDialog] = useState(false)
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false)
+  const [showUnpublishDialog, setShowUnpublishDialog] = useState(false)
+  const [feedbackText, setFeedbackText] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
 
-  const [reviewComments, setReviewComments] = useState([
-    {
-      id: 1,
-      author: "Principal Rodriguez",
-      comment: "Great article! Please add more photos from the event.",
-      timestamp: "2025-01-06T10:00:00",
-    },
-  ])
+  // Fetch review comments from API
+  const { data: reviewComments = [], isLoading: isLoadingComments, refetch: refetchComments } = useQuery({
+    queryKey: ['news', 'review-comments', params.id],
+    queryFn: () => newsApi.getReviewComments(params.id as string),
+    enabled: !!params.id,
+  })
 
-  // Mock article data - Replace with actual database fetch
+  // Fetch article data from API
+  const { data: articleData, isLoading, error } = useQuery({
+    queryKey: ['news', 'preview', params.id],
+    queryFn: () => newsApi.getNewsById(params.id as string),
+    enabled: !!params.id,
+  })
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading article...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error or not found state
+  if (error || !articleData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Article Not Found</h2>
+            <p className="text-muted-foreground mb-4">The article you're looking for doesn't exist or has been removed.</p>
+            <Button onClick={() => router.push('/teacher/news')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to News
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Calculate word count and reading time from article content
+  const wordCount = calculateWordCount(articleData.content || '')
+  const readingTime = calculateReadingTime(wordCount)
+
+  // Map API data to article format
   const article = {
-    id: params.id,
-    title: "Southville 8B NHS Wins Regional Science Fair Competition",
-    slug: "southville-8b-nhs-wins-regional-science-fair",
-    excerpt:
-      "Our students showcased exceptional talent and innovation at the Regional Science Fair, bringing home multiple awards and recognition.",
-    content: `
-      <p>In a remarkable display of scientific excellence, students from Southville 8B National High School dominated the Regional Science Fair held last weekend at the City Convention Center.</p>
-      
-      <h2>Outstanding Achievements</h2>
-      <p>The school's science club presented five groundbreaking projects across various categories, with three projects securing top positions in their respective divisions.</p>
-      
-      <blockquote>
-        <p>"This victory represents months of hard work, dedication, and the unwavering support of our teachers and parents," said Maria Santos, one of the winning students.</p>
-      </blockquote>
-      
-      <h3>Award Winners</h3>
-      <ul>
-        <li><strong>1st Place - Physics:</strong> "Renewable Energy Solutions for Rural Communities" by Grade 10 students</li>
-        <li><strong>2nd Place - Biology:</strong> "Biodegradable Plastic from Banana Peels" by Grade 9 students</li>
-        <li><strong>3rd Place - Chemistry:</strong> "Water Purification Using Natural Materials" by Grade 8 students</li>
-      </ul>
-      
-      <p>The winning teams will represent our region at the National Science Fair next month, competing against the best young scientists from across the country.</p>
-    `,
-    featuredImage: "/placeholder.svg?height=400&width=800",
-    category: "Academic Achievement",
-    tags: ["Science Fair", "Student Achievement", "STEM Education", "Competition"],
+    id: articleData.id,
+    title: articleData.title,
+    slug: articleData.slug,
+    excerpt: articleData.excerpt,
+    content: articleData.content,
+    featuredImage: articleData.image,
+    category: articleData.category,
+    tags: articleData.tags || [],
     author: {
-      name: "John Dela Cruz",
-      avatar: "/placeholder.svg?height=40&width=40",
-      role: "Science Department Head",
+      name: articleData.author,
+      avatar: articleData.authorImage || articleData.authorAvatar,
+      role: "Author", // API doesn't provide role
     },
-    coAuthors: [
-      { name: "Maria Garcia", role: "Science Teacher" },
-      { name: "Robert Santos", role: "Club Moderator" },
-    ],
-    status: "draft",
-    visibility: "public",
-    scheduledDate: "2025-01-15T10:00:00",
-    createdAt: "2025-01-05T14:30:00",
-    updatedAt: "2025-01-06T09:15:00",
-    wordCount: 342,
-    readingTime: 2,
-    views: 0,
-    approvalStatus: "pending_review",
+    coAuthors: (articleData as any).co_authors?.map((coAuthor: any) => ({
+      name: coAuthor.co_author_name,
+      role: coAuthor.role || "Co-Author",
+    })) || [],
+    status: articleData.status,
+    visibility: articleData.visibility,
+    scheduledDate: (articleData as any).scheduled_date,
+    createdAt: (articleData as any).created_at,
+    updatedAt: (articleData as any).updated_at,
+    wordCount: wordCount,
+    readingTime: readingTime,
+    views: articleData.views || 0,
+    approvalStatus: articleData.reviewStatus || 'pending',
   }
 
   // Calculate completion percentage
@@ -116,16 +169,152 @@ export default function NewsPreviewPage() {
   const completionPercentage =
     (Object.values(completionChecks).filter(Boolean).length / Object.keys(completionChecks).length) * 100
 
-  const handlePublish = () => {
-    // TODO: Implement actual publish logic with database
-    toast({
-      title: "Article Published",
-      description: "The article has been published successfully.",
-    })
-    router.push("/teacher/news")
+  const handlePublishClick = () => {
+    // Check if article has pending review_status
+    if (article.approvalStatus === 'pending' || article.approvalStatus === 'in_review') {
+      // Show warning dialog that publishing will auto-approve
+      setShowPublishWarningDialog(true)
+    } else {
+      // Show normal publish confirmation
+      setShowPublishDialog(true)
+    }
   }
 
-  const handleAddComment = () => {
+  const handlePublish = async (forceApprove: boolean = false) => {
+    try {
+      // Call publish endpoint which sets published_date to now and changes status to published
+      await newsApi.publishNews(article.id, forceApprove)
+
+      toast({
+        title: "Article Published",
+        description: forceApprove
+          ? "The article has been approved and published successfully."
+          : "The article has been published successfully.",
+      })
+      router.push("/teacher/news")
+    } catch (error: any) {
+      console.error('Error publishing article:', error)
+      const errorMessage = error?.message || "Failed to publish article. Please try again."
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setShowPublishDialog(false)
+      setShowPublishWarningDialog(false)
+    }
+  }
+
+  const handleUnpublish = async () => {
+    try {
+      await newsApi.unpublishNews(article.id)
+      toast({
+        title: "Article Unpublished",
+        description: "The article has been unpublished and moved to drafts.",
+      })
+      router.push("/teacher/news")
+    } catch (error: any) {
+      console.error('Error unpublishing article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to unpublish article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setShowUnpublishDialog(false)
+    }
+  }
+
+  const handleApprove = async () => {
+    try {
+      await newsApi.approveNews(article.id)
+      toast({
+        title: "Article Approved",
+        description: "The article has been approved and is ready to publish.",
+      })
+      router.push("/teacher/news")
+    } catch (error: any) {
+      console.error('Error approving article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to approve article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setShowApproveDialog(false)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for rejection.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await newsApi.rejectNews(article.id, rejectReason.trim())
+      toast({
+        title: "Article Rejected",
+        description: "The article has been rejected with feedback.",
+      })
+      router.push("/teacher/news")
+    } catch (error: any) {
+      console.error('Error rejecting article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to reject article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setShowRejectDialog(false)
+      setRejectReason("")
+    }
+  }
+
+  const handleRequestRevision = async () => {
+    if (!feedbackText.trim()) {
+      toast({
+        title: "Feedback Required",
+        description: "Please provide specific feedback for revision.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      // Add review comment with the revision request
+      await newsApi.addReviewComment(article.id, `REVISION REQUESTED: ${feedbackText.trim()}`)
+
+      // Optionally update the review status if you have an endpoint for that
+      // await newsApi.updateReviewStatus(article.id, 'needs_revision')
+
+      toast({
+        title: "Revision Requested",
+        description: "Your feedback has been sent to the author.",
+      })
+
+      // Refetch comments to show the new one
+      refetchComments()
+      router.push("/teacher/news")
+    } catch (error: any) {
+      console.error('Error requesting revision:', error)
+      toast({
+        title: "Error",
+        description: "Failed to request revision. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setShowRevisionDialog(false)
+      setFeedbackText("")
+    }
+  }
+
+  const handleAddComment = async () => {
     if (!comment.trim()) {
       toast({
         title: "Empty Comment",
@@ -135,22 +324,26 @@ export default function NewsPreviewPage() {
       return
     }
 
-    // Create new comment object
-    const newComment = {
-      id: reviewComments.length + 1,
-      author: "Current User", // TODO: Replace with actual logged-in user name
-      comment: comment.trim(),
-      timestamp: new Date().toISOString(),
+    try {
+      // Call API to add review comment
+      await newsApi.addReviewComment(article.id, comment.trim())
+
+      // Refetch comments to show the new one
+      refetchComments()
+
+      toast({
+        title: "Comment Added",
+        description: "Your feedback has been added to the article.",
+      })
+      setComment("")
+    } catch (error: any) {
+      console.error('Error adding comment:', error)
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to add comment. Please try again.",
+        variant: "destructive",
+      })
     }
-
-    // Add comment to the list
-    setReviewComments([...reviewComments, newComment])
-
-    toast({
-      title: "Comment Added",
-      description: "Your feedback has been added to the article.",
-    })
-    setComment("")
   }
 
   return (
@@ -165,15 +358,59 @@ export default function NewsPreviewPage() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push(`/teacher/news/edit/${article.id}`)} className="gap-2">
               <Edit className="h-4 w-4" />
-              Edit Article
+              Edit
             </Button>
-            <Button
-              onClick={() => setShowPublishDialog(true)}
-              className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-            >
-              <Send className="h-4 w-4" />
-              Publish Now
-            </Button>
+
+            {/* Show different actions based on article status */}
+            {article.status !== "Published" && article.approvalStatus === "pending" && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowApproveDialog(true)}
+                  className="gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRevisionDialog(true)}
+                  className="gap-2 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-300"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Request Revision
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRejectDialog(true)}
+                  className="gap-2 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  Reject
+                </Button>
+              </>
+            )}
+
+            {article.status !== "Published" && (
+              <Button
+                onClick={handlePublishClick}
+                className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              >
+                <Send className="h-4 w-4" />
+                Publish
+              </Button>
+            )}
+
+            {article.status === "Published" && (
+              <Button
+                variant="outline"
+                onClick={() => setShowUnpublishDialog(true)}
+                className="gap-2 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-300"
+              >
+                <XCircle className="h-4 w-4" />
+                Unpublish
+              </Button>
+            )}
           </div>
         </div>
 
@@ -430,7 +667,19 @@ export default function NewsPreviewPage() {
                 {/* Review Comments */}
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Review Comments ({reviewComments.length})</p>
-                  {reviewComments.length > 0 ? (
+                  {isLoadingComments ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 2 }).map((_, idx) => (
+                        <div key={idx} className="border rounded-lg p-3 space-y-2 bg-muted/30 animate-pulse">
+                          <div className="flex items-center justify-between">
+                            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+                            <div className="h-3 w-32 bg-gray-300 rounded"></div>
+                          </div>
+                          <div className="h-3 w-full bg-gray-300 rounded"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : reviewComments.length > 0 ? (
                     reviewComments.map((review) => (
                       <div key={review.id} className="border rounded-lg p-3 space-y-2 bg-muted/30">
                         <div className="flex items-center justify-between">
@@ -522,10 +771,142 @@ export default function NewsPreviewPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePublish}>Publish Now</AlertDialogAction>
+            <AlertDialogAction onClick={() => handlePublish(false)}>Publish Now</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Publish Warning Dialog for Pending Review */}
+      <AlertDialog open={showPublishWarningDialog} onOpenChange={setShowPublishWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Publish Pending Article
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p className="font-semibold text-foreground">
+                  This article has a <span className="text-amber-600 font-bold">Pending Review</span> status.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Publishing this article will automatically <span className="font-semibold">approve</span> it and make it immediately visible to all readers.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to proceed?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handlePublish(true)}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Approve & Publish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unpublish Confirmation Dialog */}
+      <AlertDialog open={showUnpublishDialog} onOpenChange={setShowUnpublishDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unpublish Article</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unpublish "{article.title}"? It will be moved to drafts and will no longer be visible to readers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnpublish}>Unpublish</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approve Dialog */}
+      <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Article</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve "{article.title}"? The article will be marked as approved and ready to publish.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApprove} className="bg-green-500 hover:bg-green-600">
+              Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Article</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting "{article.title}". This feedback will be sent to the author.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Explain why this article is being rejected..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={5}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleReject} disabled={!rejectReason.trim()} className="bg-red-500 hover:bg-red-600">
+              <ThumbsDown className="w-4 h-4 mr-2" />
+              Reject Article
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request Revision Dialog */}
+      <Dialog open={showRevisionDialog} onOpenChange={setShowRevisionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Revision</DialogTitle>
+            <DialogDescription>
+              Provide specific feedback on what needs to be changed in "{article.title}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Be specific about what needs to be changed..."
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              rows={5}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRevisionDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRequestRevision}
+              disabled={!feedbackText.trim()}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Request Revision
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

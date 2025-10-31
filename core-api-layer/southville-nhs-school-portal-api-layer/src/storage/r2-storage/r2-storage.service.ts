@@ -251,6 +251,39 @@ export class R2StorageService {
   }
 
   /**
+   * Download a file from R2 as Buffer
+   */
+  async downloadFile(key: string): Promise<Buffer> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.config.bucketName,
+        Key: key,
+      });
+
+      const response = await this.s3Client.send(command);
+
+      if (!response.Body) {
+        throw new Error('File not found or empty');
+      }
+
+      // Convert stream to buffer
+      const chunks: Uint8Array[] = [];
+      const stream = response.Body as any;
+
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      return Buffer.concat(chunks);
+    } catch (error) {
+      this.logger.error('Failed to download file from R2:', error);
+      throw new BadRequestException(
+        `Failed to download file: ${error.message}`,
+      );
+    }
+  }
+
+  /**
    * Delete a file from R2
    */
   async deleteFile(key: string): Promise<FileUploadResult> {

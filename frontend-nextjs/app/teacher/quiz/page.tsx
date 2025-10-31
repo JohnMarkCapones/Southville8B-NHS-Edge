@@ -283,6 +283,34 @@ const getStatusIcon = (status: string) => {
 }
 
 export default function TeacherQuizPage() {
+  // Temporary Coming Soon display. The original implementation is preserved below.
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center p-8">
+      <Card className="max-w-xl w-full text-center p-8">
+        <CardHeader>
+          <CardTitle className="text-2xl">Quiz Management</CardTitle>
+          <CardDescription>
+            This feature is under active development.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center gap-4">
+            <Badge variant="secondary" className="text-base">Coming soon</Badge>
+            <Button disabled>
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Build Quiz
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
+  /*
+   Original implementation kept for reference below. Do not delete until the
+   feature is fully launched. This block ensures we preserve the previous UI
+   and logic without executing it.
+  */
   const router = useRouter()
   const { toast } = useToast() // Initialize toast
   const [activeTab, setActiveTab] = useState("all-quizzes")

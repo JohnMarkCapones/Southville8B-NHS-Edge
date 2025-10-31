@@ -86,10 +86,14 @@ ON CONFLICT (section_name, grade_level) DO NOTHING;
 
 -- Create a view for sections with related data
 CREATE OR REPLACE VIEW sections_with_details AS
-SELECT 
+SELECT
     s.id,
     s.section_name,
     s.grade_level,
+    s.adviser_id,        -- Include adviser_id for filtering
+    s.building_id,       -- Include building_id
+    s.floor_id,          -- Include floor_id
+    s.room_id,           -- Include room_id
     s.status,
     s.created_at,
     s.updated_at,
@@ -177,6 +181,7 @@ BEGIN
     ORDER BY s.section_name;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 

@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
 import StudentLayout from "@/components/student/student-layout"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -31,20 +30,21 @@ import {
   GraduationCap,
   Loader2,
 } from "lucide-react"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, use } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { getClubBySlug, getActiveClubForms, submitClubFormResponse } from "@/lib/api/endpoints/clubs"
 import type { Club, ClubForm, ClubFormQuestion } from "@/lib/api/types/clubs"
 
 interface JoinClubPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 export default function JoinClubPage({ params }: JoinClubPageProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const resolvedParams = use(params)
   const [club, setClub] = useState<Club | null>(null)
   const [clubForm, setClubForm] = useState<ClubForm | null>(null)
   const [loadingClub, setLoadingClub] = useState(true)
@@ -58,7 +58,7 @@ export default function JoinClubPage({ params }: JoinClubPageProps) {
     const fetchClubData = async () => {
       setLoadingClub(true)
       try {
-        const clubData = await getClubBySlug(params.slug)
+        const clubData = await getClubBySlug(resolvedParams.slug)
         if (clubData) {
           setClub(clubData)
         } else {
@@ -82,7 +82,7 @@ export default function JoinClubPage({ params }: JoinClubPageProps) {
     }
 
     fetchClubData()
-  }, [params.slug, router, toast])
+  }, [resolvedParams.slug, router, toast])
 
   // Fetch club form when club is loaded
   useEffect(() => {
@@ -91,10 +91,9 @@ export default function JoinClubPage({ params }: JoinClubPageProps) {
 
       setLoadingForm(true)
       try {
-        const formsResponse = await getActiveClubForms(club.id)
-        const forms = formsResponse.data || []
+        const forms = await getActiveClubForms(club.id)
 
-        if (forms.length > 0) {
+        if (forms && forms.length > 0) {
           // Use the first active form
           setClubForm(forms[0])
         }
@@ -138,15 +137,26 @@ export default function JoinClubPage({ params }: JoinClubPageProps) {
 
     setSubmitting(true)
     try {
-      const answers = Object.entries(formAnswers).map(([question_id, answer_text]) => ({
-        question_id,
-        answer_text,
-      }))
+      // Build answers array with proper types based on question type
+      const answers = Object.entries(formAnswers).map(([question_id, value]) => {
+        const question = clubForm.questions?.find((q) => q.id === question_id)
 
-      await submitClubFormResponse({
-        form_id: clubForm.id,
-        answers,
+        // Select and radio use answer_value, text and textarea use answer_text
+        if (question?.question_type === 'select' || question?.question_type === 'radio') {
+          return {
+            question_id,
+            answer_value: value,
+          }
+        } else {
+          // text, textarea use answer_text
+          return {
+            question_id,
+            answer_text: value,
+          }
+        }
       })
+
+      await submitClubFormResponse(club.id, clubForm.id, answers)
 
       toast({
         title: "Application Submitted!",
@@ -472,22 +482,6 @@ export default function JoinClubPage({ params }: JoinClubPageProps) {
                             </div>
                           ))}
                         </RadioGroup>
-                      )}
-
-                      {/* Checkbox (single) */}
-                      {question.question_type === 'checkbox' && (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={question.id}
-                            checked={formAnswers[question.id] === 'true'}
-                            onCheckedChange={(checked) =>
-                              handleAnswerChange(question.id, checked ? 'true' : 'false')
-                            }
-                          />
-                          <Label htmlFor={question.id} className="font-normal cursor-pointer">
-                            I agree
-                          </Label>
-                        </div>
                       )}
 
                       {/* Select */}

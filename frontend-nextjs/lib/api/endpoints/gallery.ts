@@ -306,6 +306,23 @@ export async function deleteGalleryItem(id: string): Promise<DeleteResponse> {
 }
 
 /**
+ * Restore a soft-deleted gallery item
+ *
+ * **Permissions**: Admin, Teacher only
+ *
+ * @param id - Gallery item UUID
+ * @returns Success message
+ *
+ * @example
+ * ```ts
+ * const result = await restoreGalleryItem('item-uuid-123');
+ * ```
+ */
+export async function restoreGalleryItem(id: string): Promise<{ message: string }> {
+  return apiClient.post<{ message: string }>(`/gallery/${id}/restore`, {});
+}
+
+/**
  * Generate download URL for a gallery item
  *
  * @param id - Gallery item UUID

@@ -120,6 +120,38 @@ export class DepartmentsController {
     return this.departmentsService.findAll(query);
   }
 
+  @Get('count')
+  @ApiOperation({ summary: 'Get department counts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Department counts retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        pagination: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+          },
+        },
+        active: { type: 'number' },
+        inactive: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - insufficient permissions',
+  })
+  async getCount(): Promise<{
+    pagination: { total: number };
+    active: number;
+    inactive: number;
+  }> {
+    return this.departmentsService.getCount();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get department by ID' })
   @ApiParam({ name: 'id', description: 'Department ID' })

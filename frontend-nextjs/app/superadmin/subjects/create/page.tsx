@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useSubjects } from "@/hooks/useSubjects"
+import { useDepartments } from "@/hooks/useDepartments"
 import {
   ArrowLeft,
   BookOpen,
@@ -28,7 +29,8 @@ import {
 const CreateSubjectPage = () => {
   const router = useRouter()
   const { toast } = useToast()
-  const { addSubject, loading, error, clearError } = useSubjects()
+  const { addSubject, loading, error, clearError, checkCodeExists, checkNameExists } = useSubjects()
+  const { departments, loadActiveDepartments, loading: departmentsLoading } = useDepartments()
 
   const [formData, setFormData] = useState({
     code: "",
@@ -41,10 +43,20 @@ const CreateSubjectPage = () => {
 
   const [selectedGradeLevels, setSelectedGradeLevels] = useState<string[]>([])
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [validatingCode, setValidatingCode] = useState(false)
+  const [validatingName, setValidatingName] = useState(false)
+
+  // Load departments on mount
+  useEffect(() => {
+    loadActiveDepartments()
+  }, [loadActiveDepartments])
+
+  // Debounce timer for validation
+  const [validationTimer, setValidationTimer] = useState<NodeJS.Timeout | null>(null)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    
+
     // Clear validation error for this field when user starts typing
     if (validationErrors[field]) {
       setValidationErrors((prev) => {
@@ -53,7 +65,53 @@ const CreateSubjectPage = () => {
         return newErrors
       })
     }
+
+    // Trigger real-time validation for code and name fields
+    if (field === 'code' || field === 'name') {
+      // Clear existing timer
+      if (validationTimer) {
+        clearTimeout(validationTimer)
+      }
+
+      // Set new timer for debounced validation (500ms delay)
+      const timer = setTimeout(async () => {
+        if (field === 'code' && value.trim().length >= 2) {
+          setValidatingCode(true)
+          const exists = await checkCodeExists(value.trim())
+          setValidatingCode(false)
+
+          if (exists) {
+            setValidationErrors(prev => ({
+              ...prev,
+              code: 'This subject code is already in use'
+            }))
+          }
+        } else if (field === 'name' && value.trim().length >= 2) {
+          setValidatingName(true)
+          const exists = await checkNameExists(value.trim())
+          setValidatingName(false)
+
+          if (exists) {
+            setValidationErrors(prev => ({
+              ...prev,
+              name: 'This subject name is already in use'
+            }))
+          }
+        }
+      }, 500)
+
+      setValidationTimer(timer)
+    }
   }
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (validationTimer) {
+        clearTimeout(validationTimer)
+      }
+    }
+  }, [validationTimer])
 
   const handleGradeLevelToggle = (level: string) => {
     setSelectedGradeLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]))
@@ -93,6 +151,11 @@ const CreateSubjectPage = () => {
   const getFieldValidationState = (field: string) => {
     const error = validationErrors[field]
     if (error) return 'error'
+
+    // Show loading state for code and name fields during validation
+    if (field === 'code' && validatingCode) return 'validating'
+    if (field === 'name' && validatingName) return 'validating'
+
     if (formData[field as keyof typeof formData] && !error) return 'success'
     return 'default'
   }
@@ -291,13 +354,19 @@ const CreateSubjectPage = () => {
                     {validationErrors.code}
                   </p>
                 )}
-                {!validationErrors.code && formData.code && (
+                {!validationErrors.code && validatingCode && (
+                  <p className="text-xs text-blue-600 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Checking availability...
+                  </p>
+                )}
+                {!validationErrors.code && !validatingCode && formData.code && formData.code.length >= 2 && (
                   <p className="text-xs text-green-600 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     Valid subject code
                   </p>
                 )}
-                {!validationErrors.code && !formData.code && (
+                {!validationErrors.code && !validatingCode && !formData.code && (
                   <p className="text-xs text-muted-foreground">Unique identifier for the subject</p>
                 )}
               </div>
@@ -326,13 +395,19 @@ const CreateSubjectPage = () => {
                     {validationErrors.name}
                   </p>
                 )}
-                {!validationErrors.name && formData.name && (
+                {!validationErrors.name && validatingName && (
+                  <p className="text-xs text-blue-600 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Checking availability...
+                  </p>
+                )}
+                {!validationErrors.name && !validatingName && formData.name && formData.name.length >= 2 && (
                   <p className="text-xs text-green-600 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     Valid subject name
                   </p>
                 )}
-                {!validationErrors.name && !formData.name && (
+                {!validationErrors.name && !validatingName && !formData.name && (
                   <p className="text-xs text-muted-foreground">Full name of the subject</p>
                 )}
               </div>
@@ -390,23 +465,26 @@ const CreateSubjectPage = () => {
                 <Label htmlFor="department" className="text-foreground">
                   Department
                 </Label>
-                <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)}>
+                <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)} disabled={departmentsLoading}>
                   <SelectTrigger className="bg-background border-border text-foreground">
-                    <SelectValue placeholder="Select department" />
+                    <SelectValue placeholder={departmentsLoading ? "Loading departments..." : "Select department"} />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
                     <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="6e339716-dff7-4f50-b026-424dd046af50">Mathematics</SelectItem>
-                    <SelectItem value="science-dept-uuid">Science</SelectItem>
-                    <SelectItem value="english-dept-uuid">English</SelectItem>
-                    <SelectItem value="filipino-dept-uuid">Filipino</SelectItem>
-                    <SelectItem value="social-studies-dept-uuid">Social Studies</SelectItem>
-                    <SelectItem value="arts-dept-uuid">Arts</SelectItem>
-                    <SelectItem value="pe-dept-uuid">Physical Education</SelectItem>
-                    <SelectItem value="tech-dept-uuid">Technology</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.department_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">Academic department managing this subject</p>
+                <p className="text-xs text-muted-foreground">
+                  {departmentsLoading
+                    ? "Loading departments from database..."
+                    : departments.length > 0
+                    ? `${departments.length} department${departments.length > 1 ? 's' : ''} available`
+                    : "Academic department managing this subject"}
+                </p>
               </div>
             </div>
 

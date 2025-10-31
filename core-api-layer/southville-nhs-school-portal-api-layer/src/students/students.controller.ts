@@ -136,8 +136,9 @@ export class StudentsController {
     @Query('sortBy') sortBy: string = 'student_id',
     @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'asc',
   ) {
-    this.logger.log('Fetching students');
-    return this.studentsService.findAll({
+    console.log('[STUDENTS CONTROLLER] findAll called with params:', {
+      userId: user.id,
+      userEmail: user.email,
       page,
       limit,
       search,
@@ -146,6 +147,25 @@ export class StudentsController {
       sortBy,
       sortOrder,
     });
+
+    this.logger.log('Fetching students');
+    const result = await this.studentsService.findAll({
+      page,
+      limit,
+      search,
+      gradeLevel,
+      sectionId,
+      sortBy,
+      sortOrder,
+    });
+
+    console.log('[STUDENTS CONTROLLER] Service result:', {
+      hasData: !!result.data,
+      dataLength: result.data?.length || 0,
+      pagination: result.pagination,
+    });
+
+    return result;
   }
 
   @Get(':id')

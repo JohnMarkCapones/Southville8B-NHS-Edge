@@ -12,28 +12,17 @@ export class GalleryItem {
   id: string;
 
   @ApiProperty({
-    description: 'R2 public URL for the file',
-    example: 'https://bucket.r2.dev/gallery/abc123-photo.jpg',
+    description: 'Cloudflare Images ID',
+    example: 'abc123-def456-ghi789',
   })
-  file_url: string;
+  cf_image_id: string;
 
   @ApiProperty({
-    description: 'Internal R2 storage key',
-    example: 'gallery/abc123-photo.jpg',
+    description: 'Cloudflare Images delivery URL',
+    example:
+      'https://imagedelivery.net/kslzpqjNVD4TQGhwBAY6ew/abc123-def456-ghi789/public',
   })
-  r2_file_key: string;
-
-  @ApiPropertyOptional({
-    description: 'R2 public URL for thumbnail',
-    example: 'https://bucket.r2.dev/gallery/thumbnails/abc123-photo_thumb.jpg',
-  })
-  thumbnail_url?: string;
-
-  @ApiPropertyOptional({
-    description: 'Internal R2 thumbnail key',
-    example: 'gallery/thumbnails/abc123-photo_thumb.jpg',
-  })
-  r2_thumbnail_key?: string;
+  cf_image_url: string;
 
   @ApiProperty({
     description: 'Original filename',

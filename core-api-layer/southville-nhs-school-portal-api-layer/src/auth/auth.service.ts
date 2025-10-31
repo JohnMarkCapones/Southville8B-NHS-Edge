@@ -158,7 +158,13 @@ export class AuthService {
     try {
       const supabase = this.getServiceClient();
 
-      console.log('🔍 Ensuring user exists in public.users:', authUser.id);
+      // Only log in development mode or when debugging
+      if (
+        process.env.NODE_ENV === 'development' &&
+        process.env.DEBUG_AUTH === 'true'
+      ) {
+        console.log('🔍 Ensuring user exists in public.users:', authUser.id);
+      }
 
       // Check if user exists in public.users
       const { data: existingUser, error: checkError } = await supabase
@@ -194,7 +200,13 @@ export class AuthService {
       }
 
       if (!existingUser) {
-        console.log('📝 User not found, creating new user...');
+        // Only log in development mode or when debugging
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_AUTH === 'true'
+        ) {
+          console.log('📝 User not found, creating new user...');
+        }
 
         // Insert user into public.users table
         const userData = {
@@ -205,7 +217,12 @@ export class AuthService {
           status: 'Active',
         };
 
-        console.log('📝 Inserting user data:', userData);
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_AUTH === 'true'
+        ) {
+          console.log('📝 Inserting user data:', userData);
+        }
 
         const { data: insertedUser, error: insertError } = await supabase
           .from('users')
@@ -215,11 +232,19 @@ export class AuthService {
 
         if (insertError) {
           console.error('❌ Error inserting user:', insertError);
-        } else {
+        } else if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_AUTH === 'true'
+        ) {
           console.log('✅ User successfully inserted:', insertedUser);
         }
       } else {
-        console.log('📝 User exists, checking if update needed...');
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_AUTH === 'true'
+        ) {
+          console.log('📝 User exists, checking if update needed...');
+        }
 
         // Check if user needs updating (wrong email or missing role_id)
         const needsUpdate =
@@ -227,7 +252,12 @@ export class AuthService {
           (!existingUser.role_id && !!roleId);
 
         if (needsUpdate) {
-          console.log('🔄 Updating user information...');
+          if (
+            process.env.NODE_ENV === 'development' &&
+            process.env.DEBUG_AUTH === 'true'
+          ) {
+            console.log('🔄 Updating user information...');
+          }
 
           const updateData: any = {};
           if (existingUser.email !== authUser.email) {
@@ -239,7 +269,12 @@ export class AuthService {
             updateData.role_id = roleId;
           }
 
-          console.log('📝 Updating user data:', updateData);
+          if (
+            process.env.NODE_ENV === 'development' &&
+            process.env.DEBUG_AUTH === 'true'
+          ) {
+            console.log('📝 Updating user data:', updateData);
+          }
 
           const { data: updatedUser, error: updateError } = await supabase
             .from('users')
@@ -250,10 +285,16 @@ export class AuthService {
 
           if (updateError) {
             console.error('❌ Error updating user:', updateError);
-          } else {
+          } else if (
+            process.env.NODE_ENV === 'development' &&
+            process.env.DEBUG_AUTH === 'true'
+          ) {
             console.log('✅ User successfully updated:', updatedUser);
           }
-        } else {
+        } else if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_AUTH === 'true'
+        ) {
           console.log('✅ User is up to date');
         }
       }

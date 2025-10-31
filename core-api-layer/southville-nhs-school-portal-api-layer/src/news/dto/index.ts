@@ -6,3 +6,5 @@ export * from './create-news-category.dto';
 export * from './add-co-author.dto';
 export * from './add-member.dto';
 export * from './update-member-position.dto';
+export * from './create-review-comment.dto';
+export * from './update-review-comment.dto';

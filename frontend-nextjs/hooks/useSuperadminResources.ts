@@ -282,14 +282,39 @@ export function useSuperadminResources(options: UseSuperadminResourcesOptions = 
   }, []);
 
   /**
+   * Flatten folder tree structure to flat array
+   */
+  const flattenFolders = (folders: SuperadminFolder[]): SuperadminFolder[] => {
+    const flattened: SuperadminFolder[] = [];
+
+    const flatten = (folder: SuperadminFolder) => {
+      // Add the folder itself
+      flattened.push(folder);
+
+      // Recursively add children if they exist
+      if ((folder as any).children && Array.isArray((folder as any).children)) {
+        (folder as any).children.forEach((child: SuperadminFolder) => flatten(child));
+      }
+    };
+
+    folders.forEach(folder => flatten(folder));
+    return flattened;
+  };
+
+  /**
    * Fetch folders
    */
   const fetchFolders = useCallback(async () => {
     try {
       console.log('[useSuperadminResources] Fetching folders...');
       const data = await getFolders(folderParams);
-      console.log('[useSuperadminResources] ✅ Folders fetched:', data.length);
-      setFolders(data);
+      console.log('[useSuperadminResources] ✅ Folders fetched (tree):', data.length);
+
+      // Flatten the tree structure to a flat array
+      const flattenedFolders = flattenFolders(data);
+      console.log('[useSuperadminResources] ✅ Folders flattened:', flattenedFolders.length);
+
+      setFolders(flattenedFolders);
     } catch (err) {
       console.error('[useSuperadminResources] ❌ Error fetching folders:', err);
       setError(err as Error);

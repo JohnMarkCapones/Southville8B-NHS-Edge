@@ -178,6 +178,60 @@ export class SubjectsService {
     }
   }
 
+  async checkCodeExists(code: string, excludeId?: string): Promise<boolean> {
+    try {
+      const supabase = this.getSupabaseClient();
+      let query = supabase
+        .from('subjects')
+        .select('id, code')
+        .eq('is_deleted', false)
+        .ilike('code', code);
+
+      if (excludeId) {
+        query = query.neq('id', excludeId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        this.logger.error('Error checking subject code:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      this.logger.error('Error checking subject code existence:', error);
+      return false;
+    }
+  }
+
+  async checkNameExists(name: string, excludeId?: string): Promise<boolean> {
+    try {
+      const supabase = this.getSupabaseClient();
+      let query = supabase
+        .from('subjects')
+        .select('id, subject_name')
+        .eq('is_deleted', false)
+        .ilike('subject_name', name);
+
+      if (excludeId) {
+        query = query.neq('id', excludeId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        this.logger.error('Error checking subject name:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      this.logger.error('Error checking subject name existence:', error);
+      return false;
+    }
+  }
+
   private handleError(error: any, operation: string): never {
     if (
       error instanceof NotFoundException ||

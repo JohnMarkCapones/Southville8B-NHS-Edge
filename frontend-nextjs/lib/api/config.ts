@@ -55,8 +55,8 @@ export const apiConfig: ApiConfig = {
   // API version - backend uses /api/v1
   version: '1',
   
-  // 30 second timeout for all requests
-  timeout: 30000,
+  // 60 second timeout for all requests (PPTX conversion can take time)
+  timeout: 60000,
   
   // Rate limiting configuration
   rateLimits: {

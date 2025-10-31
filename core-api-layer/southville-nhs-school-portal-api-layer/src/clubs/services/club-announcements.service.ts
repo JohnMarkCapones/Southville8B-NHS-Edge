@@ -88,7 +88,7 @@ export class ClubAnnouncementsService {
    */
   async findByClub(clubId: string): Promise<ClubAnnouncementWithAuthor[]> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getServiceClient();
 
       const { data, error } = await supabase
         .from('club_announcements')
@@ -123,7 +123,7 @@ export class ClubAnnouncementsService {
    */
   async findOne(id: string): Promise<ClubAnnouncementWithAuthor> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getServiceClient();
 
       const { data, error } = await supabase
         .from('club_announcements')

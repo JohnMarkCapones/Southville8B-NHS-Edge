@@ -12,6 +12,9 @@ import { GoalTracker } from "@/components/productivity/goal-tracker"
 import { PomodoroTimer } from "@/components/productivity/pomodoro-timer"
 import { AnnouncementModal, type AnnouncementData } from "@/components/student/announcement-modal"
 import { useUser } from "@/hooks/useUser"
+import { useMySchedule } from "@/hooks/useSchedules"
+import { useEvents } from "@/hooks/useEvents"
+import { EventStatus } from "@/lib/api/types/events"
 import {
   BookOpen,
   CalendarIcon,
@@ -38,23 +41,55 @@ import {
   BarChart3,
 } from "lucide-react"
 
+// Separate component for live clock to prevent parent re-renders
+const LiveClock = () => {
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <>
+      <div className="flex items-center space-x-2">
+        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+        <span className="text-xs sm:text-sm font-medium">
+          {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+        <span className="text-xs sm:text-sm">
+          {currentTime.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
+        </span>
+      </div>
+    </>
+  )
+}
+
 export default function StudentDashboard() {
   const router = useRouter()
   const { t } = useTranslation()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [subjectsCollapsed, setSubjectsCollapsed] = useState(false)
-  const [currentTime, setCurrentTime] = useState(new Date())
   const [showNotifications, setShowNotifications] = useState(false)
   const [activeProductivityTool, setActiveProductivityTool] = useState<string | null>(null)
 
   // Fetch current user data
-  const { data: user, isLoading, isError } = useUser()
+  const { data: user, isLoading, isError} = useUser()
 
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
+  // Fetch student schedule
+  const { data: schedules, isLoading: isLoadingSchedule } = useMySchedule()
+
+  // Fetch upcoming events
+  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+  const { data: eventsResponse, isLoading: isLoadingEvents } = useEvents({
+    status: EventStatus.PUBLISHED,
+    startDate: today,
+    limit: 10,
+  })
 
   const sampleAnnouncements: AnnouncementData[] = [
     {
@@ -151,12 +186,97 @@ export default function StudentDashboard() {
     { name: "MAPEH (Music, Arts, Physical Education, Health)", grade: 94, color: "bg-indigo-500", progress: 94 },
   ]
 
-  const upcomingClasses = [
-    { subject: "Mathematics", time: "8:00 AM", room: "Room 201", teacher: "Ms. Garcia", status: "upcoming" },
-    { subject: "Science", time: "9:30 AM", room: "Lab 1", teacher: "Mr. Santos", status: "current" },
-    { subject: "English", time: "11:00 AM", room: "Room 105", teacher: "Mrs. Cruz", status: "upcoming" },
-    { subject: "PE", time: "1:00 PM", room: "Gymnasium", teacher: "Coach Martinez", status: "upcoming" },
-  ]
+  // Get today's schedule
+  const getTodaysSchedule = () => {
+    if (!schedules || schedules.length === 0) return []
+
+    // Get current day name
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+
+    // Filter schedules for today
+    const todaySchedules = schedules.filter(schedule => schedule.dayOfWeek === today)
+
+    // Get current time
+    const now = new Date()
+    const currentTime = now.getHours() * 60 + now.getMinutes()
+
+    // Format and sort schedules
+    return todaySchedules
+      .map(schedule => {
+        // Parse start time (HH:MM:SS format) - handle null/undefined
+        if (!schedule.startTime || !schedule.endTime) {
+          console.warn('Schedule missing time data:', schedule)
+          return null
+        }
+
+        const startParts = schedule.startTime.split(':')
+        const endParts = schedule.endTime.split(':')
+
+        if (startParts.length < 2 || endParts.length < 2) {
+          console.warn('Invalid time format:', schedule.startTime, schedule.endTime)
+          return null
+        }
+
+        const startHour = parseInt(startParts[0], 10)
+        const startMin = parseInt(startParts[1], 10)
+        const endHour = parseInt(endParts[0], 10)
+        const endMin = parseInt(endParts[1], 10)
+
+        if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) {
+          console.warn('Failed to parse time:', schedule)
+          return null
+        }
+
+        const startTimeMinutes = startHour * 60 + startMin
+        const endTimeMinutes = endHour * 60 + endMin
+
+        // Determine status
+        let status = 'upcoming'
+        if (currentTime >= startTimeMinutes && currentTime < endTimeMinutes) {
+          status = 'current'
+        } else if (currentTime >= endTimeMinutes) {
+          status = 'completed'
+        }
+
+        // Format time (12-hour format)
+        const formatTime = (hour: number, min: number) => {
+          const period = hour >= 12 ? 'PM' : 'AM'
+          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+          return `${displayHour}:${min.toString().padStart(2, '0')} ${period}`
+        }
+
+        // Get teacher name - handle various formats
+        let teacherName = 'TBA'
+        if (schedule.teacher) {
+          if (schedule.teacher.user?.fullName) {
+            teacherName = schedule.teacher.user.fullName
+          } else if (schedule.teacher.firstName || schedule.teacher.lastName) {
+            const firstName = schedule.teacher.firstName || ''
+            const lastName = schedule.teacher.lastName || ''
+            teacherName = `${firstName} ${lastName}`.trim() || 'TBA'
+          }
+        }
+
+        return {
+          subject: schedule.subject?.subjectName || 'No Subject Name',
+          time: formatTime(startHour, startMin),
+          room: schedule.room ? `Room ${schedule.room.roomNumber}` : schedule.building?.name || 'TBA',
+          teacher: teacherName,
+          status,
+          startTimeMinutes,
+        }
+      })
+      .filter(item => item !== null) // Remove invalid entries
+      .sort((a, b) => a.startTimeMinutes - b.startTimeMinutes)
+  }
+
+  const upcomingClasses = getTodaysSchedule()
+
+  // Debug: Log schedule data
+  if (schedules && schedules.length > 0) {
+    console.log('Schedules received:', schedules)
+    console.log('Today\'s classes:', upcomingClasses)
+  }
 
   const achievements = [
     { title: "Perfect Attendance", icon: Trophy, color: "text-yellow-500", earned: true },
@@ -408,18 +528,7 @@ export default function StudentDashboard() {
                   </p>
 
                 <div className="flex items-center flex-wrap gap-3 sm:gap-6 mb-3 sm:mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="text-xs sm:text-sm font-medium">
-                      {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="text-xs sm:text-sm">
-                      {currentTime.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
-                    </span>
-                  </div>
+                  <LiveClock />
                   <div className="flex items-center space-x-2">
                     <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span className="text-xs sm:text-sm">{t('dashboard.productiveDay')}</span>
@@ -617,8 +726,24 @@ export default function StudentDashboard() {
                 <CardDescription>Your current class schedule for today</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {upcomingClasses.map((classItem, index) => (
+                {isLoadingSchedule ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="p-4 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse">
+                        <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : upcomingClasses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">No classes scheduled for today</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Enjoy your day off!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingClasses.map((classItem, index) => (
                     <div
                       key={index}
                       className={`p-4 rounded-lg border-l-4 transition-all duration-200 hover:shadow-md ${
@@ -642,8 +767,9 @@ export default function StudentDashboard() {
                         <Clock className="w-4 h-4 text-muted-foreground" />
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -656,57 +782,105 @@ export default function StudentDashboard() {
                 <CardDescription>Upcoming events and important dates</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-sm mb-1">Math Quiz</h4>
-                          <p className="text-xs text-purple-100">Tomorrow, 10:00 AM</p>
-                          <p className="text-xs text-purple-200 mt-1">Room 201</p>
-                        </div>
-                        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                          <BookOpen className="w-4 h-4" />
-                        </div>
+                {isLoadingEvents ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse">
+                        <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
                       </div>
+                    ))}
+                  </div>
+                ) : !eventsResponse?.data || eventsResponse.data.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CalendarIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">No upcoming events</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Check back later for new events!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {eventsResponse.data.slice(0, 4).map((event, index) => {
+                        const gradients = [
+                          'from-purple-500 to-purple-600',
+                          'from-orange-500 to-orange-600',
+                          'from-green-500 to-emerald-600',
+                          'from-blue-500 to-blue-600',
+                        ]
+                        const textColors = [
+                          'text-purple-100',
+                          'text-orange-100',
+                          'text-green-100',
+                          'text-blue-100',
+                        ]
+
+                        // Format date and time
+                        const eventDate = new Date(event.startDate)
+                        const now = new Date()
+                        const tomorrow = new Date(now)
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+
+                        let dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+                        if (eventDate.toDateString() === now.toDateString()) {
+                          dateStr = 'Today'
+                        } else if (eventDate.toDateString() === tomorrow.toDateString()) {
+                          dateStr = 'Tomorrow'
+                        }
+
+                        const timeStr = event.startTime
+                          ? new Date(`2000-01-01T${event.startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                          : ''
+
+                        return (
+                          <div
+                            key={event.id}
+                            className={`p-4 rounded-xl bg-gradient-to-br ${gradients[index % gradients.length]} text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer`}
+                            onClick={() => router.push(`/student/events/${event.id}`)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-semibold text-sm mb-1 line-clamp-1">{event.title}</h4>
+                                <p className={`text-xs ${textColors[index % textColors.length]}`}>
+                                  {dateStr}{timeStr && `, ${timeStr}`}
+                                </p>
+                                {event.location && (
+                                  <p className={`text-xs ${textColors[index % textColors.length]} mt-1`}>
+                                    {event.location}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <CalendarIcon className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
 
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-sm mb-1">Science Fair</h4>
-                          <p className="text-xs text-orange-100">Friday, 2:00 PM</p>
-                          <p className="text-xs text-orange-200 mt-1">Laboratory</p>
-                        </div>
-                        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                          <Lightbulb className="w-4 h-4" />
-                        </div>
+                    {/* This Week Summary */}
+                    <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center space-x-2">
+                        <CalendarIcon className="w-4 h-4 text-blue-600" />
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          <strong>This Week:</strong> {(() => {
+                            // Calculate events happening this week
+                            const now = new Date()
+                            const endOfWeek = new Date(now)
+                            endOfWeek.setDate(now.getDate() + (7 - now.getDay())) // Sunday
+
+                            const thisWeekEvents = eventsResponse.data.filter(event => {
+                              const eventDate = new Date(event.startDate)
+                              return eventDate >= now && eventDate <= endOfWeek
+                            })
+
+                            return thisWeekEvents.length
+                          })()} upcoming events • 2 assignments due • 1 quiz scheduled
+                        </p>
                       </div>
                     </div>
                   </div>
-
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-sm mb-1">Parent-Teacher Meeting</h4>
-                        <p className="text-xs text-green-100">Next Monday, 3:00 PM</p>
-                        <p className="text-xs text-green-200 mt-1">Conference Room A</p>
-                      </div>
-                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                        <Users className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center space-x-2">
-                      <CalendarIcon className="w-4 h-4 text-blue-600" />
-                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                        <strong>This Week:</strong> 3 upcoming events • 2 assignments due • 1 quiz scheduled
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

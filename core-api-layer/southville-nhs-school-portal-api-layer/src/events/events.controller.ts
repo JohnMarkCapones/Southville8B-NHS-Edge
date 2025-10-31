@@ -50,6 +50,7 @@ import { AuditInterceptor } from './audit.interceptor';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
 import { R2StorageService } from '../storage/r2-storage/r2-storage.service';
+import { CloudflareImagesService } from '../gallery/services/cloudflare-images.service';
 
 @ApiTags('Events')
 @Controller('events')
@@ -60,15 +61,29 @@ export class EventsController {
   constructor(
     private readonly eventsService: EventsService,
     private readonly r2StorageService: R2StorageService,
+    private readonly cloudflareImagesService: CloudflareImagesService,
   ) {}
 
   /**
-   * Enrich event with presigned URL for image access
+   * Enrich event with presigned URL for image access (only for R2 images)
+   * Cloudflare Images URLs are left as-is since they're already public
    */
   private async enrichEventWithPresignedUrl(event: any): Promise<any> {
     if (!event.eventImage) return event;
 
     try {
+      // Check if it's a Cloudflare Images URL - if so, leave it as-is
+      if (
+        event.eventImage.startsWith('https://imagedelivery.net/') ||
+        event.eventImage.includes('imagedelivery.net')
+      ) {
+        this.logger.debug(
+          `Event image is Cloudflare Images URL, no conversion needed: ${event.eventImage}`,
+        );
+        return event;
+      }
+
+      // Legacy R2 image handling
       let fileKey: string | null = null;
 
       // Check if it's already a key (new format)
@@ -86,7 +101,7 @@ export class EventsController {
 
       if (fileKey) {
         this.logger.debug(
-          `Converting image URL to presigned URL. Original: ${event.eventImage}, Key: ${fileKey}`,
+          `Converting R2 image to presigned URL. Original: ${event.eventImage}, Key: ${fileKey}`,
         );
         event.eventImage = await this.r2StorageService.getPresignedUrl(
           fileKey,
@@ -257,7 +272,7 @@ export class EventsController {
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Upload event image to R2 storage' })
+  @ApiOperation({ summary: 'Upload event image to Cloudflare Images' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 200,
@@ -267,8 +282,9 @@ export class EventsController {
       properties: {
         url: {
           type: 'string',
-          example: 'https://pub-xxx.r2.dev/events/images/uuid-image.jpg',
+          example: 'https://imagedelivery.net/<account-hash>/<image-id>/public',
         },
+        cf_image_id: { type: 'string', description: 'Cloudflare Images ID' },
         fileName: { type: 'string' },
         fileSize: { type: 'number' },
       },
@@ -303,66 +319,44 @@ export class EventsController {
         throw new BadRequestException('No image file provided');
       }
 
-      // Validate image type
-      const allowedTypes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-      ];
-      if (!allowedTypes.includes(imageMimeType)) {
-        throw new BadRequestException(
-          'Invalid image type. Allowed: JPEG, PNG, GIF, WEBP',
-        );
-      }
-
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024;
-      if (imageBuffer.length > maxSize) {
-        throw new BadRequestException(
-          `Image too large: ${(imageBuffer.length / (1024 * 1024)).toFixed(2)}MB. Maximum: 10MB`,
-        );
-      }
-
-      // Sanitize filename
-      const ext = path.extname(imageFilename);
-      const sanitizedName = imageFilename
-        .replace(ext, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .substring(0, 50);
-
-      // Generate unique file key for R2
-      const uniqueId = uuidv4();
-      const finalFilename = `${uniqueId}-${sanitizedName}${ext}`;
-      const fileKey = `events/images/${finalFilename}`;
-
-      this.logger.debug(`Uploading image to R2: ${fileKey}`);
-
-      // Upload to R2
-      const uploadResult = await this.r2StorageService.uploadFile(
-        fileKey,
-        imageBuffer,
-        imageMimeType,
+      this.logger.log(
+        `Uploading event image to Cloudflare Images: ${imageFilename}`,
       );
 
-      if (!uploadResult.success) {
-        this.logger.error(`R2 upload failed for ${fileKey}`);
-        throw new BadRequestException('Failed to upload image to storage');
-      }
+      // Create Express.Multer.File-like object for Cloudflare Images service
+      const fileObject = {
+        buffer: imageBuffer,
+        originalname: imageFilename,
+        mimetype: imageMimeType,
+        size: imageBuffer.length,
+        fieldname: 'image',
+        encoding: '7bit',
+        destination: '',
+        filename: imageFilename,
+        path: '',
+      } as Express.Multer.File;
 
-      this.logger.log(`Image uploaded successfully: ${fileKey}`);
+      // Upload to Cloudflare Images
+      const uploadResult = await this.cloudflareImagesService.uploadImage(
+        fileObject,
+        {
+          uploadedBy: userId,
+          context: 'event',
+        },
+      );
 
-      this.logger.debug(`Upload result: ${JSON.stringify(uploadResult)}`);
+      this.logger.log(
+        `Image uploaded successfully to Cloudflare Images: ${uploadResult.cf_image_id}`,
+      );
 
-      // Return file key instead of presigned URL to avoid database length limits
-      // Presigned URLs will be generated on-demand in findOne/findAll endpoints
+      // Return Cloudflare Images URL and metadata
       return {
-        url: fileKey, // Store just the key, not the presigned URL
+        url: uploadResult.cf_image_url,
+        cf_image_id: uploadResult.cf_image_id,
+        cf_image_url: uploadResult.cf_image_url,
         fileName: imageFilename,
-        fileSize: imageBuffer.length,
+        fileSize: uploadResult.file_size_bytes,
+        mimeType: uploadResult.mime_type,
       };
     } catch (error) {
       this.logger.error('Error uploading image:', error);
@@ -416,6 +410,133 @@ export class EventsController {
     return this.eventsService.findByOrganizer(organizerId, filters);
   }
 
+  @Get('club/:clubId')
+  @ApiOperation({ summary: 'Get events by club ID' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    description: 'Filter by event status',
+  })
+  @ApiQuery({
+    name: 'visibility',
+    required: false,
+    type: String,
+    description: 'Filter by event visibility',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter events from this date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter events until this date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search in title, description, and location',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Club events retrieved successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid club ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async findByClubId(
+    @Param('clubId') clubId: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('status') status?: string,
+    @Query('visibility') visibility?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('search') search?: string,
+  ) {
+    const filters = {
+      page,
+      limit,
+      status,
+      visibility,
+      startDate,
+      endDate,
+      search,
+    };
+    return this.eventsService.findByClubId(clubId, filters);
+  }
+
+  @Get('club/:clubId/public')
+  @ApiOperation({ summary: 'Get public events by club ID' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter events from this date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter events until this date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search in title, description, and location',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Public club events retrieved successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid club ID' })
+  async findPublicEventsByClubId(
+    @Param('clubId') clubId: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('search') search?: string,
+  ) {
+    const filters = {
+      page,
+      limit,
+      startDate,
+      endDate,
+      search,
+    };
+    return this.eventsService.findPublicEventsByClubId(clubId, filters);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get event by ID' })
   @ApiResponse({
@@ -458,17 +579,17 @@ export class EventsController {
 
   @Delete(':id')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
-    summary: 'Permanently delete event (Admin only - use for archived events)',
+    summary: 'Permanently delete event (Admin/Teacher only)',
   })
   @ApiResponse({
     status: 200,
     description: 'Event permanently deleted',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin/Teacher only' })
   @ApiResponse({ status: 404, description: 'Event not found' })
   async remove(@Param('id') id: string): Promise<void> {
     return this.eventsService.remove(id);
@@ -476,15 +597,15 @@ export class EventsController {
 
   @Post(':id/archive')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Archive event (soft delete - Admin only)' })
+  @ApiOperation({ summary: 'Archive event (soft delete - Admin/Teacher only)' })
   @ApiResponse({
     status: 200,
     description: 'Event archived successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin/Teacher only' })
   @ApiResponse({ status: 404, description: 'Event not found' })
   async archive(@Param('id') id: string, @AuthUser() user: any): Promise<void> {
     return this.eventsService.softDelete(id, user.id);

@@ -81,8 +81,9 @@ export class TeacherFilesController {
   async getFolderTree(
     @Query() query: FolderQueryDto,
     @Req() request: any,
-  ): Promise<TeacherFolderWithChildren[]> {
-    return this.folderService.getFolderTree(
+  ): Promise<TeacherFolder[]> {
+    // Return flat list instead of tree for frontend to build its own tree
+    return this.folderService.findAll(
       query.includeDeleted,
       request.accessToken,
     );

@@ -252,6 +252,26 @@ export class GalleryController {
   }
 
   /**
+   * Restore a soft-deleted item
+   */
+  @Post(':id/restore')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restore a soft-deleted gallery item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Item restored successfully' })
+  @ApiResponse({ status: 404, description: 'Item not found' })
+  async restore(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AuthUser() user: any,
+  ): Promise<{ message: string }> {
+    await this.galleryItemsService.restore(id, user.id);
+    return { message: 'Gallery item restored successfully' };
+  }
+
+  /**
    * Reorder items
    */
   @Post('reorder')

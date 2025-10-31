@@ -15,6 +15,7 @@ import { BuildingsModule } from './buildings/buildings.module';
 import { FloorsModule } from './floors/floors.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { BannerNotificationsModule } from './banner-notifications/banner-notifications.module';
 import { EventsModule } from './events/events.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { GwaModule } from './gwa/gwa.module';
@@ -36,18 +37,22 @@ import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TeacherFilesModule } from './teacher-files/teacher-files.module';
 import { TeacherActivityModule } from './teacher-activity/teacher-activity.module';
-import { QuizModule } from './quiz/quiz.module';
+// TEMPORARILY DISABLED - Quiz module commented out for development
+// import { QuizModule } from './quiz/quiz.module';
 import { NewsModule } from './news/news.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { SearchModule } from './search/search.module';
+import { AcademicYearsModule } from './academic-years/academic-years.module';
+import { TopPerformersModule } from './top-performers/top-performers.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
+import cloudflareImagesConfig from './config/cloudflare-images.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [supabaseConfig, r2Config],
+      load: [supabaseConfig, r2Config, cloudflareImagesConfig],
     }),
     ThrottlerModule.forRoot([
       {
@@ -67,6 +72,7 @@ import r2Config from './config/r2.config';
     FloorsModule,
     RoomsModule,
     AnnouncementsModule,
+    BannerNotificationsModule,
     EventsModule,
     SchedulesModule,
     GwaModule,
@@ -87,11 +93,14 @@ import r2Config from './config/r2.config';
     SubjectsModule,
     TeacherFilesModule,
     TeacherActivityModule,
-    QuizModule,
+    // TEMPORARILY DISABLED - Quiz module commented out for development
+    // QuizModule,
     NewsModule,
     GalleryModule,
     SubjectsModule,
     SearchModule,
+    AcademicYearsModule,
+    TopPerformersModule,
   ],
   controllers: [AppController],
   providers: [AppService, R2ConfigValidationService],

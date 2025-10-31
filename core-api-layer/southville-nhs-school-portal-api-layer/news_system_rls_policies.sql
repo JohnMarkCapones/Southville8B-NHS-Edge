@@ -154,7 +154,7 @@ USING (
       OR is_journalism_adviser(auth.uid())
       OR EXISTS (
         SELECT 1 FROM news_co_authors
-        WHERE news_id = news.id AND co_author_user_id = auth.uid()
+        WHERE news_id = news.id AND user_id = auth.uid()
       )
     )
     AND deleted_at IS NULL
@@ -318,7 +318,7 @@ USING (
 -- ============================================
 -- Author, co-authors, and advisers can view approval history
 
--- SELECT: Author, co-authors, or advisers
+-- SELECT: Author or advisers (co-authors can't be verified since they're now free text)
 CREATE POLICY "news_approval_select_policy"
 ON news_approval
 FOR SELECT
@@ -329,11 +329,6 @@ USING (
     AND (
       news.author_id = auth.uid()
       OR is_journalism_adviser(auth.uid())
-      OR EXISTS (
-        SELECT 1 FROM news_co_authors
-        WHERE news_co_authors.news_id = news.id
-        AND news_co_authors.co_author_user_id = auth.uid()
-      )
     )
   )
 );

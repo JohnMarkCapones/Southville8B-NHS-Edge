@@ -1,18 +1,27 @@
-import { IsUUID, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * DTO for adding a co-author to an article
- * Co-author must be a journalism team member
+ * Co-author can be any name (internal or external contributor)
  */
 export class AddCoAuthorDto {
   @ApiProperty({
-    description: 'User ID of the co-author (must be journalism member)',
-    example: 'e1caec49-f61d-4158-bac7-1dd456e9976b',
+    description:
+      'Name of the co-author (can be internal user or external contributor)',
+    example: 'John Smith',
+    maxLength: 255,
   })
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
-  userId: string;
+  @MaxLength(255)
+  coAuthorName: string;
 
   @ApiPropertyOptional({
     description: 'Role of the co-author in this article',

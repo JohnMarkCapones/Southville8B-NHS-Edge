@@ -10,14 +10,14 @@ import {
 
 export class CreateSectionDto {
   @IsString()
-  name: string;
+  name: string; // Maps to database column 'name'
 
   @IsString()
-  grade_level: string;
+  grade_level: string; // Database uses VARCHAR
 
   @IsOptional()
   @IsUUID()
-  teacher_id?: string;
+  teacher_id?: string; // Maps to database column 'teacher_id'
 
   @IsOptional()
   @IsUUID()

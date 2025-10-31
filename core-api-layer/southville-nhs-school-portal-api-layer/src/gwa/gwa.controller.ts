@@ -36,6 +36,51 @@ export class GwaController {
 
   constructor(private readonly gwaService: GwaService) {}
 
+  @Get('student/:studentId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get GWA history for a specific student',
+    description:
+      'Returns all GWA records for a student across all grading periods and school years',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'GWA history retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'GWA record ID' },
+          student_id: { type: 'string', description: 'Student UUID' },
+          gwa: { type: 'number', description: 'GWA value (50-100)' },
+          grading_period: {
+            type: 'string',
+            description: 'Grading period (Q1, Q2, Q3, Q4)',
+          },
+          school_year: {
+            type: 'string',
+            description: 'School year (e.g., "2024-2025")',
+          },
+          remarks: { type: 'string', description: 'Optional remarks' },
+          honor_status: { type: 'string', description: 'Honor status' },
+          recorded_by: { type: 'string', description: 'Teacher who recorded' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Student not found' })
+  async getStudentGwaHistory(
+    @Param('studentId') studentId: string,
+    @AuthUser() _user: any,
+  ): Promise<any[]> {
+    this.logger.log(`Getting GWA history for student: ${studentId}`);
+    return this.gwaService.getStudentGwaHistory(studentId);
+  }
+
   @Get('my-gwa')
   @Roles(UserRole.STUDENT)
   @ApiOperation({
@@ -64,10 +109,16 @@ export class GwaController {
         type: 'object',
         properties: {
           id: { type: 'string', description: 'GWA record ID' },
-          student_id: { type: 'string', description: 'Student ID' },
+          student_id: { type: 'string', description: 'Student UUID' },
           gwa: { type: 'number', description: 'GWA value (50-100)' },
-          grading_period: { type: 'string', description: 'Grading period' },
-          school_year: { type: 'string', description: 'School year' },
+          grading_period: {
+            type: 'string',
+            description: 'Grading period (Q1, Q2, Q3, Q4)',
+          },
+          school_year: {
+            type: 'string',
+            description: 'School year (e.g., "2024-2025")',
+          },
           remarks: { type: 'string', description: 'Optional remarks' },
           honor_status: { type: 'string', description: 'Honor status' },
           recorded_by: { type: 'string', description: 'Teacher who recorded' },

@@ -56,9 +56,10 @@ interface TeacherHeaderProps {
   teacherAvatar?: string
   department?: string
   teacherId?: string
+  onOpenMobileMenu?: () => void
 }
 
-export function TeacherHeader({ teacherName, teacherAvatar, department, teacherId }: TeacherHeaderProps) {
+export function TeacherHeader({ teacherName, teacherAvatar, department, teacherId, onOpenMobileMenu }: TeacherHeaderProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
   const [isSearchFocused, setIsSearchFocused] = React.useState(false)
@@ -108,7 +109,22 @@ export function TeacherHeader({ teacherName, teacherAvatar, department, teacherI
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 backdrop-blur-xl border-white/20 shadow-lg">
         <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* Mobile menu button */}
+            <AnimatedButton
+              variant="ghost"
+              size="icon"
+              className="lg:hidden hover:bg-white/10 hover:scale-110 transition-all duration-300"
+              onClick={onOpenMobileMenu}
+            >
+              <span className="sr-only">Open navigation</span>
+              {/* Using three lines menu icon built from CSS to avoid extra import */}
+              <div className="flex flex-col gap-1.5 items-center justify-center">
+                <div className="w-5 h-[2px] bg-white/90 rounded" />
+                <div className="w-5 h-[2px] bg-white/90 rounded" />
+                <div className="w-5 h-[2px] bg-white/90 rounded" />
+              </div>
+            </AnimatedButton>
             <div className="hidden lg:flex items-center space-x-2 ml-4">
               <Badge
                 variant="secondary"

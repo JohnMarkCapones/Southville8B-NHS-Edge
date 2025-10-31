@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Badge } from "@/components/ui/badge"
 import {
   X,
@@ -72,6 +73,9 @@ export const StudentDetailPanel = ({ selectedStudent, isPanelOpen, onClose }: St
   return (
     <Sheet open={isPanelOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="w-[40vw] min-w-[600px] max-w-[1600px] p-0 overflow-y-auto">
+        <VisuallyHidden>
+          <SheetTitle>Student Details</SheetTitle>
+        </VisuallyHidden>
         <div className="h-full bg-gradient-to-br from-background via-background to-muted/20">
           {/* Header Section with Gradient */}
           <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 text-white p-8">

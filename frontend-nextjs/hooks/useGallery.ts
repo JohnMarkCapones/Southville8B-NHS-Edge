@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { 
+import {
   GalleryItem,
   GalleryItemsQueryParams,
   GalleryItemsResponse,
@@ -17,6 +17,7 @@ import {
   uploadGalleryItem,
   updateGalleryItem,
   deleteGalleryItem,
+  restoreGalleryItem,
   getGalleryItemDownloadUrl,
 } from '@/lib/api/endpoints/gallery';
 import { useToast } from '@/hooks/use-toast';
@@ -208,35 +209,58 @@ export const useGallery = (initialParams?: GalleryItemsQueryParams): UseGalleryR
   const deleteItem = useCallback(async (id: string): Promise<boolean> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      
+
       await deleteGalleryItem(id);
-      
+
       // Remove the item from the current list
       setState(prev => ({
         ...prev,
         items: prev.items.filter(item => item.id !== id),
         loading: false,
       }));
-      
+
       toast({
         title: "Success",
         description: "Gallery item deleted successfully.",
       });
-      
+
       return true;
     } catch (error: any) {
+      // Check if item was already deleted (404 error)
+      const isAlreadyDeleted = error?.status === 404 ||
+                               error?.message?.toLowerCase().includes('not found') ||
+                               error?.message?.toLowerCase().includes('gallery item not found') ||
+                               error?.data?.message?.toLowerCase().includes('not found');
+
+      if (isAlreadyDeleted) {
+        // Item already deleted - treat as success and remove from list
+        setState(prev => ({
+          ...prev,
+          items: prev.items.filter(item => item.id !== id),
+          loading: false,
+        }));
+
+        toast({
+          title: "Item Already Deleted",
+          description: "This gallery item was already deleted.",
+        });
+
+        return true;
+      }
+
+      // For other errors, show error message
       setState(prev => ({
         ...prev,
         loading: false,
         error: error?.message || 'Failed to delete gallery item',
       }));
-      
+
       toast({
         title: "Error",
         description: "Failed to delete gallery item. Please try again.",
         variant: "destructive",
       });
-      
+
       return false;
     }
   }, [toast]);
@@ -255,6 +279,48 @@ export const useGallery = (initialParams?: GalleryItemsQueryParams): UseGalleryR
       return null;
     }
   }, [toast]);
+
+  // Load deleted (archived) items
+  const loadDeletedItems = useCallback(async (): Promise<GalleryItem[]> => {
+    try {
+      const response = await getGalleryItems({ includeDeleted: true });
+      // Filter to only get deleted items
+      const deletedItems = response.items.filter(item => item.is_deleted || item.deleted_at);
+      return deletedItems;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load archived items.",
+        variant: "destructive",
+      });
+      return [];
+    }
+  }, [toast]);
+
+  // Restore (undelete) a gallery item
+  const restoreItem = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      await restoreGalleryItem(id);
+
+      toast({
+        title: "Success",
+        description: "Gallery item restored successfully.",
+      });
+
+      // Refresh the main items list
+      await loadItems();
+
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to restore gallery item. Please try again.",
+        variant: "destructive",
+      });
+
+      return false;
+    }
+  }, [toast, loadItems]);
 
   // State management helpers
   const setLoading = useCallback((loading: boolean) => {
@@ -281,6 +347,8 @@ export const useGallery = (initialParams?: GalleryItemsQueryParams): UseGalleryR
     updateItem,
     deleteItem,
     downloadItem,
+    loadDeletedItems,
+    restoreItem,
     setLoading,
     clearError,
   };

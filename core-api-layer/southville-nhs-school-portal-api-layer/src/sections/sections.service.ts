@@ -5,15 +5,23 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
-import { Section, SectionWithDetails } from './entities/section.entity';
+import {
+  Section,
+  SectionWithDetails,
+  SectionWithStudents,
+} from './entities/section.entity';
 
 @Injectable()
 export class SectionsService {
   private supabase: SupabaseClient;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private supabaseService: SupabaseService,
+  ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_ANON_KEY');
 
@@ -36,7 +44,7 @@ export class SectionsService {
 
       if (existingSection) {
         throw new ConflictException(
-          `Section ${createSectionDto.name} already exists for ${createSectionDto.grade_level}`,
+          `Section ${createSectionDto.name} already exists for grade ${createSectionDto.grade_level}`,
         );
       }
 
@@ -250,22 +258,69 @@ export class SectionsService {
     }
   }
 
-  async findByTeacherId(teacherId: string): Promise<SectionWithDetails[]> {
+  async findByTeacherId(teacherId: string): Promise<SectionWithStudents[]> {
     try {
-      const { data, error } = await this.supabase
+      // Fetch sections for the teacher
+      const { data: sections, error: sectionsError } = await this.supabase
         .from('sections_with_details')
         .select('*')
-        .eq('teacher_id', teacherId)
+        .eq('teacher_id', teacherId) // Fixed: use teacher_id not adviser_id
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      if (error) {
+      if (sectionsError) {
         throw new Error(
-          `Failed to fetch sections for teacher: ${error.message}`,
+          `Failed to fetch sections for teacher: ${sectionsError.message}`,
         );
       }
 
-      return data || [];
+      if (!sections || sections.length === 0) {
+        return [];
+      }
+
+      // Fetch students for each section using SERVICE CLIENT to bypass RLS
+      const sectionsWithStudents: SectionWithStudents[] = await Promise.all(
+        sections.map(async (section) => {
+          console.log(
+            `[DEBUG] Fetching students for section ${section.id} (${section.name})`,
+          );
+
+          // Use service client to bypass RLS policies on students table
+          const { data: students, error: studentsError } =
+            await this.supabaseService
+              .getServiceClient()
+              .from('students')
+              .select(
+                'id, first_name, last_name, student_id, grade_level, section_id',
+              )
+              .eq('section_id', section.id)
+              .order('last_name', { ascending: true });
+
+          console.log(`[DEBUG] Query completed for ${section.name}:`, {
+            hasError: !!studentsError,
+            errorDetails: studentsError,
+            studentCount: students?.length || 0,
+            firstStudent: students?.[0] || null,
+          });
+
+          if (studentsError) {
+            console.error(
+              `[ERROR] Failed to fetch students for section ${section.id}:`,
+              studentsError.message,
+              studentsError,
+            );
+            return { ...section, students: [] };
+          }
+
+          console.log(
+            `[DEBUG] Returning ${students?.length || 0} students for section ${section.name}`,
+          );
+
+          return { ...section, students: students || [] };
+        }),
+      );
+
+      return sectionsWithStudents;
     } catch (error) {
       this.handleError(error);
     }

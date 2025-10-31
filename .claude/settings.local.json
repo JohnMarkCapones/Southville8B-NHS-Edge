@@ -1,21 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc --noEmit)",
-      "Bash(npx tsc --noEmit --pretty)",
-      "Bash(curl -s http://localhost:3004/api/v1/news/public?limit=5)",
-      "Bash(curl -s http://localhost:3004/api/v1/events/upcoming)",
-      "Bash(curl -s \"http://localhost:3004/api/v1/club-memberships/student/1677dc84-d5c3-41d5-a38a-aa70ac3beae2\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsImtpZCI6IkhjZ0R1ZTFwbmZwSUo5K2QiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3BvcGZ4dWl1dGlrb3prbWNhY2tjLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJhYTBjMGU4Ny1iMzI5LTQ3ZDgtYTkyNS03NmJmM2Y3Njc2MGEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQ1MDYzOTQwLCJpYXQiOjE3NDUwNjAzNDAsImVtYWlsIjoiaGVsbG9AbWUuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9hdmF0YXJzLmdpdGh1YnVzZXJjb250ZW50LmNvbS91LzEyMzQ1Njc4OT92PTQiLCJlbWFpbCI6ImhlbGxvQG1lLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmdWxsX25hbWUiOiJKb2huIE1hcmsiLCJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJuYW1lIjoiSm9obiBNYXJrIiwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJwaWN0dXJlIjoiaHR0cHM6Ly9hdmF0YXJzLmdpdGh1YnVzZXJjb250ZW50LmNvbS91LzEyMzQ1Njc4OT92PTQiLCJwcm92aWRlcl9pZCI6IjEwOTQwNzU4NjM3NjE5MzQ1NDMxMSIsInN1YiI6IjEwOTQwNzU4NjM3NjE5MzQ1NDMxMSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6Im90cCIsInRpbWVzdGFtcCI6MTc0NTA2MDM0MH1dLCJzZXNzaW9uX2lkIjoiYWQ3OTY4NzgtNzliZi00OGNkLWJjMzEtZmNkMzg3ZDNkODdiIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.d6m_7cF0XqvLw91hNQc5YlQZW5hP-bAn-VGq3OZ8rJ4\")",
-      "Bash(curl -s \"http://localhost:3004/api/v1/club-memberships\")",
-      "Bash(npm install @tanstack/react-query qrcode.react fingerprintjs2 react-countdown lodash.debounce date-fns uuid)",
-      "Bash(npm uninstall fingerprintjs2)",
-      "Bash(npm install @fingerprintjs/fingerprintjs)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run build)",
-      "Bash(dir:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
       "Bash(cat:*)",
-      "Bash(Select-String -Pattern \"clubs\")",
-      "Bash(npm run dev:*)"
+      "Bash(timeout 180 npm run build)",
+      "Bash(timeout 3 npm run start:dev:*)",
+      "Bash(powershell:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find:*)",
+      "Bash(2)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []

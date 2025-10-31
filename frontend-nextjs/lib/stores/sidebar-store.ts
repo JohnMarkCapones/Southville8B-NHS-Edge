@@ -61,28 +61,15 @@ export const useSidebarStore = create<SidebarState>()(
       },
 
       restoreScrollPosition: (element: HTMLElement) => {
-        const { scrollPosition, isUserScrolling, hasRestoredScroll } = get()
+        const { scrollPosition } = get()
 
-        if (hasRestoredScroll || isUserScrolling) return
-
-        // Use requestAnimationFrame for smooth restoration
-        requestAnimationFrame(() => {
-          if (element && !isUserScrolling) {
-            element.scrollTo({
-              top: scrollPosition,
-              behavior: "smooth",
-            })
-            set({ hasRestoredScroll: true })
-          }
-        })
+        // Simple direct scroll restoration
+        element.scrollTop = scrollPosition
       },
 
       saveScrollPosition: (position: number) => {
-        const { isUserScrolling } = get()
-
-        if (isUserScrolling) {
-          set({ scrollPosition: position })
-        }
+        // Simple save - no conditions
+        set({ scrollPosition: position })
       },
     }),
     {
