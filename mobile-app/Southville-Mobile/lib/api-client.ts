@@ -57,6 +57,8 @@ const DEFAULT_BASE_URL = resolveDefaultBaseUrl();
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_BASE_URL;
 
+let authToken: string | null = null;
+
 const isDev = process.env.NODE_ENV !== 'production';
 
 if (isDev) {
@@ -81,6 +83,14 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: Record<string, unknown> | FormData;
 };
 
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
 export async function apiRequest<TResponse = unknown>(
   path: string,
   options: RequestOptions = {},
@@ -91,6 +101,10 @@ export async function apiRequest<TResponse = unknown>(
   const isFormData = body instanceof FormData;
   const preparedHeaders = new Headers(headers);
   preparedHeaders.set('Accept', 'application/json');
+
+  if (authToken && !preparedHeaders.has('Authorization')) {
+    preparedHeaders.set('Authorization', `Bearer ${authToken}`);
+  }
 
   let preparedBody: BodyInit | undefined;
 
@@ -109,7 +123,7 @@ export async function apiRequest<TResponse = unknown>(
   if (isDev) {
     const debugBody =
       body === undefined ? undefined : isFormData ? 'FormData' : maskSensitiveFields(body as Record<string, unknown>);
-    console.log(requestLabel, { body: debugBody });
+    console.log(requestLabel, { body: debugBody, auth: authToken ? 'attached' : 'none' });
   }
 
   let response: Response;

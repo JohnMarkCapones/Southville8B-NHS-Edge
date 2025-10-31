@@ -356,6 +356,66 @@ export class GwaService {
   }
 
   /**
+   * Get GWA records for a specific student
+   */
+  async getStudentGwa(
+    userId: string,
+    gradingPeriod?: string,
+    schoolYear?: string,
+  ): Promise<Gwa[]> {
+    try {
+      this.logger.log(
+        `Getting GWA records for student user: ${userId}, period: ${gradingPeriod}, year: ${schoolYear}`,
+      );
+
+      // Get student ID from user ID
+      const { data: student, error: studentError } = await this.supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (studentError || !student) {
+        this.logger.error('Student not found for user:', userId);
+        throw new NotFoundException('Student record not found');
+      }
+
+      // Query students_gwa table with optional filters
+      let query = this.supabase
+        .from('students_gwa')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('school_year', { ascending: false })
+        .order('grading_period', { ascending: false });
+
+      if (gradingPeriod) {
+        query = query.eq('grading_period', gradingPeriod);
+      }
+      if (schoolYear) {
+        query = query.eq('school_year', schoolYear);
+      }
+
+      const { data: gwaRecords, error } = await query;
+
+      if (error) {
+        this.logger.error('Error fetching student GWA records:', error);
+        throw new InternalServerErrorException(
+          'Failed to fetch student GWA records',
+        );
+      }
+
+      this.logger.log(
+        `Found ${gwaRecords?.length || 0} GWA records for student: ${student.id}`,
+      );
+
+      return gwaRecords || [];
+    } catch (error) {
+      this.logger.error('Error in getStudentGwa:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get top students by GWA for leaderboard display (public endpoint)
    */
   async getTopStudents(params: {

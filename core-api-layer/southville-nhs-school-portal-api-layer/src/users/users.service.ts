@@ -804,7 +804,8 @@ export class UsersService {
         role:roles(name),
         teacher:teachers(*),
         admin:admins(*),
-        student:students(*)
+        student:students(*),
+        profile:profiles(*)
       `,
       )
       .eq('id', id)
@@ -860,6 +861,7 @@ export class UsersService {
     let teacherData = null;
     let adminData = null;
     let studentData = null;
+    let profileData = null;
 
     // Check for teacher data
     const { data: teacher, error: teacherError } = await supabase
@@ -938,6 +940,24 @@ export class UsersService {
       );
     }
 
+    // Check for profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', id)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      this.logger.error('[findOne] Error fetching profile data:', {
+        userId: id,
+        errorCode: profileError.code,
+        errorMessage: profileError.message,
+      });
+    } else if (profile) {
+      profileData = profile;
+      this.logger.log(`[findOne] Profile data found for user: ${id}`);
+    }
+
     // Construct the final user object
     const user = {
       ...basicUser,
@@ -945,6 +965,7 @@ export class UsersService {
       teacher: teacherData,
       admin: adminData,
       student: studentData,
+      profile: profileData,
     };
 
     this.logger.log(
