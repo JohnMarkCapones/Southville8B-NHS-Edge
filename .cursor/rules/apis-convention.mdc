@@ -1,0 +1,50 @@
+---
+alwaysApply: true
+---
+
+**CRITICAL**: The backend API **always returns JSON in snake_case format**.
+
+### Rule
+
+When creating or updating DTOs in `Models/Api/`, **always use snake_case** in `JsonPropertyName` attributes:
+
+```csharp
+// ✅ CORRECT
+[JsonPropertyName("teacher_id")]
+public string? TeacherId { get; set; }
+
+[JsonPropertyName("grade_level")]
+public string? GradeLevel { get; set; }
+
+[JsonPropertyName("created_at")]
+public DateTime CreatedAt { get; set; }
+
+// ❌ WRONG
+[JsonPropertyName("teacherId")]    // API returns "teacher_id"
+[JsonPropertyName("gradeLevel")]   // API returns "grade_level"
+[JsonPropertyName("createdAt")]    // API returns "created_at"
+```
+
+### Common Patterns
+
+- `user_id` not `userId`
+- `teacher_id` not `teacherId`
+- `student_id` not `studentId`
+- `section_id` not `sectionId`
+- `created_at` not `createdAt`
+- `updated_at` not `updatedAt`
+- `grade_level` not `gradeLevel`
+- `room_id` not `roomId`
+- `building_id` not `buildingId`
+
+### Why This Matters
+
+If the `JsonPropertyName` doesn't match the API response:
+
+- Properties will deserialize as `null`
+- Filters and queries will fail silently
+- Data won't display in the UI
+
+### Verification
+
+Always check the actual API response format before creating DTOs. Use debug logs or API testing tools to confirm the exact field names returned by the backend.

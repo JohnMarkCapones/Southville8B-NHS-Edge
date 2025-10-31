@@ -174,7 +174,7 @@ export default function HelpCenter() {
             {searchResults.articles.length === 0 && searchResults.faqs.length === 0 && (
               <View style={styles.noResults}>
                 <Ionicons name="search-outline" size={48} color="#CCC" />
-                <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
+                <Text style={styles.noResultsText}>No results found for &quot;{searchQuery}&quot;</Text>
                 <Text style={styles.noResultsSubtext}>Try different keywords or browse categories</Text>
               </View>
             )}

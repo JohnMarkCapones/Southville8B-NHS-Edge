@@ -230,23 +230,19 @@
                             </Button>
 
                             <TextBlock Text="CLASSROOM" Classes="section-header"/>
-                            <!-- Schedule Planner - HIDDEN FOR NOW -->
-                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToSchedulePlannerCommand}" Classes.active="{Binding IsSchedulePlannerActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Calendar" IconSize="Size16"/>
                                     <TextBlock Text="Schedule Planner" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            -->
                             <Button Classes="nav-item" Command="{Binding NavigateToGradeEntryCommand}" Classes.active="{Binding IsGradeEntryActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
                                     <TextBlock Text="Grade Entry" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <!-- Student Management - HIDDEN FOR NOW -->
-                            <!--
+                            <!-- Student Management button hidden
                             <Button Classes="nav-item" Command="{Binding NavigateToStudentManagementCommand}" Classes.active="{Binding IsStudentManagementActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Person" IconSize="Size16"/>
@@ -256,19 +252,15 @@
                             -->
 
                             <TextBlock Text="CONTENT" Classes="section-header"/>
-                            <!-- My Announcements - HIDDEN FOR NOW -->
-                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToMyAnnouncementsCommand}" Classes.active="{Binding IsMyAnnouncementsActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
                                     <TextBlock Text="My Announcements" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            -->
 
+                            <!-- COMMUNICATION section hidden
                             <TextBlock Text="COMMUNICATION" Classes="section-header"/>
-                            <!-- Messaging/Chat - HIDDEN FOR NOW -->
-                            <!--
                             <Button Classes="nav-item" Command="{Binding NavigateToMessagingCommand}" Classes.active="{Binding IsMessagingActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
@@ -480,17 +472,17 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Assignments Card -->
+                                <!-- Announcements Card -->
                                 <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="4,0,0,4">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                                            <Border Width="16" Height="16" Background="{DynamicResource DangerBrush}" CornerRadius="3">
-                                                <ic:FluentIcon Icon="Notepad" IconSize="Size12" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Border Width="16" Height="16" Background="{DynamicResource WarningBrush}" CornerRadius="3">
+                                                <ic:FluentIcon Icon="Megaphone" IconSize="Size12" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <TextBlock Text="Assignments" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text="Announce." FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding PendingAssignments}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
-                                        <TextBlock Text="Pending Grading" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{Binding TotalAnnouncements}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,2"/>
+                                        <TextBlock Text="Total Posted" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
                                     </StackPanel>
                                 </Border>
 
@@ -586,41 +578,53 @@
                                     <StackPanel>
                                         <TextBlock Text="Today" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                         <Border Background="{DynamicResource PageBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                            <!-- Single grid so next button stays fixed at right edge -->
-                                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                                                <!-- Left status bar -->
-                                                <Border Grid.Column="0" Width="4" Height="40" Background="{DynamicResource SuccessBrush}" CornerRadius="2" Margin="0,0,12,0"/>
-                                                <!-- Animated content -->
-                                                <TransitioningContentControl Grid.Column="1" Content="{Binding CurrentTodayClass}" VerticalAlignment="Center">
-                                                    <TransitioningContentControl.PageTransition>
-                                                        <CompositePageTransition>
-                                                            <PageSlide Duration="0:0:0.35" />
-                                                            <CrossFade Duration="0:0:0.25" />
-                                                        </CompositePageTransition>
-                                                    </TransitioningContentControl.PageTransition>
-                                                    <TransitioningContentControl.ContentTemplate>
-                                                        <DataTemplate DataType="vm:TodayClassItem">
-                                                            <StackPanel VerticalAlignment="Center">
-                                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
-                                                                    <Border Background="{DynamicResource SuccessBrush}" CornerRadius="3" Padding="4,2">
-                                                                        <TextBlock Text="{Binding Subject}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
-                                                                    </Border>
-                                                                    <Border Background="{DynamicResource InfoBrush}" CornerRadius="3" Padding="4,2">
-                                                                        <TextBlock Text="{Binding Room}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
-                                                                    </Border>
+                                            <Grid>
+                                                <!-- Show current class if available -->
+                                                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" IsVisible="{Binding HasCurrentClass}">
+                                                    <!-- Left status bar -->
+                                                    <Border Grid.Column="0" Width="4" Height="40" Background="{DynamicResource SuccessBrush}" CornerRadius="2" Margin="0,0,12,0"/>
+                                                    <!-- Animated content -->
+                                                    <TransitioningContentControl Grid.Column="1" Content="{Binding CurrentTodayClass}" VerticalAlignment="Center">
+                                                        <TransitioningContentControl.PageTransition>
+                                                            <CompositePageTransition>
+                                                                <PageSlide Duration="0:0:0.35" />
+                                                                <CrossFade Duration="0:0:0.25" />
+                                                            </CompositePageTransition>
+                                                        </TransitioningContentControl.PageTransition>
+                                                        <TransitioningContentControl.ContentTemplate>
+                                                            <DataTemplate DataType="vm:TodayClassItem">
+                                                                <StackPanel VerticalAlignment="Center">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
+                                                                        <Border Background="{DynamicResource SuccessBrush}" CornerRadius="3" Padding="4,2">
+                                                                            <TextBlock Text="{Binding Subject}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
+                                                                        </Border>
+                                                                        <Border Background="{DynamicResource InfoBrush}" CornerRadius="3" Padding="4,2">
+                                                                            <TextBlock Text="{Binding Room}" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontSize="9"/>
+                                                                        </Border>
+                                                                    </StackPanel>
+                                                                    <TextBlock Text="{Binding Grade}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                                    <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
                                                                 </StackPanel>
-                                                                <TextBlock Text="{Binding Grade}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                                <TextBlock Text="{Binding Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                            </StackPanel>
-                                                        </DataTemplate>
-                                                    </TransitioningContentControl.ContentTemplate>
-                                                </TransitioningContentControl>
-                                                <!-- Fixed right edge next button -->
-                                                <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Width="32" Height="40"
-                                                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                        Command="{Binding NextTodayClassCommand}" IsVisible="{Binding HasMultipleTodayClasses}">
-                                                    <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                </Button>
+                                                            </DataTemplate>
+                                                        </TransitioningContentControl.ContentTemplate>
+                                                    </TransitioningContentControl>
+                                                    <!-- Fixed right edge next button -->
+                                                    <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Width="32" Height="40"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                            Command="{Binding NextTodayClassCommand}" IsVisible="{Binding HasMultipleTodayClasses}">
+                                                        <ic:FluentIcon Icon="ChevronRight" IconSize="Size16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    </Button>
+                                                </Grid>
+                                                
+                                                <!-- Show empty state when no class -->
+                                                <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" IsVisible="{Binding HasCurrentClass, Converter={StaticResource InverseBoolConverter}}">
+                                                    <!-- Left gray status bar -->
+                                                    <Border Grid.Column="0" Width="4" Height="40" Background="{DynamicResource BorderBrush}" CornerRadius="2" Margin="0,0,12,0"/>
+                                                    <!-- Empty state message -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="No classes scheduled for today" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Grid>
                                             </Grid>
                                         </Border>
                                         <Button Content="View full schedule..." Background="Transparent" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0" FontSize="11" HorizontalAlignment="Center" Padding="8,4"
@@ -632,14 +636,75 @@
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" Padding="12,8">
                                     <StackPanel>
                                         <TextBlock Text="Next Class" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                        <Border Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Opacity="0.15">
+                                        <Border Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
                                             <StackPanel>
-                                                <TextBlock Text="{Binding NextClassSubject}" FontSize="11" Foreground="{DynamicResource WarningBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="{Binding NextClassTime}" FontSize="10" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding NextClassSubject}" FontSize="11" Foreground="{DynamicResource AccentTextOnAccentBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding NextClassTime}" FontSize="10" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
                                 </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- My Announcements Section -->
+                        <Border Padding="16,8,16,16" Margin="0,8,0,0"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ic:FluentIcon Icon="Megaphone" IconSize="Size16" Foreground="{DynamicResource InfoBrush}" Margin="0,0,8,0"/>
+                                    <TextBlock Text="My Announcements" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                                
+                                <ItemsControl ItemsSource="{Binding RecentAnnouncements}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:AnnouncementSummaryItem">
+                                            <Border Background="{DynamicResource PageBackgroundBrush}" 
+                                                    BorderBrush="{DynamicResource BorderBrush}" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="6" 
+                                                    Padding="12" 
+                                                    Margin="0,0,0,8">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding Title}" 
+                                                                  FontSize="11" 
+                                                                  FontWeight="SemiBold" 
+                                                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                  TextTrimming="CharacterEllipsis"
+                                                                  MaxLines="2"/>
+                                                        <TextBlock Text="{Binding TimeAgo}" 
+                                                                  FontSize="10" 
+                                                                  Foreground="{DynamicResource TextMutedBrush}"
+                                                                  Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                    <Border Grid.Column="1" 
+                                                            Background="{DynamicResource SuccessBrush}" 
+                                                            CornerRadius="3" 
+                                                            Padding="6,2"
+                                                            VerticalAlignment="Top"
+                                                            Margin="8,0,0,0">
+                                                        <TextBlock Text="{Binding Status}" 
+                                                                  FontSize="9" 
+                                                                  Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <Button Content="View all announcements..." 
+                                        Background="Transparent" 
+                                        Foreground="{DynamicResource InfoBrush}" 
+                                        BorderThickness="0" 
+                                        FontSize="11" 
+                                        HorizontalAlignment="Center" 
+                                        Padding="8,4"
+                                        Command="{Binding NavigateToMyAnnouncementsCommand}"/>
                             </StackPanel>
                         </Border>
 

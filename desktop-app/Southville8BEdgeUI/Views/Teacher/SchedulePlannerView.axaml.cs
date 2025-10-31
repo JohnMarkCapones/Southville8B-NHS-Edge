@@ -65,6 +65,7 @@ public partial class SchedulePlannerView : UserControl
 
     private ResponsiveState _currentState = ResponsiveState.Unknown;
     private double _lastProcessedWidth;
+    private double _lastSidebarWidth;
 
     // Cache for time column and day header elements to avoid repeated searches
     private readonly List<TextBlock> _timeColumnTextBlocks = new();
@@ -133,6 +134,28 @@ public partial class SchedulePlannerView : UserControl
         this.SizeChanged += OnSizeChanged;
         this.AttachedToVisualTree += OnAttachedToVisualTree;
         this.DetachedFromVisualTree += OnDetachedFromVisualTree;
+        
+        // Listen for parent layout changes (sidebar open/close)
+        this.LayoutUpdated += OnLayoutUpdated;
+    }
+
+    private void OnLayoutUpdated(object? sender, EventArgs e)
+    {
+        var currentSidebarWidth = GetSidebarWidth();
+        if (Math.Abs(currentSidebarWidth - _lastSidebarWidth) > 1)
+        {
+            _lastSidebarWidth = currentSidebarWidth;
+            OnSidebarStateChanged();
+        }
+    }
+
+    private void OnSidebarStateChanged()
+    {
+        // Force re-evaluation of responsive layout
+        if (Bounds.Width > 0)
+        {
+            ApplyResponsiveLayout(Bounds.Width);
+        }
     }
 
     private void SchedulePeriodicUpdates()
@@ -177,19 +200,70 @@ public partial class SchedulePlannerView : UserControl
         _periodicTimer?.Stop();
     }
 
+    private void OnScheduleCellClicked(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is ScheduleSlotViewModel slot)
+        {
+            if (slot.IsOccupied && DataContext is SchedulePlannerViewModel viewModel)
+            {
+                viewModel.ShowScheduleDetailsCommand.Execute(slot);
+            }
+        }
+    }
+
     #endregion
 
     #region Responsive Layout Logic
 
+    private double GetSidebarWidth()
+    {
+        double totalSidebarWidth = 0;
+        
+        // Walk up the visual tree to find the parent shell/window
+        var parent = this.Parent;
+        while (parent != null)
+        {
+            // Look for common sidebar patterns
+            if (parent is Grid parentGrid)
+            {
+                // Check all columns for fixed-width sidebars (both left and right)
+                if (parentGrid.ColumnDefinitions.Count >= 2)
+                {
+                    // Check first column (left sidebar)
+                    var firstColumn = parentGrid.ColumnDefinitions[0];
+                    if (firstColumn.Width.IsAbsolute)
+                    {
+                        totalSidebarWidth += firstColumn.Width.Value;
+                    }
+                    
+                    // Check last column (right sidebar)
+                    var lastColumn = parentGrid.ColumnDefinitions[parentGrid.ColumnDefinitions.Count - 1];
+                    if (lastColumn.Width.IsAbsolute)
+                    {
+                        totalSidebarWidth += lastColumn.Width.Value;
+                    }
+                }
+            }
+            
+            parent = parent.Parent;
+        }
+        
+        return totalSidebarWidth;
+    }
+
     private void ApplyResponsiveLayout(double width)
     {
-        var newState = DetermineResponsiveState(width);
+        // Subtract sidebar width from available width
+        var sidebarWidth = GetSidebarWidth();
+        var availableWidth = width - sidebarWidth;
+        
+        var newState = DetermineResponsiveState(availableWidth);
 
-        if (!ShouldUpdateLayout(newState, width))
+        if (!ShouldUpdateLayout(newState, availableWidth))
             return;
 
         _currentState = newState;
-        _lastProcessedWidth = width;
+        _lastProcessedWidth = availableWidth;
 
         using var deferral = BatchUpdate();
         {

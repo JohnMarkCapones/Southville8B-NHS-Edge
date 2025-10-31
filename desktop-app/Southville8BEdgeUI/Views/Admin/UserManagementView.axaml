@@ -58,6 +58,26 @@
 			<Setter Property="FontSize" Value="9"/>
 		</Style>
 
+		<!-- Loading Animation -->
+		<Style Selector="Border.loading-spinner > TextBlock">
+			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+			<Setter Property="RenderTransform">
+				<RotateTransform Angle="0"/>
+			</Setter>
+			<Style.Animations>
+				<Animation Duration="0:0:1" IterationCount="Infinite">
+					<KeyFrame Cue="100%">
+						<Setter Property="RotateTransform.Angle" Value="360"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+
+		<!-- Disabled Button Icon Style -->
+		<Style Selector="Button:disabled ic|FluentIcon">
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+		</Style>
+
 		<!-- Stat Values -->
 		<Style Selector="TextBlock.stat-value">
 			<Setter Property="FontSize" Value="28"/>
@@ -76,6 +96,7 @@
 			<Setter Property="FontSize" Value="18"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="Opacity" Value="1"/>
 		</Style>
 		<Style Selector="TextBlock.user-name.tablet">
 			<Setter Property="FontSize" Value="16"/>
@@ -363,6 +384,12 @@
 				</StackPanel>
 
 				<StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+					<Button x:Name="RefreshButton" Classes="secondary" Command="{Binding RefreshUsersCommand}" ToolTip.Tip="Refresh user data">
+						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+							<ic:FluentIcon Icon="ArrowClockwise" IconSize="Size20"/>
+							<TextBlock Text="Refresh"/>
+						</StackPanel>
+					</Button>
 					<Button x:Name="ImportButton" Classes="secondary" Command="{Binding ImportUsersCommand}">
 						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
 							<ic:FluentIcon Icon="Folder" IconSize="Size20"/>
@@ -459,6 +486,20 @@
                               SelectedItem="{Binding SelectedGrade}"/>
 				</Grid>
 			</Border>
+
+			<!-- Loading Overlay -->
+			<Grid x:Name="LoadingOverlay" IsVisible="{Binding IsLoading}" Background="#80000000" Panel.ZIndex="1000">
+				<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+					<Border Background="White" CornerRadius="8" Padding="24">
+						<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+							<Border Width="32" Height="32" Classes="loading-spinner" Background="#2563EB" CornerRadius="16">
+								<TextBlock Text="⟳" FontSize="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Border>
+							<TextBlock Text="Loading users..." Classes="subtitle" HorizontalAlignment="Center"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</Grid>
 
 			<!-- Users Grid -->
 			<ItemsControl x:Name="UsersGrid" ItemsSource="{Binding FilteredUsers}">
@@ -558,6 +599,104 @@
 					<TextBlock x:Name="EmptyTitleText" Text="No users found" Classes="empty-title" HorizontalAlignment="Center"/>
 					<TextBlock x:Name="EmptySubtitleText" Text="Try adjusting your search criteria or create a new user" Classes="light" HorizontalAlignment="Center"/>
 				</StackPanel>
+			</Border>
+
+			<!-- Pagination Controls -->
+			<Border Background="{DynamicResource CardBackgroundBrush}"
+					BorderBrush="{DynamicResource BorderBrush}"
+					BorderThickness="1"
+					CornerRadius="8"
+					Padding="16"
+					Margin="0,16,0,0">
+				<Grid ColumnDefinitions="Auto,*,Auto">
+					<!-- Page Size Selector -->
+					<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+						<TextBlock Text="Show" 
+								   VerticalAlignment="Center"
+								   Foreground="{DynamicResource TextMutedBrush}"/>
+						<ComboBox ItemsSource="{Binding PageSizeOptions}"
+								  SelectedItem="{Binding PageSize}"
+								  MinWidth="80"
+								  VerticalAlignment="Center"/>
+						<TextBlock Text="per page" 
+								   VerticalAlignment="Center"
+								   Foreground="{DynamicResource TextMutedBrush}"/>
+					</StackPanel>
+					
+					<!-- Page Info -->
+					<StackPanel Grid.Column="1" 
+								HorizontalAlignment="Center" 
+								VerticalAlignment="Center"
+								Spacing="4">
+						<TextBlock Text="{Binding PageInfo}"
+								   FontWeight="SemiBold"
+								   HorizontalAlignment="Center"
+								   Foreground="{DynamicResource TextPrimaryBrush}"/>
+						<TextBlock Text="{Binding ResultsInfo}"
+								   FontSize="12"
+								   HorizontalAlignment="Center"
+								   Foreground="{DynamicResource TextMutedBrush}"/>
+					</StackPanel>
+					
+					<!-- Navigation Buttons -->
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+						<!-- First Page -->
+						<Button Command="{Binding GoToFirstPageCommand}"
+								ToolTip.Tip="First page"
+								Background="Transparent"
+								BorderBrush="{DynamicResource BorderBrush}"
+								BorderThickness="1"
+								Padding="8"
+								CornerRadius="4">
+							<ic:FluentIcon Icon="ChevronDoubleLeft" 
+										   IconVariant="Regular" 
+										   IconSize="Size16"
+										   Foreground="{DynamicResource TextPrimaryBrush}"/>
+						</Button>
+						
+						<!-- Previous Page -->
+						<Button Command="{Binding GoToPreviousPageCommand}"
+								ToolTip.Tip="Previous page"
+								Background="Transparent"
+								BorderBrush="{DynamicResource BorderBrush}"
+								BorderThickness="1"
+								Padding="8"
+								CornerRadius="4">
+							<ic:FluentIcon Icon="ChevronLeft" 
+										   IconVariant="Regular" 
+										   IconSize="Size16"
+										   Foreground="{DynamicResource TextPrimaryBrush}"/>
+						</Button>
+						
+						<!-- Next Page -->
+						<Button Command="{Binding GoToNextPageCommand}"
+								ToolTip.Tip="Next page"
+								Background="Transparent"
+								BorderBrush="{DynamicResource BorderBrush}"
+								BorderThickness="1"
+								Padding="8"
+								CornerRadius="4">
+							<ic:FluentIcon Icon="ChevronRight" 
+										   IconVariant="Regular" 
+										   IconSize="Size16"
+										   Foreground="{DynamicResource TextPrimaryBrush}"/>
+						</Button>
+						
+						<!-- Last Page -->
+						<Button Command="{Binding GoToLastPageCommand}"
+								ToolTip.Tip="Last page"
+								Background="Transparent"
+								BorderBrush="{DynamicResource BorderBrush}"
+								BorderThickness="1"
+								Padding="8"
+								CornerRadius="4">
+							<ic:FluentIcon Icon="ChevronDoubleRight" 
+										   IconVariant="Regular" 
+										   IconSize="Size16"
+										   Foreground="{DynamicResource TextPrimaryBrush}"/>
+						</Button>
+					</StackPanel>
+				</Grid>
 			</Border>
 		</StackPanel>
 	</ScrollViewer>

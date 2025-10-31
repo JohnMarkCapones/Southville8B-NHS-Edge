@@ -194,6 +194,41 @@ export class UsersController {
     return this.usersService.findOne(user.id);
   }
 
+  @Post('me/record-login')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a daily login for current user',
+    description:
+      'Records that the current user logged in today. Safe to call multiple times per day (idempotent).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login recorded successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async recordLogin(@AuthUser() user: SupabaseUser) {
+    await this.usersService.recordLogin(user.id);
+    return { success: true };
+  }
+
+  @Get('me/streak')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get current user login streak count',
+    description:
+      'Returns the number of consecutive days the user has logged in. Streak resets to 0 if a day is missed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login streak retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getLoginStreak(@AuthUser() user: SupabaseUser) {
+    const streak = await this.usersService.getLoginStreak(user.id);
+    return { streak };
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get a specific user' })

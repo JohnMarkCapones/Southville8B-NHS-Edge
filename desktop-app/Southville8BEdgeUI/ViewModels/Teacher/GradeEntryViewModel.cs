@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics;
 using Avalonia; // For Application.Current
 using Avalonia.Media; // For IBrush
 using Avalonia.Styling; // Theme variant
@@ -34,7 +35,12 @@ public partial class GradeEntryViewModel : ViewModelBase
     private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(1, 1);
     private int _semaphoreReleased = 0;
 
+    // Rate limiting for refresh
+    private DateTime _lastRefreshTime = DateTime.MinValue;
+    private const int RefreshCooldownSeconds = 5; // 5 second cooldown
+    
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isRefreshing = false;
     [ObservableProperty] private string _selectedGradingPeriod = "";
     [ObservableProperty] private string _selectedSchoolYear = "";
     [ObservableProperty] private ObservableCollection<string> _gradingPeriods = new();
@@ -369,6 +375,38 @@ public partial class GradeEntryViewModel : ViewModelBase
                 System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: FINALLY - Semaphore already released, skipping");
             }
             _semaphoreReleased = 0; // Reset for next call
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshGrades()
+    {
+        // Check rate limit
+        var timeSinceLastRefresh = DateTime.Now - _lastRefreshTime;
+        if (timeSinceLastRefresh.TotalSeconds < RefreshCooldownSeconds)
+        {
+            var remainingSeconds = RefreshCooldownSeconds - (int)timeSinceLastRefresh.TotalSeconds;
+            Debug.WriteLine($"Refresh rate limited. Please wait {remainingSeconds} seconds.");
+            return;
+        }
+
+        IsRefreshing = true;
+        _lastRefreshTime = DateTime.Now;
+
+        try
+        {
+            // Reload students/grades for current filters
+            await LoadStudentsAsync();
+            
+            Debug.WriteLine("Grades refreshed successfully");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error refreshing grades: {ex.Message}");
+        }
+        finally
+        {
+            IsRefreshing = false;
         }
     }
 }

@@ -85,3 +85,30 @@ export async function clearAuthSession(): Promise<void> {
   await clearTokens();
   setAuthToken(null);
 }
+
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export type ChangePasswordResponse = {
+  message?: string;
+};
+
+export async function changePassword(
+  request: ChangePasswordRequest
+): Promise<ChangePasswordResponse> {
+  // Ensure auth header is set from persisted session
+  const tokens = await loadTokens();
+  if (tokens?.accessToken) {
+    setAuthToken(tokens.accessToken);
+  }
+
+  return await apiRequest<ChangePasswordResponse>('/auth/change-password', {
+    method: 'POST',
+    body: {
+      currentPassword: request.currentPassword,
+      newPassword: request.newPassword,
+    },
+  });
+}

@@ -12,7 +12,7 @@ public class TokenStorageService : ITokenStorageService
 {
     private const string StorageFileName = "tokens.dat";
     private readonly string _storagePath;
-    private const string EncryptionKey = "Southville8BEdgeUI_SecretKey_2024"; // In production, use a proper key management solution
+    // DPAPI binds encryption to current Windows user; avoids embedded keys
 
     public TokenStorageService()
     {
@@ -35,7 +35,7 @@ public class TokenStorageService : ITokenStorageService
             };
 
             var json = JsonSerializer.Serialize(tokenData);
-            var encryptedData = EncryptString(json);
+            var encryptedData = Protect(json);
 
             await File.WriteAllTextAsync(_storagePath, encryptedData);
         }
@@ -131,7 +131,7 @@ public class TokenStorageService : ITokenStorageService
             if (string.IsNullOrEmpty(encryptedData))
                 return null;
 
-            var decryptedData = DecryptString(encryptedData);
+            var decryptedData = Unprotect(encryptedData);
             return JsonSerializer.Deserialize<TokenData>(decryptedData);
         }
         catch
@@ -140,40 +140,18 @@ public class TokenStorageService : ITokenStorageService
         }
     }
 
-    private static string EncryptString(string plainText)
+    private static string Protect(string plainText)
     {
-        using var aes = Aes.Create();
-        aes.Key = Encoding.UTF8.GetBytes(EncryptionKey.PadRight(32).Substring(0, 32));
-        aes.GenerateIV();
-
-        using var encryptor = aes.CreateEncryptor();
-        using var msEncrypt = new MemoryStream();
-        msEncrypt.Write(aes.IV, 0, aes.IV.Length);
-
-        using var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
-        using var swEncrypt = new StreamWriter(csEncrypt);
-        swEncrypt.Write(plainText);
-
-        return Convert.ToBase64String(msEncrypt.ToArray());
+        var bytes = Encoding.UTF8.GetBytes(plainText);
+        var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+        return Convert.ToBase64String(protectedBytes);
     }
 
-    private static string DecryptString(string cipherText)
+    private static string Unprotect(string cipherText)
     {
         var cipherBytes = Convert.FromBase64String(cipherText);
-
-        using var aes = Aes.Create();
-        aes.Key = Encoding.UTF8.GetBytes(EncryptionKey.PadRight(32).Substring(0, 32));
-
-        var iv = new byte[aes.IV.Length];
-        Array.Copy(cipherBytes, 0, iv, 0, iv.Length);
-        aes.IV = iv;
-
-        using var decryptor = aes.CreateDecryptor();
-        using var msDecrypt = new MemoryStream(cipherBytes, iv.Length, cipherBytes.Length - iv.Length);
-        using var csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read);
-        using var srDecrypt = new StreamReader(csDecrypt);
-
-        return srDecrypt.ReadToEnd();
+        var unprotected = ProtectedData.Unprotect(cipherBytes, null, DataProtectionScope.CurrentUser);
+        return Encoding.UTF8.GetString(unprotected);
     }
 
     private class TokenData
@@ -181,5 +159,38 @@ public class TokenStorageService : ITokenStorageService
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
         public DateTime ExpiresAt { get; set; }
+        public bool RememberMe { get; set; }
+        public string? Email { get; set; }
+    }
+
+    public async Task SaveLoginPreferenceAsync(bool rememberMe, string email)
+    {
+        try
+        {
+            var existing = await GetTokenDataAsync() ?? new TokenData();
+            existing.RememberMe = rememberMe;
+            existing.Email = email;
+            var json = JsonSerializer.Serialize(existing);
+            var encrypted = Protect(json);
+            await File.WriteAllTextAsync(_storagePath, encrypted);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to save login preference: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool rememberMe, string? email)> GetLoginPreferenceAsync()
+    {
+        try
+        {
+            var data = await GetTokenDataAsync();
+            return (data?.RememberMe ?? false, data?.Email);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to get login preference: {ex.Message}");
+            return (false, null);
+        }
     }
 }

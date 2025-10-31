@@ -107,6 +107,18 @@ export class AnnouncementsController {
     type: Boolean,
     description: 'Include expired announcements (default: false)',
   })
+  @ApiQuery({
+    name: 'teacherId',
+    required: false,
+    type: String,
+    description: 'Filter by teacher ID (user_id)',
+  })
+  @ApiQuery({
+    name: 'sectionId',
+    required: false,
+    type: String,
+    description: 'Filter by section ID',
+  })
   @ApiResponse({
     status: 200,
     description: 'Announcements retrieved successfully',
@@ -118,6 +130,8 @@ export class AnnouncementsController {
     @Query('visibility') visibility?: string,
     @Query('type') type?: string,
     @Query('roleId') roleId?: string,
+    @Query('teacherId') teacherId?: string,
+    @Query('sectionId') sectionId?: string,
     @Query('includeExpired', new DefaultValuePipe(false), ParseBoolPipe)
     includeExpired?: boolean,
   ): Promise<{ data: Announcement[]; pagination: any }> {
@@ -127,6 +141,8 @@ export class AnnouncementsController {
       visibility,
       type,
       roleId,
+      teacherId,
+      sectionId,
       includeExpired,
     };
     return this.announcementsService.findAll(filters);
@@ -181,6 +197,26 @@ export class AnnouncementsController {
     );
   }
 
+  @Get('stats')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get announcement statistics for teacher' })
+  @ApiQuery({
+    name: 'teacherId',
+    required: true,
+    type: String,
+    description: 'Teacher ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getStats(@Query('teacherId') teacherId: string): Promise<any> {
+    return this.announcementsService.getStats(teacherId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get announcement by ID' })
   @ApiResponse({
@@ -227,19 +263,25 @@ export class AnnouncementsController {
 
   @Delete(':id')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Delete announcement (Admin only)' })
+  @ApiOperation({ summary: 'Delete announcement (Admin or Teacher if owner)' })
   @ApiResponse({
     status: 200,
     description: 'Announcement deleted successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Can only delete own announcements',
+  })
   @ApiResponse({ status: 404, description: 'Announcement not found' })
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
-    this.logger.log(`Deleting announcement ${id}`);
-    await this.announcementsService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @AuthUser() user: any,
+  ): Promise<{ message: string }> {
+    this.logger.log(`Deleting announcement ${id} by user ${user.id}`);
+    await this.announcementsService.remove(id, user.id, user.role);
     return { message: 'Announcement deleted successfully' };
   }
 

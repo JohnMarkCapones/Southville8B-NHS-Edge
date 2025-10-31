@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Southville8BEdgeUI.ViewModels.Teacher;
+using Southville8BEdgeUI.Views.Admin;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -75,7 +76,9 @@ public partial class MyAnnouncementsView : UserControl
         InitializeComponent();
         if (Design.IsDesignMode)
         {
-            DataContext = new MyAnnouncementsViewModel();
+            var mockApiClient = new MockApiClient();
+            var mockDialogService = new MockDialogService();
+            DataContext = new MyAnnouncementsViewModel(mockApiClient, mockDialogService, "mock-teacher-id");
         }
 
         _layoutManager = new ResponsiveLayoutManager();

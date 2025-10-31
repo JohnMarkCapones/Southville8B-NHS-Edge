@@ -14,7 +14,7 @@ export interface SidebarMetrics {
 
 export interface TeacherSidebarMetrics {
   totalClasses: number;
-  pendingAssignments: number;
+  totalAnnouncements: number;
   totalStudents: number;
   unreadMessages: number;
   lastUpdated: string;
@@ -57,6 +57,58 @@ export class DesktopSidebarService {
           this.logger.error('Error updating sidebar metrics:', error);
         },
       });
+  }
+
+  async getStudentDistribution(): Promise<{
+    total: number;
+    grades: { grade: string; count: number }[];
+  }> {
+    try {
+      // Fetch all grade_level values; small dataset so client-side aggregation is acceptable
+      const { data, error } = await this.supabase
+        .from('students')
+        .select('grade_level');
+
+      if (error) {
+        this.logger.error('Error fetching student distribution', error);
+        throw error;
+      }
+
+      const counts: Record<string, number> = {
+        'Grade 7': 0,
+        'Grade 8': 0,
+        'Grade 9': 0,
+        'Grade 10': 0,
+      };
+
+      for (const row of data ?? []) {
+        const gl = (row as any).grade_level as string | null;
+        if (gl && counts.hasOwnProperty(gl)) counts[gl]! += 1;
+      }
+
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+      return {
+        total,
+        grades: [
+          { grade: 'Grade 7', count: counts['Grade 7'] },
+          { grade: 'Grade 8', count: counts['Grade 8'] },
+          { grade: 'Grade 9', count: counts['Grade 9'] },
+          { grade: 'Grade 10', count: counts['Grade 10'] },
+        ],
+      };
+    } catch (err) {
+      this.logger.error('getStudentDistribution failed', err as any);
+      return {
+        total: 0,
+        grades: [
+          { grade: 'Grade 7', count: 0 },
+          { grade: 'Grade 8', count: 0 },
+          { grade: 'Grade 9', count: 0 },
+          { grade: 'Grade 10', count: 0 },
+        ],
+      };
+    }
   }
 
   private async fetchMetrics(): Promise<SidebarMetrics> {
@@ -127,17 +179,43 @@ export class DesktopSidebarService {
 
   // Teacher-specific metrics methods
   private async fetchTeacherMetrics(
-    teacherId: string,
+    userId: string,
   ): Promise<TeacherSidebarMetrics> {
     try {
-      // Fetch teacher's active classes count
+      this.logger.debug(`[SSE] Fetching metrics for userId: ${userId}`);
+
+      // Step 1: Get teacher record to get teacher.id
+      const { data: teacher } = await this.supabase
+        .from('teachers')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      this.logger.debug(
+        `[SSE] Teacher lookup result: ${JSON.stringify(teacher)}`,
+      );
+
+      if (!teacher) {
+        this.logger.warn(`No teacher found for user_id: ${userId}`);
+        return {
+          totalClasses: 6,
+          totalAnnouncements: 24,
+          totalStudents: 180,
+          unreadMessages: 12,
+          lastUpdated: new Date().toISOString(),
+        };
+      }
+
+      // Step 2: Fetch teacher's active classes count using teacher.id
       const { count: totalClasses } = await this.supabase
         .from('schedules')
         .select('*', { count: 'exact', head: true })
-        .eq('teacher_id', teacherId)
+        .eq('teacher_id', teacher.id)
         .eq('status', 'Active');
 
-      // Fetch unique students count from teacher's schedules
+      this.logger.debug(`[SSE] Total classes count: ${totalClasses}`);
+
+      // Step 3: Fetch unique students count from teacher's schedules using teacher.id
       const { data: studentSchedules } = await this.supabase
         .from('student_schedule')
         .select('student_id')
@@ -146,7 +224,7 @@ export class DesktopSidebarService {
           await this.supabase
             .from('schedules')
             .select('id')
-            .eq('teacher_id', teacherId)
+            .eq('teacher_id', teacher.id)
             .eq('status', 'Active')
             .then((result) => result.data?.map((s) => s.id) || []),
         );
@@ -155,25 +233,60 @@ export class DesktopSidebarService {
         studentSchedules?.map((s) => s.student_id) || [],
       ).size;
 
-      // Mock pending assignments for now (can be replaced with actual assignments table query)
-      const pendingAssignments = Math.floor(Math.random() * 30) + 5; // Random between 5-35
+      // Step 4: Fetch teacher's announcements count using userId (not author_id)
+      const { count: totalAnnouncements } = await this.supabase
+        .from('announcements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      this.logger.debug(
+        `[SSE] Announcements query - userId: ${userId}, count: ${totalAnnouncements}`,
+      );
+
+      // Add a verification query to see actual announcements
+      const { data: announcementsList, error: announcementsError } =
+        await this.supabase
+          .from('announcements')
+          .select('id, title, user_id')
+          .eq('user_id', userId);
+
+      this.logger.debug(
+        `[SSE] Announcements list: ${JSON.stringify(announcementsList)}`,
+      );
+      if (announcementsError) {
+        this.logger.error(
+          `[SSE] Announcements query error: ${JSON.stringify(announcementsError)}`,
+        );
+      }
 
       // Mock unread messages for now
       const unreadMessages = Math.floor(Math.random() * 15); // Random between 0-15
 
-      return {
+      const finalMetrics = {
         totalClasses: totalClasses || 0,
-        pendingAssignments,
+        totalAnnouncements: totalAnnouncements || 0,
         totalStudents: uniqueStudents,
         unreadMessages,
         lastUpdated: new Date().toISOString(),
       };
+
+      this.logger.debug(
+        `[SSE] Final metrics: ${JSON.stringify({
+          totalClasses: totalClasses || 0,
+          totalAnnouncements: totalAnnouncements || 0,
+          totalStudents: uniqueStudents,
+          unreadMessages,
+        })}`,
+      );
+
+      return finalMetrics;
     } catch (error) {
       this.logger.error('Error fetching teacher sidebar metrics:', error);
+      this.logger.error(`[SSE] Full error details: ${JSON.stringify(error)}`);
       // Return default values on error
       return {
         totalClasses: 6,
-        pendingAssignments: 24,
+        totalAnnouncements: 24,
         totalStudents: 180,
         unreadMessages: 12,
         lastUpdated: new Date().toISOString(),

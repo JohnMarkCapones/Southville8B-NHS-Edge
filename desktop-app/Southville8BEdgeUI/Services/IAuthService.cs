@@ -7,7 +7,7 @@ namespace Southville8BEdgeUI.Services;
 
 public interface IAuthService
 {
-    Task<LoginResponse?> LoginAsync(string email, string password);
+    Task<LoginResponse?> LoginAsync(string email, string password, bool rememberMe);
     Task LogoutAsync();
     Task<bool> IsAuthenticatedAsync();
     Task<UserDto?> GetCurrentUserAsync();
