@@ -114,6 +114,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private DispatcherTimer? _todayClassRotationTimer;
     private readonly bool _enableRotation;
     private readonly bool _enableTimeUpdater;
+    private DispatcherTimer? _clock;
 
     // Services
     private readonly ISseService _sseService;
@@ -195,8 +196,14 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
     private void StartTimeUpdater()
     {
-        CurrentTime = DateTime.Now.ToString("hh:mm tt");
-        CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
+        _clock?.Stop();
+        _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _clock.Tick += (_, _) =>
+        {
+            CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
+            CurrentTime = DateTime.Now.ToString("hh:mm tt");
+        };
+        _clock.Start();
     }
 
     private static string FormatRoleName(string? role)
@@ -1202,6 +1209,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
             // Stop timers
             _todayClassRotationTimer?.Stop();
+            _clock?.Stop();
         }
     }
 }

@@ -71,7 +71,7 @@ public partial class LoginViewModel : ViewModelBase
             ClearError(); // Clear any previous errors
             System.Diagnostics.Debug.WriteLine("Starting login process...");
 
-            var response = await _authService.LoginAsync(Email, Password);
+            var response = await _authService.LoginAsync(Email, Password, RememberMe);
 
             if (response?.Success == true && response.User != null)
             {
@@ -189,10 +189,88 @@ public partial class LoginViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ForgotPassword()
+    private async Task ForgotPassword()
     {
-        // Logic for the forgot password flow
-        _toastService.Info("Forgot password functionality not yet implemented.");
+        // First, ask user to select their role
+        var roleChoice = await _dialogService.ShowChoiceDialogAsync(
+            "Forgot Password",
+            "Please select your role to proceed with password reset:",
+            "I'm an Admin",
+            "I'm a Teacher"
+        );
+
+        if (string.IsNullOrWhiteSpace(roleChoice))
+        {
+            return; // User cancelled
+        }
+
+        // If teacher, show contact admin instructions
+        if (roleChoice == "I'm a Teacher")
+        {
+            await _dialogService.ShowInfoAsync(
+                "Forgot Password",
+                new Dictionary<string, string>
+                {
+                    { "Instructions", "To reset your password, please contact your system administrator." }
+                }
+            );
+            return;
+        }
+
+        // If admin, proceed with email input
+        var email = await _dialogService.ShowInputDialogAsync(
+            "Forgot Password",
+            "Enter your admin email address to receive a password reset link.",
+            "admin@example.com",
+            Email // Pre-fill with email from login form if available
+        );
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return; // User cancelled
+        }
+
+        // Validate email format
+        if (!email.Contains("@") || !email.Contains("."))
+        {
+            _toastService.Error("Please enter a valid email address.", "Invalid Email");
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            ClearError();
+
+            // Get API client from service locator
+            var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+            
+            var response = await apiClient.SendPasswordResetEmailAsync(email);
+
+            if (response != null && !string.IsNullOrEmpty(response.Message))
+            {
+                await _dialogService.ShowInfoAsync(
+                    "Password Reset",
+                    new Dictionary<string, string>
+                    {
+                        { "Status", response.Message }
+                    }
+                );
+            }
+            else
+            {
+                _toastService.Error("Failed to send password reset email. Please try again.", "Error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error in forgot password: {ex.Message}");
+            _toastService.Error("An error occurred while sending the password reset email.", "Error");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [RelayCommand]

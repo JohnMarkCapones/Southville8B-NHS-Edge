@@ -712,4 +712,100 @@ export class AuthService {
 
     return password;
   }
+
+  /**
+   * Send password reset email to admin user
+   * Security: Always returns success message to prevent email enumeration
+   */
+  async sendPasswordResetEmail(email: string): Promise<{ message: string }> {
+    const supabase = this.getServiceClient();
+    const supabaseUrl = this.configService.get<string>('supabase.url');
+
+    try {
+      // 1. Check if user exists and is an admin
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select(
+          `
+          id,
+          email,
+          role_id,
+          roles(name)
+        `,
+        )
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (userError || !user) {
+        // Return generic success to prevent email enumeration
+        this.logger.warn(
+          `Password reset requested for non-existent email: ${email}`,
+        );
+        return {
+          message:
+            'If this email is registered as an admin, a password reset link has been sent to your inbox.',
+        };
+      }
+
+      // 2. Check if user has admin role
+      const rolesData = (user as any).roles;
+      const roleName = Array.isArray(rolesData)
+        ? rolesData[0]?.name?.toLowerCase()
+        : rolesData?.name?.toLowerCase();
+
+      if (roleName !== 'admin') {
+        // Return generic success for non-admin users
+        this.logger.warn(
+          `Password reset requested for non-admin email: ${email}`,
+        );
+        return {
+          message:
+            'If this email is registered as an admin, a password reset link has been sent to your inbox.',
+        };
+      }
+
+      // 3. Generate password reset link using Supabase admin API
+      // Note: generateLink creates a recovery link that must be sent via email
+      // We'll use resetPasswordForEmail which sends the email directly
+      const authClient = this.getAuthClient();
+      
+      // Get redirect URL from config or use default
+      const redirectTo = this.configService.get<string>(
+        'auth.passwordResetRedirectUrl',
+        `${supabaseUrl}/auth/callback`,
+      );
+
+      const { error: resetError } = await authClient.auth.resetPasswordForEmail(
+        email,
+        {
+          redirectTo,
+        },
+      );
+
+      if (resetError) {
+        this.logger.error(
+          `Failed to send password reset email: ${resetError.message}`,
+        );
+        // Still return success to prevent information disclosure
+        return {
+          message:
+            'If this email is registered as an admin, a password reset link has been sent to your inbox.',
+        };
+      }
+
+      this.logger.log(`Password reset email sent to admin: ${email}`);
+
+      return {
+        message:
+          'If this email is registered as an admin, a password reset link has been sent to your inbox.',
+      };
+    } catch (error) {
+      this.logger.error(`Error sending password reset email: ${error.message}`);
+      // Always return success message for security
+      return {
+        message:
+          'If this email is registered as an admin, a password reset link has been sent to your inbox.',
+      };
+    }
+  }
 }

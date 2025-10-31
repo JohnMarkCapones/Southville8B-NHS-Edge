@@ -16,6 +16,8 @@ public class SseService : ISseService
     private readonly IConfiguration _configuration;
     private CancellationTokenSource? _cancellationTokenSource;
     private bool _isConnected = false;
+    private DateTime _lastTeacherMetricsEmittedUtc = DateTime.MinValue;
+    private static readonly TimeSpan TeacherEmitInterval = TimeSpan.FromSeconds(30);
 
     public bool IsConnected => _isConnected;
     public event EventHandler<SidebarMetrics>? MetricsUpdated;
@@ -74,6 +76,18 @@ public class SseService : ISseService
                     {
                         var json = dataBuffer.ToString().Trim();
                         
+                        // Ignore heartbeat/non-final frames if present
+                        if (json.Contains("\"heartbeat\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataBuffer.Clear();
+                            continue;
+                        }
+                        if (json.Contains("\"isFinal\":false", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataBuffer.Clear();
+                            continue;
+                        }
+
                         try
                         {
                             // Try to parse as SidebarMetrics first
@@ -81,6 +95,7 @@ public class SseService : ISseService
                             if (sidebarMetrics != null)
                             {
                                 MetricsUpdated?.Invoke(this, sidebarMetrics);
+                                dataBuffer.Clear();
                                 continue;
                             }
                         }
@@ -95,7 +110,14 @@ public class SseService : ISseService
                             var teacherMetrics = JsonSerializer.Deserialize<TeacherSidebarMetrics>(json);
                             if (teacherMetrics != null)
                             {
-                                TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                var now = DateTime.UtcNow;
+                                if (now - _lastTeacherMetricsEmittedUtc >= TeacherEmitInterval)
+                                {
+                                    _lastTeacherMetricsEmittedUtc = now;
+                                    TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                }
+                                // Whether throttled or emitted, clear and continue
+                                dataBuffer.Clear();
                                 continue;
                             }
                         }
@@ -111,6 +133,7 @@ public class SseService : ISseService
                             if (dashboardMetrics != null)
                             {
                                 DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
+                                dataBuffer.Clear();
                                 continue;
                             }
                         }

@@ -28,6 +28,8 @@ import { UserRole } from '../users/dto/create-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AdminChangePasswordDto } from './dto/admin-change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { UsersService } from '../users/users.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -35,6 +37,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly sessionManagementService: SessionManagementService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Post('login')
@@ -110,6 +113,12 @@ export class AuthController {
         request.headers['user-agent'] || 'unknown',
         clientIp,
       );
+
+      // Record daily login for streak tracking (non-blocking)
+      this.usersService.recordLogin(user.id).catch((error) => {
+        // Log error but don't fail login if streak recording fails
+        console.error('Failed to record login for streak tracking:', error);
+      });
 
       return {
         success: true,
@@ -305,5 +314,32 @@ export class AuthController {
       adminChangePasswordDto.newPassword,
       admin.id,
     );
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Send password reset email to admin',
+    description:
+      'Sends a password reset magic link to the admin email address via Supabase',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'If the email is registered as an admin, a password reset link has been sent',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid email format',
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.sendPasswordResetEmail(forgotPasswordDto.email);
   }
 }

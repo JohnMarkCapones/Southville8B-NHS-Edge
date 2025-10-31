@@ -32,6 +32,8 @@ public interface IApiClient
     Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto);
     Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId);
     Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword);
+    Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword);
+    Task<ForgotPasswordResponseDto?> SendPasswordResetEmailAsync(string email);
     
     // Section Management Methods
     Task<SectionListResponse?> GetSectionsAsync(int limit = 100);

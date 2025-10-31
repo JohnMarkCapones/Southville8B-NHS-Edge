@@ -1558,4 +1558,150 @@ export class UsersService {
       );
     }
   }
+
+  /**
+   * Record a daily login for a user
+   * Uses upsert to handle duplicate same-day logins gracefully
+   * @param userId - User UUID
+   */
+  async recordLogin(userId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get today's date in YYYY-MM-DD format (date-only, no time)
+      const today = new Date().toISOString().split('T')[0];
+
+      // Upsert login record (insert if not exists, do nothing if exists)
+      const { error } = await supabase.from('daily_logins').upsert(
+        {
+          user_id: userId,
+          login_date: today,
+        },
+        {
+          onConflict: 'user_id,login_date',
+          ignoreDuplicates: false,
+        },
+      );
+
+      if (error) {
+        this.logger.error(`Error recording login for user ${userId}:`, error);
+        // Don't throw - this should be non-blocking
+      } else {
+        this.logger.log(`Recorded login for user ${userId} on ${today}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error recording login for user ${userId}:`,
+        error,
+      );
+      // Don't throw - this should be non-blocking
+    }
+  }
+
+  /**
+   * Get the current login streak count for a user
+   * Streak counts consecutive days from today backwards
+   * Returns 0 if user didn't log in today or if there's a gap
+   * @param userId - User UUID
+   * @returns Number of consecutive login days (0 if no streak)
+   */
+  async getLoginStreak(userId: string): Promise<number> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get today's date in UTC (avoid timezone offsets)
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Get all login dates for this user, ordered by date descending
+      const { data: logins, error } = await supabase
+        .from('daily_logins')
+        .select('login_date')
+        .eq('user_id', userId)
+        .order('login_date', { ascending: false });
+
+      if (error) {
+        this.logger.error(
+          `Error fetching login streak for user ${userId}:`,
+          error,
+        );
+        return 0;
+      }
+
+      if (!logins || logins.length === 0) {
+        return 0;
+      }
+
+      // DEBUG: Log raw and normalized dates to diagnose comparison issues
+      try {
+        const sample = logins.slice(0, 5).map((r: any) => r.login_date);
+        this.logger.debug(
+          `[getLoginStreak] user=${userId} today=${todayStr} sampleRaw=${JSON.stringify(
+            sample,
+          )}`,
+        );
+      } catch (_) {}
+
+      // Normalize dates to YYYY-MM-DD to avoid timezone/format mismatches
+      const normalizeDate = (d: any): string => {
+        // Supabase may return 'YYYY-MM-DD' or a full timestamp string
+        // Convert via Date to consistently get UTC date component
+        try {
+          return new Date(d as any).toISOString().split('T')[0];
+        } catch (_) {
+          // Fallback: if already 'YYYY-MM-DD'
+          return String(d).split('T')[0];
+        }
+      };
+
+      // Check if user logged in today (normalized)
+      const hasLoginToday = logins.some(
+        (login) => normalizeDate(login.login_date) === todayStr,
+      );
+
+      // DEBUG: Log normalized list presence of today
+      try {
+        const normalized = logins
+          .slice(0, 5)
+          .map((r: any) => normalizeDate(r.login_date));
+        this.logger.debug(
+          `[getLoginStreak] hasLoginToday=${hasLoginToday} normalizedSample=${JSON.stringify(
+            normalized,
+          )}`,
+        );
+      } catch (_) {}
+
+      if (!hasLoginToday) {
+        // No login today means streak is 0
+        return 0;
+      }
+
+      // Calculate consecutive days backwards from today
+      let streak = 0;
+      // Use UTC midnight based on todayStr for consistent day math
+      const expectedDate = new Date(`${todayStr}T00:00:00.000Z`);
+
+      for (let i = 0; i < logins.length; i++) {
+        const loginDateStr = normalizeDate(logins[i].login_date);
+        const expectedDateStr = expectedDate.toISOString().split('T')[0];
+
+        if (loginDateStr === expectedDateStr) {
+          streak++;
+          // Move to previous day
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+          // Gap detected, stop counting
+          break;
+        }
+      }
+
+      this.logger.log(`Login streak for user ${userId}: ${streak} days`);
+      return streak;
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error calculating login streak for user ${userId}:`,
+        error,
+      );
+      return 0;
+    }
+  }
 }

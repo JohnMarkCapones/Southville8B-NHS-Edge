@@ -461,6 +461,8 @@ public class MockApiClient : IApiClient
     public Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
     public Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId) => Task.FromResult<ResetPasswordResponseDto?>(null);
     public Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword) => Task.FromResult<ChangePasswordResponseDto?>(null);
+    public Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword) => Task.FromResult<AdminChangePasswordResponseDto?>(null);
+    public Task<ForgotPasswordResponseDto?> SendPasswordResetEmailAsync(string email) => Task.FromResult<ForgotPasswordResponseDto?>(null);
     public Task<SectionListResponse?> GetSectionsAsync(int limit = 100) => Task.FromResult<SectionListResponse?>(null);
     public Task<BuildingListResponse?> GetBuildingsAsync(int limit = 100) => Task.FromResult<BuildingListResponse?>(null);
     public Task<BuildingDto?> GetBuildingByIdAsync(string id) => Task.FromResult<BuildingDto?>(null);
@@ -572,5 +574,15 @@ public class MockDialogService : IDialogService
     public Task<bool> ShowConfirmAsync(string title, string message, string confirmText = "OK", string cancelText = "Cancel")
     {
         return Task.FromResult(false);
+    }
+
+    public Task<string?> ShowInputDialogAsync(string title, string message, string placeholder = "", string initialValue = "")
+    {
+        return Task.FromResult<string?>(null);
+    }
+
+    public Task<string?> ShowChoiceDialogAsync(string title, string message, string option1Text, string option2Text)
+    {
+        return Task.FromResult<string?>(null);
     }
 }

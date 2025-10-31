@@ -17,7 +17,7 @@ using System.Globalization;
 
 namespace Southville8BEdgeUI.ViewModels;
 
-public partial class AdminShellViewModel : ViewModelBase
+public partial class AdminShellViewModel : ViewModelBase, IDisposable
 {
     [ObservableProperty]
     private ViewModelBase _currentContent;
@@ -81,6 +81,10 @@ public partial class AdminShellViewModel : ViewModelBase
 
     // Flag to suppress applying a theme while initializing (so we respect OS/default app theme)
     private bool _suppressThemeApply = true;
+    private DispatcherTimer? _clock;
+    private SidebarMetrics? _lastValidMetrics;
+    private SidebarMetrics? _pendingMetrics;
+    private DispatcherTimer? _metricsApplyTimer;
 
     public bool ShowLeftSidebarToggle => !IsLeftSidebarVisible;
     public bool ShowRightSidebarToggle => !IsRightSidebarVisible;
@@ -192,6 +196,16 @@ public partial class AdminShellViewModel : ViewModelBase
 
         // Load sidebar events (today + next 7 days)
         _ = LoadSidebarEventsAsync();
+
+        // Realtime clock for date/time display
+        _clock?.Stop();
+        _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _clock.Tick += (_, _) =>
+        {
+            CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
+            CurrentTime = DateTime.Now.ToString("hh:mm tt");
+        };
+        _clock.Start();
     }
 
 
@@ -217,12 +231,36 @@ public partial class AdminShellViewModel : ViewModelBase
 
     private void OnMetricsUpdated(object? sender, SidebarMetrics metrics)
     {
+        // Guard: ignore transient all-zero snapshots while connected (likely heartbeat/placeholder)
+        bool looksEmpty = metrics.Events == 0 && metrics.Teachers == 0 && metrics.Students == 0 && metrics.Sections == 0;
+        if (looksEmpty && !string.Equals(ConnectionStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Debounce/coalesce: keep only latest metrics within a short window
+        _pendingMetrics = metrics;
+        _metricsApplyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _metricsApplyTimer.Tick -= ApplyPendingMetrics;
+        _metricsApplyTimer.Tick += ApplyPendingMetrics;
+        _metricsApplyTimer.Stop();
+        _metricsApplyTimer.Start();
+    }
+
+    private void ApplyPendingMetrics(object? sender, EventArgs e)
+    {
+        _metricsApplyTimer?.Stop();
+        var snapshot = _pendingMetrics;
+        _pendingMetrics = null;
+        if (snapshot == null) return;
+
+        _lastValidMetrics = snapshot;
         Dispatcher.UIThread.Post(() =>
         {
-            EventsCount = metrics.Events;
-            TeachersCount = metrics.Teachers;
-            StudentsCount = metrics.Students;
-            SectionsCount = metrics.Sections;
+            EventsCount = snapshot.Events;
+            TeachersCount = snapshot.Teachers;
+            StudentsCount = snapshot.Students;
+            SectionsCount = snapshot.Sections;
         });
     }
 
@@ -933,5 +971,11 @@ public partial class AdminShellViewModel : ViewModelBase
         {
             System.Diagnostics.Debug.WriteLine($"Failed to store access token: {ex.Message}");
         }
+    }
+
+    public void Dispose()
+    {
+        _clock?.Stop();
+        _metricsApplyTimer?.Stop();
     }
 }

@@ -1,7 +1,7 @@
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/contexts/theme-context';
@@ -42,7 +42,7 @@ export default function AccountSecurityScreen() {
           <Text style={[styles.comingSoonTitle, { color: colors.text }]}>Coming Soon</Text>
           <Text style={[styles.comingSoonDescription, { color: colors.icon }]}>
             Account security features are currently under development. 
-            You'll be able to manage your password, enable two-factor authentication, 
+            You&apos;ll be able to manage your password, enable two-factor authentication, 
             and review your account activity here.
           </Text>
           
@@ -64,6 +64,35 @@ export default function AccountSecurityScreen() {
               <Text style={[styles.featureText, { color: colors.text }]}>Security Notifications</Text>
             </View>
           </View>
+          {/* Actions */}
+          <TouchableOpacity
+            onPress={() => router.push('/account-security/change-password')}
+            activeOpacity={0.85}
+            style={{
+              marginTop: 24,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'transparent',
+              shadowColor: isDark ? 'transparent' : '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: isDark ? 0 : 0.1,
+              shadowRadius: isDark ? 0 : 3,
+              elevation: isDark ? 0 : 3,
+            }}
+          >
+            <LinearGradient
+              colors={isDark ? [colors.tint, '#1E3A8A'] : [colors.tint, '#1D4ED8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 9,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '600', textAlign: 'center' }}>Change Password</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </View>
       </View>

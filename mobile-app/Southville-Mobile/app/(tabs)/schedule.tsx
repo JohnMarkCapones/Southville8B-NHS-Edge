@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, ActivityIndicator, TouchableOpacity, Text, Image, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -24,6 +24,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useWeeklySchedule, formatTime } from '@/hooks/use-weekly-schedule';
 import { Schedule, DayOfWeek } from '@/lib/types/schedule';
+import { getSubjectAsset } from '@/lib/subject-images';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -39,6 +40,8 @@ export default function ScheduleScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const colors = Colors[isDark ? 'dark' : 'light'];
+  const { query: initialQuery } = useLocalSearchParams<{ query?: string }>();
+  const [searchFilter, setSearchFilter] = useState<string>((initialQuery || '').toString());
 
   // State management
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -118,7 +121,7 @@ export default function ScheduleScreen() {
   }, [selectedDate]);
 
   // Flatten and filter schedules for selected date
-  const filteredSchedules = useMemo(() => {
+  const filteredSchedulesBase = useMemo(() => {
     const allSchedules: Schedule[] = [];
     
     // Flatten all schedules from weeklySchedule
@@ -134,15 +137,32 @@ export default function ScheduleScreen() {
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [weeklySchedule, selectedDate]);
 
-  // Get subject image based on subject name
+  // Apply optional search filter from query param (subject, teacher, room, day)
+  const filteredSchedules = useMemo(() => {
+    const term = (searchFilter || '').trim().toLowerCase();
+    if (!term) return filteredSchedulesBase;
+
+    return filteredSchedulesBase.filter((s) => {
+      const subject = s.subject?.subject_name?.toLowerCase() || '';
+      const teacherFirst = s.teacher?.first_name?.toLowerCase() || '';
+      const teacherLast = s.teacher?.last_name?.toLowerCase() || '';
+      const teacherFull = `${teacherFirst} ${teacherLast}`.trim();
+      const room = s.room?.room_number?.toLowerCase() || '';
+      const day = s.dayOfWeek?.toLowerCase() || '';
+      return (
+        subject.includes(term) ||
+        teacherFirst.includes(term) ||
+        teacherLast.includes(term) ||
+        teacherFull.includes(term) ||
+        room.includes(term) ||
+        day.includes(term)
+      );
+    });
+  }, [filteredSchedulesBase, searchFilter]);
+
+  // Get subject image using centralized mapper
   const getSubjectImage = useCallback((subjectName: string) => {
-    const name = subjectName.toLowerCase();
-    if (name.includes('english')) return require('@/assets/subjects/English.png');
-    if (name.includes('math')) return require('@/assets/subjects/MATH.png');
-    if (name.includes('filipino')) return require('@/assets/subjects/Filipino.png');
-    if (name.includes('science')) return require('@/assets/subjects/Science.png');
-    if (name.includes('esp')) return require('@/assets/subjects/ESP.png');
-    return require('@/assets/subjects/Frame350.png'); // Default book icon
+    return getSubjectAsset(subjectName);
   }, []);
 
   // Subject-specific colors
@@ -181,6 +201,14 @@ export default function ScheduleScreen() {
   const handleCardExpand = useCallback((cardId: string) => {
     setExpandedCardId(expandedCardId === cardId ? null : cardId);
   }, [expandedCardId]);
+
+  // Auto-expand first match when a search filter is present
+  useEffect(() => {
+    const term = (searchFilter || '').trim();
+    if (term && filteredSchedules.length > 0) {
+      setExpandedCardId(filteredSchedules[0].id);
+    }
+  }, [searchFilter, filteredSchedules]);
 
   // Pan gesture handler
   const onGestureEvent = useCallback((event: any) => {
@@ -364,6 +392,34 @@ export default function ScheduleScreen() {
             />
           }
         >
+          {/* Filter banner */}
+          {searchFilter?.trim() ? (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+              backgroundColor: isDark ? '#2A2A2A' : '#F2F2F7',
+              borderWidth: 1,
+              borderColor: isDark ? '#3A3A3A' : 'rgba(0,0,0,0.06)',
+              marginBottom: 12,
+            }}>
+              <Text style={{ color: colors.icon }}>
+                Filtered by: &quot;{searchFilter}&quot; ({filteredSchedules.length} results)
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchFilter('');
+                  setExpandedCardId(null);
+                }}
+                style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: isDark ? '#404040' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? '#505050' : 'rgba(0,0,0,0.08)' }}
+              >
+                <Text style={{ color: colors.text }}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {/* Calendar Week Strip */}
           <View style={styles.calendarSection}>
             <Text style={styles.monthYear}>{currentMonthYear}</Text>

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Southville8BEdgeUI.Models.Api;
 using System.IdentityModel.Tokens.Jwt;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Southville8BEdgeUI.Services;
 
@@ -23,6 +24,12 @@ public class ApiClient : IApiClient
     private readonly IConfiguration _configuration;
     private readonly JsonSerializerOptions _jsonOptions;
     private string? _currentAccessToken;
+
+    // In-flight de-duplication (GET only)
+    private readonly ConcurrentDictionary<string, Task<HttpStringResult>> _inFlightGets = new();
+
+    // Simple in-memory cache (GET only)
+    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
 
     public ApiClient(HttpClient httpClient, ITokenStorageService tokenStorage, IConfiguration configuration)
     {
@@ -62,7 +69,7 @@ public class ApiClient : IApiClient
 
     public async Task<T?> GetAsync<T>(string endpoint) where T : class
     {
-        return await ExecuteRequestAsync<T>(HttpMethod.Get, endpoint);
+        return await ExecuteGetWithCacheAsync<T>(endpoint);
     }
 
     public async Task<T?> PostAsync<T>(string endpoint, object? data = null) where T : class
@@ -234,6 +241,41 @@ public class ApiClient : IApiClient
         catch (Exception ex)
         {
             Debug.WriteLine($"Error changing password: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword)
+    {
+        try
+        {
+            var request = new AdminChangePasswordRequestDto 
+            { 
+                UserId = userId, 
+                NewPassword = newPassword 
+            };
+            return await PostAsync<AdminChangePasswordResponseDto>("auth/admin-change-password", request);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error changing password as admin: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<ForgotPasswordResponseDto?> SendPasswordResetEmailAsync(string email)
+    {
+        try
+        {
+            var request = new ForgotPasswordRequestDto 
+            { 
+                Email = email 
+            };
+            return await PostAsync<ForgotPasswordResponseDto>("auth/forgot-password", request);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error sending password reset email: {ex.Message}");
             return null;
         }
     }
@@ -606,6 +648,133 @@ public class ApiClient : IApiClient
             System.Diagnostics.Debug.WriteLine($"Unexpected error: {ex.Message}");
             throw new ApiException("An unexpected error occurred.", ex);
         }
+    }
+
+    private sealed class HttpStringResult
+    {
+        public int StatusCode { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public string? ETag { get; set; }
+    }
+
+    private sealed class CacheEntry
+    {
+        public DateTime ExpiresAt { get; set; }
+        public string RawJson { get; set; } = string.Empty;
+        public string? ETag { get; set; }
+    }
+
+    private TimeSpan GetTtlForEndpoint(string endpoint)
+    {
+        // Normalize just by path prefix
+        var key = endpoint.ToLowerInvariant();
+        if (key.StartsWith("buildings")) return TimeSpan.FromMinutes(10);
+        if (key.StartsWith("rooms")) return TimeSpan.FromMinutes(10);
+        if (key.StartsWith("departments")) return TimeSpan.FromMinutes(10);
+        if (key.StartsWith("events")) return TimeSpan.FromMinutes(2);
+        if (key.StartsWith("schedules")) return TimeSpan.FromMinutes(1);
+        if (key.StartsWith("desktop-sidebar/student-distribution")) return TimeSpan.FromMinutes(2);
+        return TimeSpan.Zero;
+    }
+
+    private async Task<T?> ExecuteGetWithCacheAsync<T>(string endpoint) where T : class
+    {
+        await EnsureAuthenticatedAsync();
+
+        var cacheKey = endpoint.ToLowerInvariant();
+        var ttl = GetTtlForEndpoint(endpoint);
+
+        // Lookup existing cache entry (may be null)
+        CacheEntry? cached = null;
+        if (ttl > TimeSpan.Zero)
+        {
+            _cache.TryGetValue(cacheKey, out cached);
+        }
+
+        // Serve from cache when valid
+        if (ttl > TimeSpan.Zero && cached != null && cached.ExpiresAt > DateTime.UtcNow)
+        {
+            Debug.WriteLine($"[ApiClient][Cache] HIT {endpoint}");
+            return string.IsNullOrEmpty(cached.RawJson)
+                ? null
+                : JsonSerializer.Deserialize<T>(cached.RawJson, _jsonOptions);
+        }
+
+        // De-duplicate concurrent identical GETs
+        var task = _inFlightGets.GetOrAdd(cacheKey, _ => SendGetReturningStringAsync(endpoint, cached?.ETag));
+        HttpStringResult result;
+        try
+        {
+            result = await task;
+        }
+        finally
+        {
+            _inFlightGets.TryRemove(cacheKey, out _);
+        }
+
+        // Handle 304 Not Modified via cached content
+        if (result.StatusCode == 304 && cached != null)
+        {
+            Debug.WriteLine($"[ApiClient][Cache] 304 for {endpoint} – reusing cached body");
+            if (ttl > TimeSpan.Zero)
+            {
+                cached.ExpiresAt = DateTime.UtcNow.Add(ttl);
+                _cache[cacheKey] = cached;
+            }
+            return string.IsNullOrEmpty(cached.RawJson)
+                ? null
+                : JsonSerializer.Deserialize<T>(cached.RawJson, _jsonOptions);
+        }
+
+        // Non-success codes fall back to normal error handling path
+        if (result.StatusCode < 200 || result.StatusCode >= 300)
+        {
+            await HandleErrorResponseAsync(new HttpResponseMessage((System.Net.HttpStatusCode)result.StatusCode), result.Content);
+            return null;
+        }
+
+        // Cache successful responses
+        if (ttl > TimeSpan.Zero)
+        {
+            _cache[cacheKey] = new CacheEntry
+            {
+                RawJson = result.Content,
+                ExpiresAt = DateTime.UtcNow.Add(ttl),
+                ETag = result.ETag
+            };
+            Debug.WriteLine($"[ApiClient][Cache] SET {endpoint} ttl={ttl.TotalSeconds}s etag={(result.ETag ?? "-")}");
+        }
+
+        if (typeof(T) == typeof(string))
+            return result.Content as T;
+        if (string.IsNullOrEmpty(result.Content))
+            return null;
+        return JsonSerializer.Deserialize<T>(result.Content, _jsonOptions);
+    }
+
+    private async Task<HttpStringResult> SendGetReturningStringAsync(string endpoint, string? priorEtag)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+        if (!string.IsNullOrEmpty(priorEtag))
+        {
+            request.Headers.IfNoneMatch.Clear();
+            request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue($"\"{priorEtag}\""));
+        }
+
+        Debug.WriteLine($"[ApiClient][HTTP] GET {request.RequestUri} (If-None-Match={(priorEtag ?? "-")})");
+
+        using var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        string? etag = response.Headers.ETag?.Tag?.Trim('"');
+
+        Debug.WriteLine($"[ApiClient][HTTP] {response.StatusCode} (ETag={(etag ?? "-")})");
+
+        return new HttpStringResult
+        {
+            StatusCode = (int)response.StatusCode,
+            Content = content,
+            ETag = etag
+        };
     }
 
     private async Task<bool> ExecuteRequestAsync(HttpMethod method, string endpoint, object? data = null)

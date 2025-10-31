@@ -1,11 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-import type { LoginRequest, LoginResponse } from '@/services/auth';
-import { login as loginService, restoreAuthSession } from '@/services/auth';
-import type { StoredTokens } from '@/lib/storage/token-storage';
+import type { LoginRequest, LoginResponse } from "@/services/auth";
+import { login as loginService, restoreAuthSession } from "@/services/auth";
+// import { recordLogin } from "@/services/user";
+import type { StoredTokens } from "@/lib/storage/token-storage";
 
-
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthSessionContextValue = {
   status: AuthStatus;
@@ -17,10 +24,16 @@ type AuthSessionContextValue = {
   setIsLoggingOut: (value: boolean) => void;
 };
 
-const AuthSessionContext = createContext<AuthSessionContextValue | undefined>(undefined);
+const AuthSessionContext = createContext<AuthSessionContextValue | undefined>(
+  undefined
+);
 
-export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>('loading');
+export function AuthSessionProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [status, setStatus] = useState<AuthStatus>("loading");
   const [tokens, setTokens] = useState<StoredTokens | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -29,17 +42,17 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       .then((restoredTokens) => {
         if (restoredTokens) {
           setTokens(restoredTokens);
-          setStatus('authenticated');
+          setStatus("authenticated");
           return;
         }
 
         setTokens(null);
-        setStatus('unauthenticated');
+        setStatus("unauthenticated");
       })
       .catch((error) => {
-        console.warn('[AuthSessionProvider] Failed to restore session', error);
+        console.warn("[AuthSessionProvider] Failed to restore session", error);
         setTokens(null);
-        setStatus('unauthenticated');
+        setStatus("unauthenticated");
       });
   }, []);
 
@@ -50,66 +63,95 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
 
       if (restoredTokens) {
         setTokens(restoredTokens);
-        setStatus('authenticated');
+        setStatus("authenticated");
+
+        // Backend already records daily login; skip client backup call to avoid 404s
       } else {
         setTokens(null);
-        setStatus('unauthenticated');
+        setStatus("unauthenticated");
       }
 
       return response;
     } catch (error) {
       setTokens(null);
-      setStatus('unauthenticated');
+      setStatus("unauthenticated");
       throw error;
     }
   }, []);
 
   const signOut = useCallback(() => {
-    console.log('[AuthSession] Signing out - setting status to unauthenticated');
-    setStatus('unauthenticated');
+    console.log(
+      "[AuthSession] Signing out - setting status to unauthenticated"
+    );
+    setStatus("unauthenticated");
     setTokens(null);
   }, []);
 
-  const handleTokenExpiration = useCallback((error: any): boolean => {
-    if (!error) return false;
-    
-    const errorStr = error.toString().toLowerCase();
-    
-    // Check for authentication-related errors
-    const isAuthError = (
-      errorStr.includes('unauthorized') ||
-      errorStr.includes('token') ||
-      errorStr.includes('expired') ||
-      errorStr.includes('invalid') ||
-      errorStr.includes('401') ||
-      errorStr.includes('403') ||
-      errorStr.includes('forbidden') ||
-      errorStr.includes('jwt') ||
-      errorStr.includes('authentication') ||
-      errorStr.includes('no authentication token')
-    );
-    
-    if (isAuthError) {
-      console.log('[AuthSession] Token expired/invalid - clearing auth state automatically');
-      signOut(); // Immediately clear auth state
-      return true; // Indicates that auth state was cleared
-    }
-    
-    return false; // Not an auth error
-  }, [signOut]);
+  const handleTokenExpiration = useCallback(
+    (error: any): boolean => {
+      if (!error) return false;
+
+      const errorStr = error.toString().toLowerCase();
+
+      // Check for authentication-related errors
+      const isAuthError =
+        errorStr.includes("unauthorized") ||
+        errorStr.includes("token") ||
+        errorStr.includes("expired") ||
+        errorStr.includes("invalid") ||
+        errorStr.includes("401") ||
+        errorStr.includes("403") ||
+        errorStr.includes("forbidden") ||
+        errorStr.includes("jwt") ||
+        errorStr.includes("authentication") ||
+        errorStr.includes("no authentication token");
+
+      if (isAuthError) {
+        console.log(
+          "[AuthSession] Token expired/invalid - clearing auth state automatically"
+        );
+        signOut(); // Immediately clear auth state
+        return true; // Indicates that auth state was cleared
+      }
+
+      return false; // Not an auth error
+    },
+    [signOut]
+  );
 
   const value = useMemo<AuthSessionContextValue>(() => {
-    return { status, tokens, signIn, signOut, handleTokenExpiration, isLoggingOut, setIsLoggingOut };
-  }, [status, tokens?.accessToken, tokens?.refreshToken, signOut, handleTokenExpiration, isLoggingOut]);
+    return {
+      status,
+      tokens,
+      signIn,
+      signOut,
+      handleTokenExpiration,
+      isLoggingOut,
+      setIsLoggingOut,
+    };
+  }, [
+    status,
+    tokens?.accessToken,
+    tokens?.refreshToken,
+    signOut,
+    handleTokenExpiration,
+    isLoggingOut,
+  ]);
 
-  return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
+  return (
+    <AuthSessionContext.Provider value={value}>
+      {children}
+    </AuthSessionContext.Provider>
+  );
 }
 
 export function useAuthSession(): AuthSessionContextValue {
   const context = useContext(AuthSessionContext);
 
   if (!context) {
-    throw new Error('useAuthSession must be used within an AuthSessionProvider.');
+    throw new Error(
+      "useAuthSession must be used within an AuthSessionProvider."
+    );
   }
 
   return context;

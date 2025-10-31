@@ -488,7 +488,7 @@
             </Border>
 
             <!-- Bottom Section: Upcoming Classes and Quick Actions -->
-            <Grid x:Name="ContentGrid" ColumnDefinitions="2*,*">
+            <Grid x:Name="ContentGrid" ColumnDefinitions="*">
                 <!-- Upcoming Classes Panel -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
@@ -499,58 +499,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Side Panel: Quick Actions -->
-                <Border x:Name="SidePanel" Grid.Column="1" Classes="card" Margin="12,0,0,0">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        
-                        <!-- Schedule Templates -->
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Schedule Templates" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <Button Content="📋 Load Template" 
-                                   Background="{DynamicResource AccentBrush}" 
-                                   Foreground="{DynamicResource AccentTextOnAccentBrush}" 
-                                   BorderThickness="0" 
-                                   CornerRadius="8" 
-                                   Padding="12,8" 
-                                   FontWeight="SemiBold" 
-                                   HorizontalAlignment="Stretch" 
-                                   Command="{Binding LoadTemplateCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                    <ic:FluentIcon Icon="Clipboard" IconSize="Size16"/>
-                                    <TextBlock Text="Load Template"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Content="💾 Save as Template" 
-                                   Background="{DynamicResource WarningBrush}" 
-                                   Foreground="{DynamicResource AccentTextOnAccentBrush}" 
-                                   BorderThickness="0" 
-                                   CornerRadius="8" 
-                                   Padding="12,8" 
-                                   FontWeight="SemiBold" 
-                                   HorizontalAlignment="Stretch" 
-                                   Command="{Binding SaveTemplateCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                    <ic:FluentIcon Icon="Save" IconSize="Size16"/>
-                                    <TextBlock Text="Save as Template"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-
-                        <!-- Schedule Conflicts -->
-                        <StackPanel Spacing="8" IsVisible="{Binding HasConflicts}">
-                            <TextBlock Text="Schedule Conflicts" 
-                                      FontSize="14" 
-                                      FontWeight="SemiBold" 
-                                      Foreground="{DynamicResource DangerBrush}"/>
-                            <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
-                                <ItemsControl x:Name="ConflictsList" 
-                                             ItemsSource="{Binding Conflicts}" 
-                                             ItemTemplate="{StaticResource ConflictTemplate}"/>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+                <!-- Side Panel removed per request -->
             </Grid>
         </StackPanel>
     </ScrollViewer>

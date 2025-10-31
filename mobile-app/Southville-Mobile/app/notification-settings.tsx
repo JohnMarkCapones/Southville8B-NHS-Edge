@@ -31,7 +31,7 @@ export default function NotificationSettingsScreen() {
       <ScrollView style={styles.scrollView}>
         <Text style={[styles.description, { color: colors.icon }]}>
           Tell us the types of push notification you would like to get on this device. 
-          You're free to change this at anytime
+          You&apos;re free to change this at anytime
         </Text>
 
         <View style={[styles.settingItem, { 

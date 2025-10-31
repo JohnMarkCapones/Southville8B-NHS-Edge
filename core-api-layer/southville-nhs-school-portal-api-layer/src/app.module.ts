@@ -39,6 +39,7 @@ import { TeacherActivityModule } from './teacher-activity/teacher-activity.modul
 import { QuizModule } from './quiz/quiz.module';
 import { NewsModule } from './news/news.module';
 import { GalleryModule } from './gallery/gallery.module';
+import { SearchModule } from './search/search.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
 
@@ -90,6 +91,7 @@ import r2Config from './config/r2.config';
     NewsModule,
     GalleryModule,
     SubjectsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService, R2ConfigValidationService],

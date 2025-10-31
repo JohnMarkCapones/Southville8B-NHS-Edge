@@ -130,9 +130,9 @@ export default function PrivacyPolicyScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7. Children's Privacy</Text>
+            <Text style={styles.sectionTitle}>7. Children&apos;s Privacy</Text>
             <Text style={styles.sectionText}>
-              Our app is designed for educational use by students. We are committed to protecting the privacy of children and comply with applicable children's privacy laws. We obtain appropriate consent from parents or guardians when required.
+              Our app is designed for educational use by students. We are committed to protecting the privacy of children and comply with applicable children&apos;s privacy laws. We obtain appropriate consent from parents or guardians when required.
             </Text>
           </View>
 
@@ -146,7 +146,7 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>9. Changes to This Policy</Text>
             <Text style={styles.sectionText}>
-              We may update this privacy policy from time to time. We will notify you of any material changes by posting the new privacy policy in the app and updating the "Last updated" date. Your continued use of the app after such changes constitutes acceptance of the updated policy.
+              We may update this privacy policy from time to time. We will notify you of any material changes by posting the new privacy policy in the app and updating the &quot;Last updated&quot; date. Your continued use of the app after such changes constitutes acceptance of the updated policy.
             </Text>
           </View>
 
