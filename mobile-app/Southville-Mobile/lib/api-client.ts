@@ -37,19 +37,19 @@ const resolveDefaultBaseUrl = () => {
   if (__DEV__) {
     const host = getDevelopmentHost();
     if (host) {
-      return `http://${host}:3000/api/v1`;
+      return `http://${host}:3004/api/v1`;
     }
 
     if (Platform.OS === "android") {
-      return "http://10.0.2.2:3000/api/v1";
+      return "http://10.0.2.2:3004/api/v1";
     }
 
     if (Platform.OS === "ios") {
-      return "http://127.0.0.1:3000/api/v1";
+      return "http://127.0.0.1:3004/api/v1";
     }
   }
 
-  return "http://localhost:3000/api/v1";
+  return "http://localhost:3004/api/v1";
 };
 
 const DEFAULT_BASE_URL = resolveDefaultBaseUrl();

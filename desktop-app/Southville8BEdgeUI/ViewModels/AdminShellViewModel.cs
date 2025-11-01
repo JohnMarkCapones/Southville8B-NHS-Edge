@@ -720,6 +720,13 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
             await authService.LogoutAsync();
             System.Diagnostics.Debug.WriteLine("AuthService.LogoutAsync completed");
             
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode");
+            }
+            
             // Show success message
             var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
             toastService.Success("You have been logged out successfully", "Goodbye!");
@@ -761,6 +768,13 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
             var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
             var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
             var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode (fallback path)");
+            }
             
             toastService.Warning("Logout completed with warnings", "Warning");
             

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { InteractionManager } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import NetInfo from "@react-native-community/netinfo";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -46,6 +47,7 @@ import { formatAnnouncementContent } from "@/utils/html-utils";
 import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import { SearchSuggestions } from "@/components/search/SearchSuggestions";
 import { getSubjectAsset } from "@/lib/subject-images";
+import { useNetworkRefetch } from "@/hooks/use-network-refetch";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -125,6 +127,32 @@ export default function HomeScreen() {
   useEffect(() => {
     console.log("[Home][Search] active state changed", { searchActive });
   }, [searchActive]);
+
+  // Network connectivity monitoring
+  useEffect(() => {
+    // Subscribe to network state updates
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected);
+    });
+
+    // Get initial network state
+    NetInfo.fetch().then((state) => {
+      setIsConnected(state.isConnected);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Auto-refetch data when network connectivity is restored
+  useNetworkRefetch([
+    refetchAnnouncements,
+    refetchSchedule,
+    refetchUser,
+    refetchEvents,
+    refetchStreak,
+  ]);
   // Search suggestions
   const {
     data: suggestData,
@@ -199,6 +227,7 @@ export default function HomeScreen() {
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean | null>(true);
 
   // Birthday popup animation values
   const birthdayScale = useSharedValue(0);
@@ -575,6 +604,13 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Network Connectivity Indicator */}
+      {isConnected === false && (
+        <View style={styles.networkIndicator}>
+          <Ionicons name="wifi-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.networkIndicatorText}>No Internet Connection</Text>
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -622,7 +658,7 @@ export default function HomeScreen() {
                     styles.searchInput,
                     { color: isDark ? "#FFFFFF" : "#333333" },
                   ]}
-                  placeholder="search...."
+                  placeholder="Search announcements"
                   placeholderTextColor={isDark ? "#CCCCCC" : "#999999"}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -1082,7 +1118,11 @@ export default function HomeScreen() {
                       </Text>
 
                       <View style={styles.announcementCardFooter}>
-                        <View style={styles.announcementCardActions}>
+                        <TouchableOpacity
+                          style={styles.announcementCardActions}
+                          onPress={() => router.push("/(tabs)/announcements")}
+                          activeOpacity={0.7}
+                        >
                           <Ionicons
                             name="eye-outline"
                             size={16}
@@ -1096,7 +1136,7 @@ export default function HomeScreen() {
                           >
                             Read More
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                         <View
                           style={[
                             styles.announcementCardPriority,
@@ -2435,5 +2475,29 @@ const styles = StyleSheet.create({
   },
   eventDropdownItemDate: {
     fontSize: 12,
+  },
+  // Network Indicator
+  networkIndicator: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    backgroundColor: "#E74C3C",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 1000,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  networkIndicatorText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

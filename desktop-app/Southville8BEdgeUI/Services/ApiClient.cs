@@ -39,7 +39,7 @@ public class ApiClient : IApiClient
 
         // Configure HttpClient
         var apiSettings = _configuration.GetSection("ApiSettings");
-        var baseUrl = apiSettings["BaseUrl"] ?? "http://localhost:3000/api/v1";
+        var baseUrl = apiSettings["BaseUrl"] ?? "http://localhost:3004/api/v1";
         
         // Ensure base URL ends with a slash for proper URL combination
         if (!baseUrl.EndsWith("/"))

@@ -25,6 +25,7 @@ import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useWeeklySchedule, formatTime } from '@/hooks/use-weekly-schedule';
 import { Schedule, DayOfWeek } from '@/lib/types/schedule';
 import { getSubjectAsset } from '@/lib/subject-images';
+import { useNetworkRefetch } from '@/hooks/use-network-refetch';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -85,6 +86,9 @@ export default function ScheduleScreen() {
       }
     }
   }, [error, handleAuthError]);
+
+  // Auto-refetch data when network connectivity is restored
+  useNetworkRefetch([refetchSchedule]);
 
   // Generate calendar week data
   const calendarWeek = useMemo(() => {
@@ -187,6 +191,31 @@ export default function ScheduleScreen() {
       return ['#E91E63', '#F06292']; // Pink gradient for Arts
     } else {
       return ['#607D8B', '#78909C']; // Default gray gradient for other subjects
+    }
+  }, []);
+
+  // Get subject-specific academic icon
+  const getSubjectIcon = useCallback((subjectName: string): string => {
+    const subject = subjectName.toLowerCase();
+    
+    if (subject.includes('math') || subject.includes('mathematics')) {
+      return 'calculator-outline';
+    } else if (subject.includes('science') || subject.includes('biology') || subject.includes('chemistry') || subject.includes('physics')) {
+      return 'flask-outline';
+    } else if (subject.includes('english') || subject.includes('literature')) {
+      return 'book-outline';
+    } else if (subject.includes('filipino') || subject.includes('tagalog')) {
+      return 'language-outline';
+    } else if (subject.includes('pe') || subject.includes('physical education') || subject.includes('sports')) {
+      return 'fitness-outline';
+    } else if (subject.includes('art') || subject.includes('music') || subject.includes('drawing')) {
+      return 'color-palette-outline';
+    } else if (subject.includes('history') || subject.includes('social studies')) {
+      return 'globe-outline';
+    } else if (subject.includes('esp') || subject.includes('values') || subject.includes('religion')) {
+      return 'heart-outline';
+    } else {
+      return 'school-outline';
     }
   }, []);
 
@@ -495,19 +524,6 @@ export default function ScheduleScreen() {
                               />
                             </View>
                             
-                            {/* Action Icons */}
-                            <View style={styles.actionIcons}>
-                              <TouchableOpacity style={[styles.actionIcon, { 
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
-                              }]}>
-                                <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
-                              </TouchableOpacity>
-                              <TouchableOpacity style={[styles.actionIcon, { 
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
-                              }]}>
-                                <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-                              </TouchableOpacity>
-                            </View>
                           </View>
 
                           {/* Center Content */}
@@ -547,11 +563,14 @@ export default function ScheduleScreen() {
                               </Text>
                             </TouchableOpacity>
 
-                            {/* Academic Illustration */}
+                            {/* Academic Icon */}
                             <View style={styles.academicIllustration}>
-                              <Ionicons name="book-outline" size={24} color="#FFFFFF" style={styles.illustrationIcon} />
-                              <Ionicons name="globe-outline" size={20} color="#FFFFFF" style={styles.illustrationIcon} />
-                              <Ionicons name="pencil-outline" size={18} color="#FFFFFF" style={styles.illustrationIcon} />
+                              <Ionicons 
+                                name={getSubjectIcon(schedule.subject?.subject_name || '') as any} 
+                                size={24} 
+                                color="#FFFFFF" 
+                                style={styles.illustrationIcon} 
+                              />
                             </View>
                           </View>
 
@@ -626,6 +645,13 @@ export default function ScheduleScreen() {
                     />
                   ))}
                 </View>
+              )}
+
+              {/* Swipe Indicator */}
+              {filteredSchedules.length > 1 && (
+                <Text style={[styles.swipeIndicatorText, { color: colors.icon }]}>
+                  Swipe up/down to navigate cards
+                </Text>
               )}
             </View>
           ) : (
@@ -905,6 +931,14 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     // backgroundColor handled dynamically
+  },
+  // Swipe Indicator
+  swipeIndicatorText: {
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 8,
+    opacity: 0.7,
+    fontStyle: "italic",
   },
 
   // Empty State

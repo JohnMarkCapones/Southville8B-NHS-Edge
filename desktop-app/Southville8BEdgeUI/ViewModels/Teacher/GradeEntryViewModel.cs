@@ -315,16 +315,22 @@ public partial class GradeEntryViewModel : ViewModelBase
                             StudentNumber = student.StudentNumber,
                             Gwa = student.Gwa,
                             Remarks = student.Remarks ?? "",
-                            HonorStatus = student.HonorStatus,
+                            // HonorStatus will be automatically calculated when Gwa is set
                             GwaId = student.GwaId ?? "",
                             IsDirty = false
                         };
+                        
+                        // Recalculate honor status from GWA (in case it was set differently in database)
+                        if (studentGrade.Gwa.HasValue)
+                        {
+                            studentGrade.HonorStatus = StudentGradeViewModel.CalculateHonorStatus(studentGrade.Gwa);
+                        }
 
                         studentGrade.PropertyChanged += (_, args) =>
                         {
+                            // HonorStatus is auto-calculated, so it doesn't trigger dirty state
                             if (args.PropertyName == nameof(StudentGradeViewModel.Gwa) ||
-                                args.PropertyName == nameof(StudentGradeViewModel.Remarks) ||
-                                args.PropertyName == nameof(StudentGradeViewModel.HonorStatus))
+                                args.PropertyName == nameof(StudentGradeViewModel.Remarks))
                             {
                                 studentGrade.IsDirty = true;
                                 MarkDirty();
@@ -425,9 +431,6 @@ public partial class StudentGradeViewModel : ViewModelBase
     [ObservableProperty] private decimal? _gwa;
     [ObservableProperty] private string _remarks = "";
     [ObservableProperty] private string _honorStatus = "None";
-    [ObservableProperty] private ObservableCollection<string> _honorStatusOptions = new() { 
-        "None", "With Honors", "High Honors", "Highest Honors" 
-    };
     [ObservableProperty] private bool _isDirty; // tracks if edited
     [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed grade color
 
@@ -443,6 +446,26 @@ public partial class StudentGradeViewModel : ViewModelBase
     {
         // Update grade color
         GradeColor = GradeColorProvider.GetFor((double)(value ?? 0));
+        
+        // Automatically calculate honor status based on GWA
+        HonorStatus = CalculateHonorStatus(value);
+    }
+
+    /// <summary>
+    /// Calculates honor status based on GWA score ranges
+    /// </summary>
+    public static string CalculateHonorStatus(decimal? gwa)
+    {
+        if (!gwa.HasValue || gwa.Value < 0) return "None";
+        
+        var score = gwa.Value;
+        
+        if (score >= 97) return "Excellent / Outstanding";
+        if (score >= 95) return "Very Good";
+        if (score >= 90) return "Good / Above Average";
+        if (score >= 80) return "Satisfactory / Average";
+        if (score >= 75) return "Fair / Below Average";
+        return "Failing / Needs Improvement";
     }
 
     [RelayCommand]
@@ -551,7 +574,7 @@ public partial class StudentGradeViewModel : ViewModelBase
             GwaId = "";
             Gwa = null;
             Remarks = "";
-            HonorStatus = "None";
+            HonorStatus = CalculateHonorStatus(null);
             IsDirty = false;
             
             System.Diagnostics.Debug.WriteLine($"Cleared GWA entry for {StudentName}");

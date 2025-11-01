@@ -408,10 +408,20 @@
                                                     <TextBox Text="{Binding Gwa}" Watermark="50.00-100.00" TextAlignment="Center"/>
                                                 </StackPanel>
                                                 
-                                                <!-- Honor Status Field -->
+                                                <!-- Honor Status Field (Read-only, Auto-calculated) -->
                                                 <StackPanel Grid.Column="1" Grid.Row="0" Margin="8,0,0,0">
                                                     <TextBlock Text="Honor Status" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
-                                                    <ComboBox SelectedItem="{Binding HonorStatus}" ItemsSource="{Binding HonorStatusOptions}"/>
+                                                    <Border Background="{DynamicResource CardBackgroundBrush}" 
+                                                            BorderBrush="{DynamicResource BorderBrush}" 
+                                                            BorderThickness="1" 
+                                                            CornerRadius="6" 
+                                                            Padding="8">
+                                                        <TextBlock Text="{Binding HonorStatus}" 
+                                                                   FontSize="14" 
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextAlignment="Center"/>
+                                                    </Border>
                                                 </StackPanel>
                                                 
                                                 <!-- Remarks Field - Full Width -->

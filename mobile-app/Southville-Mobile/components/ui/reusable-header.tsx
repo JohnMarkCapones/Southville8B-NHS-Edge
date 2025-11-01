@@ -135,7 +135,7 @@ function getGreeting(): string {
 
 const styles = StyleSheet.create({
   headerSection: {
-    paddingTop: 24,
+    paddingTop: 32,
     paddingBottom: 16,
     paddingHorizontal: 20,
   },

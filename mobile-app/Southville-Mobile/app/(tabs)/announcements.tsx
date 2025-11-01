@@ -11,6 +11,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useAnnouncements } from '@/hooks/use-announcements';
 import { formatAnnouncementContent } from '@/utils/html-utils';
+import { useNetworkRefetch } from '@/hooks/use-network-refetch';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -57,6 +58,9 @@ export default function AnnouncementsScreen() {
       }
     }
   }, [announcementsError, handleAuthError]);
+
+  // Auto-refetch data when network connectivity is restored
+  useNetworkRefetch([refetchAnnouncements]);
 
   // Helper function to get announcement type and styling
   const getAnnouncementType = (title: string) => {

@@ -12,6 +12,8 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { clearAuthSession } from '@/services/auth';
+import { useNetworkRefetch } from '@/hooks/use-network-refetch';
+import { useStudentRanking } from '@/hooks/use-student-ranking';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -26,6 +28,9 @@ export default function ProfileScreen() {
   
   // Fetch current user data
   const { user, loading: userLoading, error: userError, refetch: refetchUser } = useCurrentUser();
+
+  // Fetch student ranking from Supabase
+  const { ranking, loading: rankingLoading, error: rankingError, refetch: refetchRanking } = useStudentRanking(user?.student?.id);
 
   // Auth error handling
   const { handleAuthError } = useAuthErrorHandler();
@@ -65,6 +70,9 @@ export default function ProfileScreen() {
       }
     }
   }, [userError, router, isRedirecting, globalLoggingOut, handleAuthError]);
+
+  // Auto-refetch data when network connectivity is restored
+  useNetworkRefetch([refetchUser, refetchRanking]);
 
   const handleLogout = useCallback(async () => {
     // Prevent multiple logout attempts
@@ -268,8 +276,15 @@ export default function ProfileScreen() {
           </View>
           <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0' }]} />
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.text }]}>{user?.student?.rank || 'N/A'}</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>
+              {rankingLoading ? '...' : ranking?.rank || 'N/A'}
+            </Text>
             <Text style={[styles.statLabel, { color: colors.icon }]}>Ranking</Text>
+            {ranking && (
+              <Text style={[styles.statSubtitle, { color: colors.icon }]}>
+                {ranking.quarter} {ranking.school_year}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -471,6 +486,12 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  statSubtitle: {
+    fontSize: 10,
+    fontWeight: '400',
+    marginTop: 2,
+    opacity: 0.7,
   },
   
   // Personal Section Container

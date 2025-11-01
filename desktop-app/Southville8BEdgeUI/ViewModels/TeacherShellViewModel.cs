@@ -954,6 +954,13 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             await authService.LogoutAsync();
             System.Diagnostics.Debug.WriteLine("AuthService.LogoutAsync completed");
             
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode");
+            }
+            
             // Show success message
             _toastService.Success("You have been logged out successfully", "Goodbye!");
             
@@ -985,6 +992,14 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
             
             var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode (fallback path)");
+            }
+            
             _toastService.Warning("Logout completed with warnings", "Warning");
             
             var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
