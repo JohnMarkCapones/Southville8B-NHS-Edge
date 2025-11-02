@@ -502,7 +502,7 @@
 			</Grid>
 
 			<!-- Users Grid -->
-			<ItemsControl x:Name="UsersGrid" ItemsSource="{Binding FilteredUsers}">
+			<ItemsControl x:Name="UsersGrid" ItemsSource="{Binding Users}">
 				<ItemsControl.ItemsPanel>
 					<ItemsPanelTemplate>
 						<WrapPanel x:Name="UsersWrapPanel" Orientation="Horizontal"/>
@@ -591,7 +591,7 @@
 
 			<!-- Empty State -->
 			<Border x:Name="EmptyStateCard" Classes="card"
-                    IsVisible="{Binding !HasFilteredUsers}"
+                    IsVisible="{Binding !HasUsers}"
                     HorizontalAlignment="Center"
                     Padding="40">
 				<StackPanel Spacing="16" HorizontalAlignment="Center">

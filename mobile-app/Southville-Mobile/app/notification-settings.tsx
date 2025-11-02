@@ -1,6 +1,5 @@
 import { View, Text, Switch, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useNavigationLoading } from '@/hooks/use-navigation-loading';

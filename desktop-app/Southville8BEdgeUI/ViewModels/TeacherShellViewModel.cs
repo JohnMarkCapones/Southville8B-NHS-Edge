@@ -42,6 +42,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _userInitials = "SY";
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
+    [ObservableProperty] private string _academicYear = "2024-2025"; // Default fallback
 
     private bool _isUserDropdownVisible;
     public bool IsUserDropdownVisible
@@ -181,6 +182,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         
         // Load real data asynchronously
         // Note: LoadTeacherKpisAsync() is called after teacher ID is loaded from profile
+        _ = LoadActiveAcademicYearAsync();
         _ = LoadTodaySchedulesAsync();
         _ = LoadRecentActivitiesAsync();
         _ = LoadTodayEventsAsync();
@@ -748,6 +750,52 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to store access token: {ex.Message}");
+        }
+    }
+
+    private async Task LoadActiveAcademicYearAsync()
+    {
+        try
+        {
+            var academicYear = await _apiClient.GetActiveAcademicYearAsync();
+            if (academicYear != null)
+            {
+                // Debug: Log the raw DTO values to see what we're getting
+                System.Diagnostics.Debug.WriteLine($"AcademicYear DTO received:");
+                System.Diagnostics.Debug.WriteLine($"  Id: {academicYear.Id}");
+                System.Diagnostics.Debug.WriteLine($"  YearName: {academicYear.YearName}");
+                System.Diagnostics.Debug.WriteLine($"  StartDate: {academicYear.StartDate}");
+                System.Diagnostics.Debug.WriteLine($"  EndDate: {academicYear.EndDate}");
+                System.Diagnostics.Debug.WriteLine($"  IsActive: {academicYear.IsActive}");
+                
+                var displayName = academicYear.GetDisplayName();
+                
+                // If GetDisplayName returns "N/A", it means all fields are empty/null
+                // In this case, keep the default value instead of showing "N/A"
+                if (displayName == "N/A")
+                {
+                    System.Diagnostics.Debug.WriteLine("AcademicYear DTO has no usable data (all fields null/empty), keeping default value");
+                    // Keep the default "2024-2025" value
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        AcademicYear = displayName;
+                        System.Diagnostics.Debug.WriteLine($"Active academic year loaded: {AcademicYear}");
+                    });
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No active academic year found (API returned null), keeping default value");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load active academic year: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Keep the default "2024-2025" value on error
         }
     }
 

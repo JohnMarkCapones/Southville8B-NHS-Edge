@@ -11,13 +11,14 @@ export function getSubjectAsset(subjectName: string) {
     return require("@/assets/subjects/ESP.png");
   if (key.includes("history") || key.includes("araling panlipunan"))
     return require("@/assets/subjects/AP.png");
+  // Physical Education - sports/exercise specific
+  // Note: Add PE.png or Sports.png asset with sports/exercise imagery when available
   if (
-    key.includes("mapeh") ||
-    key.includes("pe") ||
-    key.includes("music") ||
-    key.includes("arts") ||
-    key.includes("physical education")
+    key.includes("physical education") ||
+    (key.includes("pe") && !key.includes("mapeh"))
   )
+    return require("@/assets/subjects/PE.png"); // Temporary placeholder - replace with sports/exercise image
+  if (key.includes("mapeh") || key.includes("music") || key.includes("arts"))
     return require("@/assets/subjects/MAPEH.png");
 
   // Fallback

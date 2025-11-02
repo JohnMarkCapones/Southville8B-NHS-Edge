@@ -23,13 +23,14 @@ public interface IApiClient
     Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync();
     
     // User Management Methods
-    Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, int page = 1, int limit = 25);
+    Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25);
     Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto);
     Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto);
     Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto);
     Task<bool> UpdateUserStatusAsync(string userId, string status);
     Task<bool> DeleteUserAsync(string userId);
     Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto);
+    Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto);
     Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId);
     Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword);
     Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword);
@@ -152,4 +153,7 @@ public interface IApiClient
     Task<DepartmentDto?> GetDepartmentAsync(string departmentId);
     Task<SubjectDto?> GetSubjectAsync(string subjectId);
     Task<SectionDto?> GetSectionAsync(string sectionId);
+    
+    // Academic Year Management Methods
+    Task<AcademicYearDto?> GetActiveAcademicYearAsync();
 }

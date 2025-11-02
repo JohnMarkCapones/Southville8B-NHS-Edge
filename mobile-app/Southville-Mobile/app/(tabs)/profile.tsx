@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState, useCallback, useEffect } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, Text, Dimensions, RefreshControl } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, Text, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -14,8 +14,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { clearAuthSession } from '@/services/auth';
 import { useNetworkRefetch } from '@/hooks/use-network-refetch';
 import { useStudentRanking } from '@/hooks/use-student-ranking';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { useLoginStreak } from '@/hooks/use-login-streak';
 
 export default function ProfileScreen() {
   const { isDark } = useTheme();
@@ -30,7 +29,10 @@ export default function ProfileScreen() {
   const { user, loading: userLoading, error: userError, refetch: refetchUser } = useCurrentUser();
 
   // Fetch student ranking from Supabase
-  const { ranking, loading: rankingLoading, error: rankingError, refetch: refetchRanking } = useStudentRanking(user?.student?.id);
+  const { ranking, loading: rankingLoading, refetch: refetchRanking } = useStudentRanking(user?.student?.id);
+
+  // Fetch login streak
+  const { streak, refetch: refetchStreak } = useLoginStreak();
 
   // Auth error handling
   const { handleAuthError } = useAuthErrorHandler();
@@ -72,7 +74,7 @@ export default function ProfileScreen() {
   }, [userError, router, isRedirecting, globalLoggingOut, handleAuthError]);
 
   // Auto-refetch data when network connectivity is restored
-  useNetworkRefetch([refetchUser, refetchRanking]);
+  useNetworkRefetch([refetchUser, refetchRanking, refetchStreak]);
 
   const handleLogout = useCallback(async () => {
     // Prevent multiple logout attempts
@@ -138,20 +140,6 @@ export default function ProfileScreen() {
     return 'User';
   };
 
-  // Helper function to get student ID
-  const getStudentId = () => {
-    return user?.student?.student_id || 'Not available';
-  };
-
-  // Helper function to get contact info
-  const getContactInfo = () => {
-    return {
-      email: user?.email || 'Not provided',
-      mobile: user?.profile?.phone_number || 'Not provided',
-      address: user?.profile?.address || 'Not provided',
-    };
-  };
-
   // Helper function to get section name
   const getSectionName = () => {
     // Use section name from nested object or fallback to placeholder
@@ -203,8 +191,6 @@ export default function ProfileScreen() {
     );
   }
 
-  const contactInfo = getContactInfo();
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -242,7 +228,7 @@ export default function ProfileScreen() {
                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)' 
               }]}>
                 <Ionicons name="trophy-outline" size={16} color="#FFD700" />
-                <Text style={styles.streakText}>Highest 29 streak</Text>
+                <Text style={styles.streakText}>Highest {streak} streak</Text>
               </View>
               
               {/* Name */}

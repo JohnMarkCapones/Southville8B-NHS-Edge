@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, ActivityIndicator, TouchableOpacity, Text, Image, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -20,7 +20,6 @@ import { ReusableHeader } from '@/components/ui/reusable-header';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/contexts/theme-context';
-import { useAuthSession } from '@/hooks/use-auth-session';
 import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useWeeklySchedule, formatTime } from '@/hooks/use-weekly-schedule';
 import { Schedule, DayOfWeek } from '@/lib/types/schedule';
@@ -38,7 +37,6 @@ interface CalendarDay {
 }
 
 export default function ScheduleScreen() {
-  const router = useRouter();
   const { isDark } = useTheme();
   const colors = Colors[isDark ? 'dark' : 'light'];
   const { query: initialQuery } = useLocalSearchParams<{ query?: string }>();
@@ -52,7 +50,6 @@ export default function ScheduleScreen() {
 
   // Animation values
   const translateY = useSharedValue(0);
-  const cardScale = useSharedValue(1);
 
   // Fetch weekly schedule data
   const { weeklySchedule, loading, error, hasStudentProfile, refetch: refetchSchedule } = useWeeklySchedule();
@@ -95,7 +92,17 @@ export default function ScheduleScreen() {
     const today = new Date();
     const currentDay = today.getDay();
     const monday = new Date(today);
-    monday.setDate(today.getDate() - currentDay + 1);
+    
+    // Fix: Ensure today is always included in the week view
+    // If today is Sunday (0), go back 6 days to get Monday of current week
+    // Otherwise, use standard calculation: go back (currentDay - 1) days
+    if (currentDay === 0) {
+      // Today is Sunday - go back 6 days to get Monday of current week
+      monday.setDate(today.getDate() - 6);
+    } else {
+      // Existing logic for Mon-Sat
+      monday.setDate(today.getDate() - currentDay + 1);
+    }
     
     const week: CalendarDay[] = [];
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -243,7 +250,7 @@ export default function ScheduleScreen() {
   const onGestureEvent = useCallback((event: any) => {
     'worklet';
     translateY.value = event.nativeEvent.translationY;
-  }, []);
+  }, [translateY]);
 
   const onGestureEnd = useCallback((event: any) => {
     'worklet';
@@ -274,7 +281,7 @@ export default function ScheduleScreen() {
       // Small movement - just reset
       translateY.value = withSpring(0);
     }
-  }, [currentCardIndex, filteredSchedules.length]);
+  }, [currentCardIndex, filteredSchedules.length, translateY]);
 
   // Individual animated styles for each card position - ENHANCED VISIBILITY
   const card0AnimatedStyle = useAnimatedStyle(() => {

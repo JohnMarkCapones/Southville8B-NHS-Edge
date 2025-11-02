@@ -285,7 +285,7 @@ public partial class LoginViewModel : ViewModelBase
     private void FillTeacherCredentials()
     {
         Email = "johnmarkcapones93@gmail.com";
-        Password = "skadoosh";
+        Password = "Skadoosh#123456789";
         ClearError();
     }
 

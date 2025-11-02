@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect, useRef } from "react";
+import { AppState } from "react-native";
 import * as Notifications from "expo-notifications";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -26,6 +27,23 @@ export default function RootLayout() {
   const router = useRouter();
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+
+  // Handle app state changes to prevent modal/overlay persistence issues
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && appStateRef.current === 'background') {
+        // App resumed from background - ensure clean state
+        // Individual screens will handle their own modal resets
+        console.log('[RootLayout] App resumed from background');
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -120,6 +138,10 @@ export default function RootLayout() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="minor-user-policy"
+                options={{ headerShown: false }}
+              />
               <Stack.Screen
                 name="terms-of-service"
                 options={{ headerShown: false }}

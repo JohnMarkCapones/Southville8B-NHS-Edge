@@ -54,7 +54,6 @@ export default function NotificationsScreen() {
   ];
   
   const loading = false;
-  const unreadCount = notifications.filter(n => !n.read).length;
   
   const markAsRead = (id: string) => {
     console.log('Mark as read:', id);

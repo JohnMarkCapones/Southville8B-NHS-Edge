@@ -452,13 +452,14 @@ public class MockApiClient : IApiClient
     public Task<UserProfile?> GetUserProfileAsync(string userId) => Task.FromResult<UserProfile?>(null);
     public Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken) => Task.FromResult<UserProfile?>(null);
     public Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync() => Task.FromResult<AdminDashboardMetrics?>(null);
-    public Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, int page = 1, int limit = 25) => Task.FromResult<UserListResponse?>(null);
+    public Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25) => Task.FromResult<UserListResponse?>(null);
     public Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<bool> UpdateUserStatusAsync(string userId, string status) => Task.FromResult(false);
     public Task<bool> DeleteUserAsync(string userId) => Task.FromResult(false);
     public Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
+    public Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
     public Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId) => Task.FromResult<ResetPasswordResponseDto?>(null);
     public Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword) => Task.FromResult<ChangePasswordResponseDto?>(null);
     public Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword) => Task.FromResult<AdminChangePasswordResponseDto?>(null);
@@ -546,6 +547,7 @@ public class MockApiClient : IApiClient
     public Task<DepartmentDto?> GetDepartmentAsync(string departmentId) => Task.FromResult<DepartmentDto?>(null);
     public Task<SubjectDto?> GetSubjectAsync(string subjectId) => Task.FromResult<SubjectDto?>(null);
     public Task<SectionDto?> GetSectionAsync(string sectionId) => Task.FromResult<SectionDto?>(null);
+    public Task<AcademicYearDto?> GetActiveAcademicYearAsync() => Task.FromResult<AcademicYearDto?>(null);
     public Task<StudentDistributionDto?> GetStudentDistributionAsync() => Task.FromResult<StudentDistributionDto?>(new StudentDistributionDto
     {
         Total = 0,

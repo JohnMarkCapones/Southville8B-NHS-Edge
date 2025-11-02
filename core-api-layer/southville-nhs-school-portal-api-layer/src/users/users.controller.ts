@@ -35,6 +35,7 @@ import { CreateStudentRequestDto } from './dto/create-student.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import { ImportStudentsCsvDto } from './dto/import-students-csv.dto';
+import { ImportTeachersCsvDto } from './dto/import-teachers-csv.dto';
 import {
   UpdateUserStatusDto,
   SuspendUserDto,
@@ -116,6 +117,18 @@ export class UsersController {
     @AuthUser() user: SupabaseUser,
   ) {
     return this.usersService.importStudentsFromCsv(importDto, user.id);
+  }
+
+  @Post('import-teachers-csv')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Import teachers from CSV (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Teachers imported successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid CSV data' })
+  async importTeachersCsv(
+    @Body() importDto: ImportTeachersCsvDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    return this.usersService.importTeachersFromCsv(importDto, user.id);
   }
 
   @Get()

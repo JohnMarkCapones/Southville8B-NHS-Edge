@@ -20,6 +20,9 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { APIError } from "@/lib/api-client";
+import ModalDialog from "@/components/ui/ModalDialog";
+import { fetchCurrentUser } from "@/services/user";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,6 +36,7 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   useEffect(() => {
     const keyboardWillShowListener = Keyboard.addListener(
@@ -76,7 +80,32 @@ export default function LoginScreen() {
       console.log("[LoginScreen] Attempting login", { email: trimmedEmail });
       await signIn({ email: trimmedEmail, password });
       console.log("[LoginScreen] Login successful");
-      router.replace("/(tabs)");
+      
+      // Check if user is a student and needs to accept policy
+      try {
+        const user = await fetchCurrentUser();
+        
+        // Check if user is a student
+        if (user?.student) {
+          // Check if policy has been accepted
+          const flagKey = `@minor_policy_accepted_${user.id}`;
+          const policyAccepted = await AsyncStorage.getItem(flagKey);
+          
+          if (!policyAccepted) {
+            // First login for student - show policy page
+            console.log("[LoginScreen] Redirecting to policy page");
+            router.replace("/minor-user-policy");
+            return;
+          }
+        }
+        
+        // Policy accepted or not a student - go to home
+        router.replace("/(tabs)");
+      } catch (userError) {
+        console.error("[LoginScreen] Error fetching user after login:", userError);
+        // If user fetch fails, still navigate to home
+        router.replace("/(tabs)");
+      }
     } catch (error) {
       console.error("[LoginScreen] Login failed", error);
       if (error instanceof APIError) {
@@ -237,7 +266,10 @@ export default function LoginScreen() {
           ) : null}
 
             {/* Forget Password Link */}
-            <TouchableOpacity style={styles.forgetPasswordContainer}>
+            <TouchableOpacity 
+              style={styles.forgetPasswordContainer}
+              onPress={() => setShowForgotPasswordModal(true)}
+            >
               <Text style={styles.forgetPasswordText}>Forget Password?</Text>
             </TouchableOpacity>
 
@@ -288,6 +320,19 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Forgot Password Modal */}
+      <ModalDialog
+        visible={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        title="Forgot Password?"
+        message="To reset your password, please contact your adviser or school administrator. They will assist you in recovering your account access."
+        variant="info"
+        primaryText="Understood"
+        onPrimary={() => setShowForgotPasswordModal(false)}
+        allowBackdropClose={true}
+        colors={colors}
+      />
     </SafeAreaView>
   );
 }

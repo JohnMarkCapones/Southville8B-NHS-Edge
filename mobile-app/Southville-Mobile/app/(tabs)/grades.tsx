@@ -6,37 +6,21 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Text,
-  Image,
-  Dimensions,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolate,
-  Extrapolate,
-} from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { ReusableHeader } from "@/components/ui/reusable-header";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/contexts/theme-context";
-import { useAuthSession } from "@/hooks/use-auth-session";
 import { useAuthErrorHandler } from "@/hooks/use-auth-error-handler";
 import { useMyGwa } from "@/hooks/use-my-gwa";
-import { GradingPeriod, HonorStatus } from "@/lib/types/gwa";
+import { GradingPeriod } from "@/lib/types/gwa";
 import { useNetworkRefetch } from "@/hooks/use-network-refetch";
 
-const { width: screenWidth } = Dimensions.get("window");
-
 export default function GradesScreen() {
-  const router = useRouter();
   const { isDark } = useTheme();
   const colors = Colors[isDark ? "dark" : "light"];
 
@@ -45,12 +29,7 @@ export default function GradesScreen() {
     "All"
   );
   const [selectedSchoolYear, setSelectedSchoolYear] = useState<string>("");
-  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Animation values
-  const cardScale = useSharedValue(1);
-  const cardOpacity = useSharedValue(1);
 
   // Build filter params
   const filterParams = useMemo(() => {
@@ -120,30 +99,6 @@ export default function GradesScreen() {
     setSelectedSchoolYear(year);
   }, []);
 
-  // Get honor status color
-  const getHonorStatusColor = (honorStatus: HonorStatus) => {
-    switch (honorStatus) {
-      case HonorStatus.WITH_HIGHEST_HONORS:
-        return "#FFD700"; // Gold
-      case HonorStatus.WITH_HIGH_HONORS:
-        return "#C0C0C0"; // Silver
-      case HonorStatus.WITH_HONORS:
-        return "#CD7F32"; // Bronze
-      default:
-        return colors.text;
-    }
-  };
-
-  // Get GWA color based on score
-  const getGwaColor = (gwa: number) => {
-    if (gwa >= 97) return "#3498DB"; // Blue - Excellent / Outstanding
-    if (gwa >= 95) return "#27AE60"; // Green - Very Good
-    if (gwa >= 90) return "#2ECC71"; // Light Green - Good / Above Average
-    if (gwa >= 80) return "#F1C40F"; // Yellow - Satisfactory / Average
-    if (gwa >= 75) return "#E67E22"; // Orange - Fair / Below Average
-    return "#E74C3C"; // Red - Failing / Needs Improvement
-  };
-
   // Get creative gradient colors for cards
   const getCardGradient = (gwa: number) => {
     if (gwa >= 97) return ["#3498DB", "#5DADE2"]; // Blue gradient - Excellent / Outstanding
@@ -183,14 +138,6 @@ export default function GradesScreen() {
     if (gwa >= 75) return "Progress, not perfection. You're getting there!";
     return "Every expert was once a beginner. Keep going!";
   };
-
-  // Handle card expansion
-  const handleCardExpand = useCallback(
-    (cardId: string) => {
-      setExpandedCardId(expandedCardId === cardId ? null : cardId);
-    },
-    [expandedCardId]
-  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -399,7 +346,6 @@ export default function GradesScreen() {
           </View>
         ) : gwaRecords.length > 0 ? (
           gwaRecords.map((record, index) => {
-            const isExpanded = expandedCardId === record.id;
             const cardGradient = getCardGradient(record.gwa);
             const emoji = getGwaEmoji(record.gwa);
             const message = getMotivationalMessage(record.gwa);
@@ -416,7 +362,6 @@ export default function GradesScreen() {
                       ? "rgba(255, 255, 255, 0.3)"
                       : "rgba(0, 0, 0, 0.1)",
                     borderWidth: 1,
-                    minHeight: isExpanded ? 320 : 260,
                   },
                 ]}
               >
@@ -458,71 +403,18 @@ export default function GradesScreen() {
                   {getMotivationalQuote(record.gwa)}
                 </Text>
 
-                {/* Expand Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.expandButton,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(255, 255, 255, 0.2)"
-                        : "rgba(255, 255, 255, 0.3)",
-                      borderColor: isDark
-                        ? "rgba(255, 255, 255, 0.3)"
-                        : "rgba(255, 255, 255, 0.5)",
-                    },
-                  ]}
-                  onPress={() => handleCardExpand(record.id)}
-                >
-                  <Text style={styles.expandButtonText}>
-                    {isExpanded ? "Show Less ↑" : "View Details ↓"}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Expanded Content */}
-                {isExpanded && (
-                  <Animated.View
-                    style={[
-                      styles.expandedContent,
-                      {
-                        borderTopColor: isDark
-                          ? "rgba(255, 255, 255, 0.3)"
-                          : "rgba(255, 255, 255, 0.3)",
-                      },
-                    ]}
-                  >
-                    <View style={styles.detailsRow}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#FFFFFF"
-                      />
-                      <Text style={styles.detailText}>
-                        School Year: {record.school_year}
-                      </Text>
-                    </View>
-                    <View style={styles.detailsRow}>
-                      <Ionicons
-                        name="trophy-outline"
-                        size={16}
-                        color="#FFFFFF"
-                      />
-                      <Text style={styles.detailText}>
-                        Status: {record.honor_status}
-                      </Text>
-                    </View>
-                    {record.remarks && (
-                      <View style={styles.detailsRow}>
-                        <Ionicons
-                          name="chatbubble-outline"
-                          size={16}
-                          color="#FFFFFF"
-                        />
-                        <Text style={styles.detailText}>
-                          Remarks: {record.remarks}
-                        </Text>
-                      </View>
-                    )}
-                  </Animated.View>
+                {/* Remarks */}
+                {record.remarks && (
+                  <View style={styles.remarksContainer}>
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={16}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.remarksText}>
+                      Remarks: {record.remarks}
+                    </Text>
+                  </View>
                 )}
               </Animated.View>
             );
@@ -819,39 +711,20 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Expand Button
-  expandButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignSelf: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.5)",
-  },
-  expandButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-
-  // Expanded Content
-  expandedContent: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    gap: 12,
-  },
-  detailsRow: {
+  // Remarks
+  remarksContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 8,
   },
-  detailText: {
+  remarksText: {
     fontSize: 14,
     color: "#FFFFFF",
     fontWeight: "500",
     opacity: 0.9,
+    flex: 1,
   },
 
   // Empty State

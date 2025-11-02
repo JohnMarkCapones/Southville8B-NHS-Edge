@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTheme } from '@/contexts/theme-context';
 import { useThemeColor } from '@/hooks/use-theme-color';

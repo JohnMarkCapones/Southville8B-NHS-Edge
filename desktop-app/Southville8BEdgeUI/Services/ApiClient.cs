@@ -141,20 +141,26 @@ public class ApiClient : IApiClient
     }
 
     // User Management Methods
-    public async Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, int page = 1, int limit = 25)
+    public async Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25)
     {
         var queryParams = new List<string>();
-        
+  
         if (!string.IsNullOrEmpty(role) && role != "All Roles")
             queryParams.Add($"role={Uri.EscapeDataString(role)}");
         
         if (!string.IsNullOrEmpty(status) && status != "All Status")
             queryParams.Add($"status={Uri.EscapeDataString(status)}");
         
+        // ✅ NEW: Add search parameter
+        if (!string.IsNullOrEmpty(search))
+            queryParams.Add($"search={Uri.EscapeDataString(search)}");
+        
         queryParams.Add($"page={page}");
         queryParams.Add($"limit={limit}");
         
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+        
+        System.Diagnostics.Debug.WriteLine($"[ApiClient] GetUsersAsync URL: users{queryString}");
         
         return await GetAsync<UserListResponse>($"users{queryString}");
     }
@@ -206,6 +212,18 @@ public class ApiClient : IApiClient
         try
         {
             return await PostAsync<BulkImportResultDto>("users/import-students-csv", dto);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto)
+    {
+        try
+        {
+            return await PostAsync<BulkImportResultDto>("users/import-teachers-csv", dto);
         }
         catch
         {
@@ -1550,6 +1568,51 @@ public class ApiClient : IApiClient
         catch (Exception ex)
         {
             Debug.WriteLine($"Error getting section: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<AcademicYearDto?> GetActiveAcademicYearAsync()
+    {
+        try
+        {
+            // Get raw response first to see what the API actually returns
+            var result = await SendGetReturningStringAsync("academic-years/active", null);
+            
+            Debug.WriteLine($"[GetActiveAcademicYearAsync] Raw API Response:");
+            Debug.WriteLine($"Status Code: {result.StatusCode}");
+            Debug.WriteLine($"Response Content: {result.Content}");
+            
+            if (result.StatusCode < 200 || result.StatusCode >= 300)
+            {
+                if (result.StatusCode == 404)
+                {
+                    Debug.WriteLine("No active academic year found (404)");
+                    return null;
+                }
+                await HandleErrorResponseAsync(new HttpResponseMessage((System.Net.HttpStatusCode)result.StatusCode), result.Content);
+                return null;
+            }
+            
+            if (string.IsNullOrEmpty(result.Content))
+            {
+                Debug.WriteLine("Empty response from academic-years/active");
+                return null;
+            }
+            
+            var dto = JsonSerializer.Deserialize<AcademicYearDto>(result.Content, _jsonOptions);
+            return dto;
+        }
+        catch (NotFoundException)
+        {
+            // Handle 404 (no active academic year found) gracefully
+            Debug.WriteLine("No active academic year found");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting active academic year: {ex.Message}");
+            Debug.WriteLine($"StackTrace: {ex.StackTrace}");
             return null;
         }
     }

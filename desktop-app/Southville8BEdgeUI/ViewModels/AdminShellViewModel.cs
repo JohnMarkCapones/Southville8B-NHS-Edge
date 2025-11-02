@@ -39,6 +39,7 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
     [ObservableProperty] private string _currentVersion = "1.0.0";
+    [ObservableProperty] private string _academicYear = "2024-2025"; // Default fallback
 
     // SSE KPI Metrics Properties
     [ObservableProperty] private int _eventsCount = 120;
@@ -196,6 +197,9 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
 
         // Load sidebar events (today + next 7 days)
         _ = LoadSidebarEventsAsync();
+
+        // Load active academic year
+        _ = LoadActiveAcademicYearAsync();
 
         // Realtime clock for date/time display
         _clock?.Stop();
@@ -503,6 +507,52 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task LoadActiveAcademicYearAsync()
+    {
+        try
+        {
+            var academicYear = await _apiClient.GetActiveAcademicYearAsync();
+            if (academicYear != null)
+            {
+                // Debug: Log the raw DTO values to see what we're getting
+                System.Diagnostics.Debug.WriteLine($"AcademicYear DTO received:");
+                System.Diagnostics.Debug.WriteLine($"  Id: {academicYear.Id}");
+                System.Diagnostics.Debug.WriteLine($"  YearName: {academicYear.YearName}");
+                System.Diagnostics.Debug.WriteLine($"  StartDate: {academicYear.StartDate}");
+                System.Diagnostics.Debug.WriteLine($"  EndDate: {academicYear.EndDate}");
+                System.Diagnostics.Debug.WriteLine($"  IsActive: {academicYear.IsActive}");
+                
+                var displayName = academicYear.GetDisplayName();
+                
+                // If GetDisplayName returns "N/A", it means all fields are empty/null
+                // In this case, keep the default value instead of showing "N/A"
+                if (displayName == "N/A")
+                {
+                    System.Diagnostics.Debug.WriteLine("AcademicYear DTO has no usable data (all fields null/empty), keeping default value");
+                    // Keep the default "2024-2025" value
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        AcademicYear = displayName;
+                        System.Diagnostics.Debug.WriteLine($"Active academic year loaded: {AcademicYear}");
+                    });
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No active academic year found (API returned null), keeping default value");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load active academic year: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Keep the default "2024-2025" value on error
+        }
+    }
+
     // Property change handlers for computed time properties
     partial void OnCurrentEventChanged(EventDto? value)
     {
@@ -739,8 +789,11 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
             System.Diagnostics.Debug.WriteLine($"LoginViewModel created: {loginVm != null}");
             
             // Set NavigateTo on the new LoginViewModel so it can navigate to AdminShell after login
-            loginVm.NavigateTo = MainNavigateTo;
-            System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+            if (MainNavigateTo != null)
+            {
+                loginVm.NavigateTo = MainNavigateTo;
+                System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+            }
             
             System.Diagnostics.Debug.WriteLine($"About to invoke MainNavigateTo with LoginViewModel");
             System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");

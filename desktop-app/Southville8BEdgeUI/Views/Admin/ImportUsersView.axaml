@@ -138,7 +138,10 @@
 			<Border Classes="card">
 				<StackPanel>
 					<TextBlock Text="Upload CSV" Classes="section-title"/>
-					<TextBlock Text="Select a properly formatted CSV file (.csv) with student data." Classes="label"/>
+					<TextBlock Text="Select a properly formatted CSV file (.csv). The system will automatically detect if it contains student or teacher data." Classes="label"/>
+					<TextBlock Text="{Binding DetectedImportType, StringFormat='Detected Type: {0}'}" 
+					   FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" 
+					   Margin="0,8,0,0" IsVisible="{Binding HasFile}"/>
 
 					<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0" VerticalAlignment="Center">
 						<StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0" VerticalAlignment="Center">

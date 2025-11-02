@@ -15,6 +15,12 @@ export interface AnnouncementUser {
   email: string;
 }
 
+export interface AnnouncementSection {
+  id: string;
+  name: string;
+  grade_level?: string;
+}
+
 export interface Announcement {
   id: string;
   userId: string;
@@ -28,6 +34,7 @@ export interface Announcement {
   user?: AnnouncementUser;
   tags?: AnnouncementTag[];
   targetRoles?: AnnouncementRole[];
+  sections?: AnnouncementSection[];
 }
 
 export interface AnnouncementsPagination {

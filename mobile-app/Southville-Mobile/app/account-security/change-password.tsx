@@ -1,13 +1,34 @@
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, AppState } from 'react-native';
 import { Stack, useRouter, useRootNavigationState } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from '@/contexts/theme-context';
 import { Colors } from '@/constants/theme';
 import { changePassword, clearAuthSession } from '@/services/auth';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useCurrentUser } from '@/hooks/use-current-user';
+// eslint-disable-next-line import/no-named-as-default
 import ModalDialog from '@/components/ui/ModalDialog';
+
+// Helper component for requirement items
+function RequirementItem({ met, text, colors }: { met: boolean; text: string; colors: any }) {
+  return (
+    <View style={styles.requirementRow}>
+      <Ionicons 
+        name={met ? 'checkmark-circle' : 'ellipse-outline'} 
+        size={16} 
+        color={met ? '#10B981' : colors.icon} 
+      />
+      <Text style={[styles.requirementText, { 
+        color: met ? '#10B981' : colors.icon 
+      }]}>
+        {text}
+      </Text>
+    </View>
+  );
+}
 
 export default function ChangePasswordScreen() {
   const { isDark } = useTheme();
@@ -15,6 +36,7 @@ export default function ChangePasswordScreen() {
   const router = useRouter();
   const nav = useRootNavigationState();
   const { signOut } = useAuthSession();
+  const { user } = useCurrentUser();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -25,11 +47,55 @@ export default function ChangePasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogProps, setDialogProps] = useState<{ variant: 'success'|'error'|'info'; title: string; message?: string; bullets?: string[]; autoDismissMs?: number } | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+
+  // Handle app state changes to reset modal state when app resumes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && appStateRef.current === 'background') {
+        // App resumed from background - reset dialog to prevent invisible overlay
+        console.log('[ChangePasswordScreen] App resumed from background - resetting dialog');
+        setDialogVisible(false);
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const validatePassword = (password: string): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long.');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter (A-Z).');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter (a-z).');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number (0-9).');
+    }
+    if (!/[!@#$%^&]/.test(password)) {
+      errors.push('Password must contain at least one special character (!@#$%^&).');
+    }
+    
+    return { valid: errors.length === 0, errors };
+  };
 
   const validate = (): string | null => {
     if (!currentPassword) return 'Please enter your current password.';
     if (!newPassword) return 'Please enter a new password.';
-    if (newPassword.length < 8) return 'New password must be at least 8 characters.';
+    
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return passwordValidation.errors[0];
+    }
+    
     if (newPassword === currentPassword) return 'New password must be different from current password.';
     if (confirmPassword !== newPassword) return 'Confirm password does not match the new password.';
     return null;
@@ -46,6 +112,14 @@ export default function ChangePasswordScreen() {
     try {
       setLoading(true);
       const resp = await changePassword({ currentPassword, newPassword });
+      
+      // Set the password change prompt flag when password is successfully changed
+      // This prevents the prompt from showing again on next login
+      if (user?.id) {
+        const flagKey = `@password_change_prompt_shown_${user.id}`;
+        await AsyncStorage.setItem(flagKey, 'true');
+      }
+      
       setDialogProps({
         variant: 'success',
         title: 'Password changed',
@@ -118,6 +192,41 @@ export default function ChangePasswordScreen() {
                   <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
                 </TouchableOpacity>
               </View>
+              
+              {/* Password Requirements */}
+              {newPassword.length > 0 && (
+                <View style={[styles.requirementsContainer, { 
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB'
+                }]}>
+                  <Text style={[styles.requirementsTitle, { color: colors.text }]}>Password Requirements:</Text>
+                  <RequirementItem 
+                    met={newPassword.length >= 8}
+                    text="At least 8 characters"
+                    colors={colors}
+                  />
+                  <RequirementItem 
+                    met={/[A-Z]/.test(newPassword)}
+                    text="Include uppercase letter (A-Z)"
+                    colors={colors}
+                  />
+                  <RequirementItem 
+                    met={/[a-z]/.test(newPassword)}
+                    text="Include lowercase letter (a-z)"
+                    colors={colors}
+                  />
+                  <RequirementItem 
+                    met={/[0-9]/.test(newPassword)}
+                    text="Include number (0-9)"
+                    colors={colors}
+                  />
+                  <RequirementItem 
+                    met={/[!@#$%^&]/.test(newPassword)}
+                    text="Include special character (!@#$%^&)"
+                    colors={colors}
+                  />
+                </View>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -218,6 +327,26 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   submitText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  requirementsContainer: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  requirementsTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  requirementText: {
+    fontSize: 12,
+    marginLeft: 8,
+  },
 });
 
 

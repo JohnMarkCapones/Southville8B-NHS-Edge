@@ -21,6 +21,10 @@ import {
   BulkImportResultDto,
 } from './dto/import-students-csv.dto';
 import {
+  ImportTeachersCsvDto,
+  CsvTeacherRowDto,
+} from './dto/import-teachers-csv.dto';
+import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
@@ -281,6 +285,7 @@ export class UsersService {
         age: teacherData.age,
         subject_specialization_id: teacherData.subjectSpecializationId,
         department_id: teacherData.departmentId,
+        advisory_section_id: teacherData.advisorySectionId,
       })
       .select()
       .single();
@@ -1455,6 +1460,96 @@ export class UsersService {
   }
 
   /**
+   * Find section by name only (for advisory sections, no grade level required)
+   */
+  private async findSectionByName(
+    sectionName: string,
+  ): Promise<string | undefined> {
+    const supabase = this.getSupabaseClient();
+
+    if (!sectionName || sectionName.trim() === '') {
+      return undefined;
+    }
+
+    const { data: sections, error } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('name', sectionName.trim())
+      .limit(1);
+
+    if (error) {
+      this.logger.error('Error fetching section by name:', error);
+      throw new NotFoundException(
+        `Section '${sectionName}' not found. Please ensure the section exists.`,
+      );
+    }
+
+    if (!sections || sections.length === 0) {
+      throw new NotFoundException(
+        `Section '${sectionName}' not found. Please ensure the section exists.`,
+      );
+    }
+
+    return sections[0].id;
+  }
+
+  /**
+   * Find department by name
+   */
+  private async findDepartmentByName(departmentName: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: department, error } = await supabase
+      .from('departments')
+      .select('id')
+      .eq('department_name', departmentName.trim())
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching department by name:', error);
+      throw new NotFoundException(
+        `Department '${departmentName}' not found. Please ensure the department exists.`,
+      );
+    }
+
+    if (!department) {
+      throw new NotFoundException(
+        `Department '${departmentName}' not found. Please ensure the department exists.`,
+      );
+    }
+
+    return department.id;
+  }
+
+  /**
+   * Find subject by name
+   */
+  private async findSubjectByName(subjectName: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: subject, error } = await supabase
+      .from('subjects')
+      .select('id')
+      .eq('subject_name', subjectName.trim())
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching subject by name:', error);
+      throw new NotFoundException(
+        `Subject '${subjectName}' not found. Please ensure the subject exists.`,
+      );
+    }
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject '${subjectName}' not found. Please ensure the subject exists.`,
+      );
+    }
+
+    return subject.id;
+  }
+
+  /**
    * Parse CSV student rows and group by student (LRN)
    */
   private parseCsvStudentRows(rows: CsvStudentRowDto[]): Map<string, any> {
@@ -1555,6 +1650,91 @@ export class UsersService {
       this.logger.error('Error importing students from CSV:', error);
       throw new InternalServerErrorException(
         'Failed to import students from CSV',
+      );
+    }
+  }
+
+  /**
+   * Import teachers from CSV data
+   */
+  async importTeachersFromCsv(
+    importDto: ImportTeachersCsvDto,
+    createdBy: string,
+  ): Promise<BulkImportResultDto> {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    try {
+      for (const row of importDto.teachers) {
+        try {
+          // Lookup department ID by name
+          const departmentId = await this.findDepartmentByName(
+            row.department_id,
+          );
+
+          // Lookup subject specialization ID by name
+          const subjectSpecializationId = await this.findSubjectByName(
+            row.subject_specialization_id,
+          );
+
+          // Lookup advisory section ID by name (optional)
+          let advisorySectionId: string | undefined = undefined;
+          if (
+            row.advisory_section_id &&
+            row.advisory_section_id.trim() !== ''
+          ) {
+            advisorySectionId = await this.findSectionByName(
+              row.advisory_section_id,
+            );
+          }
+
+          // Use provided email or generate from first_name and last_name
+          const email =
+            row.email && row.email.trim() !== ''
+              ? row.email.trim()
+              : `${row.first_name.toLowerCase()}.${row.last_name.toLowerCase()}@teacher.local`;
+
+          // Create teacher DTO
+          const teacherDto = new CreateTeacherDto();
+          teacherDto.firstName = row.first_name;
+          teacherDto.lastName = row.last_name;
+          teacherDto.middleName = row.middle_name;
+          teacherDto.birthday = row.birthday;
+          teacherDto.age = row.age;
+          teacherDto.subjectSpecializationId = subjectSpecializationId;
+          teacherDto.departmentId = departmentId;
+          teacherDto.advisorySectionId = advisorySectionId;
+          teacherDto.email = email;
+          teacherDto.fullName =
+            `${row.first_name} ${row.middle_name ? row.middle_name + ' ' : ''}${row.last_name}`.trim();
+
+          // Create teacher (this will handle auth user, public user, and teacher record)
+          const result = await this.createTeacher(teacherDto, createdBy);
+          results.push({
+            firstName: row.first_name,
+            lastName: row.last_name,
+            email: email,
+            result: result,
+          });
+        } catch (error) {
+          errors.push({
+            firstName: row.first_name,
+            lastName: row.last_name,
+            error: error.message || String(error),
+          });
+        }
+      }
+
+      return {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+    } catch (error) {
+      this.logger.error('Error importing teachers from CSV:', error);
+      throw new InternalServerErrorException(
+        'Failed to import teachers from CSV',
       );
     }
   }

@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { fetchCurrentUser } from '@/services/user';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -36,8 +37,30 @@ export default function SplashScreen() {
         await new Promise(resolve => setTimeout(resolve, 2500));
 
         if (status === 'authenticated') {
-          // User is already logged in, go to tabs
-          router.replace('/(tabs)');
+          // User is already logged in - check if they need to accept policy
+          try {
+            const user = await fetchCurrentUser();
+            
+            // Check if user is a student
+            if (user?.student) {
+              // Check if policy has been accepted
+              const flagKey = `@minor_policy_accepted_${user.id}`;
+              const policyAccepted = await AsyncStorage.getItem(flagKey);
+              
+              if (!policyAccepted) {
+                // Policy not accepted - show policy page
+                router.replace('/minor-user-policy');
+                return;
+              }
+            }
+            
+            // Policy accepted or not a student - go to tabs
+            router.replace('/(tabs)');
+          } catch (userError) {
+            console.error('[SplashScreen] Error fetching user:', userError);
+            // If user fetch fails, navigate to tabs
+            router.replace('/(tabs)');
+          }
         } else if (onboardingCompleted === 'true') {
           // Onboarding completed, go to login
           router.replace('/login');

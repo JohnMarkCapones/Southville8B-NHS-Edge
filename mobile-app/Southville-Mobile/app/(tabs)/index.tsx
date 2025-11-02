@@ -9,21 +9,20 @@ import {
   Image,
   Text,
   TextInput,
-  Dimensions,
   RefreshControl,
   Keyboard,
+  AppState,
+  InteractionManager,
 } from "react-native";
-import { InteractionManager } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import NetInfo from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withSequence,
-  withDelay,
   withTiming,
-  withRepeat,
   Easing,
 } from "react-native-reanimated";
 
@@ -48,8 +47,7 @@ import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import { SearchSuggestions } from "@/components/search/SearchSuggestions";
 import { getSubjectAsset } from "@/lib/subject-images";
 import { useNetworkRefetch } from "@/hooks/use-network-refetch";
-
-const { width: screenWidth } = Dimensions.get("window");
+import { ModalDialog } from "@/components/ui/ModalDialog";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -101,6 +99,9 @@ export default function HomeScreen() {
   // Fetch login streak
   const { streak, refetch: refetchStreak } = useLoginStreak();
 
+  // Auth session for detecting first login
+  const { status: authStatus } = useAuthSession();
+
   // Auth error handling
   const { handleAuthError } = useAuthErrorHandler();
 
@@ -108,6 +109,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchActive, setSearchActive] = useState(false);
   const deactivateTimerRef = useRef<null | ReturnType<typeof setTimeout>>(null);
+  const appStateRef = useRef(AppState.currentState);
   // Debug: track keyboard visibility and search active state
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e: any) => {
@@ -228,6 +230,8 @@ export default function HomeScreen() {
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean | null>(true);
+  const [showPasswordChangePrompt, setShowPasswordChangePrompt] =
+    useState(false);
 
   // Birthday popup animation values
   const birthdayScale = useSharedValue(0);
@@ -264,7 +268,7 @@ export default function HomeScreen() {
       birthdayOpacity.value = withTiming(0, { duration: 300 });
       birthdayRotation.value = withTiming(-5, { duration: 300 });
     }
-  }, [showBirthdayPopup]);
+  }, [showBirthdayPopup, birthdayOpacity, birthdayRotation, birthdayScale]);
 
   // Check if today is user's birthday
   const isBirthdayToday = useMemo(() => {
@@ -323,6 +327,59 @@ export default function HomeScreen() {
     eventsError,
     handleAuthError,
   ]);
+
+  // Check for first-time login and show password change prompt
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const checkFirstTimeLogin = async () => {
+      // Only check if user is authenticated and user data is loaded
+      if (authStatus !== "authenticated" || !user?.id || userLoading) {
+        return;
+      }
+
+      try {
+        const flagKey = `@password_change_prompt_shown_${user.id}`;
+        const hasSeenPrompt = await AsyncStorage.getItem(flagKey);
+
+        if (!hasSeenPrompt) {
+          // Small delay to ensure home screen is visible first
+          timeoutId = setTimeout(() => {
+            setShowPasswordChangePrompt(true);
+          }, 1500);
+        }
+      } catch (error) {
+        console.error("Error checking password change prompt:", error);
+      }
+    };
+
+    checkFirstTimeLogin();
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [authStatus, user?.id, userLoading]);
+
+  // Handle app state changes to reset modal states when app resumes
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active" && appStateRef.current === "background") {
+        // App resumed from background - reset modal states to prevent invisible overlays
+        console.log(
+          "[HomeScreen] App resumed from background - resetting modals"
+        );
+        setShowPasswordChangePrompt(false);
+        setShowBirthdayPopup(false);
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   // Animated styles
   const birthdayAnimatedStyle = useAnimatedStyle(() => {
@@ -507,19 +564,27 @@ export default function HomeScreen() {
       }));
   }, [events]);
 
-  // Helper function to get current week data
+  // Helper function to get current week data (same logic as schedule screen)
   const getCurrentWeek = () => {
     const today = new Date();
     const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-    // Get Monday of current week
     const monday = new Date(today);
-    monday.setDate(today.getDate() - currentDay + 1);
+
+    // Fix: Ensure today is always included in the week view
+    // If today is Sunday (0), go back 6 days to get Monday of current week
+    // Otherwise, use standard calculation: go back (currentDay - 1) days
+    if (currentDay === 0) {
+      // Today is Sunday - go back 6 days to get Monday of current week
+      monday.setDate(today.getDate() - 6);
+    } else {
+      // Existing logic for Mon-Sat
+      monday.setDate(today.getDate() - currentDay + 1);
+    }
 
     const week = [];
-    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       const day = new Date(monday);
       day.setDate(monday.getDate() + i);
 
@@ -597,10 +662,8 @@ export default function HomeScreen() {
     [todaysSchedules]
   );
 
-  const headlineAnnouncements = useMemo(
-    () => announcements.map((announcement) => announcement.title),
-    [announcements]
-  );
+  // Keep full announcement objects for date access
+  const headlineAnnouncements = useMemo(() => announcements, [announcements]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -608,7 +671,9 @@ export default function HomeScreen() {
       {isConnected === false && (
         <View style={styles.networkIndicator}>
           <Ionicons name="wifi-outline" size={16} color="#FFFFFF" />
-          <Text style={styles.networkIndicatorText}>No Internet Connection</Text>
+          <Text style={styles.networkIndicatorText}>
+            No Internet Connection
+          </Text>
         </View>
       )}
       <ScrollView
@@ -963,7 +1028,11 @@ export default function HomeScreen() {
 
                   {/* Subject Illustration */}
                   <View style={styles.subjectIllustration}>
-                    <Image source={getSubjectImage(title)} style={styles.subjectImage} resizeMode="contain" />
+                    <Image
+                      source={getSubjectImage(title)}
+                      style={styles.subjectImage}
+                      resizeMode="contain"
+                    />
                   </View>
                 </View>
               )
@@ -1033,9 +1102,18 @@ export default function HomeScreen() {
             </View>
           ) : headlineAnnouncements.length > 0 ? (
             headlineAnnouncements.map((announcement, index) => {
-              const announcementType = getAnnouncementType(announcement);
+              const announcementType = getAnnouncementType(announcement.title);
+              const announcementDate = new Date(announcement.createdAt);
+              const formattedDate = announcementDate.toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              });
+
               return (
-                <View key={announcement} style={styles.announcementWrapper}>
+                <View key={announcement.id} style={styles.announcementWrapper}>
                   {/* Type Badge */}
                   <View
                     style={[
@@ -1098,12 +1176,7 @@ export default function HomeScreen() {
                               { color: colors.icon },
                             ]}
                           >
-                            {new Date().toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formattedDate}
                           </Text>
                         </View>
                       </View>
@@ -1114,7 +1187,7 @@ export default function HomeScreen() {
                           { color: colors.text },
                         ]}
                       >
-                        {formatAnnouncementContent(announcement)}
+                        {formatAnnouncementContent(announcement.title)}
                       </Text>
 
                       <View style={styles.announcementCardFooter}>
@@ -1337,6 +1410,44 @@ export default function HomeScreen() {
           eventsLoading
         }
         variant="heart"
+      />
+
+      {/* Password Change Prompt Modal */}
+      <ModalDialog
+        visible={showPasswordChangePrompt}
+        onClose={async () => {
+          // Backdrop tap or close - do NOT set the flag
+          // This ensures the prompt will show again on next login if user dismisses it
+          setShowPasswordChangePrompt(false);
+        }}
+        title="Security Alert: Change Your Password"
+        message="For security purposes, you need to change your password on first login."
+        bullets={[
+          "Go to Profile tab (bottom navigation)",
+          "Tap on 'Account Security'",
+          "Tap on 'Change Password' button",
+          "Enter your current password",
+          "Enter your new password (meets requirements below)",
+          "Confirm your new password",
+          "Tap 'Change Password' to save",
+        ]}
+        variant="info"
+        primaryText="Change Password"
+        secondaryText="Remind me later"
+        onPrimary={async () => {
+          // Navigate to change password screen
+          // Flag will be set only when password is successfully changed
+          setShowPasswordChangePrompt(false);
+          router.push("/account-security/change-password");
+        }}
+        onSecondary={async () => {
+          // "Remind me later" - explicitly do NOT set the flag
+          // This ensures the prompt will show again on next login
+          // The flag will only be set when password is successfully changed
+          setShowPasswordChangePrompt(false);
+        }}
+        allowBackdropClose={true}
+        colors={colors}
       />
     </View>
   );

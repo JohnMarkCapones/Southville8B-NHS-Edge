@@ -36,7 +36,9 @@ public partial class ImportUsersViewModel : ViewModelBase
 
     public ObservableCollection<string> CsvColumns { get; } = new();
     public ObservableCollection<CsvStudentRowDto> ParsedStudents { get; } = new();
+    public ObservableCollection<CsvTeacherRowDto> ParsedTeachers { get; } = new();
 
+    [ObservableProperty] private string _detectedImportType = "Unknown"; // "Student" or "Teacher"
     [ObservableProperty] private string _summaryText = "No file loaded.";
     [ObservableProperty] private string _importStatusMessage = string.Empty;
     [ObservableProperty] private bool _isImporting;
@@ -51,7 +53,8 @@ public partial class ImportUsersViewModel : ViewModelBase
     // Require file and valid data before enabling import
     public bool CanImport => HasFile &&
                               !HasFileValidationError &&
-                              ParsedStudents.Count > 0 &&
+                              ((DetectedImportType == "Student" && ParsedStudents.Count > 0) ||
+                               (DetectedImportType == "Teacher" && ParsedTeachers.Count > 0)) &&
                               !IsImporting;
 
     public bool HasImportCompleted => !IsImporting && !string.IsNullOrWhiteSpace(ImportStatusMessage);
@@ -66,6 +69,7 @@ public partial class ImportUsersViewModel : ViewModelBase
         _apiClient = apiClient;
         _toastService = toastService;
         ParsedStudents.CollectionChanged += (_, __) => OnPropertyChanged(nameof(CanImport));
+        ParsedTeachers.CollectionChanged += (_, __) => OnPropertyChanged(nameof(CanImport));
     }
 
     [RelayCommand]
@@ -157,13 +161,65 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
                 return;
             }
 
-            var csvContent = await File.ReadAllTextAsync(FilePath);
+            // Check if file is accessible (not locked by another process)
+            try
+            {
+                using (var fileStream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    // File is accessible, proceed to read
+                }
+            }
+            catch (IOException ioEx)
+            {
+                FileValidationMessage = $"Cannot access the file. Please close it in Excel or any other application that may have it open, then try again.\n\nError: {ioEx.Message}";
+                HasFileValidationError = true;
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                FileValidationMessage = "Access denied. Please check file permissions or close the file in other applications.";
+                HasFileValidationError = true;
+                return;
+            }
+
+            // Retry logic for reading the file (in case of transient locks)
+            string csvContent = null;
+            int retries = 3;
+            int delayMs = 500;
+
+            for (int i = 0; i < retries; i++)
+            {
+                try
+                {
+                    csvContent = await File.ReadAllTextAsync(FilePath);
+                    break; // Success, exit retry loop
+                }
+                catch (IOException) when (i < retries - 1)
+                {
+                    // Wait before retrying
+                    await Task.Delay(delayMs);
+                    delayMs *= 2; // Exponential backoff
+                }
+            }
+
+            if (csvContent == null)
+            {
+                FileValidationMessage = "Failed to read file after multiple attempts. Please ensure the file is closed in all applications.";
+                HasFileValidationError = true;
+                return;
+            }
+
             await ParseCsvContent(csvContent);
             
             HasFile = true;
             HasFileValidationError = false;
             FileValidationMessage = string.Empty;
             UpdateSummary();
+        }
+        catch (IOException ioEx)
+        {
+            FileValidationMessage = $"Cannot access the file. Please close it in Excel or any other application, then try again.\n\nDetails: {ioEx.Message}";
+            HasFileValidationError = true;
         }
         catch (Exception ex)
         {
@@ -177,7 +233,9 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
         try
         {
             ParsedStudents.Clear();
+            ParsedTeachers.Clear();
             CsvColumns.Clear();
+            DetectedImportType = "Unknown";
 
             using var reader = new StringReader(csvContent);
             using var csv = new CsvReader(reader, new CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture)
@@ -196,62 +254,136 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
                 CsvColumns.Add(header);
             }
 
-            // Read data rows
-            var students = new List<CsvStudentRowDto>();
-            var rowNumber = 1;
+            // Auto-detect import type based on CSV columns
+            bool hasStudentColumns = headers.Any(h => 
+                h.Equals("lrn_id", StringComparison.OrdinalIgnoreCase) ||
+                h.Equals("grade_level", StringComparison.OrdinalIgnoreCase) ||
+                h.Equals("section", StringComparison.OrdinalIgnoreCase) ||
+                h.Equals("guardian_name", StringComparison.OrdinalIgnoreCase) ||
+                h.Equals("student_id", StringComparison.OrdinalIgnoreCase));
 
-            while (await csv.ReadAsync())
+            bool hasTeacherColumns = headers.Any(h => 
+                h.Equals("subject_specialization_id", StringComparison.OrdinalIgnoreCase) ||
+                h.Equals("department_id", StringComparison.OrdinalIgnoreCase) ||
+                h.Equals("advisory_section_id", StringComparison.OrdinalIgnoreCase));
+
+            // Determine import type: Teacher takes precedence if both detected
+            if (hasTeacherColumns && !hasStudentColumns)
             {
-                rowNumber++;
-                try
-                {
-                    var student = new CsvStudentRowDto
-                    {
-                        full_name = csv.GetField("full_name") ?? "",
-                        role = csv.GetField("role") ?? "",
-                        status = csv.GetField("status") ?? "",
-                        first_name = csv.GetField("first_name") ?? "",
-                        last_name = csv.GetField("last_name") ?? "",
-                        middle_name = csv.GetField("middle_name"),
-                        student_id = csv.GetField("student_id") ?? "",
-                        lrn_id = csv.GetField("lrn_id") ?? "",
-                        grade_level = csv.GetField("grade_level") ?? "",
-                        enrollment = int.TryParse(csv.GetField("enrollment"), out var enrollment) ? enrollment : 0,
-                        section = csv.GetField("section") ?? "",
-                        age = int.TryParse(csv.GetField("age"), out var age) ? age : null,
-                        birthday = DateTime.TryParse(csv.GetField("birthday"), out var birthday) ? birthday : DateTime.MinValue,
-                        guardian_name = csv.GetField("guardian_name") ?? "",
-                        relationship = csv.GetField("relationship") ?? "",
-                        phone_number = ParsePhoneNumber(csv.GetField("phone_number") ?? ""),
-                        email = csv.GetField("email"),
-                        address = csv.GetField("address"),
-                        is_primary = bool.TryParse(csv.GetField("is_primary"), out var isPrimary) ? isPrimary : false
-                    };
-
-                    students.Add(student);
-                }
-                catch (Exception ex)
-                {
-                    // Log error for this row but continue processing
-                    System.Diagnostics.Debug.WriteLine($"Error parsing row {rowNumber}: {ex.Message}");
-                }
+                DetectedImportType = "Teacher";
+                await ParseTeacherCsv(csv, headers);
+            }
+            else if (hasStudentColumns)
+            {
+                DetectedImportType = "Student";
+                await ParseStudentCsv(csv, headers);
+            }
+            else
+            {
+                FileValidationMessage = "Cannot detect CSV format. Ensure CSV has either student columns (lrn_id, grade_level, section) or teacher columns (subject_specialization_id, department_id).";
+                HasFileValidationError = true;
+                return;
             }
 
-            // Add valid students to collection
-            foreach (var student in students)
-            {
-                ParsedStudents.Add(student);
-            }
-
-            TotalRows = rowNumber - 1; // Subtract header row
-            ValidRows = ParsedStudents.Count;
-            InvalidRows = TotalRows - ValidRows;
+            UpdateSummary();
         }
         catch (Exception ex)
         {
             FileValidationMessage = $"Error parsing CSV: {ex.Message}";
             HasFileValidationError = true;
         }
+    }
+
+    private async Task ParseStudentCsv(CsvReader csv, List<string> headers)
+    {
+        var students = new List<CsvStudentRowDto>();
+        var rowNumber = 1;
+
+        while (await csv.ReadAsync())
+        {
+            rowNumber++;
+            try
+            {
+                var student = new CsvStudentRowDto
+                {
+                    full_name = csv.GetField("full_name") ?? "",
+                    role = csv.GetField("role") ?? "",
+                    status = csv.GetField("status") ?? "",
+                    first_name = csv.GetField("first_name") ?? "",
+                    last_name = csv.GetField("last_name") ?? "",
+                    middle_name = csv.GetField("middle_name"),
+                    student_id = csv.GetField("student_id") ?? "",
+                    lrn_id = csv.GetField("lrn_id") ?? "",
+                    grade_level = csv.GetField("grade_level") ?? "",
+                    enrollment = int.TryParse(csv.GetField("enrollment"), out var enrollment) ? enrollment : 0,
+                    section = csv.GetField("section") ?? "",
+                    age = int.TryParse(csv.GetField("age"), out var age) ? age : null,
+                    birthday = DateTime.TryParse(csv.GetField("birthday"), out var birthday) ? birthday : DateTime.MinValue,
+                    guardian_name = csv.GetField("guardian_name") ?? "",
+                    relationship = csv.GetField("relationship") ?? "",
+                    phone_number = ParsePhoneNumber(csv.GetField("phone_number") ?? ""),
+                    email = csv.GetField("email"),
+                    address = csv.GetField("address"),
+                    is_primary = bool.TryParse(csv.GetField("is_primary"), out var isPrimary) ? isPrimary : false
+                };
+
+                students.Add(student);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error parsing student row {rowNumber}: {ex.Message}");
+            }
+        }
+
+        foreach (var student in students)
+        {
+            ParsedStudents.Add(student);
+        }
+
+        TotalRows = rowNumber - 1;
+        ValidRows = ParsedStudents.Count;
+        InvalidRows = TotalRows - ValidRows;
+    }
+
+    private async Task ParseTeacherCsv(CsvReader csv, List<string> headers)
+    {
+        var teachers = new List<CsvTeacherRowDto>();
+        var rowNumber = 1;
+
+        while (await csv.ReadAsync())
+        {
+            rowNumber++;
+            try
+            {
+                var teacher = new CsvTeacherRowDto
+                {
+                    FirstName = csv.GetField("first_name") ?? "",
+                    LastName = csv.GetField("last_name") ?? "",
+                    MiddleName = csv.GetField("middle_name"),
+                    Age = int.TryParse(csv.GetField("age"), out var age) ? age : null,
+                    SubjectSpecializationId = csv.GetField("subject_specialization_id") ?? "",
+                    DepartmentId = csv.GetField("department_id") ?? "",
+                    AdvisorySectionId = csv.GetField("advisory_section_id"),
+                    Email = csv.GetField("email")?.Trim(),
+                    Birthday = csv.GetField("birthday") ?? ""
+                };
+
+                teachers.Add(teacher);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error parsing teacher row {rowNumber}: {ex.Message}");
+            }
+        }
+
+        foreach (var teacher in teachers)
+        {
+            ParsedTeachers.Add(teacher);
+        }
+
+        TotalRows = rowNumber - 1;
+        ValidRows = ParsedTeachers.Count;
+        InvalidRows = TotalRows - ValidRows;
     }
 
     private string ParsePhoneNumber(string value)
@@ -285,7 +417,9 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
 
     private void UpdateSummary()
     {
-        SummaryText = $"File: {SelectedFileName} | Total rows: {TotalRows} | Valid: {ValidRows} | Invalid: {InvalidRows}";
+        var userType = DetectedImportType == "Student" ? "students" : 
+                       DetectedImportType == "Teacher" ? "teachers" : "users";
+        SummaryText = $"File: {SelectedFileName} | Type: {DetectedImportType} | Total rows: {TotalRows} | Valid: {ValidRows} | Invalid: {InvalidRows}";
     }
 
     [RelayCommand]
@@ -304,7 +438,6 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
         
         try
         {
-            // Simulate progress steps
             await Task.Delay(100);
             ImportProgress = 10;
             ProgressText = "Validating data...";
@@ -313,16 +446,33 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
             ImportProgress = 20;
             ProgressText = "Sending to server...";
             
-            var importDto = new ImportStudentsCsvDto
-            {
-                Students = ParsedStudents.ToList()
-            };
-
             await Task.Delay(100);
             ImportProgress = 30;
-            ProgressText = "Processing students...";
 
-            var result = await _apiClient.ImportStudentsCsvAsync(importDto);
+            BulkImportResultDto? result = null;
+
+            if (DetectedImportType == "Student")
+            {
+                ProgressText = "Processing students...";
+                var importDto = new ImportStudentsCsvDto
+                {
+                    Students = ParsedStudents.ToList()
+                };
+                result = await _apiClient.ImportStudentsCsvAsync(importDto);
+            }
+            else if (DetectedImportType == "Teacher")
+            {
+                ProgressText = "Processing teachers...";
+                var importDto = new ImportTeachersCsvDto
+                {
+                    Teachers = ParsedTeachers.ToList()
+                };
+                result = await _apiClient.ImportTeachersCsvAsync(importDto);
+            }
+            else
+            {
+                throw new Exception("Unknown import type detected");
+            }
             
             ImportProgress = 90;
             ProgressText = "Finalizing...";
@@ -331,20 +481,21 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
             {
                 ImportProgress = 100;
                 ProgressText = "Import completed!";
+                var userType = DetectedImportType == "Student" ? "students" : "teachers";
                 ImportStatusMessage = $"Import completed. Success: {result.Success}, Failed: {result.Failed}";
                 
                 // Show toast notification based on results
                 if (result.Success > 0 && result.Failed == 0)
                 {
-                    _toastService.Success($"Successfully imported {result.Success} students!", "Import Complete");
+                    _toastService.Success($"Successfully imported {result.Success} {userType}!", "Import Complete");
                 }
                 else if (result.Success > 0 && result.Failed > 0)
                 {
-                    _toastService.Warning($"Imported {result.Success} students with {result.Failed} errors", "Partial Success");
+                    _toastService.Warning($"Imported {result.Success} {userType} with {result.Failed} errors", "Partial Success");
                 }
                 else
                 {
-                    _toastService.Error("No students were imported successfully", "Import Failed");
+                    _toastService.Error($"No {userType} were imported successfully", "Import Failed");
                 }
                 
                 if (result.Errors.Count > 0)
@@ -384,6 +535,8 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
         HasFile = false;
         CsvColumns.Clear();
         ParsedStudents.Clear();
+        ParsedTeachers.Clear();
+        DetectedImportType = "Unknown";
         SummaryText = "No file loaded.";
         ImportStatusMessage = string.Empty;
         FileValidationMessage = string.Empty;
