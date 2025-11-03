@@ -686,6 +686,7 @@ public class ApiClient : IApiClient
     {
         // Normalize just by path prefix
         var key = endpoint.ToLowerInvariant();
+        if (key.StartsWith("users/")) return TimeSpan.FromMinutes(5);
         if (key.StartsWith("buildings")) return TimeSpan.FromMinutes(10);
         if (key.StartsWith("rooms")) return TimeSpan.FromMinutes(10);
         if (key.StartsWith("departments")) return TimeSpan.FromMinutes(10);
@@ -693,6 +694,20 @@ public class ApiClient : IApiClient
         if (key.StartsWith("schedules")) return TimeSpan.FromMinutes(1);
         if (key.StartsWith("desktop-sidebar/student-distribution")) return TimeSpan.FromMinutes(2);
         return TimeSpan.Zero;
+    }
+
+    public void InvalidateCachePrefix(string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix)) return;
+        var normalized = prefix.ToLowerInvariant();
+        foreach (var key in _cache.Keys.ToList())
+        {
+            if (key.StartsWith(normalized))
+            {
+                _cache.TryRemove(key, out _);
+                Debug.WriteLine($"[ApiClient][Cache] INVALIDATE {key}");
+            }
+        }
     }
 
     private async Task<T?> ExecuteGetWithCacheAsync<T>(string endpoint) where T : class

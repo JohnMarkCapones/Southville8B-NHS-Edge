@@ -173,6 +173,14 @@ public partial class ProfileViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task RefreshProfile()
+    {
+        // Invalidate cached profile before reloading to force a fresh fetch
+        _apiClient.InvalidateCachePrefix($"users/{_userId}/profile");
+        await LoadProfileAsync();
+    }
+
     [RelayCommand] private void UploadPhoto() { /* TODO */ }
     [RelayCommand] private void EditProfile() { /* TODO */ }
     [RelayCommand] private void ChangePassword() { /* TODO */ }

@@ -48,6 +48,10 @@
     <!-- <PackageReference Include="CredentialManagement" Version="1.0.0" /> -->
   </ItemGroup>
 
+	<ItemGroup>
+		<Using Include="System.Collections.Generic" />
+	</ItemGroup>
+
   <ItemGroup>
     <Folder Include="Resources\Strings\" />
   </ItemGroup>

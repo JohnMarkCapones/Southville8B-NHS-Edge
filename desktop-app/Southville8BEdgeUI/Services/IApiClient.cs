@@ -90,6 +90,7 @@ public interface IApiClient
     void SetAccessToken(string accessToken);
     string? GetCurrentUserId();
     string? GetCachedToken();
+    void InvalidateCachePrefix(string prefix);
 
     // Alerts API
     Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50);
