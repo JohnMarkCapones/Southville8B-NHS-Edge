@@ -190,7 +190,7 @@ public partial class GradeEntryViewModel : ViewModelBase
     private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades != null && StudentGrades.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanSaveAllGrades))]
-    private async void SaveAllGrades()
+    private async Task SaveAllGrades()
     {
         if (StudentGrades == null || StudentGrades.Count == 0)
         {

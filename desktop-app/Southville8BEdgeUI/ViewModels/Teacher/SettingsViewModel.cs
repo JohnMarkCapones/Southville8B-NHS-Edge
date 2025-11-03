@@ -82,11 +82,11 @@ public partial class SettingsViewModel : ViewModelBase
         {
             IsChangingPassword = true;
 
-            var response = await _apiClient?.ChangePasswordAsync(CurrentPassword, NewPassword);
+            var response = await _apiClient.ChangePasswordAsync(CurrentPassword, NewPassword);
 
             if (response != null)
             {
-                _toastService?.Success("Password changed successfully", "Success");
+                _toastService.Success("Password changed successfully", "Success");
                 // Clear fields
                 CurrentPassword = "";
                 NewPassword = "";
@@ -94,7 +94,7 @@ public partial class SettingsViewModel : ViewModelBase
             }
             else
             {
-                _toastService?.Error("Failed to change password. Please check your current password.", "Error");
+                _toastService.Error("Failed to change password. Please check your current password.", "Error");
             }
         }
         catch (Exception ex)

@@ -114,9 +114,12 @@ public partial class LoginViewModel : ViewModelBase
                     System.Diagnostics.Debug.WriteLine($"AdminShellViewModel created: {adminShell != null}");
                     System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo is null: {NavigateTo == null}");
                     System.Diagnostics.Debug.WriteLine($"About to invoke NavigateTo with AdminShellViewModel");
-                    
-                    NavigateTo?.Invoke(adminShell);
-                    System.Diagnostics.Debug.WriteLine("Navigation to AdminShell completed");
+    
+                    if (NavigateTo != null)
+                    {
+                        NavigateTo.Invoke(adminShell!);
+    System.Diagnostics.Debug.WriteLine("Navigation to AdminShell completed");
+                    }
                     break;
                 case "teacher":
                     var teacherSseService = ServiceLocator.Services.GetRequiredService<ISseService>();
@@ -128,8 +131,11 @@ public partial class LoginViewModel : ViewModelBase
                     teacherApiClient.SetAccessToken(teacherAccessToken);
                     
                     var teacherShell = new TeacherShellViewModel(teacherSseService, teacherApiClient, teacherTokenStorage, _toastService, _dialogService, userDto, teacherAccessToken, true, true, NavigateTo);
-                    NavigateTo?.Invoke(teacherShell);
-                    break;
+   if (NavigateTo != null)
+          {
+         NavigateTo.Invoke(teacherShell!);
+ }
+      break;
                     default:
                         _toastService.Warning($"Unknown role: {response.User.Role}");
                         break;

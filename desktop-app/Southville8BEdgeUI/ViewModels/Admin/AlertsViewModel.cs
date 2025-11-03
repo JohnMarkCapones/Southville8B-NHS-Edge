@@ -168,7 +168,7 @@ public partial class AlertsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async void CreateAlert()
+    private async Task CreateAlert()
     {
         // reset UI state
         ErrorMessage = string.Empty;
@@ -226,7 +226,7 @@ public partial class AlertsViewModel : ViewModelBase
         => uiType switch { "Weather" => "warning", "Emergency" => "error", "System" => "system", _ => "info" };
 
     [RelayCommand]
-    private async void DeleteAlert(AlertItemViewModel alert)
+    private async Task DeleteAlert(AlertItemViewModel alert)
     {
         if (_apiClient != null)
             await _apiClient.DeleteAlertAsync(alert.Id);
@@ -235,7 +235,7 @@ public partial class AlertsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async void ExpireAlert(AlertItemViewModel alert)
+    private async Task ExpireAlert(AlertItemViewModel alert)
     {
         alert.ExpiresAt = DateTime.Now;
         if (_apiClient != null)
@@ -269,7 +269,7 @@ public partial class AlertsViewModel : ViewModelBase
 
     // Optional: call this from a timer to auto-refresh Active/Expired UI if desired
     [RelayCommand]
-    private async void RefreshComputed()
+    private async Task RefreshComputed()
     {
         UpdateComputed();
         if (_apiClient != null) await LoadAlertsAsync();

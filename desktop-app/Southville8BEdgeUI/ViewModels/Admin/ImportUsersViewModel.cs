@@ -183,7 +183,7 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
             }
 
             // Retry logic for reading the file (in case of transient locks)
-            string csvContent = null;
+            string? csvContent = null;
             int retries = 3;
             int delayMs = 500;
 
@@ -304,6 +304,7 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
             rowNumber++;
             try
             {
+                string? phoneNum = csv.GetField("phone_number");
                 var student = new CsvStudentRowDto
                 {
                     full_name = csv.GetField("full_name") ?? "",
@@ -321,7 +322,7 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
                     birthday = DateTime.TryParse(csv.GetField("birthday"), out var birthday) ? birthday : DateTime.MinValue,
                     guardian_name = csv.GetField("guardian_name") ?? "",
                     relationship = csv.GetField("relationship") ?? "",
-                    phone_number = ParsePhoneNumber(csv.GetField("phone_number") ?? ""),
+                    phone_number = ParsePhoneNumber(phoneNum ?? ""),
                     email = csv.GetField("email"),
                     address = csv.GetField("address"),
                     is_primary = bool.TryParse(csv.GetField("is_primary"), out var isPrimary) ? isPrimary : false

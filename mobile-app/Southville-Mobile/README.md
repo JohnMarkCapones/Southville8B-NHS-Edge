@@ -42,6 +42,71 @@ To learn more about developing your project with Expo, look at the following res
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
+## Building APK for Distribution
+
+### Prerequisites
+
+1. **Install EAS CLI** (if not already installed):
+   ```bash
+   npm install -g eas-cli
+   ```
+
+2. **Login to Expo**:
+   ```bash
+   eas login
+   ```
+
+3. **Set up Environment Variables** using EAS Secrets:
+   ```bash
+   # Set production API URL (REQUIRED for production builds)
+   eas secret:create --scope project --name EXPO_PUBLIC_API_URL --value https://your-api-domain.com/api/v1
+   
+   # Set Supabase credentials (if using Supabase)
+   eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value your_supabase_project_url
+   eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value your_supabase_anon_key
+   ```
+
+   **Note**: For local development, create a `.env` file in the root directory with these variables. For production builds with EAS, use `eas secret:create` as shown above.
+
+### Building APK
+
+To build a standalone APK for GitHub distribution (soft launch):
+
+```bash
+eas build --platform android --profile development
+```
+
+This will:
+- Build a standalone APK (not requiring Expo Go)
+- Use the `development` profile for iterative updates
+- Take approximately 10-20 minutes
+- Provide a download link when complete
+
+### Environment Variables
+
+The following environment variables are required for production builds:
+
+- **`EXPO_PUBLIC_API_URL`** (Required): Production API base URL
+  - Example: `https://api.yourdomain.com/api/v1`
+  - Must be set via EAS secrets for cloud builds
+  - Falls back to localhost in development mode only
+
+- **`EXPO_PUBLIC_SUPABASE_URL`** (Optional): Supabase project URL
+  - Only needed if using Supabase features (alerts, realtime)
+
+- **`EXPO_PUBLIC_SUPABASE_ANON_KEY`** (Optional): Supabase anonymous key
+  - Only needed if using Supabase features
+
+### Local Development Environment
+
+Create a `.env` file in the project root (not committed to git):
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3004/api/v1
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+```
+
 ## Join the community
 
 Join our community of developers creating universal apps.

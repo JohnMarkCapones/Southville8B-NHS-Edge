@@ -47,9 +47,14 @@ const resolveDefaultBaseUrl = () => {
     if (Platform.OS === "ios") {
       return "http://127.0.0.1:3004/api/v1";
     }
+
+    return "http://localhost:3004/api/v1";
   }
 
-  return "http://localhost:3004/api/v1";
+  // Production: EXPO_PUBLIC_API_URL must be set via environment variable
+  // If not set, return empty string to force error (better than localhost)
+  // This will make it clear that the environment variable is required
+  return "";
 };
 
 const DEFAULT_BASE_URL = resolveDefaultBaseUrl();

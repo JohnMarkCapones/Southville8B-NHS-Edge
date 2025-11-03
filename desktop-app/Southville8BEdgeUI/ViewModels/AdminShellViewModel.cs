@@ -570,22 +570,25 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
         if (CurrentEvent == null || string.IsNullOrWhiteSpace(CurrentEvent.Id)) return;
         try
         {
-            await _apiClient.UpdateEventAsync(CurrentEvent.Id, new UpdateEventDto { Status = "completed" });
-            await LoadSidebarEventsAsync();
-        }
+          await _apiClient.UpdateEventAsync(CurrentEvent.Id, new UpdateEventDto { Status = "completed" });
+await LoadSidebarEventsAsync();
+}
         catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to complete current event: {ex.Message}");
+    {
+     System.Diagnostics.Debug.WriteLine($"Failed to complete current event: {ex.Message}");
         }
     }
 
     [RelayCommand]
     private void ViewMoreEvents()
     {
-        DisposeCurrentContent();
+    DisposeCurrentContent();
         var vm = CreateEventDashboardViewModel();
-        vm.PageSize = 5; // paginate by 5 as requested
-        CurrentContent = vm;
+      if (vm != null)
+        {
+            vm.PageSize = 5; // paginate by 5 as requested
+  CurrentContent = vm;
+        }
         CurrentPage = "Events Dashboard";
         CloseUserDropdown();
     }
@@ -789,27 +792,21 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
             System.Diagnostics.Debug.WriteLine($"LoginViewModel created: {loginVm != null}");
             
             // Set NavigateTo on the new LoginViewModel so it can navigate to AdminShell after login
-            if (MainNavigateTo != null)
-            {
-                loginVm.NavigateTo = MainNavigateTo;
-                System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+       if (MainNavigateTo != null)
+    {
+        loginVm!.NavigateTo = MainNavigateTo;
+        System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
             }
-            
-            System.Diagnostics.Debug.WriteLine($"About to invoke MainNavigateTo with LoginViewModel");
-            System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
-            
-            if (MainNavigateTo != null)
+
+   System.Diagnostics.Debug.WriteLine($"About to invoke MainNavigateTo with LoginViewModel");
+        System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
+       
+          if (MainNavigateTo != null)
             {
-                System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
-                MainNavigateTo.Invoke(loginVm);
-                System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
+           System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
+      MainNavigateTo.Invoke(loginVm!);
+    System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("ERROR: MainNavigateTo is NULL - cannot navigate to login!");
-            }
-            
-            System.Diagnostics.Debug.WriteLine("=== LOGOUT COMPLETED ===");
         }
         catch (Exception ex)
         {

@@ -128,9 +128,6 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private readonly string? _accessToken;
     private TeacherDashboardViewModel? _dashboardViewModel;
 
-    // Flag to suppress applying a theme while initializing (so we respect OS/default app theme)
-    private bool _suppressThemeApply = true;
-
     // Added optional parameters to disable timers for unit tests.
     public TeacherShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, IToastService toastService, IDialogService dialogService, UserDto? user = null, string? accessToken = null, bool enableRotation = true, bool enableTimeUpdater = true, Action<ViewModelBase>? mainNavigateTo = null)
     {
@@ -173,10 +170,9 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         // Initialize theme without triggering change
         if (Application.Current is not null)
         {
-            _isDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+        _isDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
             OnPropertyChanged(nameof(IsDarkMode));
         }
-        _suppressThemeApply = false;
 
         GenerateCalendarDays();
         
@@ -411,15 +407,17 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private void UpdateCurrentAndNextClass(List<ScheduleDto> todaySchedules)
     {
         var now = DateTime.Now.TimeOfDay;
-        
+      
         ScheduleDto? currentClass = null;
         ScheduleDto? nextClass = null;
         
         foreach (var schedule in todaySchedules)
         {
-            if (!TimeSpan.TryParse(schedule.StartTime, out var startTime) ||
-                !TimeSpan.TryParse(schedule.EndTime, out var endTime))
-                continue;
+  if (schedule == null) continue;
+      
+       if (!TimeSpan.TryParse(schedule.StartTime, out var startTime) ||
+!TimeSpan.TryParse(schedule.EndTime, out var endTime))
+         continue;
             
             // Check if class is currently ongoing
             if (now >= startTime && now < endTime)
@@ -1020,12 +1018,12 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             
             if (MainNavigateTo != null)
             {
-                loginVm.NavigateTo = MainNavigateTo;
-                System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
-                System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
-                MainNavigateTo.Invoke(loginVm);
-                System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
-            }
+   loginVm!.NavigateTo = MainNavigateTo;
+       System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+   System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
+   MainNavigateTo.Invoke(loginVm!);
+   System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
+ }
             else
             {
                 System.Diagnostics.Debug.WriteLine("ERROR: MainNavigateTo is NULL - cannot navigate to login!");

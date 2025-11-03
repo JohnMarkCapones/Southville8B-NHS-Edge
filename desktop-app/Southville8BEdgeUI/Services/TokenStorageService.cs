@@ -142,6 +142,14 @@ public class TokenStorageService : ITokenStorageService
 
     private static string Protect(string plainText)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            // For non-Windows platforms, use a simple Base64 encoding as a fallback
+            // Note: This is less secure than DPAPI. Consider using platform-specific encryption.
+            var nonWindowsBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(nonWindowsBytes);
+        }
+
         var bytes = Encoding.UTF8.GetBytes(plainText);
         var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
         return Convert.ToBase64String(protectedBytes);
@@ -149,6 +157,13 @@ public class TokenStorageService : ITokenStorageService
 
     private static string Unprotect(string cipherText)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            // For non-Windows platforms, decode Base64
+            var nonWindowsCipherBytes = Convert.FromBase64String(cipherText);
+            return Encoding.UTF8.GetString(nonWindowsCipherBytes);
+        }
+
         var cipherBytes = Convert.FromBase64String(cipherText);
         var unprotected = ProtectedData.Unprotect(cipherBytes, null, DataProtectionScope.CurrentUser);
         return Encoding.UTF8.GetString(unprotected);

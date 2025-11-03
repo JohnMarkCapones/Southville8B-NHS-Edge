@@ -120,7 +120,8 @@ public partial class BuildingManagementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            // Handle error silently or show user-friendly message
+            // Log error or show user-friendly message
+            System.Diagnostics.Debug.WriteLine($"Error loading buildings: {ex.Message}");
         }
         finally
         {
