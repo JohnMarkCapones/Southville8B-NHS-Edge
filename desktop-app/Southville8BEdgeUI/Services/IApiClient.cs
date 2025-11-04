@@ -23,16 +23,24 @@ public interface IApiClient
     Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync();
     
     // User Management Methods
-    Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null);
+    Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25);
     Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto);
     Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto);
     Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto);
     Task<bool> UpdateUserStatusAsync(string userId, string status);
     Task<bool> DeleteUserAsync(string userId);
     Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto);
+    Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto);
+    Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId);
+    Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword);
+    Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword);
+    Task<ForgotPasswordResponseDto?> SendPasswordResetEmailAsync(string email);
     
     // Section Management Methods
     Task<SectionListResponse?> GetSectionsAsync(int limit = 100);
+
+    // Student distribution stats
+    Task<StudentDistributionDto?> GetStudentDistributionAsync();
     
     // Building Management Methods
     Task<BuildingListResponse?> GetBuildingsAsync(int limit = 100);
@@ -82,6 +90,7 @@ public interface IApiClient
     void SetAccessToken(string accessToken);
     string? GetCurrentUserId();
     string? GetCachedToken();
+    void InvalidateCachePrefix(string prefix);
 
     // Alerts API
     Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50);
@@ -123,4 +132,29 @@ public interface IApiClient
     Task<List<UserDto>?> GetTeachersAsync();
     Task<List<RoomDto>?> GetRoomsAsync();
     Task<List<BuildingDto>?> GetBuildingsAsync();
+    
+    // Announcement Management Methods
+    Task<AnnouncementListResponse?> GetAnnouncementsAsync(
+        string? teacherId = null,
+        string? sectionId = null,
+        string? visibility = null,
+        string? type = null,
+        bool? includeExpired = null,
+        int page = 1,
+        int limit = 100);
+    
+    Task<AnnouncementDto?> GetAnnouncementByIdAsync(string id);
+    Task<AnnouncementDto?> CreateAnnouncementAsync(CreateAnnouncementDto dto);
+    Task<AnnouncementDto?> UpdateAnnouncementAsync(string id, UpdateAnnouncementDto dto);
+    Task DeleteAnnouncementAsync(string id);
+    Task<AnnouncementStatsDto?> GetAnnouncementStatsAsync(string teacherId);
+    Task<List<SectionDto>?> GetMySectionsAsync();
+    
+    // Related entity methods
+    Task<DepartmentDto?> GetDepartmentAsync(string departmentId);
+    Task<SubjectDto?> GetSubjectAsync(string subjectId);
+    Task<SectionDto?> GetSectionAsync(string sectionId);
+    
+    // Academic Year Management Methods
+    Task<AcademicYearDto?> GetActiveAcademicYearAsync();
 }

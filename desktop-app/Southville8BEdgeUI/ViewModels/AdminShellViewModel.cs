@@ -17,7 +17,7 @@ using System.Globalization;
 
 namespace Southville8BEdgeUI.ViewModels;
 
-public partial class AdminShellViewModel : ViewModelBase
+public partial class AdminShellViewModel : ViewModelBase, IDisposable
 {
     [ObservableProperty]
     private ViewModelBase _currentContent;
@@ -39,6 +39,7 @@ public partial class AdminShellViewModel : ViewModelBase
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
     [ObservableProperty] private string _currentVersion = "1.0.0";
+    [ObservableProperty] private string _academicYear = "2024-2025"; // Default fallback
 
     // SSE KPI Metrics Properties
     [ObservableProperty] private int _eventsCount = 120;
@@ -81,11 +82,24 @@ public partial class AdminShellViewModel : ViewModelBase
 
     // Flag to suppress applying a theme while initializing (so we respect OS/default app theme)
     private bool _suppressThemeApply = true;
+    private DispatcherTimer? _clock;
+    private SidebarMetrics? _lastValidMetrics;
+    private SidebarMetrics? _pendingMetrics;
+    private DispatcherTimer? _metricsApplyTimer;
 
     public bool ShowLeftSidebarToggle => !IsLeftSidebarVisible;
     public bool ShowRightSidebarToggle => !IsRightSidebarVisible;
 
     public Action<ViewModelBase>? NavigateTo { get; set; }
+    
+    // Main-level navigation action for app-level navigation (e.g., logout to login)
+    public Action<ViewModelBase>? MainNavigateTo { get; set; }
+    
+    // Cached ViewModel instances
+    private UserManagementViewModel? _cachedUserManagementViewModel;
+    private ClassSchedulesViewModel? _cachedClassSchedulesViewModel;
+    private EventDashboardViewModel? _cachedEventDashboardViewModel;
+    private BuildingManagementViewModel? _cachedBuildingManagementViewModel;
 
     // Sidebar events (current/next + upcoming page)
     [ObservableProperty] private EventDto? _currentEvent;
@@ -94,13 +108,54 @@ public partial class AdminShellViewModel : ViewModelBase
     [ObservableProperty] private bool _hasCurrentEvent;
     [ObservableProperty] private bool _hasNextEvent;
 
+    // Computed properties for 12-hour formatted times with day of week
+    public string CurrentEventTimeFormatted => FormatTimeWithDay(CurrentEvent);
+    public string NextEventTimeFormatted => FormatTimeWithDay(NextEvent);
+
+    private string FormatTimeWithDay(EventDto? eventDto)
+    {
+        if (eventDto == null)
+            return "N/A";
+        
+        string dayOfWeek = GetDayOfWeek(eventDto.Date);
+        string timeFormatted = FormatTime(eventDto.Time);
+        
+        return $"{dayOfWeek}, {timeFormatted}";
+    }
+
+    private string GetDayOfWeek(string dateString)
+    {
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("dddd"); // e.g., "Tuesday", "Wednesday"
+        }
+        return "N/A";
+    }
+
+    private string FormatTime(string? time)
+    {
+        if (string.IsNullOrEmpty(time))
+            return "N/A";
+        
+        if (TimeSpan.TryParse(time, out var timeSpan))
+        {
+            var dateTime = DateTime.Today.Add(timeSpan);
+            return dateTime.ToString("h:mm tt"); // e.g., "9:00 AM"
+        }
+        
+        return time;
+    }
+
     // Added optional parameter enableRotation (default true) to allow unit tests to disable DispatcherTimer creation.
-    public AdminShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, UserDto? user = null, string? accessToken = null, bool enableRotation = true)
+    public AdminShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, UserDto? user = null, string? accessToken = null, bool enableRotation = true, Action<ViewModelBase>? mainNavigateTo = null)
     {
         _sseService = sseService;
         _apiClient = apiClient;
         _tokenStorage = tokenStorage;
         _accessToken = accessToken;
+        
+        // Store the main-level navigation action
+        MainNavigateTo = mainNavigateTo;
         
         // Create dashboard immediately with token (no async initialization needed)
         _currentContent = CreateDashboardViewModel();
@@ -116,7 +171,7 @@ public partial class AdminShellViewModel : ViewModelBase
         {
             _userId = user.Id;
             UserEmail = user.Email ?? "user@southville.edu.ph";
-            UserRole = FormatRoleName(user.Role);
+            UserRole = FormatRoleName(user.Role?.Name);
             UserInitials = GetInitialsFromEmail(user.Email);
             
             // Fetch full profile asynchronously
@@ -142,6 +197,19 @@ public partial class AdminShellViewModel : ViewModelBase
 
         // Load sidebar events (today + next 7 days)
         _ = LoadSidebarEventsAsync();
+
+        // Load active academic year
+        _ = LoadActiveAcademicYearAsync();
+
+        // Realtime clock for date/time display
+        _clock?.Stop();
+        _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _clock.Tick += (_, _) =>
+        {
+            CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
+            CurrentTime = DateTime.Now.ToString("hh:mm tt");
+        };
+        _clock.Start();
     }
 
 
@@ -167,12 +235,36 @@ public partial class AdminShellViewModel : ViewModelBase
 
     private void OnMetricsUpdated(object? sender, SidebarMetrics metrics)
     {
+        // Guard: ignore transient all-zero snapshots while connected (likely heartbeat/placeholder)
+        bool looksEmpty = metrics.Events == 0 && metrics.Teachers == 0 && metrics.Students == 0 && metrics.Sections == 0;
+        if (looksEmpty && !string.Equals(ConnectionStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Debounce/coalesce: keep only latest metrics within a short window
+        _pendingMetrics = metrics;
+        _metricsApplyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _metricsApplyTimer.Tick -= ApplyPendingMetrics;
+        _metricsApplyTimer.Tick += ApplyPendingMetrics;
+        _metricsApplyTimer.Stop();
+        _metricsApplyTimer.Start();
+    }
+
+    private void ApplyPendingMetrics(object? sender, EventArgs e)
+    {
+        _metricsApplyTimer?.Stop();
+        var snapshot = _pendingMetrics;
+        _pendingMetrics = null;
+        if (snapshot == null) return;
+
+        _lastValidMetrics = snapshot;
         Dispatcher.UIThread.Post(() =>
         {
-            EventsCount = metrics.Events;
-            TeachersCount = metrics.Teachers;
-            StudentsCount = metrics.Students;
-            SectionsCount = metrics.Sections;
+            EventsCount = snapshot.Events;
+            TeachersCount = snapshot.Teachers;
+            StudentsCount = snapshot.Students;
+            SectionsCount = snapshot.Sections;
         });
     }
 
@@ -415,32 +507,88 @@ public partial class AdminShellViewModel : ViewModelBase
         }
     }
 
+    private async Task LoadActiveAcademicYearAsync()
+    {
+        try
+        {
+            var academicYear = await _apiClient.GetActiveAcademicYearAsync();
+            if (academicYear != null)
+            {
+                // Debug: Log the raw DTO values to see what we're getting
+                System.Diagnostics.Debug.WriteLine($"AcademicYear DTO received:");
+                System.Diagnostics.Debug.WriteLine($"  Id: {academicYear.Id}");
+                System.Diagnostics.Debug.WriteLine($"  YearName: {academicYear.YearName}");
+                System.Diagnostics.Debug.WriteLine($"  StartDate: {academicYear.StartDate}");
+                System.Diagnostics.Debug.WriteLine($"  EndDate: {academicYear.EndDate}");
+                System.Diagnostics.Debug.WriteLine($"  IsActive: {academicYear.IsActive}");
+                
+                var displayName = academicYear.GetDisplayName();
+                
+                // If GetDisplayName returns "N/A", it means all fields are empty/null
+                // In this case, keep the default value instead of showing "N/A"
+                if (displayName == "N/A")
+                {
+                    System.Diagnostics.Debug.WriteLine("AcademicYear DTO has no usable data (all fields null/empty), keeping default value");
+                    // Keep the default "2024-2025" value
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        AcademicYear = displayName;
+                        System.Diagnostics.Debug.WriteLine($"Active academic year loaded: {AcademicYear}");
+                    });
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No active academic year found (API returned null), keeping default value");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load active academic year: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Keep the default "2024-2025" value on error
+        }
+    }
+
+    // Property change handlers for computed time properties
+    partial void OnCurrentEventChanged(EventDto? value)
+    {
+        OnPropertyChanged(nameof(CurrentEventTimeFormatted));
+    }
+
+    partial void OnNextEventChanged(EventDto? value)
+    {
+        OnPropertyChanged(nameof(NextEventTimeFormatted));
+    }
+
     [RelayCommand]
     private async Task MarkCurrentEventCompleted()
     {
         if (CurrentEvent == null || string.IsNullOrWhiteSpace(CurrentEvent.Id)) return;
         try
         {
-            await _apiClient.UpdateEventAsync(CurrentEvent.Id, new UpdateEventDto { Status = "completed" });
-            await LoadSidebarEventsAsync();
-        }
+          await _apiClient.UpdateEventAsync(CurrentEvent.Id, new UpdateEventDto { Status = "completed" });
+await LoadSidebarEventsAsync();
+}
         catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to complete current event: {ex.Message}");
+    {
+     System.Diagnostics.Debug.WriteLine($"Failed to complete current event: {ex.Message}");
         }
     }
 
     [RelayCommand]
     private void ViewMoreEvents()
     {
-        DisposeCurrentContent();
-        var vm = new EventDashboardViewModel(_apiClient)
+    DisposeCurrentContent();
+        var vm = CreateEventDashboardViewModel();
+      if (vm != null)
         {
-            NavigateTo = inner => CurrentContent = inner,
-            NavigateBack = () => NavigateToDashboard()
-        };
-        vm.PageSize = 5; // paginate by 5 as requested
-        CurrentContent = vm;
+            vm.PageSize = 5; // paginate by 5 as requested
+  CurrentContent = vm;
+        }
         CurrentPage = "Events Dashboard";
         CloseUserDropdown();
     }
@@ -486,6 +634,30 @@ public partial class AdminShellViewModel : ViewModelBase
     {
         if (CurrentContent is IDisposable disposable)
         {
+            // Clear cache when disposing UserManagementViewModel
+            if (disposable is UserManagementViewModel)
+            {
+                _cachedUserManagementViewModel = null;
+            }
+            
+            // Clear cache when disposing ClassSchedulesViewModel
+            if (disposable is ClassSchedulesViewModel)
+            {
+                _cachedClassSchedulesViewModel = null;
+            }
+            
+            // Clear cache when disposing EventDashboardViewModel
+            if (disposable is EventDashboardViewModel)
+            {
+                _cachedEventDashboardViewModel = null;
+            }
+            
+            // Clear cache when disposing BuildingManagementViewModel
+            if (disposable is BuildingManagementViewModel)
+            {
+                _cachedBuildingManagementViewModel = null;
+            }
+            
             disposable.Dispose();
         }
     }
@@ -529,25 +701,24 @@ public partial class AdminShellViewModel : ViewModelBase
     [RelayCommand] private void NavigateToBuildingManagement() 
     { 
         DisposeCurrentContent();
-        var vm = new BuildingManagementViewModel(_apiClient); 
-        vm.NavigateTo = inner => CurrentContent = inner; 
-        vm.NavigateBack = () => NavigateToDashboard(); 
-        CurrentContent = vm; 
+        CurrentContent = CreateBuildingManagementViewModel(); 
         CurrentPage = "Building Management"; 
         CloseUserDropdown(); 
     }
     [RelayCommand] private void NavigateToClassSchedules() 
     { 
         DisposeCurrentContent();
-        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
-        var vm = new ClassSchedulesViewModel(_apiClient, toastService); 
-        vm.NavigateTo = inner => CurrentContent = inner; 
-        vm.NavigateBack = () => NavigateToDashboard(); 
-        CurrentContent = vm; 
+        CurrentContent = CreateClassSchedulesViewModel(); 
         CurrentPage = "Class Schedules"; 
         CloseUserDropdown(); 
     }
-    [RelayCommand] private void NavigateToEventsDashboard() { var vm = new EventDashboardViewModel(_apiClient); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToEventsDashboard() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateEventDashboardViewModel(); 
+        CurrentPage = "Events Dashboard"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToELibrary() { CurrentContent = new ELibraryManagementViewModel(); CurrentPage = "E-Library Management"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToUserManagement() 
     { 
@@ -569,13 +740,100 @@ public partial class AdminShellViewModel : ViewModelBase
         CloseUserDropdown();
     }
 
-    [RelayCommand] private void Logout() 
-    { 
-        CloseUserDropdown(); 
-        var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
-        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
-        var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
-        NavigateTo?.Invoke(new LoginViewModel(authService, toastService, roleValidationService)); 
+    [RelayCommand]
+    private async Task Logout()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== LOGOUT STARTED ===");
+            System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
+            
+            CloseUserDropdown();
+            
+            // Show confirmation dialog
+            // Note: In a real implementation, you would show a proper dialog
+            // For now, we'll proceed directly with logout
+            
+            // Clear all cached ViewModels to free memory
+            System.Diagnostics.Debug.WriteLine("Clearing cached ViewModels...");
+            _cachedUserManagementViewModel = null;
+            _cachedClassSchedulesViewModel = null;
+            _cachedEventDashboardViewModel = null;
+            _cachedBuildingManagementViewModel = null;
+            System.Diagnostics.Debug.WriteLine("Cached ViewModels cleared");
+            
+            // Reset current content
+            System.Diagnostics.Debug.WriteLine("Resetting CurrentContent...");
+            CurrentContent = null!;
+            System.Diagnostics.Debug.WriteLine("CurrentContent reset");
+            
+            // Call auth service logout (clears tokens and user data)
+            System.Diagnostics.Debug.WriteLine("Calling AuthService.LogoutAsync...");
+            var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            await authService.LogoutAsync();
+            System.Diagnostics.Debug.WriteLine("AuthService.LogoutAsync completed");
+            
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode");
+            }
+            
+            // Show success message
+            var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+            toastService.Success("You have been logged out successfully", "Goodbye!");
+            
+            // Navigate to login screen
+            System.Diagnostics.Debug.WriteLine("Creating LoginViewModel...");
+            var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
+            var loginVm = new LoginViewModel(authService, toastService, roleValidationService, dialogService);
+            System.Diagnostics.Debug.WriteLine($"LoginViewModel created: {loginVm != null}");
+            
+            // Set NavigateTo on the new LoginViewModel so it can navigate to AdminShell after login
+       if (MainNavigateTo != null)
+    {
+        loginVm!.NavigateTo = MainNavigateTo;
+        System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+            }
+
+   System.Diagnostics.Debug.WriteLine($"About to invoke MainNavigateTo with LoginViewModel");
+        System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
+       
+          if (MainNavigateTo != null)
+            {
+           System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
+      MainNavigateTo.Invoke(loginVm!);
+    System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== LOGOUT ERROR ===");
+            System.Diagnostics.Debug.WriteLine($"Exception: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            
+            // Even if there's an error, still try to navigate to login
+            var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+            var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode (fallback path)");
+            }
+            
+            toastService.Warning("Logout completed with warnings", "Warning");
+            
+            var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
+            var loginVm = new LoginViewModel(authService, toastService, roleValidationService, dialogService);
+            loginVm.NavigateTo = MainNavigateTo;
+            System.Diagnostics.Debug.WriteLine($"Fallback: MainNavigateTo is null: {MainNavigateTo == null}");
+            MainNavigateTo?.Invoke(loginVm);
+        }
     }
     [RelayCommand] private void DismissAlert(SystemAlertViewModel alert) { if (CurrentContent is AdminDashboardViewModel d) d.SystemAlerts.Remove(alert); }
 
@@ -625,10 +883,95 @@ public partial class AdminShellViewModel : ViewModelBase
 
     private UserManagementViewModel CreateUserManagementViewModel()
     {
+        // Return cached instance if exists
+        if (_cachedUserManagementViewModel != null)
+        {
+            // Show loading state briefly for better UX, then clear it immediately
+            // since data is already loaded
+            _cachedUserManagementViewModel.ShowLoadingState();
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(100); // Brief visual feedback
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _cachedUserManagementViewModel.IsLoading = false;
+                });
+            });
+            return _cachedUserManagementViewModel;
+        }
+
+        // Create new instance
         var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
-        var vm = new UserManagementViewModel(_apiClient, toastService);
+        var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
+        var vm = new UserManagementViewModel(_apiClient, toastService, dialogService);
         vm.NavigateTo = innerVm => CurrentContent = innerVm;
         vm.NavigateBack = () => NavigateToDashboard();
+        
+        // Cache the instance
+        _cachedUserManagementViewModel = vm;
+        
+        return vm;
+    }
+
+    private ClassSchedulesViewModel CreateClassSchedulesViewModel()
+    {
+        // Return cached instance if exists
+        if (_cachedClassSchedulesViewModel != null)
+        {
+            return _cachedClassSchedulesViewModel;
+        }
+
+        // Create new instance
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var vm = new ClassSchedulesViewModel(_apiClient, toastService);
+        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        vm.NavigateBack = () => NavigateToDashboard();
+        
+        // Cache the instance
+        _cachedClassSchedulesViewModel = vm;
+        
+        return vm;
+    }
+
+    private EventDashboardViewModel CreateEventDashboardViewModel()
+    {
+        // Return cached instance if exists
+        if (_cachedEventDashboardViewModel != null)
+        {
+            return _cachedEventDashboardViewModel;
+        }
+
+        // Create new instance
+        var vm = new EventDashboardViewModel(_apiClient);
+        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        vm.NavigateBack = () => NavigateToDashboard();
+        
+        // Cache the instance
+        _cachedEventDashboardViewModel = vm;
+        
+        return vm;
+    }
+
+    private BuildingManagementViewModel CreateBuildingManagementViewModel()
+    {
+        if (_cachedBuildingManagementViewModel != null)
+        {
+            _cachedBuildingManagementViewModel.ShowLoadingState();
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(100); // Brief visual feedback
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _cachedBuildingManagementViewModel.IsLoading = false;
+                });
+            });
+            return _cachedBuildingManagementViewModel;
+        }
+
+        var vm = new BuildingManagementViewModel(_apiClient);
+        vm.NavigateTo = inner => CurrentContent = inner;
+        vm.NavigateBack = () => NavigateToDashboard();
+        _cachedBuildingManagementViewModel = vm;
         return vm;
     }
 
@@ -692,5 +1035,11 @@ public partial class AdminShellViewModel : ViewModelBase
         {
             System.Diagnostics.Debug.WriteLine($"Failed to store access token: {ex.Message}");
         }
+    }
+
+    public void Dispose()
+    {
+        _clock?.Stop();
+        _metricsApplyTimer?.Stop();
     }
 }

@@ -439,7 +439,7 @@
 				</Grid>
 
 				<!-- Quick Dev Login Badge (Remove in Production) -->
-				<!--<StackPanel HorizontalAlignment="Right" 
+				<StackPanel HorizontalAlignment="Right" 
 							VerticalAlignment="Bottom" 
 							Margin="0,0,-12,-12"
 							Spacing="4">
@@ -477,7 +477,7 @@
 									Cursor="Hand"/>
 						</StackPanel>
 					</Border>
-				</StackPanel> -->
+				</StackPanel>
 			</Grid>
 		</Border>
 	</Grid>

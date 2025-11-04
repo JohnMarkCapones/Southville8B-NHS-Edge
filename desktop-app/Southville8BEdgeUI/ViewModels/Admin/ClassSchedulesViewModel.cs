@@ -16,6 +16,7 @@ public partial class ClassSchedulesViewModel : ViewModelBase
 {
     private readonly IApiClient _apiClient;
     private readonly IToastService _toastService;
+    private bool _isInitialLoad = true;
 
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? NavigateBack { get; set; }
@@ -42,10 +43,9 @@ public partial class ClassSchedulesViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<RoomDto> _rooms = new();
     [ObservableProperty] private ObservableCollection<BuildingDto> _buildings = new();
 
-    // For create/edit dialog
+    // For edit dialog
     [ObservableProperty] private ScheduleViewModel? _selectedSchedule;
     [ObservableProperty] private bool _isEditDialogOpen;
-    [ObservableProperty] private bool _isCreateDialogOpen;
     [ObservableProperty] private bool _isAssignStudentsDialogOpen;
 
     // Statistics
@@ -58,9 +58,14 @@ public partial class ClassSchedulesViewModel : ViewModelBase
     // Loading states
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isSaving;
+    
+    // Debug properties
+    [ObservableProperty] private bool _isDataGridVisible;
+    [ObservableProperty] private bool _isEmptyStateVisible;
+    [ObservableProperty] private string _firstScheduleSubject = "Unknown";
+    [ObservableProperty] private string _firstScheduleTeacher = "Unknown";
 
-    // Form data for create/edit
-    [ObservableProperty] private CreateScheduleDto _createScheduleData = new();
+    // Form data for edit
     [ObservableProperty] private UpdateScheduleDto _updateScheduleData = new();
 
     // Day options for dropdown
@@ -86,8 +91,18 @@ public partial class ClassSchedulesViewModel : ViewModelBase
         Rooms = new ObservableCollection<RoomDto>();
         Buildings = new ObservableCollection<BuildingDto>();
 
-        // Load initial data
-        _ = LoadInitialDataAsync();
+        // Only load on first creation
+        if (_isInitialLoad)
+        {
+            _ = LoadInitialDataAsync();
+            _isInitialLoad = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task RefreshData()
+    {
+        await LoadInitialDataAsync();
     }
 
     private async Task LoadInitialDataAsync()
@@ -114,25 +129,63 @@ public partial class ClassSchedulesViewModel : ViewModelBase
                 schoolYear: SelectedSchoolYear,
                 semester: SelectedSemester
             );
-
+            
             if (response?.Data != null)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    Schedules.Clear();
-                    foreach (var schedule in response.Data)
+                    try
                     {
-                        try
+                        Schedules.Clear();
+                        foreach (var schedule in response.Data)
                         {
-                            Schedules.Add(new ScheduleViewModel(schedule));
+                            try
+                            {
+                                if (schedule != null)
+                                {
+                                    var scheduleVm = new ScheduleViewModel(schedule);
+                                    Schedules.Add(scheduleVm);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _toastService.Error($"Error creating schedule view model: {ex.Message}", "Error");
+                            }
                         }
-                        catch (Exception ex)
+                        ApplyFilters();
+                        UpdateStatistics();
+                        
+                        // Test with hardcoded data if no real data
+                        if (Schedules.Count == 0)
                         {
-                            _toastService.Error($"Error creating schedule view model: {ex.Message}", "Error");
+                            var testSchedule = new ScheduleDto
+                            {
+                                Id = "test-1",
+                                SubjectId = "test-subject",
+                                TeacherId = "test-teacher",
+                                SectionId = "test-section",
+                                RoomId = "test-room",
+                                DayOfWeek = "Monday",
+                                StartTime = "08:00",
+                                EndTime = "09:00",
+                                SchoolYear = "2024-2025",
+                                Semester = "1st",
+                                Subject = new SubjectDto { SubjectName = "Test Subject", ColorHex = "#FF0000" },
+                                Teacher = new TeacherDto { FirstName = "Test", LastName = "Teacher" },
+                                Section = new SectionDto { Name = "Test Section" },
+                                Room = new RoomDto { RoomNumber = "101" },
+                                Building = new BuildingDto { BuildingName = "Test Building" }
+                            };
+                            Schedules.Add(new ScheduleViewModel(testSchedule));
+                            ApplyFilters();
+                            UpdateStatistics();
                         }
                     }
-                    ApplyFilters();
-                    UpdateStatistics();
+                    catch (Exception ex)
+                    {
+                        _toastService.Error($"Error updating UI with schedule data: {ex.Message}", "Error");
+                        System.Diagnostics.Debug.WriteLine($"UI update error: {ex}");
+                    }
                 });
             }
             else
@@ -258,15 +311,20 @@ public partial class ClassSchedulesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenCreateDialog()
+    private async Task ClearFilters()
     {
-        CreateScheduleData = new CreateScheduleDto
-        {
-            SchoolYear = SelectedSchoolYear ?? "2024-2025",
-            Semester = SelectedSemester ?? "1st"
-        };
-        IsCreateDialogOpen = true;
+        // Reset all filter properties to defaults
+        SearchText = "";
+        SelectedSection = null;
+        SelectedTeacher = null;
+        SelectedDay = null;
+        SelectedSchoolYear = "2024-2025";
+        SelectedSemester = "1st";
+        
+        // Reload schedules without filters
+        await LoadSchedulesAsync();
     }
+
 
     [RelayCommand]
     private void OpenEditDialog(ScheduleViewModel schedule)
@@ -295,11 +353,7 @@ public partial class ClassSchedulesViewModel : ViewModelBase
         {
             IsSaving = true;
 
-            if (IsCreateDialogOpen)
-            {
-                await CreateScheduleAsync();
-            }
-            else if (IsEditDialogOpen && SelectedSchedule != null)
+            if (IsEditDialogOpen && SelectedSchedule != null)
             {
                 await UpdateScheduleAsync();
             }
@@ -311,47 +365,6 @@ public partial class ClassSchedulesViewModel : ViewModelBase
         finally
         {
             IsSaving = false;
-        }
-    }
-
-    private async Task CreateScheduleAsync()
-    {
-        try
-        {
-            // Step 1: Check for conflicts FIRST (blocking)
-            var conflictResult = await _apiClient.CheckScheduleConflictsAsync(CreateScheduleData);
-            
-            if (conflictResult?.HasConflicts == true)
-            {
-                // Show blocking dialog with conflict details
-                var conflictMessages = string.Join("\n", 
-                    conflictResult.Conflicts.Select(c => $"• {c.Type}: {c.Message}"));
-                
-                _toastService.Warning(
-                    $"Cannot create schedule due to conflicts:\n{conflictMessages}", 
-                    "Schedule Conflicts Detected");
-                
-                // Do NOT proceed with save
-                return;
-            }
-            
-            // Step 2: No conflicts - proceed with creation
-            var result = await _apiClient.CreateScheduleAsync(CreateScheduleData);
-            
-            if (result != null)
-            {
-                _toastService.Success("Schedule created successfully", "Success");
-                IsCreateDialogOpen = false;
-                await LoadSchedulesAsync();
-            }
-            else
-            {
-                _toastService.Error("Failed to create schedule", "Error");
-            }
-        }
-        catch (ApiException ex)
-        {
-            _toastService.Error(ex.Message, "Error Creating Schedule");
         }
     }
 
@@ -437,11 +450,9 @@ public partial class ClassSchedulesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CancelCreateEdit()
+    private void CancelEdit()
     {
-        IsCreateDialogOpen = false;
         IsEditDialogOpen = false;
-        CreateScheduleData = new CreateScheduleDto();
         UpdateScheduleData = new UpdateScheduleDto();
     }
 
@@ -451,55 +462,70 @@ public partial class ClassSchedulesViewModel : ViewModelBase
         IsAssignStudentsDialogOpen = false;
     }
 
-    [RelayCommand]
-    private async Task CheckConflictsAsync()
-    {
-        if (IsCreateDialogOpen)
-        {
-            var conflictResult = await _apiClient.CheckScheduleConflictsAsync(CreateScheduleData);
-            if (conflictResult?.HasConflicts == true)
-            {
-                var conflictMessages = string.Join("\n", conflictResult.Conflicts.Select(c => c.Message));
-                _toastService.Warning($"The following conflicts were detected:\n{conflictMessages}", "Schedule Conflicts");
-            }
-            else
-            {
-                _toastService.Success("No schedule conflicts detected", "No Conflicts");
-            }
-        }
-    }
 
     private void ApplyFilters()
     {
-        var filtered = Schedules.AsEnumerable();
-
-        if (!string.IsNullOrEmpty(SearchText))
+        try
         {
-            filtered = filtered.Where(s => 
-                s.SubjectName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.TeacherName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.SectionName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.RoomNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-            );
-        }
+            var filtered = Schedules.AsEnumerable();
 
-        FilteredSchedules.Clear();
-        foreach (var schedule in filtered)
-        {
-            FilteredSchedules.Add(schedule);
+            if (!string.IsNullOrEmpty(SearchText))
+            {
+                filtered = filtered.Where(s => 
+                    s?.SubjectName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                    s?.TeacherName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                    s?.SectionName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                    s?.RoomNumber?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true
+                );
+            }
+
+            FilteredSchedules.Clear();
+            foreach (var schedule in filtered)
+            {
+                if (schedule != null)
+                {
+                    FilteredSchedules.Add(schedule);
+                }
+            }
+            
+            // Update debug visibility properties
+            IsDataGridVisible = FilteredSchedules.Count > 0;
+            IsEmptyStateVisible = FilteredSchedules.Count == 0;
+            
+            // Update debug properties for first schedule
+            if (FilteredSchedules.Count > 0)
+            {
+                FirstScheduleSubject = FilteredSchedules[0]?.SubjectName ?? "Unknown";
+                FirstScheduleTeacher = FilteredSchedules[0]?.TeacherName ?? "Unknown";
+            }
+            else
+            {
+                FirstScheduleSubject = "No schedules";
+                FirstScheduleTeacher = "No schedules";
+            }
         }
-        
-        // Debug logging
-        _toastService.Info($"Applied filters: {Schedules.Count} total, {FilteredSchedules.Count} filtered", "Debug");
+        catch (Exception ex)
+        {
+            _toastService.Error($"Error applying filters: {ex.Message}", "Error");
+            System.Diagnostics.Debug.WriteLine($"ApplyFilters error: {ex}");
+        }
     }
 
     private void UpdateStatistics()
     {
-        TotalSchedules = Schedules.Count;
-        ActiveSchedules = Schedules.Count(s => s.Schedule.SchoolYear == SelectedSchoolYear);
-        SchedulesThisSemester = Schedules.Count(s => s.Schedule.SchoolYear == SelectedSchoolYear && s.Schedule.Semester == SelectedSemester);
-        ConflictCount = Schedules.Count(s => s.HasConflict);
-        TeacherCount = Schedules.Select(s => s.Schedule.TeacherId).Distinct().Count();
+        try
+        {
+            TotalSchedules = Schedules.Count;
+            ActiveSchedules = Schedules.Count(s => s?.Schedule?.SchoolYear == SelectedSchoolYear);
+            SchedulesThisSemester = Schedules.Count(s => s?.Schedule?.SchoolYear == SelectedSchoolYear && s?.Schedule?.Semester == SelectedSemester);
+            ConflictCount = Schedules.Count(s => s?.HasConflict == true);
+            TeacherCount = Schedules.Where(s => s?.Schedule?.TeacherId != null).Select(s => s.Schedule.TeacherId).Distinct().Count();
+        }
+        catch (Exception ex)
+        {
+            _toastService.Error($"Error updating statistics: {ex.Message}", "Error");
+            System.Diagnostics.Debug.WriteLine($"UpdateStatistics error: {ex}");
+        }
     }
 
     partial void OnSearchTextChanged(string value)

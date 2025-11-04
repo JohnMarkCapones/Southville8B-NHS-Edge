@@ -35,6 +35,7 @@ import { CreateStudentRequestDto } from './dto/create-student.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import { ImportStudentsCsvDto } from './dto/import-students-csv.dto';
+import { ImportTeachersCsvDto } from './dto/import-teachers-csv.dto';
 import {
   UpdateUserStatusDto,
   SuspendUserDto,
@@ -119,6 +120,18 @@ export class UsersController {
     return this.usersService.importStudentsFromCsv(importDto, user.id);
   }
 
+  @Post('import-teachers-csv')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Import teachers from CSV (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Teachers imported successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid CSV data' })
+  async importTeachersCsv(
+    @Body() importDto: ImportTeachersCsvDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    return this.usersService.importTeachersFromCsv(importDto, user.id);
+  }
+
   @Get()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Get users with pagination and filtering' })
@@ -193,6 +206,41 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getCurrentUser(@AuthUser() user: SupabaseUser) {
     return this.usersService.findOne(user.id);
+  }
+
+  @Post('me/record-login')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a daily login for current user',
+    description:
+      'Records that the current user logged in today. Safe to call multiple times per day (idempotent).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login recorded successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async recordLogin(@AuthUser() user: SupabaseUser) {
+    await this.usersService.recordLogin(user.id);
+    return { success: true };
+  }
+
+  @Get('me/streak')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get current user login streak count',
+    description:
+      'Returns the number of consecutive days the user has logged in. Streak resets to 0 if a day is missed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login streak retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getLoginStreak(@AuthUser() user: SupabaseUser) {
+    const streak = await this.usersService.getLoginStreak(user.id);
+    return { streak };
   }
 
   @Get(':id')

@@ -7,13 +7,29 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SupabaseUser } from './interfaces/supabase-user.interface';
 import { LoginDto, TokenVerifyDto } from './dto/login.dto';
 import { SessionManagementService } from '../session-management/session-management.service';
+import { SupabaseAuthGuard } from './supabase-auth.guard';
+import { AuthUser } from './auth-user.decorator';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { UserRole } from '../users/dto/create-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AdminChangePasswordDto } from './dto/admin-change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { UsersService } from '../users/users.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -21,6 +37,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly sessionManagementService: SessionManagementService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Post('login')
@@ -96,6 +113,12 @@ export class AuthController {
         request.headers['user-agent'] || 'unknown',
         clientIp,
       );
+
+      // Record daily login for streak tracking (non-blocking)
+      this.usersService.recordLogin(user.id).catch((error) => {
+        // Log error but don't fail login if streak recording fails
+        console.error('Failed to record login for streak tracking:', error);
+      });
 
       return {
         success: true,
@@ -186,5 +209,137 @@ export class AuthController {
     } catch (error) {
       throw error; // Let NestJS handle the error response
     }
+  }
+
+  @Post('reset-password')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Reset user password to default (Admin only)',
+    description:
+      'Resets password to birthday-based default for students/teachers, random for admins',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        temporaryPassword: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+    @AuthUser() admin: any,
+  ): Promise<{ message: string; temporaryPassword?: string }> {
+    return this.authService.resetPasswordToDefault(
+      resetPasswordDto.userId,
+      admin.id,
+    );
+  }
+
+  @Post('change-password')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Change own password',
+    description: 'User changes their own password (requires current password)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized or incorrect current password',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @AuthUser() user: any,
+  ): Promise<{ message: string }> {
+    return this.authService.changePassword(
+      user.id,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
+  }
+
+  @Post('admin-change-password')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Admin changes any user password',
+    description:
+      'Admin can change any user password without knowing current password',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async adminChangePassword(
+    @Body() adminChangePasswordDto: AdminChangePasswordDto,
+    @AuthUser() admin: any,
+  ): Promise<{ message: string }> {
+    return this.authService.adminChangePassword(
+      adminChangePasswordDto.userId,
+      adminChangePasswordDto.newPassword,
+      admin.id,
+    );
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Send password reset email to admin',
+    description:
+      'Sends a password reset magic link to the admin email address via Supabase',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'If the email is registered as an admin, a password reset link has been sent',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid email format',
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.sendPasswordResetEmail(forgotPasswordDto.email);
   }
 }

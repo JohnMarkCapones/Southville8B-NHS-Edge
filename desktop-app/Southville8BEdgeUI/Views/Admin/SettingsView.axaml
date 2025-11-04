@@ -106,47 +106,138 @@
                     <TextBlock Text="Configure your application preferences and system settings" Classes="page-subtitle"/>
                 </StackPanel>
 
-                <!-- General Settings -->
+                <!-- School Information -->
                 <Border Classes="settings-card">
                     <StackPanel Spacing="16">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <ic:FluentIcon Icon="Settings" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="General Settings" Classes="section-title"/>
-                        </StackPanel>
-
-                        <StackPanel Spacing="12">
-                            <CheckBox Content="Dark Mode" IsChecked="{Binding DarkMode}"/>
-                            <CheckBox Content="Auto Save" IsChecked="{Binding AutoSave}"/>
+                            <ic:FluentIcon Icon="Building" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="School Information" Classes="section-title"/>
                         </StackPanel>
 
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Language" Classes="field-label"/>
-                            <ComboBox ItemsSource="{Binding AvailableLanguages}" SelectedItem="{Binding SelectedLanguage}" HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="School Name" Classes="field-label"/>
+                            <TextBox Text="{Binding SchoolName}" HorizontalAlignment="Stretch"/>
                         </StackPanel>
 
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Time Zone" Classes="field-label"/>
-                            <ComboBox ItemsSource="{Binding AvailableTimeZones}" SelectedItem="{Binding SelectedTimeZone}" HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="Current School Year" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding SchoolYears}" SelectedItem="{Binding CurrentSchoolYear}" HorizontalAlignment="Stretch"/>
                         </StackPanel>
 
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Session Timeout (minutes)" Classes="field-label"/>
-                            <NumericUpDown Value="{Binding SessionTimeout}" Minimum="5" Maximum="120" Increment="5"/>
+                            <TextBlock Text="Current Semester" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding Semesters}" SelectedItem="{Binding CurrentSemester}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="School Theme Color" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding SchoolThemes}" SelectedItem="{Binding SchoolTheme}" HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- Notification Settings -->
+                <!-- Display Preferences -->
+                <Border Classes="settings-card">
+                    <StackPanel Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Table" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Display Preferences" Classes="section-title"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Students per page" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding StudentsPerPageOptions}" SelectedItem="{Binding StudentsPerPage}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Date Format" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding DateFormats}" SelectedItem="{Binding DateFormat}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12">
+                            <CheckBox Content="Show student photos in lists" IsChecked="{Binding ShowStudentPhotos}"/>
+                            <CheckBox Content="Show detailed information by default" IsChecked="{Binding ShowDetailedInfo}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Notifications &amp; Alerts -->
                 <Border Classes="settings-card">
                     <StackPanel Spacing="16">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                             <ic:FluentIcon Icon="Alert" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Notification Settings" Classes="section-title"/>
+                            <TextBlock Text="Notifications &amp; Alerts" Classes="section-title"/>
                         </StackPanel>
+
                         <StackPanel Spacing="12">
-                            <CheckBox Content="Enable Notifications" IsChecked="{Binding Notifications}"/>
-                            <CheckBox Content="Email Notifications" IsChecked="{Binding EmailNotifications}"/>
-                            <CheckBox Content="SMS Notifications" IsChecked="{Binding SmsNotifications}"/>
+                            <CheckBox Content="Email notifications for new students" IsChecked="{Binding EmailNewStudents}"/>
+                            <CheckBox Content="Email notifications for grade submissions" IsChecked="{Binding EmailGradeSubmissions}"/>
+                            <CheckBox Content="Show popup alerts for important events" IsChecked="{Binding ShowPopupAlerts}"/>
+                            <CheckBox Content="Notification sound" IsChecked="{Binding NotificationSound}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Data Management -->
+                <Border Classes="settings-card">
+                    <StackPanel Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Database" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Data Management" Classes="section-title"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12">
+                            <CheckBox Content="Auto-save when creating new records" IsChecked="{Binding AutoSaveRecords}"/>
+                            <CheckBox Content="Ask before deleting students" IsChecked="{Binding ConfirmDeleteStudents}"/>
+                            <CheckBox Content="Ask before deleting teachers" IsChecked="{Binding ConfirmDeleteTeachers}"/>
+                            <CheckBox Content="Show confirmation messages" IsChecked="{Binding ShowConfirmationMessages}"/>
+                            <CheckBox Content="Remember last viewed page" IsChecked="{Binding RememberLastPage}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Security &amp; Access -->
+                <Border Classes="settings-card">
+                    <StackPanel Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Shield" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Security &amp; Access" Classes="section-title"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Session timeout (minutes)" Classes="field-label"/>
+                            <NumericUpDown Value="{Binding SessionTimeoutMinutes}" Minimum="5" Maximum="120" Increment="5"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12">
+                            <CheckBox Content="Require password for sensitive actions" IsChecked="{Binding RequirePasswordForSensitiveActions}"/>
+                            <CheckBox Content="Log user activities" IsChecked="{Binding LogUserActivities}"/>
+                            <CheckBox Content="Backup data automatically" IsChecked="{Binding AutoBackupData}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Reports &amp; Export -->
+                <Border Classes="settings-card">
+                    <StackPanel Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Document" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Reports &amp; Export" Classes="section-title"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Default report format" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding ReportFormats}" SelectedItem="{Binding DefaultReportFormat}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Export data location" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding ExportLocations}" SelectedItem="{Binding ExportDataLocation}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12">
+                            <CheckBox Content="Include school logo in reports" IsChecked="{Binding IncludeSchoolLogoInReports}"/>
+                            <CheckBox Content="Auto-generate monthly reports" IsChecked="{Binding AutoGenerateMonthlyReports}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

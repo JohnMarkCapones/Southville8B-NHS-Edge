@@ -16,6 +16,15 @@ public partial class AlertsViewModel : ViewModelBase
 {
     private readonly IApiClient? _apiClient;
     [ObservableProperty] private ObservableCollection<AlertItemViewModel> _alerts = new();
+    [ObservableProperty] private bool _isSaving;
+    [ObservableProperty] private string _errorMessage = string.Empty;
+
+    public bool IsNotSaving => !IsSaving;
+
+    partial void OnIsSavingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotSaving));
+    }
 
     // Form fields
     [ObservableProperty] private string _newType = "Weather";
@@ -34,7 +43,7 @@ public partial class AlertsViewModel : ViewModelBase
     [ObservableProperty] private TimeSpan? _newExpiresTime = new(23, 59, 0);
 
     // Reference lists
-    public string[] AlertTypes { get; } = new[] { "Weather", "Class Suspension", "Emergency", "System", "Announcement" };
+    public string[] AlertTypes { get; } = new[] { "Weather", "Class Suspension", "Emergency" };
     public string[] Priorities { get; } = new[] { "High", "Medium", "Low" };
     public string[] TargetScopes { get; } = new[] { "Whole School", "Grade Level", "Section" };
 
@@ -159,58 +168,65 @@ public partial class AlertsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async void CreateAlert()
+    private async Task CreateAlert()
     {
+        // reset UI state
+        ErrorMessage = string.Empty;
         var expiresDate = NewExpiresDate?.Date ?? DateTimeOffset.Now.Date;
         var expiresTime = NewExpiresTime ?? new TimeSpan(23, 59, 0);
         var expiresAt = expiresDate.Add(expiresTime);
 
-        var alert = new AlertItemViewModel
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            Type = string.IsNullOrWhiteSpace(NewType) ? "Announcement" : NewType.Trim(),
-            Title = NewTitle?.Trim() ?? "",
-            Message = NewMessage?.Trim() ?? "",
-            ExtraLink = NewExtraLink?.Trim() ?? "",
-            CreatedAt = DateTime.Now,
-            ExpiresAt = expiresAt,
-            Priority = string.IsNullOrWhiteSpace(NewPriority) ? "Low" : NewPriority.Trim(),
-            TargetAudience = ToTargetAudience(NewTargetScope, NewGradeLevel, NewSection),
-            Parent = this
-        };
+        var title = NewTitle?.Trim() ?? "";
+        var message = NewMessage?.Trim() ?? "";
 
         // Basic validation
-        if (string.IsNullOrWhiteSpace(alert.Title) || string.IsNullOrWhiteSpace(alert.Message))
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
             return;
 
-        if (_apiClient != null)
+        if (_apiClient == null)
+        {
+            ErrorMessage = "API client not configured. Alert was not published.";
+            return;
+        }
+
+        IsSaving = true;
+        try
         {
             var dto = new CreateAlertDto
             {
                 Type = MapCreateType(NewType),
-                Title = alert.Title,
-                Message = alert.Message,
+                Title = title,
+                Message = message,
                 RecipientId = NewTargetScope == "Whole School" ? null : (string.IsNullOrWhiteSpace(NewSection) ? null : NewSection)
             };
+
             var created = await _apiClient.CreateAlertAsync(dto);
             if (created != null)
             {
-                // Refresh from server to ensure we reflect server-side defaults (e.g., expiresAt)
                 await LoadAlertsAsync();
                 ClearForm();
-                return;
+                UpdateComputed();
+            }
+            else
+            {
+                ErrorMessage = "Failed to publish alert. Please try again.";
             }
         }
-        Alerts.Insert(0, alert);
-        UpdateComputed();
-        ClearForm();
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
     private static string MapCreateType(string uiType)
         => uiType switch { "Weather" => "warning", "Emergency" => "error", "System" => "system", _ => "info" };
 
     [RelayCommand]
-    private async void DeleteAlert(AlertItemViewModel alert)
+    private async Task DeleteAlert(AlertItemViewModel alert)
     {
         if (_apiClient != null)
             await _apiClient.DeleteAlertAsync(alert.Id);
@@ -219,7 +235,7 @@ public partial class AlertsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async void ExpireAlert(AlertItemViewModel alert)
+    private async Task ExpireAlert(AlertItemViewModel alert)
     {
         alert.ExpiresAt = DateTime.Now;
         if (_apiClient != null)
@@ -253,7 +269,7 @@ public partial class AlertsViewModel : ViewModelBase
 
     // Optional: call this from a timer to auto-refresh Active/Expired UI if desired
     [RelayCommand]
-    private async void RefreshComputed()
+    private async Task RefreshComputed()
     {
         UpdateComputed();
         if (_apiClient != null) await LoadAlertsAsync();

@@ -68,7 +68,7 @@
     <ResourceDictionary x:Key="Dark">
       <!-- surfaces -->
       <SolidColorBrush x:Key="PageBackgroundBrush">#16181D</SolidColorBrush>
-      <SolidColorBrush x:Key="CardBackgroundBrush">#1F2228</SolidColorBrush>
+      <SolidColorBrush x:Key="CardBackgroundBrush">#0F0F0F</SolidColorBrush>
       <SolidColorBrush x:Key="SidebarBackgroundBrush">#1C1F25</SolidColorBrush>
       <SolidColorBrush x:Key="BorderBrush">#2C3138</SolidColorBrush>
 

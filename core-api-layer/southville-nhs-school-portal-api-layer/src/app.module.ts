@@ -41,6 +41,7 @@ import { TeacherActivityModule } from './teacher-activity/teacher-activity.modul
 // import { QuizModule } from './quiz/quiz.module';
 import { NewsModule } from './news/news.module';
 import { GalleryModule } from './gallery/gallery.module';
+import { SearchModule } from './search/search.module';
 import { AcademicYearsModule } from './academic-years/academic-years.module';
 import { TopPerformersModule } from './top-performers/top-performers.module';
 import { StudentActivitiesModule } from './student-activities/student-activities.module';
@@ -98,6 +99,7 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     NewsModule,
     GalleryModule,
     SubjectsModule,
+    SearchModule,
     AcademicYearsModule,
     TopPerformersModule,
     StudentActivitiesModule,

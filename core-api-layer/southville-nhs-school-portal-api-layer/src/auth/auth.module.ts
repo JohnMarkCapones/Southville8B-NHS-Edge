@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { AuthService } from './auth.service';
@@ -9,12 +9,14 @@ import { RoleCacheService } from './services/role-cache.service';
 import { AuthController } from './auth.controller';
 import { PbacModule } from './pbac.module';
 import { SessionManagementService } from '../session-management/session-management.service';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     ConfigModule,
     SupabaseModule, // Import SupabaseModule to access SupabaseService
     PbacModule, // Import PBAC module for domain-specific permissions
+    forwardRef(() => UsersModule), // Avoid circular dependency with UsersModule
   ],
   providers: [
     AuthService,

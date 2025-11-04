@@ -274,7 +274,7 @@
                   <TextBlock Text="ACADEMIC YEAR" Classes="section-header" Margin="0,0,0,8"/>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Ellipse Fill="#DC5B5B" Width="10" Height="10" VerticalAlignment="Center"/>
-                    <TextBlock Text="2024-2025" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding AcademicYear}" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
@@ -303,15 +303,12 @@
                       <TextBlock Text="Building Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  <!-- Class Schedules - HIDDEN FOR NOW -->
-                  <!--
                   <Button Classes="nav-item" Command="{Binding NavigateToClassSchedulesCommand}" Classes.active="{Binding IsClassSchedulesActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                      <TextBlock Text="📅" FontSize="16" VerticalAlignment="Center"/>
+                      <ic:FluentIcon Icon="Calendar" IconSize="Size16"/>
                       <TextBlock Text="Class Schedules" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  -->
 
                   <TextBlock Text="CONTENT" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToEventsDashboardCommand}" Classes.active="{Binding IsEventsDashboardActive}">
@@ -320,15 +317,12 @@
                       <TextBlock Text="Events Dashboard" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  <!-- E-Library Management - HIDDEN FOR NOW -->
-                  <!--
                   <Button Classes="nav-item" Command="{Binding NavigateToELibraryCommand}" Classes.active="{Binding IsELibraryActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
                       <TextBlock Text="E-Library Management" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  -->
 
                   <TextBlock Text="COMMUNICATION" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToAlertsCommand}" Classes.active="{Binding IsAlertsActive}">
@@ -337,15 +331,12 @@
                       <TextBlock Text="Alerts" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  <!-- Chat - HIDDEN FOR NOW -->
-                  <!--
                   <Button Classes="nav-item" Command="{Binding NavigateToChatCommand}" Classes.active="{Binding IsChatActive}">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
                       <TextBlock Text="Chat" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  -->
                 </StackPanel>
               </ScrollViewer>
             </DockPanel>
@@ -678,8 +669,19 @@
                                                                 </StackPanel>
                                                 <StackPanel IsVisible="{Binding CurrentEvent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
                                                     <TextBlock Text="{Binding CurrentEvent.Title}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <TextBlock Text="{Binding CurrentEvent.Time}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                    <Button Content="Mark as Complete" Command="{Binding MarkCurrentEventCompletedCommand}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="{Binding CurrentEventTimeFormatted}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <Button Content="Mark as Complete" 
+                                                            Command="{Binding MarkCurrentEventCompletedCommand}" 
+                                                            HorizontalAlignment="Left" 
+                                                            Margin="0,6,0,0"
+                                                            Background="{DynamicResource SuccessBrush}"
+                                                            Foreground="White"
+                                                            BorderThickness="0"
+                                                            Padding="12,6"
+                                                            CornerRadius="6"
+                                                            FontSize="11"
+                                                            FontWeight="SemiBold"
+                                                            Cursor="Hand"/>
                                                 </StackPanel>
                                                 <TextBlock Text="No event currently" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding CurrentEvent, Converter={x:Static converters:ObjectConverters.IsNull}}"/>
                                                             </StackPanel>
@@ -710,7 +712,7 @@
                                                            FontWeight="SemiBold"
                                                            HorizontalAlignment="Center"
                                                            IsVisible="{Binding NextEvent, Converter={x:Static converters:ObjectConverters.IsNotNull}}"/>
-                                                <TextBlock Text="{Binding NextEvent.Time}"
+                                                <TextBlock Text="{Binding NextEventTimeFormatted}"
                                                            FontSize="10"
                                                            Foreground="{DynamicResource TextMutedBrush}"
                                                            HorizontalAlignment="Center"

@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Modal, Dimensions } from 'react-native';
+import { View, StyleSheet, Modal } from 'react-native';
 import { CuteLoading } from './cute-loading';
-
-const { height: screenHeight } = Dimensions.get('window');
 
 interface LoadingOverlayProps {
   visible: boolean;

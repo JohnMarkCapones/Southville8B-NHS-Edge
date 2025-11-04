@@ -452,13 +452,18 @@ public class MockApiClient : IApiClient
     public Task<UserProfile?> GetUserProfileAsync(string userId) => Task.FromResult<UserProfile?>(null);
     public Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken) => Task.FromResult<UserProfile?>(null);
     public Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync() => Task.FromResult<AdminDashboardMetrics?>(null);
-    public Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null) => Task.FromResult<UserListResponse?>(null);
+    public Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25) => Task.FromResult<UserListResponse?>(null);
     public Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<bool> UpdateUserStatusAsync(string userId, string status) => Task.FromResult(false);
     public Task<bool> DeleteUserAsync(string userId) => Task.FromResult(false);
     public Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
+    public Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
+    public Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId) => Task.FromResult<ResetPasswordResponseDto?>(null);
+    public Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword) => Task.FromResult<ChangePasswordResponseDto?>(null);
+    public Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword) => Task.FromResult<AdminChangePasswordResponseDto?>(null);
+    public Task<ForgotPasswordResponseDto?> SendPasswordResetEmailAsync(string email) => Task.FromResult<ForgotPasswordResponseDto?>(null);
     public Task<SectionListResponse?> GetSectionsAsync(int limit = 100) => Task.FromResult<SectionListResponse?>(null);
     public Task<BuildingListResponse?> GetBuildingsAsync(int limit = 100) => Task.FromResult<BuildingListResponse?>(null);
     public Task<BuildingDto?> GetBuildingByIdAsync(string id) => Task.FromResult<BuildingDto?>(null);
@@ -497,6 +502,7 @@ public class MockApiClient : IApiClient
     public void SetAccessToken(string accessToken) { }
     public string? GetCurrentUserId() => "mock-user-id";
     public string? GetCachedToken() => "mock-token";
+    public void InvalidateCachePrefix(string prefix) { }
 
     // Alerts API (stubs for design-time)
     public Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50) => Task.FromResult<AlertListResponse?>(new AlertListResponse { Data = new List<AlertDto>() });
@@ -530,4 +536,56 @@ public class MockApiClient : IApiClient
     public Task<List<UserDto>?> GetTeachersAsync() => Task.FromResult<List<UserDto>?>(null);
     public Task<List<RoomDto>?> GetRoomsAsync() => Task.FromResult<List<RoomDto>?>(null);
     public Task<List<BuildingDto>?> GetBuildingsAsync() => Task.FromResult<List<BuildingDto>?>(null);
+    
+    // Announcement Management Methods (stubs for design-time)
+    public Task<AnnouncementListResponse?> GetAnnouncementsAsync(string? teacherId = null, string? sectionId = null, string? visibility = null, string? type = null, bool? includeExpired = null, int page = 1, int limit = 100) => Task.FromResult<AnnouncementListResponse?>(null);
+    public Task<AnnouncementDto?> GetAnnouncementByIdAsync(string id) => Task.FromResult<AnnouncementDto?>(null);
+    public Task<AnnouncementDto?> CreateAnnouncementAsync(CreateAnnouncementDto dto) => Task.FromResult<AnnouncementDto?>(null);
+    public Task<AnnouncementDto?> UpdateAnnouncementAsync(string id, UpdateAnnouncementDto dto) => Task.FromResult<AnnouncementDto?>(null);
+    public Task DeleteAnnouncementAsync(string id) => Task.CompletedTask;
+    public Task<AnnouncementStatsDto?> GetAnnouncementStatsAsync(string teacherId) => Task.FromResult<AnnouncementStatsDto?>(null);
+    public Task<List<SectionDto>?> GetMySectionsAsync() => Task.FromResult<List<SectionDto>?>(null);
+    public Task<DepartmentDto?> GetDepartmentAsync(string departmentId) => Task.FromResult<DepartmentDto?>(null);
+    public Task<SubjectDto?> GetSubjectAsync(string subjectId) => Task.FromResult<SubjectDto?>(null);
+    public Task<SectionDto?> GetSectionAsync(string sectionId) => Task.FromResult<SectionDto?>(null);
+    public Task<AcademicYearDto?> GetActiveAcademicYearAsync() => Task.FromResult<AcademicYearDto?>(null);
+    public Task<StudentDistributionDto?> GetStudentDistributionAsync() => Task.FromResult<StudentDistributionDto?>(new StudentDistributionDto
+    {
+        Total = 0,
+        Grades = new List<StudentDistributionGradeDto>
+        {
+            new StudentDistributionGradeDto{ Grade = "Grade 7", Count = 0 },
+            new StudentDistributionGradeDto{ Grade = "Grade 8", Count = 0 },
+            new StudentDistributionGradeDto{ Grade = "Grade 9", Count = 0 },
+            new StudentDistributionGradeDto{ Grade = "Grade 10", Count = 0 },
+        }
+    });
+}
+
+public class MockDialogService : IDialogService
+{
+    public Task<bool> ConfirmDeleteAsync(string title, string message)
+    {
+        return Task.FromResult(false);
+    }
+
+    public Task ShowInfoAsync(string title, System.Collections.Generic.Dictionary<string, string> details)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> ShowConfirmAsync(string title, string message, string confirmText = "OK", string cancelText = "Cancel")
+    {
+        return Task.FromResult(false);
+    }
+
+    public Task<string?> ShowInputDialogAsync(string title, string message, string placeholder = "", string initialValue = "")
+    {
+        return Task.FromResult<string?>(null);
+    }
+
+    public Task<string?> ShowChoiceDialogAsync(string title, string message, string option1Text, string option2Text)
+    {
+        return Task.FromResult<string?>(null);
+    }
 }

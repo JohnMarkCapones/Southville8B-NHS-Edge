@@ -16,6 +16,8 @@ public class SseService : ISseService
     private readonly IConfiguration _configuration;
     private CancellationTokenSource? _cancellationTokenSource;
     private bool _isConnected = false;
+    private DateTime _lastTeacherMetricsEmittedUtc = DateTime.MinValue;
+    private static readonly TimeSpan TeacherEmitInterval = TimeSpan.FromSeconds(30);
 
     public bool IsConnected => _isConnected;
     public event EventHandler<SidebarMetrics>? MetricsUpdated;
@@ -47,8 +49,6 @@ public class SseService : ISseService
 
             var fullUrl = $"{baseUrl}{endpoint}";
             
-            System.Diagnostics.Debug.WriteLine($"Starting SSE connection to: {fullUrl}");
-            
             using var response = await _httpClient.GetAsync(fullUrl, HttpCompletionOption.ResponseHeadersRead, _cancellationTokenSource.Token);
             
             if (!response.IsSuccessStatusCode)
@@ -58,7 +58,6 @@ public class SseService : ISseService
 
             _isConnected = true;
             OnConnectionStatusChanged("Connected");
-            System.Diagnostics.Debug.WriteLine("SSE connection established successfully");
 
             using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -68,8 +67,6 @@ public class SseService : ISseService
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
                 var line = await reader.ReadLineAsync();
-                
-                System.Diagnostics.Debug.WriteLine($"SSE received: {line ?? "(null)"}");
 
                 // Handle empty lines as SSE event separators
                 if (string.IsNullOrEmpty(line))
@@ -78,16 +75,27 @@ public class SseService : ISseService
                     if (dataBuffer.Length > 0)
                     {
                         var json = dataBuffer.ToString().Trim();
-                        System.Diagnostics.Debug.WriteLine($"Processing buffered SSE data: {json}");
                         
+                        // Ignore heartbeat/non-final frames if present
+                        if (json.Contains("\"heartbeat\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataBuffer.Clear();
+                            continue;
+                        }
+                        if (json.Contains("\"isFinal\":false", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataBuffer.Clear();
+                            continue;
+                        }
+
                         try
                         {
                             // Try to parse as SidebarMetrics first
                             var sidebarMetrics = JsonSerializer.Deserialize<SidebarMetrics>(json);
                             if (sidebarMetrics != null)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Parsed sidebar metrics: Events={sidebarMetrics.Events}, Teachers={sidebarMetrics.Teachers}, Students={sidebarMetrics.Students}, Sections={sidebarMetrics.Sections}");
                                 MetricsUpdated?.Invoke(this, sidebarMetrics);
+                                dataBuffer.Clear();
                                 continue;
                             }
                         }
@@ -102,8 +110,14 @@ public class SseService : ISseService
                             var teacherMetrics = JsonSerializer.Deserialize<TeacherSidebarMetrics>(json);
                             if (teacherMetrics != null)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Parsed teacher metrics: Classes={teacherMetrics.TotalClasses}, Assignments={teacherMetrics.PendingAssignments}, Students={teacherMetrics.TotalStudents}, Messages={teacherMetrics.UnreadMessages}");
-                                TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                var now = DateTime.UtcNow;
+                                if (now - _lastTeacherMetricsEmittedUtc >= TeacherEmitInterval)
+                                {
+                                    _lastTeacherMetricsEmittedUtc = now;
+                                    TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                }
+                                // Whether throttled or emitted, clear and continue
+                                dataBuffer.Clear();
                                 continue;
                             }
                         }
@@ -118,23 +132,18 @@ public class SseService : ISseService
                             var dashboardMetrics = JsonSerializer.Deserialize<AdminDashboardMetrics>(json);
                             if (dashboardMetrics != null)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Parsed dashboard metrics: Students={dashboardMetrics.TotalStudents}, Teachers={dashboardMetrics.ActiveTeachers}, Sections={dashboardMetrics.TotalSections}");
                                 DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
+                                dataBuffer.Clear();
                                 continue;
                             }
                         }
                         catch (JsonException ex)
                         {
                             System.Diagnostics.Debug.WriteLine($"Error parsing SSE data: {ex.Message}");
-                            System.Diagnostics.Debug.WriteLine($"Raw JSON: {json}");
                         }
                         
                         // Clear the buffer after processing
                         dataBuffer.Clear();
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("SSE separator line received (no buffered data)");
                     }
                     continue;
                 }
@@ -150,25 +159,17 @@ public class SseService : ISseService
                         dataBuffer.AppendLine();
                     }
                     dataBuffer.Append(dataContent);
-                    
-                    System.Diagnostics.Debug.WriteLine($"Accumulated SSE data: {dataContent}");
                 }
                 // Handle other SSE event types
                 else if (line.StartsWith("event: "))
                 {
                     var eventType = line.Substring(7).Trim();
-                    System.Diagnostics.Debug.WriteLine($"SSE event type: {eventType}");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"SSE unknown line format: {line}");
                 }
             }
         }
         catch (OperationCanceledException)
         {
             // Expected when stopping
-            System.Diagnostics.Debug.WriteLine("SSE connection cancelled");
         }
         catch (Exception ex)
         {
@@ -179,13 +180,11 @@ public class SseService : ISseService
         {
             _isConnected = false;
             OnConnectionStatusChanged("Disconnected");
-            System.Diagnostics.Debug.WriteLine("SSE connection closed");
         }
     }
 
     public async Task StopAsync()
     {
-        System.Diagnostics.Debug.WriteLine("Stopping SSE connection...");
         _cancellationTokenSource?.Cancel();
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = null;

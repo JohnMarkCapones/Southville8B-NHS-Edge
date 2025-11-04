@@ -118,6 +118,7 @@ public partial class BuildingCardViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            // Log the error for debugging purposes
             System.Diagnostics.Debug.WriteLine($"Error loading floors: {ex.Message}");
         }
         finally
@@ -145,6 +146,7 @@ public partial class BuildingCardViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            // Log the error for debugging purposes
             System.Diagnostics.Debug.WriteLine($"Error deleting building: {ex.Message}");
         }
     }

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, ActivityIndicator, TouchableOpacity, Text, Image, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -20,10 +20,11 @@ import { ReusableHeader } from '@/components/ui/reusable-header';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/contexts/theme-context';
-import { useAuthSession } from '@/hooks/use-auth-session';
 import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { useWeeklySchedule, formatTime } from '@/hooks/use-weekly-schedule';
 import { Schedule, DayOfWeek } from '@/lib/types/schedule';
+import { getSubjectAsset } from '@/lib/subject-images';
+import { useNetworkRefetch } from '@/hooks/use-network-refetch';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -36,9 +37,10 @@ interface CalendarDay {
 }
 
 export default function ScheduleScreen() {
-  const router = useRouter();
   const { isDark } = useTheme();
   const colors = Colors[isDark ? 'dark' : 'light'];
+  const { query: initialQuery } = useLocalSearchParams<{ query?: string }>();
+  const [searchFilter, setSearchFilter] = useState<string>((initialQuery || '').toString());
 
   // State management
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -48,7 +50,6 @@ export default function ScheduleScreen() {
 
   // Animation values
   const translateY = useSharedValue(0);
-  const cardScale = useSharedValue(1);
 
   // Fetch weekly schedule data
   const { weeklySchedule, loading, error, hasStudentProfile, refetch: refetchSchedule } = useWeeklySchedule();
@@ -83,12 +84,25 @@ export default function ScheduleScreen() {
     }
   }, [error, handleAuthError]);
 
+  // Auto-refetch data when network connectivity is restored
+  useNetworkRefetch([refetchSchedule]);
+
   // Generate calendar week data
   const calendarWeek = useMemo(() => {
     const today = new Date();
     const currentDay = today.getDay();
     const monday = new Date(today);
-    monday.setDate(today.getDate() - currentDay + 1);
+    
+    // Fix: Ensure today is always included in the week view
+    // If today is Sunday (0), go back 6 days to get Monday of current week
+    // Otherwise, use standard calculation: go back (currentDay - 1) days
+    if (currentDay === 0) {
+      // Today is Sunday - go back 6 days to get Monday of current week
+      monday.setDate(today.getDate() - 6);
+    } else {
+      // Existing logic for Mon-Sat
+      monday.setDate(today.getDate() - currentDay + 1);
+    }
     
     const week: CalendarDay[] = [];
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -118,7 +132,7 @@ export default function ScheduleScreen() {
   }, [selectedDate]);
 
   // Flatten and filter schedules for selected date
-  const filteredSchedules = useMemo(() => {
+  const filteredSchedulesBase = useMemo(() => {
     const allSchedules: Schedule[] = [];
     
     // Flatten all schedules from weeklySchedule
@@ -134,15 +148,32 @@ export default function ScheduleScreen() {
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [weeklySchedule, selectedDate]);
 
-  // Get subject image based on subject name
+  // Apply optional search filter from query param (subject, teacher, room, day)
+  const filteredSchedules = useMemo(() => {
+    const term = (searchFilter || '').trim().toLowerCase();
+    if (!term) return filteredSchedulesBase;
+
+    return filteredSchedulesBase.filter((s) => {
+      const subject = s.subject?.subject_name?.toLowerCase() || '';
+      const teacherFirst = s.teacher?.first_name?.toLowerCase() || '';
+      const teacherLast = s.teacher?.last_name?.toLowerCase() || '';
+      const teacherFull = `${teacherFirst} ${teacherLast}`.trim();
+      const room = s.room?.room_number?.toLowerCase() || '';
+      const day = s.dayOfWeek?.toLowerCase() || '';
+      return (
+        subject.includes(term) ||
+        teacherFirst.includes(term) ||
+        teacherLast.includes(term) ||
+        teacherFull.includes(term) ||
+        room.includes(term) ||
+        day.includes(term)
+      );
+    });
+  }, [filteredSchedulesBase, searchFilter]);
+
+  // Get subject image using centralized mapper
   const getSubjectImage = useCallback((subjectName: string) => {
-    const name = subjectName.toLowerCase();
-    if (name.includes('english')) return require('@/assets/subjects/English.png');
-    if (name.includes('math')) return require('@/assets/subjects/MATH.png');
-    if (name.includes('filipino')) return require('@/assets/subjects/Filipino.png');
-    if (name.includes('science')) return require('@/assets/subjects/Science.png');
-    if (name.includes('esp')) return require('@/assets/subjects/ESP.png');
-    return require('@/assets/subjects/Frame350.png'); // Default book icon
+    return getSubjectAsset(subjectName);
   }, []);
 
   // Subject-specific colors
@@ -170,6 +201,31 @@ export default function ScheduleScreen() {
     }
   }, []);
 
+  // Get subject-specific academic icon
+  const getSubjectIcon = useCallback((subjectName: string): string => {
+    const subject = subjectName.toLowerCase();
+    
+    if (subject.includes('math') || subject.includes('mathematics')) {
+      return 'calculator-outline';
+    } else if (subject.includes('science') || subject.includes('biology') || subject.includes('chemistry') || subject.includes('physics')) {
+      return 'flask-outline';
+    } else if (subject.includes('english') || subject.includes('literature')) {
+      return 'book-outline';
+    } else if (subject.includes('filipino') || subject.includes('tagalog')) {
+      return 'language-outline';
+    } else if (subject.includes('pe') || subject.includes('physical education') || subject.includes('sports')) {
+      return 'fitness-outline';
+    } else if (subject.includes('art') || subject.includes('music') || subject.includes('drawing')) {
+      return 'color-palette-outline';
+    } else if (subject.includes('history') || subject.includes('social studies')) {
+      return 'globe-outline';
+    } else if (subject.includes('esp') || subject.includes('values') || subject.includes('religion')) {
+      return 'heart-outline';
+    } else {
+      return 'school-outline';
+    }
+  }, []);
+
   // Handle calendar day selection
   const handleDaySelect = useCallback((day: CalendarDay) => {
     setSelectedDate(day.fullDate);
@@ -182,11 +238,19 @@ export default function ScheduleScreen() {
     setExpandedCardId(expandedCardId === cardId ? null : cardId);
   }, [expandedCardId]);
 
+  // Auto-expand first match when a search filter is present
+  useEffect(() => {
+    const term = (searchFilter || '').trim();
+    if (term && filteredSchedules.length > 0) {
+      setExpandedCardId(filteredSchedules[0].id);
+    }
+  }, [searchFilter, filteredSchedules]);
+
   // Pan gesture handler
   const onGestureEvent = useCallback((event: any) => {
     'worklet';
     translateY.value = event.nativeEvent.translationY;
-  }, []);
+  }, [translateY]);
 
   const onGestureEnd = useCallback((event: any) => {
     'worklet';
@@ -217,7 +281,7 @@ export default function ScheduleScreen() {
       // Small movement - just reset
       translateY.value = withSpring(0);
     }
-  }, [currentCardIndex, filteredSchedules.length]);
+  }, [currentCardIndex, filteredSchedules.length, translateY]);
 
   // Individual animated styles for each card position - ENHANCED VISIBILITY
   const card0AnimatedStyle = useAnimatedStyle(() => {
@@ -364,6 +428,34 @@ export default function ScheduleScreen() {
             />
           }
         >
+          {/* Filter banner */}
+          {searchFilter?.trim() ? (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+              backgroundColor: isDark ? '#2A2A2A' : '#F2F2F7',
+              borderWidth: 1,
+              borderColor: isDark ? '#3A3A3A' : 'rgba(0,0,0,0.06)',
+              marginBottom: 12,
+            }}>
+              <Text style={{ color: colors.icon }}>
+                Filtered by: &quot;{searchFilter}&quot; ({filteredSchedules.length} results)
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchFilter('');
+                  setExpandedCardId(null);
+                }}
+                style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: isDark ? '#404040' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? '#505050' : 'rgba(0,0,0,0.08)' }}
+              >
+                <Text style={{ color: colors.text }}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {/* Calendar Week Strip */}
           <View style={styles.calendarSection}>
             <Text style={styles.monthYear}>{currentMonthYear}</Text>
@@ -439,19 +531,6 @@ export default function ScheduleScreen() {
                               />
                             </View>
                             
-                            {/* Action Icons */}
-                            <View style={styles.actionIcons}>
-                              <TouchableOpacity style={[styles.actionIcon, { 
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
-                              }]}>
-                                <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
-                              </TouchableOpacity>
-                              <TouchableOpacity style={[styles.actionIcon, { 
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.2)' 
-                              }]}>
-                                <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-                              </TouchableOpacity>
-                            </View>
                           </View>
 
                           {/* Center Content */}
@@ -491,11 +570,14 @@ export default function ScheduleScreen() {
                               </Text>
                             </TouchableOpacity>
 
-                            {/* Academic Illustration */}
+                            {/* Academic Icon */}
                             <View style={styles.academicIllustration}>
-                              <Ionicons name="book-outline" size={24} color="#FFFFFF" style={styles.illustrationIcon} />
-                              <Ionicons name="globe-outline" size={20} color="#FFFFFF" style={styles.illustrationIcon} />
-                              <Ionicons name="pencil-outline" size={18} color="#FFFFFF" style={styles.illustrationIcon} />
+                              <Ionicons 
+                                name={getSubjectIcon(schedule.subject?.subject_name || '') as any} 
+                                size={24} 
+                                color="#FFFFFF" 
+                                style={styles.illustrationIcon} 
+                              />
                             </View>
                           </View>
 
@@ -570,6 +652,13 @@ export default function ScheduleScreen() {
                     />
                   ))}
                 </View>
+              )}
+
+              {/* Swipe Indicator */}
+              {filteredSchedules.length > 1 && (
+                <Text style={[styles.swipeIndicatorText, { color: colors.icon }]}>
+                  Swipe up/down to navigate cards
+                </Text>
               )}
             </View>
           ) : (
@@ -849,6 +938,14 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     // backgroundColor handled dynamically
+  },
+  // Swipe Indicator
+  swipeIndicatorText: {
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 8,
+    opacity: 0.7,
+    fontStyle: "italic",
   },
 
   // Empty State

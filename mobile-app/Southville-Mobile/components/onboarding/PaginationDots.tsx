@@ -11,37 +11,40 @@ interface PaginationDotsProps {
   activeIndex: number;
 }
 
+interface DotProps {
+  isActive: boolean;
+}
+
+function Dot({ isActive }: DotProps) {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      width: withTiming(isActive ? 12 : 8, {
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+      }),
+      height: withTiming(isActive ? 12 : 8, {
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+      }),
+      backgroundColor: withTiming(
+        isActive ? '#2196F3' : '#E0E0E0',
+        {
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+        }
+      ),
+    };
+  });
+
+  return <Animated.View style={[styles.dot, animatedStyle]} />;
+}
+
 export function PaginationDots({ totalDots, activeIndex }: PaginationDotsProps) {
   return (
     <View style={styles.container}>
       {Array.from({ length: totalDots }, (_, index) => {
-        const isActive = index === activeIndex;
-        
-        const animatedStyle = useAnimatedStyle(() => {
-          return {
-            width: withTiming(isActive ? 12 : 8, {
-              duration: 300,
-              easing: Easing.out(Easing.ease),
-            }),
-            height: withTiming(isActive ? 12 : 8, {
-              duration: 300,
-              easing: Easing.out(Easing.ease),
-            }),
-            backgroundColor: withTiming(
-              isActive ? '#2196F3' : '#E0E0E0',
-              {
-                duration: 300,
-                easing: Easing.out(Easing.ease),
-              }
-            ),
-          };
-        });
-
         return (
-          <Animated.View
-            key={index}
-            style={[styles.dot, animatedStyle]}
-          />
+          <Dot key={index} isActive={index === activeIndex} />
         );
       })}
     </View>

@@ -3,20 +3,22 @@
  * Handles login, logout, token verification, and user profile fetching
  */
 
-import { apiClient } from '../client';
-import type { 
-  LoginRequest, 
-  LoginResponse, 
+import { apiClient } from "../client";
+import type {
+  LoginRequest,
+  LoginResponse,
   TokenVerifyResponse,
-  UserProfileResponse 
-} from '../types';
+  UserProfileResponse,
+  ChangePasswordRequest,
+  ChangePasswordResponse,
+} from "../types";
 
 /**
  * Login with email and password
  * Sets HttpOnly cookies via server action (not directly here)
  */
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
-  return apiClient.post<LoginResponse>('/auth/login', credentials, {
+  return apiClient.post<LoginResponse>("/auth/login", credentials, {
     requiresAuth: false, // Login doesn't require auth
   });
 }
@@ -27,7 +29,7 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
  */
 export async function verifyToken(token: string): Promise<TokenVerifyResponse> {
   return apiClient.post<TokenVerifyResponse>(
-    '/auth/verify',
+    "/auth/verify",
     { token },
     { requiresAuth: false }
   );
@@ -38,15 +40,27 @@ export async function verifyToken(token: string): Promise<TokenVerifyResponse> {
  * Calls GET /users/me endpoint
  */
 export async function getCurrentUser(): Promise<UserProfileResponse> {
-  return apiClient.get<UserProfileResponse>('/users/me');
+  return apiClient.get<UserProfileResponse>("/users/me");
 }
 
 /**
  * Get user profile by ID
  * Calls GET /users/:id/profile endpoint
  */
-export async function getUserProfile(userId: string): Promise<UserProfileResponse> {
+export async function getUserProfile(
+  userId: string
+): Promise<UserProfileResponse> {
   return apiClient.get<UserProfileResponse>(`/users/${userId}/profile`);
+}
+
+/**
+ * Change user password
+ * Requires authenticated user (current password must be correct)
+ */
+export async function changePassword(
+  data: ChangePasswordRequest
+): Promise<ChangePasswordResponse> {
+  return apiClient.post<ChangePasswordResponse>("/auth/change-password", data);
 }
 
 /**
@@ -59,4 +73,3 @@ export async function logout(): Promise<void> {
   // Actual logout happens in server action by clearing cookies
   return Promise.resolve();
 }
-

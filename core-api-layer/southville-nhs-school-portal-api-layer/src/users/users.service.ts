@@ -21,6 +21,10 @@ import {
   BulkImportResultDto,
 } from './dto/import-students-csv.dto';
 import {
+  ImportTeachersCsvDto,
+  CsvTeacherRowDto,
+} from './dto/import-teachers-csv.dto';
+import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
@@ -281,6 +285,7 @@ export class UsersService {
         age: teacherData.age,
         subject_specialization_id: teacherData.subjectSpecializationId,
         department_id: teacherData.departmentId,
+        advisory_section_id: teacherData.advisorySectionId,
       })
       .select()
       .single();
@@ -739,7 +744,7 @@ export class UsersService {
           id: user.id,
           email: user.email,
           fullName: user.full_name,
-          role: user.role?.name || '',
+          role: user.role ? { id: user.role.id, name: user.role.name } : null,
           status: user.status,
           createdAt: user.created_at,
           lastLogin: user.last_login || null,
@@ -751,11 +756,36 @@ export class UsersService {
           subjectSpecialization: null as string | null,
         };
 
+        console.log(
+          `Base user for ${user.email}: fullName='${baseUser.fullName}', role='${baseUser.role}'`,
+        );
+
         // Map Student-specific fields
         if (user.student) {
+          console.log(
+            `Processing student: ${user.email}, student data:`,
+            user.student,
+          );
+
           baseUser.studentId = user.student.student_id;
           baseUser.gradeLevel = user.student.grade_level;
           baseUser.phoneNumber = user.student.phone_number;
+
+          // Construct full name from student's first_name and last_name
+          const firstName = user.student.first_name || '';
+          const lastName = user.student.last_name || '';
+          const middleName = user.student.middle_name || '';
+
+          console.log(
+            `Student name parts: firstName='${firstName}', lastName='${lastName}', middleName='${middleName}'`,
+          );
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+            console.log(`Constructed fullName: '${baseUser.fullName}'`);
+          }
         }
 
         // Map Teacher-specific fields
@@ -766,6 +796,17 @@ export class UsersService {
             user.teacher.department?.department_name || null;
           baseUser.subjectSpecialization =
             user.teacher.subject_specialization_id;
+
+          // Construct full name from teacher's first_name and last_name
+          const firstName = user.teacher.first_name || '';
+          const lastName = user.teacher.last_name || '';
+          const middleName = user.teacher.middle_name || '';
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+          }
         }
 
         // Map Admin-specific fields
@@ -773,13 +814,24 @@ export class UsersService {
           baseUser.employeeId = user.admin.id;
           baseUser.phoneNumber = user.admin.phone_number;
           baseUser.department = 'Administration';
+
+          // Construct full name from admin's first_name and last_name
+          const firstName = user.admin.first_name || '';
+          const lastName = user.admin.last_name || '';
+          const middleName = user.admin.middle_name || '';
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+          }
         }
 
         return baseUser;
       }) || [];
 
     return {
-      data: data || [],
+      data: transformedData,
       pagination: {
         page,
         limit: effectiveLimit,
@@ -1408,6 +1460,96 @@ export class UsersService {
   }
 
   /**
+   * Find section by name only (for advisory sections, no grade level required)
+   */
+  private async findSectionByName(
+    sectionName: string,
+  ): Promise<string | undefined> {
+    const supabase = this.getSupabaseClient();
+
+    if (!sectionName || sectionName.trim() === '') {
+      return undefined;
+    }
+
+    const { data: sections, error } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('name', sectionName.trim())
+      .limit(1);
+
+    if (error) {
+      this.logger.error('Error fetching section by name:', error);
+      throw new NotFoundException(
+        `Section '${sectionName}' not found. Please ensure the section exists.`,
+      );
+    }
+
+    if (!sections || sections.length === 0) {
+      throw new NotFoundException(
+        `Section '${sectionName}' not found. Please ensure the section exists.`,
+      );
+    }
+
+    return sections[0].id;
+  }
+
+  /**
+   * Find department by name
+   */
+  private async findDepartmentByName(departmentName: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: department, error } = await supabase
+      .from('departments')
+      .select('id')
+      .eq('department_name', departmentName.trim())
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching department by name:', error);
+      throw new NotFoundException(
+        `Department '${departmentName}' not found. Please ensure the department exists.`,
+      );
+    }
+
+    if (!department) {
+      throw new NotFoundException(
+        `Department '${departmentName}' not found. Please ensure the department exists.`,
+      );
+    }
+
+    return department.id;
+  }
+
+  /**
+   * Find subject by name
+   */
+  private async findSubjectByName(subjectName: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: subject, error } = await supabase
+      .from('subjects')
+      .select('id')
+      .eq('subject_name', subjectName.trim())
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching subject by name:', error);
+      throw new NotFoundException(
+        `Subject '${subjectName}' not found. Please ensure the subject exists.`,
+      );
+    }
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject '${subjectName}' not found. Please ensure the subject exists.`,
+      );
+    }
+
+    return subject.id;
+  }
+
+  /**
    * Parse CSV student rows and group by student (LRN)
    */
   private parseCsvStudentRows(rows: CsvStudentRowDto[]): Map<string, any> {
@@ -1744,6 +1886,234 @@ export class UsersService {
       throw new InternalServerErrorException(
         'Failed to remove domain role assignment',
       );
+  /**
+   * Import teachers from CSV data
+   */
+  async importTeachersFromCsv(
+    importDto: ImportTeachersCsvDto,
+    createdBy: string,
+  ): Promise<BulkImportResultDto> {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    try {
+      for (const row of importDto.teachers) {
+        try {
+          // Lookup department ID by name
+          const departmentId = await this.findDepartmentByName(
+            row.department_id,
+          );
+
+          // Lookup subject specialization ID by name
+          const subjectSpecializationId = await this.findSubjectByName(
+            row.subject_specialization_id,
+          );
+
+          // Lookup advisory section ID by name (optional)
+          let advisorySectionId: string | undefined = undefined;
+          if (
+            row.advisory_section_id &&
+            row.advisory_section_id.trim() !== ''
+          ) {
+            advisorySectionId = await this.findSectionByName(
+              row.advisory_section_id,
+            );
+          }
+
+          // Use provided email or generate from first_name and last_name
+          const email =
+            row.email && row.email.trim() !== ''
+              ? row.email.trim()
+              : `${row.first_name.toLowerCase()}.${row.last_name.toLowerCase()}@teacher.local`;
+
+          // Create teacher DTO
+          const teacherDto = new CreateTeacherDto();
+          teacherDto.firstName = row.first_name;
+          teacherDto.lastName = row.last_name;
+          teacherDto.middleName = row.middle_name;
+          teacherDto.birthday = row.birthday;
+          teacherDto.age = row.age;
+          teacherDto.subjectSpecializationId = subjectSpecializationId;
+          teacherDto.departmentId = departmentId;
+          teacherDto.advisorySectionId = advisorySectionId;
+          teacherDto.email = email;
+          teacherDto.fullName =
+            `${row.first_name} ${row.middle_name ? row.middle_name + ' ' : ''}${row.last_name}`.trim();
+
+          // Create teacher (this will handle auth user, public user, and teacher record)
+          const result = await this.createTeacher(teacherDto, createdBy);
+          results.push({
+            firstName: row.first_name,
+            lastName: row.last_name,
+            email: email,
+            result: result,
+          });
+        } catch (error) {
+          errors.push({
+            firstName: row.first_name,
+            lastName: row.last_name,
+            error: error.message || String(error),
+          });
+        }
+      }
+
+      return {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+    } catch (error) {
+      this.logger.error('Error importing teachers from CSV:', error);
+      throw new InternalServerErrorException(
+        'Failed to import teachers from CSV',
+      );
+    }
+  }
+
+  /**
+   * Record a daily login for a user
+   * Uses upsert to handle duplicate same-day logins gracefully
+   * @param userId - User UUID
+   */
+  async recordLogin(userId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get today's date in YYYY-MM-DD format (date-only, no time)
+      const today = new Date().toISOString().split('T')[0];
+
+      // Upsert login record (insert if not exists, do nothing if exists)
+      const { error } = await supabase.from('daily_logins').upsert(
+        {
+          user_id: userId,
+          login_date: today,
+        },
+        {
+          onConflict: 'user_id,login_date',
+          ignoreDuplicates: false,
+        },
+      );
+
+      if (error) {
+        this.logger.error(`Error recording login for user ${userId}:`, error);
+        // Don't throw - this should be non-blocking
+      } else {
+        this.logger.log(`Recorded login for user ${userId} on ${today}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error recording login for user ${userId}:`,
+        error,
+      );
+      // Don't throw - this should be non-blocking
+    }
+  }
+
+  /**
+   * Get the current login streak count for a user
+   * Streak counts consecutive days from today backwards
+   * Returns 0 if user didn't log in today or if there's a gap
+   * @param userId - User UUID
+   * @returns Number of consecutive login days (0 if no streak)
+   */
+  async getLoginStreak(userId: string): Promise<number> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get today's date in UTC (avoid timezone offsets)
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Get all login dates for this user, ordered by date descending
+      const { data: logins, error } = await supabase
+        .from('daily_logins')
+        .select('login_date')
+        .eq('user_id', userId)
+        .order('login_date', { ascending: false });
+
+      if (error) {
+        this.logger.error(
+          `Error fetching login streak for user ${userId}:`,
+          error,
+        );
+        return 0;
+      }
+
+      if (!logins || logins.length === 0) {
+        return 0;
+      }
+
+      // DEBUG: Log raw and normalized dates to diagnose comparison issues
+      try {
+        const sample = logins.slice(0, 5).map((r: any) => r.login_date);
+        this.logger.debug(
+          `[getLoginStreak] user=${userId} today=${todayStr} sampleRaw=${JSON.stringify(
+            sample,
+          )}`,
+        );
+      } catch (_) {}
+
+      // Normalize dates to YYYY-MM-DD to avoid timezone/format mismatches
+      const normalizeDate = (d: any): string => {
+        // Supabase may return 'YYYY-MM-DD' or a full timestamp string
+        // Convert via Date to consistently get UTC date component
+        try {
+          return new Date(d as any).toISOString().split('T')[0];
+        } catch (_) {
+          // Fallback: if already 'YYYY-MM-DD'
+          return String(d).split('T')[0];
+        }
+      };
+
+      // Check if user logged in today (normalized)
+      const hasLoginToday = logins.some(
+        (login) => normalizeDate(login.login_date) === todayStr,
+      );
+
+      // DEBUG: Log normalized list presence of today
+      try {
+        const normalized = logins
+          .slice(0, 5)
+          .map((r: any) => normalizeDate(r.login_date));
+        this.logger.debug(
+          `[getLoginStreak] hasLoginToday=${hasLoginToday} normalizedSample=${JSON.stringify(
+            normalized,
+          )}`,
+        );
+      } catch (_) {}
+
+      if (!hasLoginToday) {
+        // No login today means streak is 0
+        return 0;
+      }
+
+      // Calculate consecutive days backwards from today
+      let streak = 0;
+      // Use UTC midnight based on todayStr for consistent day math
+      const expectedDate = new Date(`${todayStr}T00:00:00.000Z`);
+
+      for (let i = 0; i < logins.length; i++) {
+        const loginDateStr = normalizeDate(logins[i].login_date);
+        const expectedDateStr = expectedDate.toISOString().split('T')[0];
+
+        if (loginDateStr === expectedDateStr) {
+          streak++;
+          // Move to previous day
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+          // Gap detected, stop counting
+          break;
+        }
+      }
+
+      this.logger.log(`Login streak for user ${userId}: ${streak} days`);
+      return streak;
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error calculating login streak for user ${userId}:`,
+        error,
+      );
+      return 0;
     }
   }
 }

@@ -23,7 +23,7 @@
         </Style>
 
         <Style Selector="Border.floor-section">
-            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
@@ -66,23 +66,6 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="MinWidth" Value="100"/>
-        </Style>
-
-        <!-- Dialog Styles -->
-        <Style Selector="Border.dialog-overlay">
-            <Setter Property="Background" Value="#80000000"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="VerticalAlignment" Value="Stretch"/>
-        </Style>
-        
-        <Style Selector="Border.dialog-content">
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="MaxWidth" Value="400"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="BoxShadow" Value="0 8 32 0 #20000000"/>
         </Style>
 
         <!-- Text Styles -->
@@ -129,24 +112,94 @@
 
     <Grid>
         <!-- Main Content -->
-    <ScrollViewer>
+        <ScrollViewer>
             <StackPanel Margin="24" Spacing="16">
                 <!-- Header -->
                 <Grid ColumnDefinitions="*,Auto">
-                    <!-- <TextBlock Text="Buildings" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/> -->
-                    <Button Command="{Binding OpenCreateBuildingDialogCommand}"
-                            Classes="primary-button"
-                            Background="#C64747"/>
-                            <TextBlock Text="Add Building" Foreground="White"/>
+                    <TextBlock Text="Buildings" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <Button Grid.Column="1"
+                            Command="{Binding RefreshCommand}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            ToolTip.Tip="Refresh buildings">
+                        <ic:FluentIcon Icon="ArrowClockwise" 
+                                       IconVariant="Regular" 
+                                       IconSize="Size20"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </Button>
                 </Grid>
 
-                <!-- Search Bar -->
-                <TextBox Text="{Binding SearchText}" 
-                         Watermark="Search buildings..."
-                         Padding="12"
-                         CornerRadius="8"
-                         BorderBrush="{DynamicResource BorderBrush}"
-                         Background="{DynamicResource CardBackgroundBrush}"/>
+                <!-- Search Section -->
+                <Border Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <!-- Search Icon -->
+                        <ic:FluentIcon Grid.Column="0" 
+                                       Icon="Search" 
+                                       IconVariant="Regular" 
+                                       IconSize="Size20"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                        
+                        <!-- Search TextBox -->
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding SearchText}"
+                                 Watermark="Search buildings, floors, or rooms..."
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalAlignment="Center"/>
+                        
+                        <!-- Clear Button -->
+                        <Button Grid.Column="2"
+                                Command="{Binding ClearSearchCommand}"
+                                IsVisible="{Binding SearchText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="4"
+                                VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Dismiss" 
+                                           IconVariant="Regular" 
+                                           IconSize="Size16"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Search Result Count -->
+                <TextBlock Text="{Binding SearchResultText}"
+                           FontSize="14"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           Margin="0,4,0,0"/>
+
+                <!-- No Results Message -->
+                <Border IsVisible="{Binding HasNoSearchResults}"
+                        Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="32"
+                        HorizontalAlignment="Center">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <ic:FluentIcon Icon="SearchInfo" 
+                                       IconVariant="Regular" 
+                                       IconSize="Size48"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding SearchText, StringFormat='No results found for &quot;{0}&quot;'}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Try searching for a different building, floor, or room"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- Buildings List -->
                 <ItemsControl ItemsSource="{Binding FilteredBuildings}">
@@ -155,7 +208,7 @@
                             <Border Classes="building-card">
                                 <StackPanel Spacing="12">
                                     <!-- Building Header -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                                    <Grid ColumnDefinitions="Auto,*">
                                         <Button Grid.Column="0" 
                                                 Command="{Binding ToggleExpandCommand}"
                                                 Classes="expand-button">
@@ -176,23 +229,8 @@
                                         <StackPanel Grid.Column="1" Margin="8,0">
                                             <TextBlock Text="{Binding BuildingName}" Classes="building-name"/>
                                             <TextBlock Text="{Binding Code}" Classes="building-code"/>
-                </StackPanel>
-
-                                        <Button Grid.Column="2" 
-                                                Content="+ Add Floor"
-                                                Command="{Binding AddFloorCommand}"
-                                                Classes="action-button"/>
-                                        
-                                        <Button Grid.Column="3" 
-                                                Content="Edit"
-                                                Command="{Binding EditBuildingCommand}"
-                                                Classes="action-button"/>
-                                        
-                                        <Button Grid.Column="4" 
-                                                Content="Delete"
-                                                Command="{Binding DeleteBuildingCommand}"
-                                                Classes="action-button"/>
-            </Grid>
+                                        </StackPanel>
+                                    </Grid>
 
                                     <!-- Floors (visible when expanded) -->
                                     <ItemsControl ItemsSource="{Binding Floors}" 
@@ -202,7 +240,7 @@
                                                 <Border Classes="floor-section">
                                                     <StackPanel Spacing="8">
                                                         <!-- Floor Header -->
-                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                                        <Grid ColumnDefinitions="Auto,*">
                                                             <Button Grid.Column="0" 
                                                                     Command="{Binding ToggleExpandCommand}"
                                                                     Classes="expand-button">
@@ -223,27 +261,17 @@
                                                             <TextBlock Grid.Column="1" 
                                                                        Text="{Binding Name}" 
                                                                        Classes="floor-name"/>
-                                                            
-                                                            <Button Grid.Column="2" 
-                                                                    Content="+ Add Room"
-                                                                    Command="{Binding AddRoomCommand}"
-                                                                    Classes="action-button"/>
-                                                            
-                                                            <Button Grid.Column="3" 
-                                                                    Content="Delete"
-                                                                    Command="{Binding DeleteFloorCommand}"
-                                                                    Classes="action-button"/>
-            </Grid>
+                                                        </Grid>
 
                                                         <!-- Rooms Grid (visible when expanded) -->
                                                         <ItemsControl ItemsSource="{Binding Rooms}" 
                                                                       IsVisible="{Binding IsExpanded}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
                                                                     <Border Background="{DynamicResource CardBackgroundBrush}"
                                                                             BorderBrush="{DynamicResource BorderBrush}"
@@ -261,22 +289,6 @@
                                                                                     <TextBlock Text="{Binding Name}" Classes="room-name"/>
                                                                                 </StackPanel>
                                                                             </Border>
-                                                                            
-                                                                            <!-- Action Buttons -->
-                                                                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-                                                                                <Button Content="Edit" 
-                                                                                        Command="{Binding EditRoomCommand}"
-                                                                                        Classes="action-button"
-                                                                                        FontSize="10"
-                                                                                        Padding="6,3"
-                                                                                        MinWidth="40"/>
-                                                                                <Button Content="Delete" 
-                                                                                        Command="{Binding DeleteRoomCommand}"
-                                                                                        Classes="danger-button"
-                                                                                        FontSize="10"
-                                                                                        Padding="6,3"
-                                                                                        MinWidth="40"/>
-                                                                            </StackPanel>
                                                                         </StackPanel>
                                                                     </Border>
                                                                 </DataTemplate>
@@ -292,338 +304,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                                    </StackPanel>
+            </StackPanel>
         </ScrollViewer>
-
-        <!-- Create Building Dialog -->
-        <Border IsVisible="{Binding IsCreateBuildingDialogOpen}" 
-                Classes="dialog-overlay">
-            <Border Classes="dialog-content">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Create New Building" 
-                               FontSize="20" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Building Name" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingBuilding.BuildingName}" 
-                                 Watermark="Enter building name"/>
-                                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Building Code" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingBuilding.Code}" 
-                                 Watermark="Enter building code"/>
-                                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Capacity (Optional)" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingBuilding.Capacity}" 
-                                 Watermark="Enter total capacity"/>
-                                    </StackPanel>
-                    
-                    <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
-                        <Button Grid.Column="0" 
-                                Content="Cancel" 
-                                Command="{Binding CloseCreateBuildingDialogCommand}"
-                                Classes="action-button"
-                                Margin="0,0,8,0"/>
-                        <Button Grid.Column="1" 
-                                Content="Create" 
-                                Command="{Binding SaveBuildingCommand}"
-                                Classes="primary-button"/>
-                    </Grid>
-                                    </StackPanel>
-            </Border>
-        </Border>
-
-        <!-- Create Floor Dialog -->
-        <Border IsVisible="{Binding IsCreateFloorDialogOpen}" 
-                Classes="dialog-overlay">
-            <Border Classes="dialog-content">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Add New Floor" 
-                               FontSize="20" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <TextBlock Text="{Binding SelectedBuildingForFloor.BuildingName, StringFormat='Building: {0}'}" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Floor Name" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingFloor.Name}" 
-                                 Watermark="Enter floor name"/>
-                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Floor Number" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingFloor.Number, Converter={x:Static conv:IntegerValidationConverter.Instance}}" 
-                                 Watermark="Enter floor number"/>
-                                </StackPanel>
-
-                    <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
-                                    <Button Grid.Column="0" 
-                                Content="Cancel" 
-                                Command="{Binding CloseCreateFloorDialogCommand}"
-                                Classes="action-button"
-                                Margin="0,0,8,0"/>
-                                    <Button Grid.Column="1" 
-                                Content="Create" 
-                                Command="{Binding SaveFloorCommand}"
-                                Classes="primary-button"/>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-        </Border>
-
-        <!-- Create Room Dialog -->
-        <Border IsVisible="{Binding IsCreateRoomDialogOpen}" 
-                Classes="dialog-overlay">
-            <Border Classes="dialog-content">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Add New Room" 
-                               FontSize="20" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <TextBlock Text="{Binding SelectedFloorForRoom.Name, StringFormat='Floor: {0}'}" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Room Name" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingRoom.Name}" 
-                                 Watermark="Enter room name"/>
-                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Capacity" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingRoom.Capacity, Converter={x:Static conv:IntegerValidationConverter.Instance}}" 
-                                 Watermark="Enter room capacity"/>
-                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Status" FontWeight="SemiBold"/>
-                        <ComboBox SelectedItem="{Binding EditingRoom.Status}">
-                            <x:String>Available</x:String>
-                            <x:String>Occupied</x:String>
-                            <x:String>Maintenance</x:String>
-                        </ComboBox>
-                    </StackPanel>
-                    
-                    <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
-                        <Button Grid.Column="0" 
-                                Content="Cancel" 
-                                Command="{Binding CloseCreateRoomDialogCommand}"
-                                Classes="action-button"
-                                Margin="0,0,8,0"/>
-                        <Button Grid.Column="1" 
-                                Content="Create" 
-                                Command="{Binding SaveRoomCommand}"
-                                Classes="primary-button"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </Border>
-
-        <!-- Edit Room Dialog -->
-        <Border IsVisible="{Binding IsEditRoomDialogOpen}"
-                Background="#80000000"
-                Grid.RowSpan="2">
-            <Border Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="24"
-                    CornerRadius="8"
-                    MaxWidth="500"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Edit Room" 
-                               FontSize="20" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <TextBlock Text="{Binding EditingRoomFloorName, StringFormat='Floor: {0}'}" 
-                               FontWeight="SemiBold" 
-                               HorizontalAlignment="Center"/>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Room Name" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingRoomData.Name}" 
-                                 Watermark="Enter room name"/>
-                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Capacity" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding EditingRoomData.Capacity, Converter={x:Static conv:IntegerValidationConverter.Instance}}" 
-                                 Watermark="Enter room capacity"/>
-                    </StackPanel>
-                    
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Status" FontWeight="SemiBold"/>
-                        <ComboBox SelectedItem="{Binding EditingRoomData.Status}">
-                            <x:String>Available</x:String>
-                            <x:String>Occupied</x:String>
-                            <x:String>Maintenance</x:String>
-                        </ComboBox>
-                    </StackPanel>
-                    
-                    <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
-                        <Button Grid.Column="0" 
-                                Content="Cancel" 
-                                Command="{Binding CloseEditRoomDialogCommand}"
-                                Classes="action-button"
-                                Margin="0,0,4,0"/>
-                        <Button Grid.Column="1" 
-                                Content="Save Changes" 
-                                Command="{Binding SaveEditedRoomCommand}"
-                                Classes="primary-button"
-                                Margin="4,0,0,0"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </Border>
-
-        <!-- Error/Success Messages -->
-        <Border IsVisible="{Binding HasError}" 
-                Background="{DynamicResource DangerBrush}" 
-                CornerRadius="8" 
-                Padding="12" 
-                Margin="24" 
-                VerticalAlignment="Top">
-            <TextBlock Text="{Binding ErrorMessage}" 
-                       Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
-            </Border>
-
-        <Border IsVisible="{Binding HasSuccess}" 
-                Background="{DynamicResource SuccessBrush}" 
-                CornerRadius="8" 
-                Padding="12" 
-                Margin="24" 
-                VerticalAlignment="Top">
-            <TextBlock Text="{Binding SuccessMessage}" 
-                       Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
-        </Border>
-
-        <!-- Edit Building Dialog -->
-        <Border IsVisible="{Binding IsEditBuildingDialogOpen}" 
-                Background="#80000000" 
-                HorizontalAlignment="Stretch" 
-                VerticalAlignment="Stretch">
-            <Border Background="{DynamicResource CardBackgroundBrush}" 
-                    CornerRadius="12" 
-                    Padding="24" 
-                    MaxWidth="800" 
-                    MaxHeight="600" 
-                    HorizontalAlignment="Center" 
-                    VerticalAlignment="Center">
-                <ScrollViewer>
-                    <StackPanel Spacing="20">
-                        <!-- Header -->
-                        <StackPanel>
-                            <TextBlock Text="Edit Building" 
-                                       FontSize="24" 
-                                       FontWeight="Bold" 
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{Binding EditingBuildingCard.BuildingName, StringFormat='Building: {0}'}" 
-                                       FontSize="14" 
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                        </StackPanel>
-
-                        <!-- Building Details Form -->
-                        <StackPanel Spacing="16">
-                            <TextBlock Text="Building Details" 
-                                       FontSize="18" 
-                                       FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            
-                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
-                                <!-- Building Name -->
-                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="8" Margin="0,0,6,12">
-                                    <TextBlock Text="Building Name" FontWeight="SemiBold"/>
-                                    <TextBox Text="{Binding EditingBuildingData.BuildingName}" 
-                                             Watermark="Enter building name"/>
-                                </StackPanel>
-
-                                <!-- Building Code -->
-                                <StackPanel Grid.Column="1" Grid.Row="0" Spacing="8" Margin="6,0,0,12">
-                                    <TextBlock Text="Building Code" FontWeight="SemiBold"/>
-                                    <TextBox Text="{Binding EditingBuildingData.Code}" 
-                                             Watermark="Enter building code"/>
-                                </StackPanel>
-
-                                <!-- Capacity -->
-                                <StackPanel Grid.Column="0" Grid.Row="1" Spacing="8" Margin="0,0,6,0">
-                                    <TextBlock Text="Capacity" FontWeight="SemiBold"/>
-                                    <TextBox Text="{Binding EditingBuildingData.Capacity, Converter={x:Static conv:IntegerValidationConverter.Instance}}" 
-                                             Watermark="Enter capacity"/>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-
-                        <!-- Floors Section -->
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="Floors" 
-                                       FontSize="18" 
-                                       FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            
-                            <ItemsControl ItemsSource="{Binding EditingBuildingCard.Floors}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource CardBackgroundBrush}" 
-                                                BorderBrush="{DynamicResource BorderBrush}" 
-                                                BorderThickness="1" 
-                                                CornerRadius="8" 
-                                                Padding="16" 
-                                                Margin="0,0,0,8">
-                                            <StackPanel Spacing="12">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Text="{Binding Name}" 
-                                                                   FontWeight="SemiBold" 
-                                                                   FontSize="16"/>
-                                                        <TextBlock Text="{Binding Number, StringFormat='Floor {0}'}" 
-                                                                   Foreground="{DynamicResource TextMutedBrush}"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                                        <Button Content="Edit" 
-                                                                Command="{Binding EditFloorCommand}" 
-                                                                Classes="action-button"/>
-                                                        <Button Content="Delete" 
-                                                                Command="{Binding DeleteFloorCommand}" 
-                                                                Classes="danger-button"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                
-                                                <!-- Rooms count info -->
-                                                <TextBlock Text="{Binding Rooms.Count, StringFormat='Rooms: {0}'}" 
-                                                           Foreground="{DynamicResource TextMutedBrush}" 
-                                                           FontSize="12"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <!-- Action Buttons -->
-                        <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
-                            <Button Grid.Column="0" 
-                                    Content="Cancel" 
-                                    Command="{Binding CloseEditBuildingDialogCommand}"
-                                    Classes="action-button"
-                                    Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" 
-                                    Content="Save Changes" 
-                                    Command="{Binding SaveEditedBuildingCommand}"
-                                    Classes="primary-button"/>
-                        </Grid>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
-        </Border>
     </Grid>
 </UserControl>

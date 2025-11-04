@@ -54,7 +54,6 @@ export default function NotificationsScreen() {
   ];
   
   const loading = false;
-  const unreadCount = notifications.filter(n => !n.read).length;
   
   const markAsRead = (id: string) => {
     console.log('Mark as read:', id);
@@ -193,7 +192,7 @@ export default function NotificationsScreen() {
           <Image source={require('@/assets/subjects/Spider.png')} style={styles.emptyImage} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>No notification yet</Text>
           <Text style={[styles.emptySubtitle, { color: colors.icon }]}>
-            Your notification will appear here once you've receive them.
+            Your notification will appear here once you&apos;ve receive them.
           </Text>
           <Text style={[styles.emptyHint, { color: colors.icon }]}>Missing notification?</Text>
           <TouchableOpacity>

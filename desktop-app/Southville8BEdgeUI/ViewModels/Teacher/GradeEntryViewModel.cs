@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics;
 using Avalonia; // For Application.Current
 using Avalonia.Media; // For IBrush
 using Avalonia.Styling; // Theme variant
@@ -34,7 +35,12 @@ public partial class GradeEntryViewModel : ViewModelBase
     private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(1, 1);
     private int _semaphoreReleased = 0;
 
+    // Rate limiting for refresh
+    private DateTime _lastRefreshTime = DateTime.MinValue;
+    private const int RefreshCooldownSeconds = 5; // 5 second cooldown
+    
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isRefreshing = false;
     [ObservableProperty] private string _selectedGradingPeriod = "";
     [ObservableProperty] private string _selectedSchoolYear = "";
     [ObservableProperty] private ObservableCollection<string> _gradingPeriods = new();
@@ -184,7 +190,7 @@ public partial class GradeEntryViewModel : ViewModelBase
     private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades != null && StudentGrades.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanSaveAllGrades))]
-    private async void SaveAllGrades()
+    private async Task SaveAllGrades()
     {
         if (StudentGrades == null || StudentGrades.Count == 0)
         {
@@ -309,16 +315,22 @@ public partial class GradeEntryViewModel : ViewModelBase
                             StudentNumber = student.StudentNumber,
                             Gwa = student.Gwa,
                             Remarks = student.Remarks ?? "",
-                            HonorStatus = student.HonorStatus,
+                            // HonorStatus will be automatically calculated when Gwa is set
                             GwaId = student.GwaId ?? "",
                             IsDirty = false
                         };
+                        
+                        // Recalculate honor status from GWA (in case it was set differently in database)
+                        if (studentGrade.Gwa.HasValue)
+                        {
+                            studentGrade.HonorStatus = StudentGradeViewModel.CalculateHonorStatus(studentGrade.Gwa);
+                        }
 
                         studentGrade.PropertyChanged += (_, args) =>
                         {
+                            // HonorStatus is auto-calculated, so it doesn't trigger dirty state
                             if (args.PropertyName == nameof(StudentGradeViewModel.Gwa) ||
-                                args.PropertyName == nameof(StudentGradeViewModel.Remarks) ||
-                                args.PropertyName == nameof(StudentGradeViewModel.HonorStatus))
+                                args.PropertyName == nameof(StudentGradeViewModel.Remarks))
                             {
                                 studentGrade.IsDirty = true;
                                 MarkDirty();
@@ -371,6 +383,38 @@ public partial class GradeEntryViewModel : ViewModelBase
             _semaphoreReleased = 0; // Reset for next call
         }
     }
+
+    [RelayCommand]
+    private async Task RefreshGrades()
+    {
+        // Check rate limit
+        var timeSinceLastRefresh = DateTime.Now - _lastRefreshTime;
+        if (timeSinceLastRefresh.TotalSeconds < RefreshCooldownSeconds)
+        {
+            var remainingSeconds = RefreshCooldownSeconds - (int)timeSinceLastRefresh.TotalSeconds;
+            Debug.WriteLine($"Refresh rate limited. Please wait {remainingSeconds} seconds.");
+            return;
+        }
+
+        IsRefreshing = true;
+        _lastRefreshTime = DateTime.Now;
+
+        try
+        {
+            // Reload students/grades for current filters
+            await LoadStudentsAsync();
+            
+            Debug.WriteLine("Grades refreshed successfully");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error refreshing grades: {ex.Message}");
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
+    }
 }
 
 public partial class StudentGradeViewModel : ViewModelBase
@@ -387,9 +431,6 @@ public partial class StudentGradeViewModel : ViewModelBase
     [ObservableProperty] private decimal? _gwa;
     [ObservableProperty] private string _remarks = "";
     [ObservableProperty] private string _honorStatus = "None";
-    [ObservableProperty] private ObservableCollection<string> _honorStatusOptions = new() { 
-        "None", "With Honors", "High Honors", "Highest Honors" 
-    };
     [ObservableProperty] private bool _isDirty; // tracks if edited
     [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed grade color
 
@@ -405,6 +446,26 @@ public partial class StudentGradeViewModel : ViewModelBase
     {
         // Update grade color
         GradeColor = GradeColorProvider.GetFor((double)(value ?? 0));
+        
+        // Automatically calculate honor status based on GWA
+        HonorStatus = CalculateHonorStatus(value);
+    }
+
+    /// <summary>
+    /// Calculates honor status based on GWA score ranges
+    /// </summary>
+    public static string CalculateHonorStatus(decimal? gwa)
+    {
+        if (!gwa.HasValue || gwa.Value < 0) return "None";
+        
+        var score = gwa.Value;
+        
+        if (score >= 97) return "Excellent / Outstanding";
+        if (score >= 95) return "Very Good";
+        if (score >= 90) return "Good / Above Average";
+        if (score >= 80) return "Satisfactory / Average";
+        if (score >= 75) return "Fair / Below Average";
+        return "Failing / Needs Improvement";
     }
 
     [RelayCommand]
@@ -513,7 +574,7 @@ public partial class StudentGradeViewModel : ViewModelBase
             GwaId = "";
             Gwa = null;
             Remarks = "";
-            HonorStatus = "None";
+            HonorStatus = CalculateHonorStatus(null);
             IsDirty = false;
             
             System.Diagnostics.Debug.WriteLine($"Cleared GWA entry for {StudentName}");

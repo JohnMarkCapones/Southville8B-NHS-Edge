@@ -43,8 +43,7 @@ export class SubjectsService {
 
       let queryBuilder = supabase
         .from('subjects')
-        .select('*', { count: 'exact' })
-        .eq('is_deleted', false);
+        .select('*', { count: 'exact' });
 
       if (search) {
         queryBuilder = queryBuilder.or(
@@ -94,7 +93,6 @@ export class SubjectsService {
         .from('subjects')
         .select('*')
         .eq('id', id)
-        .eq('is_deleted', false)
         .single();
 
       if (error) {
@@ -143,7 +141,6 @@ export class SubjectsService {
         .from('subjects')
         .update(updateSubjectDto)
         .eq('id', id)
-        .eq('is_deleted', false)
         .select()
         .single();
 
@@ -167,7 +164,7 @@ export class SubjectsService {
       const supabase = this.getSupabaseClient();
       const { error } = await supabase
         .from('subjects')
-        .update({ is_deleted: true })
+        .update({ status: 'inactive' })
         .eq('id', id);
 
       if (error) {

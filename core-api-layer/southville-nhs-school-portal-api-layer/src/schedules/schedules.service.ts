@@ -335,7 +335,7 @@ export class SchedulesService {
           building: schedule.room?.floor?.building
             ? {
                 id: schedule.room.floor.building.id,
-                name: schedule.room.floor.building.building_name,
+                buildingName: schedule.room.floor.building.building_name,
               }
             : undefined,
         })) || [];

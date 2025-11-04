@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   FlatList,
   TouchableOpacity,
   ImageSourcePropType,
@@ -15,8 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingSlide } from '@/components/onboarding/OnboardingSlide';
 import { PaginationDots } from '@/components/onboarding/PaginationDots';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 interface OnboardingData {
   id: string;
@@ -195,7 +192,7 @@ export default function OnboardingScreen() {
 
       {/* Copyright */}
       <View style={styles.footer}>
-        <Text style={styles.copyright}>All Rights Reserve 2023</Text>
+        <Text style={styles.copyright}>All Rights Reserve 2025</Text>
       </View>
     </SafeAreaView>
   );

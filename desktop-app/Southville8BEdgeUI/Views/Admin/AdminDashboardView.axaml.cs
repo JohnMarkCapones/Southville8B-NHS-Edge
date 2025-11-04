@@ -45,10 +45,10 @@ public partial class AdminDashboardView : UserControl
             RoomUtilizationValue,
             SystemUptimeValue,
             UptimeSubtext,
-            MonthlyRevenueValue,
-            OperatingCostsValue,
-            NetRevenueValue,
-            BudgetUtilizationText,
+            TotalBuildingsValue,
+            TotalRoomsValue,
+            TotalUsersValue,
+            TotalDepartmentsValue,
             AvailableRoomsText,
             OccupiedRoomsText,
             MaintenanceRoomsText,
@@ -80,7 +80,6 @@ public partial class AdminDashboardView : UserControl
         _responsiveProgressBars.AddRange(new Control[]
         {
             RoomProgressBar,
-            BudgetProgressBar,
             OverallProgressBar
         });
 

@@ -309,12 +309,27 @@
     <ScrollViewer x:Name="MainScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="MainStackPanel" Classes="main-content">
             <!-- Header -->
-            <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
+            <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto,Auto">
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="GWA Entry System" Classes="header"/>
                     <TextBlock Text="Enter final GWA for students in your advisory section" Classes="subtitle"/>
                 </StackPanel>
-                <Button Grid.Column="1" Classes="action-btn" Command="{Binding SaveAllGradesCommand}" IsEnabled="{Binding HasUnsavedChanges}">
+                <Button Grid.Column="1" 
+                        Background="{DynamicResource TextSecondaryBrush}" 
+                        Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                        BorderThickness="0" 
+                        CornerRadius="6" 
+                        Padding="8,6" 
+                        Command="{Binding RefreshGradesCommand}"
+                        IsEnabled="{Binding !IsRefreshing}"
+                        Margin="0,0,8,0"
+                        ToolTip.Tip="Refresh grades (5s cooldown)">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16"/>
+                        <TextBlock Text="Refresh"/>
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Classes="action-btn" Command="{Binding SaveAllGradesCommand}" IsEnabled="{Binding HasUnsavedChanges}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <ic:FluentIcon Icon="Save" IconSize="Size16"/>
                         <TextBlock Text="Save All Changes"/>
@@ -393,10 +408,20 @@
                                                     <TextBox Text="{Binding Gwa}" Watermark="50.00-100.00" TextAlignment="Center"/>
                                                 </StackPanel>
                                                 
-                                                <!-- Honor Status Field -->
+                                                <!-- Honor Status Field (Read-only, Auto-calculated) -->
                                                 <StackPanel Grid.Column="1" Grid.Row="0" Margin="8,0,0,0">
                                                     <TextBlock Text="Honor Status" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
-                                                    <ComboBox SelectedItem="{Binding HonorStatus}" ItemsSource="{Binding HonorStatusOptions}"/>
+                                                    <Border Background="{DynamicResource CardBackgroundBrush}" 
+                                                            BorderBrush="{DynamicResource BorderBrush}" 
+                                                            BorderThickness="1" 
+                                                            CornerRadius="6" 
+                                                            Padding="8">
+                                                        <TextBlock Text="{Binding HonorStatus}" 
+                                                                   FontSize="14" 
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextAlignment="Center"/>
+                                                    </Border>
                                                 </StackPanel>
                                                 
                                                 <!-- Remarks Field - Full Width -->

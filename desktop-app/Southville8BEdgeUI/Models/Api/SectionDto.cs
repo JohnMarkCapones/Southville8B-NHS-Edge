@@ -42,7 +42,7 @@ public class TeacherInfo
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("full_name")]
+    [JsonPropertyName("fullName")]
     public string FullName { get; set; } = string.Empty;
     
     [JsonPropertyName("email")]
@@ -54,12 +54,12 @@ public class StudentInfo
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
     
-    [JsonPropertyName("first_name")]
+    [JsonPropertyName("firstName")]
     public string FirstName { get; set; } = string.Empty;
     
-    [JsonPropertyName("last_name")]
+    [JsonPropertyName("lastName")]
     public string LastName { get; set; } = string.Empty;
     
-    [JsonPropertyName("student_id")]
+    [JsonPropertyName("studentId")]
     public string StudentId { get; set; } = string.Empty;
 }

@@ -157,6 +157,32 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Change Password -->
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Change Password" Classes="section-header"/>
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="120,*">
+                                        <TextBlock Grid.Column="0" Text="Current Password" Classes="muted" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding CurrentPassword}" PasswordChar="●" Margin="12,0,0,0"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="120,*">
+                                        <TextBlock Grid.Column="0" Text="New Password" Classes="muted" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding NewPassword}" PasswordChar="●" Margin="12,0,0,0"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="120,*">
+                                        <TextBlock Grid.Column="0" Text="Confirm Password" Classes="muted" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding ConfirmPassword}" PasswordChar="●" Margin="12,0,0,0"/>
+                                    </Grid>
+                                    <Button Content="Change Password" 
+                                            Command="{Binding ChangePasswordCommand}" 
+                                            Classes="primary" 
+                                            HorizontalAlignment="Left"
+                                            IsEnabled="{Binding !IsChangingPassword}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Notifications -->
                         <Border Classes="card">
                             <StackPanel Spacing="12">

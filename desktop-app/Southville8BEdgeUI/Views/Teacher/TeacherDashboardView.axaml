@@ -184,7 +184,11 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <TextBlock Text="Online" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                     <Ellipse Fill="{DynamicResource SuccessBrush}" Width="10" Height="10" VerticalAlignment="Center"/>
-                    <Button x:Name="RefreshButton" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}" Command="{Binding RefreshDashboardCommand}">
+                    <Button x:Name="RefreshButton" 
+                            Classes="quick-action" 
+                            Background="{DynamicResource TextSecondaryBrush}" 
+                            Command="{Binding RefreshDashboardCommand}"
+                            IsEnabled="{Binding CanRefresh}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size20"/>
                             <TextBlock Text="Refresh"/>
@@ -194,7 +198,7 @@
             </Grid>
 
             <!-- Key Performance Indicators -->
-            <Grid x:Name="KpiGrid" ColumnDefinitions="*,*,*,*,*">
+            <Grid x:Name="KpiGrid" ColumnDefinitions="*,*,*,*">
                 <Border x:Name="KpiCard1" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
@@ -222,71 +226,91 @@
                 <Border x:Name="KpiCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Pending Grading" Classes="stat-title"/>
+                            <TextBlock Grid.Column="0" Text="Total Announcements" Classes="stat-title"/>
+                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource InfoBrush}">
+                                <ic:FluentIcon Icon="Megaphone" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock x:Name="TotalAnnouncementsText" Text="{Binding TotalAnnouncements}" Classes="stat-value"/>
+                        <TextBlock Text="Posted announcements" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="KpiCard4" Grid.Column="3" Classes="card" Margin="12,0,0,0">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Total Sections" Classes="stat-title"/>
                             <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource WarningBrush}">
-                                <ic:FluentIcon Icon="Edit" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                                <ic:FluentIcon Icon="PeopleTeam" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
                             </Border>
                         </Grid>
-                        <TextBlock x:Name="PendingAssignmentsText" Text="{Binding PendingAssignments}" Classes="stat-value"/>
-                        <ProgressBar Value="{Binding GradingProgress}" Minimum="0" Maximum="100" Classes="responsive-progress" Foreground="{DynamicResource WarningBrush}"/>
-                    </StackPanel>
-                </Border>
-                <Border x:Name="KpiCard4" Grid.Column="3" Classes="card" Margin="12,0">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Average Grade" Classes="stat-title"/>
-                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource AccentBrush}">
-                                <ic:FluentIcon Icon="DataBarVertical" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
-                            </Border>
-                        </Grid>
-                        <TextBlock x:Name="AverageGradeText" Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-                        <TextBlock Text="Class performance" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
-                    </StackPanel>
-                </Border>
-                <Border x:Name="KpiCard5" Grid.Column="4" Classes="card" Margin="12,0,0,0">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Attendance Rate" Classes="stat-title"/>
-                            <Border Grid.Column="1" CornerRadius="6" Padding="4" Background="{DynamicResource SuccessBrush}">
-                                <ic:FluentIcon Icon="CheckmarkCircle" IconSize="Size20" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
-                            </Border>
-                        </Grid>
-                        <TextBlock x:Name="AttendanceRateText" Text="{Binding ClassAttendanceRate, StringFormat={}{0:F1}%}" Classes="stat-value"/>
-                        <TextBlock Text="Overall attendance" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
+                        <TextBlock x:Name="TotalSectionsText" Text="{Binding TotalSections}" Classes="stat-value"/>
+                        <TextBlock Text="Classes handled" FontSize="12" Foreground="{DynamicResource WarningBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <!-- Performance Metrics & Today's Schedule -->
             <Grid x:Name="TwoColumnGrid1" ColumnDefinitions="2*,*">
-                <!-- Student Performance Metrics -->
+                <!-- My Announcements -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Subject Performance" Classes="section-header"/>
-                            <Button x:Name="DetailedReportsButton" Grid.Column="1" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}"
-                                    Command="{Binding ViewDetailedReportsCommand}" Padding="12,8" FontSize="12">
+                            <TextBlock Grid.Column="0" Text="My Announcements" Classes="section-header"/>
+                            <Button Grid.Column="1" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}"
+                                    Command="{Binding NavigateToMyAnnouncementsCommand}" Padding="12,8" FontSize="12">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <ic:FluentIcon Icon="DataPie" IconSize="Size20"/>
-                                    <TextBlock Text="Detailed Reports"/>
+                                    <ic:FluentIcon Icon="Megaphone" IconSize="Size20"/>
+                                    <TextBlock Text="View All"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding StudentPerformance}">
+                        <ItemsControl ItemsSource="{Binding MyAnnouncements}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:StudentPerformanceViewModel">
-                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,12">
-                                        <Border Grid.Column="0" CornerRadius="8" Padding="8" Margin="0,0,12,0" Background="{DynamicResource BorderBrush}">
-                                            <ic:FluentIcon Icon="BookOpen" IconSize="Size20"/>
+                                <DataTemplate DataType="vm:AnnouncementSummaryViewModel">
+                                    <Border Background="{DynamicResource PageBackgroundBrush}" 
+                                            BorderBrush="{DynamicResource BorderBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="8" 
+                                            Padding="12" 
+                                            Margin="0,0,0,12">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Border Grid.Column="0" CornerRadius="8" Padding="8" Margin="0,0,12,0" 
+                                                    Background="{DynamicResource BorderBrush}">
+                                                <ic:FluentIcon Icon="Megaphone" IconSize="Size20" 
+                                                              Foreground="{DynamicResource InfoBrush}"/>
                                         </Border>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Subject}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" FontSize="20" FontWeight="Bold"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                                <TextBlock Text="{Binding Title}" 
+                                                          FontWeight="SemiBold" 
+                                                          TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding TimeAgo}" 
+                                                              FontSize="12" 
+                                                              Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="•" 
+                                                              FontSize="12" 
+                                                              Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <ic:FluentIcon Icon="Eye" IconSize="Size16" 
+                                                                      Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <TextBlock Text="{Binding ViewsCount}" 
+                                                                  FontSize="12" 
+                                                                  Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{Binding StudentsCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding ImprovementText}" Foreground="{Binding ImprovementBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <Path Grid.Column="4" Data="{Binding IsImproving, Converter={StaticResource BoolToArrowConverter}}" Fill="{Binding ImprovementBrush}" Width="10" Height="5" VerticalAlignment="Center"/>
+                                            <Border Grid.Column="2" 
+                                                    Background="{Binding StatusBrush}" 
+                                                    CornerRadius="4" 
+                                                    Padding="8,4"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Status}" 
+                                                          FontSize="11" 
+                                                          FontWeight="SemiBold"
+                                                          Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                                            </Border>
                                     </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -376,32 +400,48 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Class Statistics Overview -->
+                <!-- Grade Entry Quick Access -->
                 <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Class Overview" Classes="section-header"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Grade Entry Quick Access" Classes="section-header"/>
+                            <Button Grid.Column="1" Classes="quick-action" Background="{DynamicResource TextSecondaryBrush}"
+                                    Command="{Binding NavigateToGradeEntryCommand}" Padding="12,8" FontSize="12">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <ic:FluentIcon Icon="DocumentEdit" IconSize="Size20"/>
+                                    <TextBlock Text="View All"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
                         <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding ClassStatistics}">
+                            <ItemsControl ItemsSource="{Binding GradeEntrySections}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:ClassStatViewModel">
+                                    <DataTemplate DataType="vm:GradeEntrySectionViewModel">
                                         <Border Background="{DynamicResource PageBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                            <StackPanel Spacing="4">
-                                                <TextBlock Text="{Binding ClassName}" FontWeight="SemiBold" FontSize="12"/>
-                                                <Grid ColumnDefinitions="*,*,*">
-                                                    <StackPanel Grid.Column="0" Spacing="2">
-                                                        <TextBlock Text="Students" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                        <TextBlock Text="{Binding StudentsCount}" FontSize="14" FontWeight="Bold"/>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0" Spacing="4">
+                                                    <TextBlock Text="{Binding SectionName}" FontWeight="SemiBold" FontSize="12"/>
+                                                    <TextBlock Text="{Binding GradeLevel}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <ic:FluentIcon Icon="DocumentBulletList" IconSize="Size16" Foreground="{DynamicResource WarningBrush}"/>
+                                                            <TextBlock Text="{Binding PendingText}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <ic:FluentIcon Icon="Clock" IconSize="Size16" Foreground="{DynamicResource InfoBrush}"/>
+                                                            <TextBlock Text="{Binding LastSubmissionText}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                        </StackPanel>
                                                     </StackPanel>
-                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                        <TextBlock Text="Attendance" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                        <TextBlock Text="{Binding AttendanceRate, StringFormat={}{0:F1}%}" FontSize="14" FontWeight="Bold"/>
                                                     </StackPanel>
-                                                    <StackPanel Grid.Column="2" Spacing="2">
-                                                        <TextBlock Text="Avg Grade" FontSize="9" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                        <TextBlock Text="{Binding AverageGrade, StringFormat={}{0:F1}%}" FontSize="14" FontWeight="Bold"/>
+                                                <Button Grid.Column="1" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:TeacherDashboardViewModel)DataContext).NavigateToGradeEntryCommand}"
+                                                        Padding="8,6" FontSize="11" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <ic:FluentIcon Icon="Edit" IconSize="Size16" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                                                        <TextBlock Text="Enter Grades" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
                                                     </StackPanel>
+                                                </Button>
                                                 </Grid>
-                                            </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -413,58 +453,130 @@
 
             <!-- Subject Distribution & Recent Activity -->
             <Grid x:Name="TwoColumnGrid3" ColumnDefinitions="*,2*">
-                <!-- Subject Distribution -->
+                <!-- My Sections Overview -->
                 <Border Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="Subject Distribution" Classes="section-header"/>
-                        <ItemsControl ItemsSource="{Binding SubjectDistribution}">
+                        <TextBlock Text="My Sections" Classes="section-header"/>
+                        <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding MySections}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:SubjectDistributionViewModel">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
-                                        <Border Grid.Column="0" Background="{Binding Color}" Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <DataTemplate DataType="vm:SectionOverviewViewModel">
+                                        <Border Background="{DynamicResource PageBackgroundBrush}" 
+                                                CornerRadius="8" 
+                                                Padding="12" 
+                                                Margin="0,0,0,8"
+                                                Cursor="Hand">
+                                            <Border.Styles>
+                                                <Style Selector="Border:pointerover">
+                                                    <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+                                                </Style>
+                                            </Border.Styles>
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <ic:FluentIcon Grid.Column="0" 
+                                                             Icon="Class" 
+                                                             IconSize="Size24" 
+                                                             Foreground="{DynamicResource InfoBrush}"
+                                                             VerticalAlignment="Center" 
+                                                             Margin="0,0,12,0"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Subject}" FontWeight="SemiBold"/>
-                                            <ProgressBar Value="{Binding Percentage}" Minimum="0" Maximum="40" Classes="responsive-progress" Foreground="{Binding Color}"/>
+                                                    <TextBlock Text="{Binding SectionName}" 
+                                                             FontWeight="SemiBold" 
+                                                             FontSize="13"/>
+                                                    <TextBlock Text="{Binding GradeLevel}" 
+                                                             FontSize="11" 
+                                                             Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding StudentCountText}" 
+                                                             FontSize="11" 
+                                                             Foreground="{DynamicResource TextSecondaryBrush}"
+                                                             Margin="0,2,0,0"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{Binding StudentsCount}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <ic:FluentIcon Grid.Column="2" 
+                                                             Icon="ChevronRight" 
+                                                             IconSize="Size20" 
+                                                             Foreground="{DynamicResource TextMutedBrush}"
+                                                             VerticalAlignment="Center"/>
                                     </Grid>
+                                        </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </ScrollViewer>
                     </StackPanel>
                 </Border>
 
-                <!-- Recent Activity -->
+                <!-- Students Needing Attention -->
                 <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Recent Student Activity" Classes="section-header"/>
-                            <Button x:Name="ViewAllButton" Grid.Column="1" Classes="quick-action" Background="{DynamicResource SuccessBrush}"
-                                    Command="{Binding ViewAllActivitiesCommand}" Padding="8,6" FontSize="10">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <ic:FluentIcon Icon="List" IconSize="Size16"/>
-                                    <TextBlock Text="View All"/>
+                            <TextBlock Grid.Column="0" Text="Students Needing Attention" Classes="section-header"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding StudentsNeedingAttention.Count}" 
+                                          FontSize="12" 
+                                          FontWeight="SemiBold" 
+                                          Foreground="{DynamicResource DangerBrush}"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock Text="at risk" 
+                                          FontSize="12" 
+                                          Foreground="{DynamicResource TextMutedBrush}"
+                                          VerticalAlignment="Center"/>
                                 </StackPanel>
-                            </Button>
                         </Grid>
                         <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding RecentActivities}">
+                            <ItemsControl ItemsSource="{Binding StudentsNeedingAttention}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:TeacherActivityViewModel">
-                                        <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
-                                            <Grid Grid.Column="0" Width="32" Height="32" Margin="0,0,12,0">
-                                                <Border Background="{Binding TypeColor}" CornerRadius="16" Opacity="0.15"/>
-                                                <ic:FluentIcon Icon="{Binding IconName}" IconSize="Size16" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Grid>
+                                    <DataTemplate DataType="vm:StudentAtRiskViewModel">
+                                        <Border Background="{DynamicResource PageBackgroundBrush}" 
+                                                CornerRadius="8" 
+                                                Padding="12" 
+                                                Margin="0,0,0,8">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Border Grid.Column="0" 
+                                                        Background="{Binding StatusColor}" 
+                                                        Width="4" 
+                                                        Height="50" 
+                                                        CornerRadius="2" 
+                                                        VerticalAlignment="Center"
+                                                        Margin="0,0,12,0"/>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" Text="{Binding Description}"/>
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <TextBlock Text="{Binding Subject}" FontSize="10" Foreground="{DynamicResource SuccessBrush}"/>
-                                                    <TextBlock Text="•" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                    <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding StudentName}" 
+                                                             FontWeight="SemiBold" 
+                                                             FontSize="13"/>
+                                                    <TextBlock Text="{Binding StudentNumber}" 
+                                                             FontSize="11" 
+                                                             Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                                        <TextBlock Text="{Binding SectionName}" 
+                                                                 FontSize="10" 
+                                                                 Foreground="{DynamicResource InfoBrush}"/>
+                                                        <TextBlock Text="•" 
+                                                                 FontSize="10" 
+                                                                 Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        <TextBlock Text="{Binding GradingPeriod}" 
+                                                                 FontSize="10" 
+                                                                 Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
                                             </StackPanel>
+                                                <StackPanel Grid.Column="2" 
+                                                          HorizontalAlignment="Right" 
+                                                          VerticalAlignment="Center"
+                                                          Spacing="4">
+                                                    <TextBlock Text="{Binding GwaText}" 
+                                                             FontSize="16" 
+                                                             FontWeight="Bold" 
+                                                             Foreground="{Binding GwaColor}"
+                                                             HorizontalAlignment="Right"/>
+                                                    <Border Classes="badge" 
+                                                            Background="{Binding StatusColor}"
+                                                            Padding="6,2"
+                                                            HorizontalAlignment="Right">
+                                                        <TextBlock Text="{Binding StatusText}" 
+                                                                 FontSize="10" 
+                                                                 FontWeight="SemiBold"
+                                                                 Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                                                    </Border>
+                                                </StackPanel>
                                         </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
