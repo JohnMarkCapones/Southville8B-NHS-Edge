@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { AuthModule } from '../auth/auth.module';
 import { StorageModule } from '../storage/storage.module';
+import { StudentActivitiesModule } from '../student-activities/student-activities.module';
+import { GalleryModule } from '../gallery/gallery.module';
 
 // Controllers
 import {
@@ -30,7 +32,7 @@ import { NewsReviewCommentsService } from './services/news-review-comments.servi
  * Supports journalism domain with position-based permissions
  */
 @Module({
-  imports: [SupabaseModule, AuthModule, StorageModule],
+  imports: [SupabaseModule, AuthModule, StorageModule, StudentActivitiesModule, GalleryModule],
   controllers: [
     NewsController,
     NewsCategoriesController,

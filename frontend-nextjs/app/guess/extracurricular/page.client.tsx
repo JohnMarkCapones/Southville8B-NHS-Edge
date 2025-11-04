@@ -7,6 +7,7 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import {
@@ -338,6 +339,7 @@ export default function ExtracurricularClient() {
 
   return (
     <div className="min-h-screen bg-background">
+      <GuessBreadcrumb items={[{ label: "Extracurricular" }]} />
       {/* Hero Section */}
       <section
         ref={heroRef}

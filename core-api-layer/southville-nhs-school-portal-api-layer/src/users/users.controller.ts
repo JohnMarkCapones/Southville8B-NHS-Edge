@@ -39,6 +39,7 @@ import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
+import { AssignDomainRoleDto } from './dto/assign-domain-role.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -266,5 +267,72 @@ export class UsersController {
       throw new ForbiddenException('Students can only view their own profile');
     }
     return this.usersService.findOne(id);
+  }
+
+  // ===== Domain Role Management Endpoints =====
+
+  @Get(':id/domain-roles')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Get all domain roles assigned to a user',
+    description:
+      'Retrieves all domain role assignments for a specific user, including role details and domain information',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Domain roles retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getUserDomainRoles(@Param('id') userId: string) {
+    return this.usersService.getUserDomainRoles(userId);
+  }
+
+  @Post(':id/domain-roles')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Assign a domain role to a user',
+    description:
+      'Assigns a specific domain role to a user. The user can have multiple domain roles across different domains.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Domain role assigned successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'User or domain role not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async assignDomainRole(
+    @Param('id') userId: string,
+    @Body() assignDto: AssignDomainRoleDto,
+  ) {
+    return this.usersService.assignDomainRole(
+      userId,
+      assignDto.domain_role_id,
+    );
+  }
+
+  @Delete(':id/domain-roles/:assignmentId')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Remove a domain role assignment from a user',
+    description:
+      'Removes a specific domain role assignment. Use the assignment ID from user_domain_roles table.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Domain role assignment removed successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async removeDomainRole(
+    @Param('id') userId: string,
+    @Param('assignmentId') assignmentId: string,
+  ) {
+    return this.usersService.removeDomainRole(userId, assignmentId);
   }
 }

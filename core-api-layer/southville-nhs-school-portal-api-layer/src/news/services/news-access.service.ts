@@ -117,6 +117,8 @@ export class NewsAccessService {
     if (!domainId) return null;
 
     // Get user's domain role in journalism
+    // FIX: Use .limit(1).single() instead of .maybeSingle() to handle duplicates
+    // If user has multiple positions (e.g., Publisher + Writer), take the first one
     const { data, error } = await supabase
       .from('user_domain_roles')
       .select(
@@ -130,7 +132,8 @@ export class NewsAccessService {
       )
       .eq('user_id', userId)
       .eq('domain_roles.domain_id', domainId)
-      .maybeSingle();
+      .limit(1)
+      .single();
 
     if (error || !data) {
       this.logger.debug(`No journalism position found for user ${userId}`);

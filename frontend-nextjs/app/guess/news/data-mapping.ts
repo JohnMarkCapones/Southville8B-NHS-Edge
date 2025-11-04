@@ -19,6 +19,8 @@ export interface NewsArticle {
   featured?: boolean;
   trending?: boolean;
   tags?: string[];
+  coAuthors?: string[];
+  credits?: string;
 }
 
 export interface BackendNews {
@@ -26,6 +28,7 @@ export interface BackendNews {
   title: string;
   slug: string;
   author_id: string;
+  author_name?: string;
   domain_id?: string;
   article_html: string;
   description: string;
@@ -55,6 +58,12 @@ export interface BackendNews {
       slug: string;
     };
   }>;
+  co_authors?: Array<{
+    id: string;
+    co_author_name: string;
+    role?: string;
+  }>;
+  credits?: string;
 }
 
 /**
@@ -63,20 +72,23 @@ export interface BackendNews {
 export function mapBackendNewsToFrontend(backendNews: BackendNews): NewsArticle {
   // Extract excerpt from HTML content (strip HTML tags)
   const cleanContent = backendNews.article_html?.replace(/<[^>]*>/g, '') || '';
-  const excerpt = cleanContent.substring(0, 200) + (cleanContent.length > 200 ? '...' : '');
-  
+  const excerpt = backendNews.description || (cleanContent.substring(0, 200) + (cleanContent.length > 200 ? '...' : ''));
+
   // Generate read time estimate (average 200 words per minute)
   const wordCount = cleanContent.split(/\s+/).length;
   const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
   const readTime = `${readTimeMinutes} min read`;
-  
+
   // Map category
   const category = backendNews.category?.name || 'General';
-  
+
   // Determine if featured (for now, we'll use views as a proxy)
   const featured = backendNews.views > 2000;
   const trending = backendNews.views > 1500;
-  
+
+  // Get author name with proper fallback chain
+  const authorName = backendNews.author_name || backendNews.author?.full_name || 'Unknown Author';
+
   return {
     id: backendNews.id,
     title: backendNews.title,
@@ -84,7 +96,7 @@ export function mapBackendNewsToFrontend(backendNews: BackendNews): NewsArticle 
     excerpt: excerpt,
     content: backendNews.article_html || '',
     author: {
-      name: backendNews.author?.full_name || 'Unknown Author',
+      name: authorName,
       email: backendNews.author?.email,
     },
     date: backendNews.published_date || backendNews.created_at,
@@ -95,15 +107,18 @@ export function mapBackendNewsToFrontend(backendNews: BackendNews): NewsArticle 
     featured: featured,
     trending: trending,
     tags: backendNews.tags?.map(t => t.tag.name) || [],
+    coAuthors: backendNews.co_authors?.map(ca => ca.co_author_name) || [],
+    credits: backendNews.credits || undefined,
   };
 }
 
 /**
  * Fetch news articles from the API
+ * Only fetches articles that are published and approved
  */
 export async function fetchNewsFromAPI(): Promise<NewsArticle[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
-  
+
   try {
     const res = await fetch(`${apiUrl}/api/v1/news/public?limit=20`, {
       next: { revalidate: 3600 },
@@ -115,7 +130,13 @@ export async function fetchNewsFromAPI(): Promise<NewsArticle[]> {
     }
 
     const data: BackendNews[] = await res.json();
-    return data.map(mapBackendNewsToFrontend);
+
+    // Filter to only show published and approved articles
+    const publishedAndApproved = data.filter(article =>
+      article.status === 'published' || article.status === 'approved'
+    );
+
+    return publishedAndApproved.map(mapBackendNewsToFrontend);
   } catch (error) {
     console.error('Error fetching news from API:', error);
     return [];
@@ -148,10 +169,28 @@ export async function findNewsBySlugFromAPI(slug: string): Promise<NewsArticle |
 
 /**
  * Fetch featured news articles (high views or manually marked)
+ * Returns published and approved news sorted by views
  */
 export async function fetchFeaturedNewsFromAPI(): Promise<NewsArticle[]> {
   const allNews = await fetchNewsFromAPI();
-  return allNews.filter(article => article.featured).slice(0, 3);
+
+  // Sort by views (descending) to show most popular first
+  const sortedNews = allNews.sort((a, b) => (b.views || 0) - (a.views || 0));
+
+  // Return top 3 articles, prioritizing featured ones
+  const featured = sortedNews.filter(article => article.featured);
+
+  // If we have featured articles, return those, otherwise return top 3 by views
+  if (featured.length >= 3) {
+    return featured.slice(0, 3);
+  } else if (featured.length > 0) {
+    // If we have some featured but not enough, fill with non-featured
+    const nonFeatured = sortedNews.filter(article => !article.featured);
+    return [...featured, ...nonFeatured].slice(0, 3);
+  } else {
+    // No featured articles, just return top 3 by views
+    return sortedNews.slice(0, 3);
+  }
 }
 
 /**

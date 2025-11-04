@@ -7,6 +7,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { StudentActivitiesService } from '../student-activities/student-activities.service';
+import { ActivityType } from '../student-activities/entities/student-activity.entity';
 import { ModuleStorageService } from './services/module-storage.service';
 import { ModuleAccessService } from './services/module-access.service';
 import { ModuleDownloadLoggerService } from './services/module-download-logger.service';
@@ -46,6 +48,7 @@ export class ModulesService {
     private readonly moduleStorageService: ModuleStorageService,
     private readonly moduleAccessService: ModuleAccessService,
     private readonly moduleDownloadLoggerService: ModuleDownloadLoggerService,
+    private readonly studentActivitiesService: StudentActivitiesService,
   ) {}
 
   /**
@@ -261,6 +264,91 @@ export class ModulesService {
       }
 
       this.logger.log(`Module file uploaded successfully: ${moduleId}`);
+
+      // 🎯 CREATE ACTIVITIES - Notify students about the new module
+      try {
+        this.logger.log(`🎯 Starting activity creation for module: ${updatedModule.title}`);
+        this.logger.log(`Module is_global: ${updatedModule.is_global}, sectionIds: ${uploadModuleDto.sectionIds}`);
+
+        // Get teacher info
+        const { data: teacher } = await this.supabaseService
+          .getServiceClient()
+          .from('users')
+          .select('full_name')
+          .eq('id', uploadedBy)
+          .single();
+
+        const teacherName = teacher?.full_name || 'Teacher';
+        this.logger.log(`Teacher name: ${teacherName}`);
+
+        // Get all students who should receive this module
+        let studentIds: string[] = [];
+
+        if (updatedModule.is_global) {
+          // Global modules - get all students
+          this.logger.log('Fetching all students for global module...');
+          const { data: allStudents, error } = await this.supabaseService
+            .getServiceClient()
+            .from('students')
+            .select('user_id');
+
+          if (error) {
+            this.logger.error('Error fetching students:', error);
+          }
+
+          studentIds = allStudents?.map(s => s.user_id).filter(Boolean) || [];
+          this.logger.log(`Found ${studentIds.length} students for global module`);
+        } else if (uploadModuleDto.sectionIds && uploadModuleDto.sectionIds.length > 0) {
+          // Section-specific modules - get students from those sections
+          this.logger.log(`Fetching students from sections: ${uploadModuleDto.sectionIds.join(', ')}`);
+          const { data: sectionStudents, error } = await this.supabaseService
+            .getServiceClient()
+            .from('students')
+            .select('user_id')
+            .in('section_id', uploadModuleDto.sectionIds);
+
+          if (error) {
+            this.logger.error('Error fetching section students:', error);
+          }
+
+          studentIds = sectionStudents?.map(s => s.user_id).filter(Boolean) || [];
+          this.logger.log(`Found ${studentIds.length} students in sections`);
+        } else {
+          this.logger.warn('⚠️ No sectionIds provided and module is not global - no students will be notified!');
+        }
+
+        // Create activity for each student (limit to first 100 to avoid overload)
+        const limitedStudentIds = studentIds.slice(0, 100);
+        this.logger.log(`📝 Creating activities for ${limitedStudentIds.length} students`);
+
+        for (const studentId of limitedStudentIds) {
+          try {
+            await this.studentActivitiesService.create({
+              studentUserId: studentId,
+              activityType: ActivityType.MODULE_UPLOADED_BY_TEACHER,
+              title: `${teacherName} uploaded ${updatedModule.title}`,
+              description: 'New learning material available',
+              metadata: {
+                module_id: updatedModule.id,
+                module_title: updatedModule.title,
+                teacher_name: teacherName,
+                teacher_id: uploadedBy,
+              },
+              relatedEntityId: updatedModule.id,
+              relatedEntityType: 'module',
+              icon: 'BookOpen',
+              color: 'text-purple-500',
+            });
+          } catch (activityError) {
+            // Don't fail upload if activity creation fails for a student
+            this.logger.error(`Failed to create activity for student ${studentId}:`, activityError);
+          }
+        }
+      } catch (activityError) {
+        // Don't fail the upload if activity creation fails
+        this.logger.error('Failed to create module upload activities:', activityError);
+      }
+
       return {
         module: updatedModule,
         uploadResult,
@@ -610,6 +698,107 @@ export class ModulesService {
       this.logger.log(
         `Module assigned to ${sectionIds.length} sections: ${moduleId}`,
       );
+
+      // 🎯 CREATE ACTIVITIES - Notify students about the module
+      try {
+        this.logger.log(`🎯 Starting activity creation for module assignment: ${moduleId}`);
+
+        // Get module details including file info
+        const { data: module } = await this.supabaseService
+          .getServiceClient()
+          .from('modules')
+          .select('title, r2_file_key, file_url, mime_type')
+          .eq('id', moduleId)
+          .single();
+
+        // Extract filename from r2_file_key (e.g., "modules/.../16c8fb69-...-module-1761632334361.pdf")
+        let fileName = module?.title || 'New Module';
+        if (module?.r2_file_key) {
+          const pathParts = module.r2_file_key.split('/');
+          const fullFileName = pathParts[pathParts.length - 1]; // e.g., "16c8fb69-b418-478f-82fb-5853f588e7a8-module-1761632334361.pdf"
+
+          // Remove UUID prefix and timestamp: "16c8fb69-...-module-1761632334361.pdf" -> "module.pdf"
+          // Pattern: UUID-originalname-timestamp.ext -> originalname.ext
+          const match = fullFileName.match(/^[a-f0-9-]+-(.+?)-\d+(\.[^.]+)$/);
+          if (match) {
+            fileName = match[1] + match[2]; // originalname + extension
+          } else {
+            // Fallback: just use the full filename
+            fileName = fullFileName;
+          }
+        }
+
+        this.logger.log(`📄 Module file info: ${JSON.stringify({
+          title: module?.title,
+          r2_file_key: module?.r2_file_key,
+          fileName: fileName,
+          file_url: module?.file_url,
+          mime_type: module?.mime_type
+        })}`);
+
+        // Get teacher info
+        const { data: teacher } = await this.supabaseService
+          .getServiceClient()
+          .from('users')
+          .select('full_name')
+          .eq('id', assignedBy)
+          .single();
+
+        const teacherName = teacher?.full_name || 'Teacher';
+        const moduleTitle = module?.title || 'New Module';
+
+        this.logger.log(`Module: "${moduleTitle}", Teacher: ${teacherName}`);
+        this.logger.log(`Fetching students from sections: ${sectionIds.join(', ')}`);
+
+        // Get all students in the assigned sections
+        // Join with users to ensure we only get students with valid auth accounts
+        const { data: sectionStudents, error: studentError } = await this.supabaseService
+          .getServiceClient()
+          .from('students')
+          .select('user_id, users!inner(id)')
+          .in('section_id', sectionIds)
+          .not('user_id', 'is', null);
+
+        if (studentError) {
+          this.logger.error('Error fetching section students:', studentError);
+        }
+
+        const studentIds = sectionStudents?.map(s => s.user_id).filter(Boolean) || [];
+        this.logger.log(`Filtered to ${studentIds.length} students with valid user accounts`);
+        this.logger.log(`Found ${studentIds.length} students in sections`);
+
+        // Create activity for each student (limit to 100)
+        const limitedStudentIds = studentIds.slice(0, 100);
+        this.logger.log(`📝 Creating activities for ${limitedStudentIds.length} students`);
+
+        for (const studentId of limitedStudentIds) {
+          try {
+            await this.studentActivitiesService.create({
+              studentUserId: studentId,
+              activityType: ActivityType.MODULE_UPLOADED_BY_TEACHER,
+              title: `${teacherName} uploaded ${moduleTitle}`,
+              description: 'New learning material available',
+              metadata: {
+                module_id: moduleId,
+                module_title: moduleTitle,
+                teacher_name: teacherName,
+                teacher_id: assignedBy,
+                file_name: fileName,
+                file_url: module?.file_url,
+                file_type: module?.mime_type,
+              },
+              relatedEntityId: moduleId,
+              relatedEntityType: 'module',
+              icon: 'BookOpen',
+              color: 'text-purple-500',
+            });
+          } catch (activityError) {
+            this.logger.error(`Failed to create activity for student ${studentId}:`, activityError);
+          }
+        }
+      } catch (activityError) {
+        this.logger.error('Failed to create module assignment activities:', activityError);
+      }
     } catch (error) {
       this.logger.error('Error assigning module to sections:', error);
       throw error;

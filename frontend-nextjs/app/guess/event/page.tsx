@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { absoluteUrl } from "@/lib/seo"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { getEvents } from "@/lib/api/endpoints/events"
 import { EVENTS } from "./[slug]/data"
+import EventsPageClient from "./page-client"
+import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export const metadata: Metadata = {
   title: "Events | Southville 8B NHS",
@@ -26,11 +27,11 @@ export default async function EventsIndexPage() {
   // Try to fetch from API, fallback to static data
   let events
   try {
-    const response = await getEvents({ 
-      page: 1, 
-      limit: 50, 
-      status: 'published', 
-      visibility: 'public' 
+    const response = await getEvents({
+      page: 1,
+      limit: 100,
+      status: 'published',
+      visibility: 'public'
     })
     events = response.data
     // If API returns empty array, use static data as fallback
@@ -43,32 +44,18 @@ export default async function EventsIndexPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-10">
+    <>
       <JsonLd data={[breadcrumbs]} />
-      <h1 className="text-3xl md:text-4xl font-bold mb-6">Events</h1>
-      <p className="text-muted-foreground mb-8 max-w-2xl">
-        Explore upcoming and featured events across arts, sports, academics, and more.
-      </p>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((e) => {
-          // Generate slug from title if not provided
-          const slug = e.slug || e.title
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-            .replace(/\s+/g, '-') // Replace spaces with hyphens
-            .replace(/-+/g, '-') // Replace multiple hyphens with single
-            .trim();
-          
-          return (
-            <Link key={e.id} href={`/guess/event/${slug}`} className="group block border rounded-xl p-5 hover:shadow-lg transition">
-              <div className="text-sm text-muted-foreground">{new Date(e.date).toLocaleDateString()} • {e.time}</div>
-              <div className="mt-2 font-semibold text-lg group-hover:underline">{e.title}</div>
-              <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</div>
-            </Link>
-          );
-        })}
+      <div className="container mx-auto px-4 pt-4">
+        <Breadcrumbs
+          items={[
+            { name: "Home", href: "/" },
+          ]}
+          current="Events"
+        />
       </div>
-    </div>
+      <EventsPageClient initialEvents={events} />
+    </>
   )
 }
 

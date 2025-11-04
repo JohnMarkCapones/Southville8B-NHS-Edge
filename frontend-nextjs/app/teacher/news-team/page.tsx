@@ -69,6 +69,7 @@ import { newsApi } from "@/lib/api/endpoints/news"
 import type { StudentData } from "@/components/superadmin/data/student-data"
 import { cn } from "@/lib/utils"
 import { useStudentSearch } from "@/hooks/useStudentSearch"
+import { EditJournalismMemberDialog } from "@/components/teacher/dialogs/edit-journalism-member-dialog"
 
 export default function TeacherNewsTeamPage() {
   const { toast } = useToast()
@@ -281,19 +282,8 @@ export default function TeacherNewsTeamPage() {
     setEditMemberDialogOpen(true)
   }
 
-  const handleUpdateMember = async () => {
-    if (!selectedMember) return
-    try {
-      const backendPosition = mapUiPositionToBackend(selectedMember.position as unknown as string)
-      const selectedUserId = (selectedMember as any).userId || selectedMember.id
-      await newsApi.updateJournalismMember(selectedUserId, { position: backendPosition })
-      await fetchMembersAndKpis()
-      setEditMemberDialogOpen(false)
-      setSelectedMember(null)
-      toast({ title: 'Member Updated', description: 'Position updated successfully.' })
-    } catch (error: any) {
-      toast({ title: 'Failed to update member', description: error?.message || 'Please try again.', variant: 'destructive' })
-    }
+  const handleEditMemberSuccess = async () => {
+    await fetchMembersAndKpis()
   }
 
   const handleDeleteMember = (member: NewsTeamMember) => {
@@ -940,146 +930,17 @@ export default function TeacherNewsTeamPage() {
       </Dialog>
 
       {/* Edit Member Dialog */}
-      <Dialog open={editMemberDialogOpen} onOpenChange={setEditMemberDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Team Member</DialogTitle>
-            <DialogDescription>Update member information and permissions.</DialogDescription>
-          </DialogHeader>
-          {selectedMember && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={selectedMember?.name || ""}
-                    onChange={(e) => setSelectedMember(selectedMember ? { ...selectedMember, name: e.target.value } : selectedMember)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    value={selectedMember?.email || ""}
-                    onChange={(e) => setSelectedMember(selectedMember ? { ...selectedMember, email: e.target.value } : selectedMember)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-position">Position</Label>
-                  <Select
-                    value={selectedMember.position}
-                    onValueChange={(value) => setSelectedMember({ ...selectedMember, position: value as any })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Editor-in-Chief">Editor-in-Chief</SelectItem>
-                      <SelectItem value="Managing Editor">Managing Editor</SelectItem>
-                      <SelectItem value="Section Editor">Section Editor</SelectItem>
-                      <SelectItem value="Staff Writer">Staff Writer</SelectItem>
-                      <SelectItem value="Photographer">Photographer</SelectItem>
-                      <SelectItem value="Layout Designer">Layout Designer</SelectItem>
-                      <SelectItem value="Faculty Adviser">Faculty Adviser</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Label>Permissions</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-canWrite"
-                      checked={selectedMember.permissions.includes("write")}
-                      onCheckedChange={(checked) => {
-                        const perms = checked
-                          ? [...selectedMember.permissions, "write"]
-                          : selectedMember.permissions.filter((p) => p !== "write")
-                        setSelectedMember({ ...selectedMember, permissions: perms as any })
-                      }}
-                    />
-                    <Label htmlFor="edit-canWrite" className="font-normal">
-                      Can Write Articles
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-canEdit"
-                      checked={selectedMember.permissions.includes("edit")}
-                      onCheckedChange={(checked) => {
-                        const perms = checked
-                          ? [...selectedMember.permissions, "edit"]
-                          : selectedMember.permissions.filter((p) => p !== "edit")
-                        setSelectedMember({ ...selectedMember, permissions: perms as any })
-                      }}
-                    />
-                    <Label htmlFor="edit-canEdit" className="font-normal">
-                      Can Edit Articles
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-canReview"
-                      checked={selectedMember.permissions.includes("review")}
-                      onCheckedChange={(checked) => {
-                        const perms = checked
-                          ? [...selectedMember.permissions, "review"]
-                          : selectedMember.permissions.filter((p) => p !== "review")
-                        setSelectedMember({ ...selectedMember, permissions: perms as any })
-                      }}
-                    />
-                    <Label htmlFor="edit-canReview" className="font-normal">
-                      Can Review Articles
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-canApprove"
-                      checked={selectedMember.permissions.includes("approve")}
-                      onCheckedChange={(checked) => {
-                        const perms = checked
-                          ? [...selectedMember.permissions, "approve"]
-                          : selectedMember.permissions.filter((p) => p !== "approve")
-                        setSelectedMember({ ...selectedMember, permissions: perms as any })
-                      }}
-                    />
-                    <Label htmlFor="edit-canApprove" className="font-normal">
-                      Can Approve Articles
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-canPublish"
-                      checked={selectedMember.permissions.includes("publish")}
-                      onCheckedChange={(checked) => {
-                        const perms = checked
-                          ? [...selectedMember.permissions, "publish"]
-                          : selectedMember.permissions.filter((p) => p !== "publish")
-                        setSelectedMember({ ...selectedMember, permissions: perms as any })
-                      }}
-                    />
-                    <Label htmlFor="edit-canPublish" className="font-normal">
-                      Can Publish Articles
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditMemberDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateMember} className="bg-purple-600 hover:bg-purple-700">
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditJournalismMemberDialog
+        member={selectedMember ? {
+          id: (selectedMember as any).userId || selectedMember.id,
+          name: selectedMember.name,
+          email: selectedMember.email,
+          position: selectedMember.position
+        } : null}
+        open={editMemberDialogOpen}
+        onOpenChange={setEditMemberDialogOpen}
+        onSuccess={handleEditMemberSuccess}
+      />
 
       {/* View Member Dialog */}
       <Dialog open={viewMemberDialogOpen} onOpenChange={setViewMemberDialogOpen}>

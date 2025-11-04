@@ -18,7 +18,13 @@
       "Bash(npx tsc:*)",
       "Bash(find:*)",
       "Bash(2)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(timeout 15 npm run start:dev)",
+      "Bash(timeout 10 echo:*)",
+      "Bash(timeout 1 ping:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 5 echo:*)",
+      "Bash(timeout 30 npm run build:*)"
     ],
     "deny": [],
     "ask": []

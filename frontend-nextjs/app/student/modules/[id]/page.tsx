@@ -437,11 +437,11 @@ export default function ModuleViewerPage() {
         </div>
 
         {/* Main Content */}
-        <div className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="p-2 sm:p-4 lg:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {/* Sidebar - Module Info */}
-            <div className="xl:col-span-1 order-2 xl:order-1">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-xl sticky top-4 xl:top-6">
+            <div className="lg:col-span-1 order-2 lg:order-1">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-xl lg:sticky lg:top-4">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                     <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -544,7 +544,7 @@ export default function ModuleViewerPage() {
             </div>
 
             {/* Main Document Viewer */}
-            <div className="xl:col-span-3 order-1 xl:order-2">
+            <div className="lg:col-span-3 order-1 lg:order-2">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -553,10 +553,10 @@ export default function ModuleViewerPage() {
                     </CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="p-2 sm:p-6">
+                <CardContent className="p-2 sm:p-4 lg:p-6">
                   {/* Document Viewer */}
                   {fileType === 'pptx' ? (
-                    <div className="relative bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] flex items-center justify-center">
+                    <div className="relative bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden min-h-[300px] sm:min-h-[400px] lg:min-h-[600px] flex items-center justify-center">
                       <div className="text-center space-y-4 sm:space-y-6 max-w-md px-4">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto">
                           <FileText className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-orange-500" />
@@ -605,10 +605,10 @@ export default function ModuleViewerPage() {
                       onZoomChange={setZoomLevel}
                       totalPages={totalPages}
                       onTotalPagesChange={setTotalPages}
-                      className="min-h-[400px] sm:min-h-[500px] lg:min-h-[600px]"
+                      className="min-h-[300px] sm:min-h-[400px] lg:min-h-[600px]"
                     />
                   ) : (
-                    <div className="relative bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] flex items-center justify-center">
+                    <div className="relative bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden min-h-[300px] sm:min-h-[400px] lg:min-h-[600px] flex items-center justify-center">
                       <div className="text-center space-y-3 sm:space-y-4 px-4">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
                           <FileText className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-primary" />
@@ -651,21 +651,21 @@ export default function ModuleViewerPage() {
 
               {/* Progress Achievement */}
               {progress >= 100 && (
-                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-0 shadow-xl mt-4 sm:mt-6">
-                  <CardHeader className="text-center pb-3">
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-0 shadow-xl mt-3 sm:mt-4 lg:mt-6">
+                  <CardHeader className="text-center pb-2 sm:pb-3">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
                       <div className="p-2 sm:p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg sm:rounded-xl">
-                        <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                        <Trophy className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
                       </div>
-                      <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800 dark:text-green-200">
+                      <CardTitle className="text-base sm:text-lg lg:text-2xl font-bold text-green-800 dark:text-green-200">
                         Module Completed!
                       </CardTitle>
                     </div>
-                    <CardDescription className="text-sm sm:text-base lg:text-lg text-green-700 dark:text-green-300">
+                    <CardDescription className="text-xs sm:text-sm lg:text-lg text-green-700 dark:text-green-300 px-2">
                       Congratulations! You've successfully completed this learning module.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6">
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                       <div className="text-center p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 rounded-lg sm:rounded-xl">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">

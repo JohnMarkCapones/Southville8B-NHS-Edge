@@ -50,7 +50,6 @@ export const primaryNavItems = [
       { icon: Users2, label: "All Users", description: "Manage all system users" },
       { icon: GraduationCap, label: "Students", description: "Student management" },
       { icon: UserCog, label: "Teachers", description: "Teacher management" },
-      { icon: Shield, label: "Admins", description: "Administrator accounts" },
     ],
   },
   {

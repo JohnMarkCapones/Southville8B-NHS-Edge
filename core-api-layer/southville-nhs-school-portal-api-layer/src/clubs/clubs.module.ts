@@ -3,6 +3,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { AuthModule } from '../auth/auth.module';
 import { StorageModule } from '../storage/storage.module';
 import { GalleryModule } from '../gallery/gallery.module';
+import { StudentActivitiesModule } from '../student-activities/student-activities.module';
 import { ClubsService } from './clubs.service';
 import { ClubsController } from './clubs.controller';
 import { ClubFormsService } from './services/club-forms.service';
@@ -16,7 +17,7 @@ import { ClubBenefitsService } from './services/club-benefits.service';
 import { ClubFaqsService } from './services/club-faqs.service';
 
 @Module({
-  imports: [SupabaseModule, AuthModule, StorageModule, GalleryModule],
+  imports: [SupabaseModule, AuthModule, StorageModule, GalleryModule, StudentActivitiesModule],
   controllers: [
     ClubsController,
     ClubFormsController,

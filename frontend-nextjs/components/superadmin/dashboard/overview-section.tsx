@@ -361,10 +361,10 @@ export function OverviewSection() {
   return (
     <div className="space-y-6">
       {/* KPI Section */}
-      <div className="flex gap-4 h-auto">
-        {/* Hero KPI Cards (3x3 grid) */}
+      <div className="flex flex-col xl:flex-row gap-4 h-auto">
+        {/* Hero KPI Cards (Responsive grid) */}
         <div className="flex-1">
-          <KPIGrid className="grid-cols-3 gap-3 mb-4">
+          <KPIGrid className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
             {/* Top Row - Hero Cards */}
             <HeroKPICard
               {...kpiConfigs.students}
@@ -389,7 +389,7 @@ export function OverviewSection() {
           </KPIGrid>
 
           {/* Secondary KPI Cards */}
-          <KPIGrid className="grid-cols-3 gap-3">
+          <KPIGrid className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             <CompactKPICard
               {...kpiConfigs.subjects}
               value={kpiData?.subjects.value || 24}
@@ -478,7 +478,7 @@ export function OverviewSection() {
 // Extracted Sessions Pie Chart Component
 function SessionsPieChart({ sessionData }: { sessionData: any[] }) {
   return (
-    <Card className="w-80 h-100 relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 hover:scale-[1.02] group">
+    <Card className="w-full lg:w-64 xl:w-80 h-auto lg:h-100 relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 hover:scale-[1.02] group">
       <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent dark:from-orange-900/20"></div>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-bold flex items-center gap-3">

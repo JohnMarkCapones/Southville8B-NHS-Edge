@@ -608,7 +608,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
   return (
     <StudentLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-        <div className="relative h-80 overflow-hidden">
+        <div className="relative h-64 sm:h-72 lg:h-80 overflow-hidden">
           <div
             className={`absolute inset-0 ${club.club_image ? '' : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500'}`}
             style={club.club_image ? {
@@ -620,36 +620,37 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
             <div className="absolute inset-0 bg-black/40"></div>
           </div>
 
-          <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+          <div className="relative z-10 p-3 sm:p-4 lg:p-6 h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
                 onClick={() => router.push("/student/clubs")}
-                className="text-white hover:bg-white/20 backdrop-blur-sm"
+                className="text-white hover:bg-white/20 backdrop-blur-sm h-9 px-2 sm:px-4 text-xs sm:text-sm"
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Back to Clubs
+                <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back to Clubs</span>
+                <span className="sm:hidden">Back</span>
               </Button>
 
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 backdrop-blur-sm">
-                  <Share2 className="w-4 h-4" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 backdrop-blur-sm h-8 w-8 sm:h-9 sm:w-9 p-0">
+                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="text-white hover:bg-white/20 backdrop-blur-sm"
+                  className="text-white hover:bg-white/20 backdrop-blur-sm h-8 w-8 sm:h-9 sm:w-9 p-0"
                 >
-                  <Bell className={`w-4 h-4 ${showNotifications ? "text-yellow-300" : ""}`} />
+                  <Bell className={`w-3 h-3 sm:w-4 sm:h-4 ${showNotifications ? "text-yellow-300" : ""}`} />
                 </Button>
               </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-              <div className="flex items-end gap-6">
+            <div className="flex flex-col gap-4 sm:gap-6">
+              <div className="flex items-end gap-3 sm:gap-4 lg:gap-6">
                 {club.club_logo ? (
-                  <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 backdrop-blur-sm bg-white">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-white/20 backdrop-blur-sm bg-white flex-shrink-0">
                     <img
                       src={club.club_logo}
                       alt={`${club.name} logo`}
@@ -658,110 +659,114 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                   </div>
                 ) : (
                   <div
-                    className={`w-24 h-24 ${club.color} rounded-3xl flex items-center justify-center shadow-2xl border-4 border-white/20 backdrop-blur-sm`}
+                    className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 ${club.color} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl border-2 sm:border-4 border-white/20 backdrop-blur-sm flex-shrink-0`}
                   >
-                    <Users className="w-12 h-12 text-white" />
+                    <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white" />
                   </div>
                 )}
 
-                <div className="text-white">
-                  <h1 className="text-4xl font-bold mb-2">{club.name}</h1>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                <div className="text-white flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold mb-1 sm:mb-2 truncate">{club.name}</h1>
+                  <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 lg:gap-3 mb-1 sm:mb-2">
+                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs h-5 sm:h-auto px-1.5 sm:px-2.5">
                       {club.category}
                     </Badge>
-                    <Badge variant="outline" className="bg-white/10 text-white border-white/30">
+                    <Badge variant="outline" className="bg-white/10 text-white border-white/30 text-[10px] sm:text-xs h-5 sm:h-auto px-1.5 sm:px-2.5">
                       {club.role}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-white/90">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span className="text-sm">{members.length} members</span>
+                  <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-white/90">
+                    <div className="flex items-center gap-0.5 sm:gap-1">
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="text-[10px] sm:text-xs lg:text-sm">{members.length} members</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">{club.meetingFrequency}</span>
+                    <div className="flex items-center gap-0.5 sm:gap-1">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="text-[10px] sm:text-xs lg:text-sm">{club.meetingFrequency}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <Button
                   onClick={() => setIsFollowing(!isFollowing)}
                   className={`${
                     isFollowing ? "bg-white/20 text-white border-white/30" : "bg-white text-gray-900 hover:bg-gray-100"
-                  } backdrop-blur-sm transition-all duration-300`}
+                  } backdrop-blur-sm transition-all duration-300 h-9 px-3 text-xs sm:text-sm flex-1 sm:flex-initial`}
                   variant={isFollowing ? "outline" : "default"}
                 >
-                  <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
-                  {isFollowing ? "Following" : "Follow"}
+                  <Heart className={`w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 ${isFollowing ? "fill-current" : ""}`} />
+                  <span className="hidden sm:inline">{isFollowing ? "Following" : "Follow"}</span>
                 </Button>
-                <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Join Chat
+                <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white h-9 px-3 text-xs sm:text-sm flex-1 sm:flex-initial">
+                  <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Join Chat</span>
+                  <span className="sm:hidden">Chat</span>
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setLeaveDialogOpen(true)}
-                  className="bg-white/10 text-white border-white/30 hover:bg-red-500/20 hover:border-red-400 backdrop-blur-sm transition-all duration-300"
+                  className="bg-white/10 text-white border-white/30 hover:bg-red-500/20 hover:border-red-400 backdrop-blur-sm transition-all duration-300 h-9 px-3 text-xs sm:text-sm flex-1 sm:flex-initial"
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Leave Club
+                  <LogOut className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden lg:inline">Leave Club</span>
+                  <span className="lg:hidden">Leave</span>
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="p-6 -mt-6 relative z-20">
+        <div className="p-3 sm:p-4 lg:p-6 -mt-4 sm:-mt-6 relative z-20">
           <Card className="shadow-2xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl">
             <CardContent className="p-0">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <div className="border-b border-gray-200 dark:border-gray-700 px-6">
-                  <TabsList className="grid w-full grid-cols-5 bg-transparent h-auto p-0">
+                <div className="border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 lg:px-6 overflow-x-auto">
+                  <TabsList className="inline-flex w-full lg:grid lg:grid-cols-5 bg-transparent h-auto p-0 min-w-max lg:min-w-0">
                     <TabsTrigger
                       value="overview"
-                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-4"
+                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-3 px-3 sm:px-4 text-xs sm:text-sm lg:py-4"
                     >
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      Overview
+                      <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Overview</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="members"
-                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-4"
+                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-3 px-3 sm:px-4 text-xs sm:text-sm lg:py-4"
                     >
-                      <Users className="w-4 h-4 mr-2" />
-                      Members
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Members</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="events"
-                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-4"
+                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-3 px-3 sm:px-4 text-xs sm:text-sm lg:py-4"
                     >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Events
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Events</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="members-management"
-                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-4"
+                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-3 px-3 sm:px-4 text-xs sm:text-sm lg:py-4 whitespace-nowrap"
                     >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Manage Members
+                      <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Manage Members</span>
+                      <span className="sm:hidden">Manage</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="announcements-management"
-                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-4"
+                      className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none py-3 px-3 sm:px-4 text-xs sm:text-sm lg:py-4 whitespace-nowrap"
                     >
-                      <Bell className="w-4 h-4 mr-2" />
-                      Manage Announcements
+                      <Bell className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Manage Announcements</span>
+                      <span className="sm:hidden">Announce</span>
                     </TabsTrigger>
                   </TabsList>
                 </div>
 
-                <TabsContent value="overview" className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
+                <TabsContent value="overview" className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                       <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
                         <CardHeader>
                           <CardTitle className="flex items-center text-blue-700 dark:text-blue-300">
@@ -1045,8 +1050,8 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="members" className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TabsContent value="members" className="p-3 sm:p-4 lg:p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {members.map((member, index) => (
                       <Card
                         key={index}
@@ -1076,7 +1081,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="events" className="p-6">
+                <TabsContent value="events" className="p-3 sm:p-4 lg:p-6">
                   {loadingEvents ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="flex items-center space-x-2">
@@ -1176,7 +1181,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                   )}
                 </TabsContent>
 
-                <TabsContent value="members-management" className="p-6 space-y-6">
+                <TabsContent value="members-management" className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Members Management</h2>
@@ -1225,7 +1230,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         {filteredMembers.map((member) => (
                           <Card
                             key={member.id}
@@ -1291,7 +1296,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="announcements-management" className="p-6 space-y-6">
+                <TabsContent value="announcements-management" className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements Management</h2>

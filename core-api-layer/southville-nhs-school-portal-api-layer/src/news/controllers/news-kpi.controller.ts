@@ -13,13 +13,16 @@ export class NewsKpiController {
   constructor(private readonly newsKpiService: NewsKpiService) {}
 
   @Get('kpis')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get journalism team KPIs' })
   @ApiResponse({ status: 200 })
   async getKpis() {
     return this.newsKpiService.getKpis();
   }
 }
+
+
+
 
 
 

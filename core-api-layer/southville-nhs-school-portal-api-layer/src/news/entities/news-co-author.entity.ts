@@ -20,14 +20,6 @@ export class NewsCoAuthor {
   @Column({ type: 'varchar', length: 255, nullable: false })
   co_author_name: string;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-    default: 'co-author',
-    nullable: false,
-  })
-  role: 'co-author' | 'editor' | 'contributor';
-
   @CreateDateColumn({ type: 'timestamp with time zone' })
   added_at: Date;
 

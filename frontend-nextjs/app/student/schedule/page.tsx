@@ -27,16 +27,73 @@ import ScheduleEmpty from "@/components/ui/schedule-empty"
 
 export default function SchedulePage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
+  const [isMobile, setIsMobile] = useState(false)
+  const [currentDayIndex, setCurrentDayIndex] = useState(0)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
+
+  // Auto-detect mobile and set default view mode
   const [viewMode, setViewMode] = useState<'week' | 'agenda'>('week')
-  
+
   // Get current day for highlighting
   const getCurrentDay = () => {
     const today = new Date()
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     return dayNames[today.getDay()]
   }
-  
+
   const currentDay = getCurrentDay()
+
+  // Detect mobile and set default view mode
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768 // md breakpoint
+      setIsMobile(mobile)
+      if (mobile && viewMode === 'week') {
+        setViewMode('agenda') // Auto-switch to agenda on mobile
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Set current day index based on today
+  useEffect(() => {
+    const weekDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    const idx = weekDayNames.indexOf(currentDay)
+    if (idx !== -1) {
+      setCurrentDayIndex(idx)
+    }
+  }, [currentDay])
+
+  // Swipe handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe && currentDayIndex < 4) {
+      setCurrentDayIndex(currentDayIndex + 1)
+    }
+    if (isRightSwipe && currentDayIndex > 0) {
+      setCurrentDayIndex(currentDayIndex - 1)
+    }
+
+    setTouchStart(0)
+    setTouchEnd(0)
+  }
 
   // Continuous timeline config (minute-precise)
   const dayStartMinutes = 6 * 60 // 06:00
@@ -476,53 +533,68 @@ export default function SchedulePage() {
 
   return (
     <StudentLayout>
-      <div className="p-6 space-y-8 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800/50 min-h-screen">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
+      <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 lg:space-y-8 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800/50 min-h-screen">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 sm:space-y-6 lg:space-y-0">
           <div className="space-y-2">
-            <div className="flex items-center space-x-3">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
                 Class Schedule
               </h1>
               {isRefetching && (
-                <div className="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                   <span>Updating...</span>
                 </div>
               )}
-              <div className="ml-4 hidden md:flex bg-slate-100/70 dark:bg-slate-800/70 rounded-lg p-1 border border-slate-200/60 dark:border-slate-600/60">
-                <Button size="sm" variant={viewMode==='week'? 'default':'ghost'} className={`h-8 px-3 ${viewMode==='week'?'bg-white dark:bg-slate-700':''}`} onClick={() => setViewMode('week')}>Weekly</Button>
-                <Button size="sm" variant={viewMode==='agenda'? 'default':'ghost'} className={`h-8 px-3 ${viewMode==='agenda'?'bg-white dark:bg-slate-700':''}`} onClick={() => setViewMode('agenda')}>Agenda</Button>
+              {/* View Mode Toggle - Mobile Friendly */}
+              <div className="flex bg-slate-100/70 dark:bg-slate-800/70 rounded-lg p-1 border border-slate-200/60 dark:border-slate-600/60 w-full sm:w-auto">
+                <Button
+                  size="sm"
+                  variant={viewMode==='week'? 'default':'ghost'}
+                  className={`h-8 px-3 flex-1 sm:flex-initial text-xs sm:text-sm ${viewMode==='week'?'bg-white dark:bg-slate-700':''}`}
+                  onClick={() => setViewMode('week')}
+                >
+                  Weekly
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode==='agenda'? 'default':'ghost'}
+                  className={`h-8 px-3 flex-1 sm:flex-initial text-xs sm:text-sm ${viewMode==='agenda'?'bg-white dark:bg-slate-700':''}`}
+                  onClick={() => setViewMode('agenda')}
+                >
+                  Agenda
+                </Button>
               </div>
             </div>
-            <p className="text-lg text-slate-600 dark:text-slate-300 font-medium">Your weekly academic schedule</p>
+            <p className="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-300 font-medium">Your weekly academic schedule</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={downloadScheduleAsPDF}
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-slate-700/90 border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-200 dark:text-slate-200"
+              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-slate-700/90 border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-200 dark:text-slate-200 h-9 px-3 text-xs sm:text-sm"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Download PDF
+              <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Download PDF</span>
             </Button>
             <Button
               variant="outline"
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-slate-700/90 border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-200 dark:text-slate-200"
+              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-slate-700/90 border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-200 dark:text-slate-200 h-9 px-3 text-xs sm:text-sm hidden sm:flex"
             >
-              <Printer className="w-4 h-4 mr-2" />
-              Print
+              <Printer className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden md:inline">Print</span>
             </Button>
             <Button
               variant="outline"
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-slate-700/90 border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-200 dark:text-slate-200"
+              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-slate-700/90 border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-200 dark:text-slate-200 h-9 px-3 text-xs sm:text-sm hidden lg:flex"
             >
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden md:inline">Share</span>
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50 dark:border-slate-600/50 shadow-lg">
+        <div className="flex items-center justify-between bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-slate-200/50 dark:border-slate-600/50 shadow-lg">
           <Button
             variant="outline"
             onClick={() => {
@@ -530,17 +602,18 @@ export default function SchedulePage() {
               newWeek.setDate(currentWeek.getDate() - 7)
               setCurrentWeek(newWeek)
             }}
-            className="bg-white/80 dark:bg-slate-700/80 hover:bg-white/90 dark:hover:bg-slate-600/90 border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200 dark:text-slate-200"
+            className="bg-white/80 dark:bg-slate-700/80 hover:bg-white/90 dark:hover:bg-slate-600/90 border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200 dark:text-slate-200 h-9 px-2 sm:px-4 text-xs sm:text-sm"
           >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Previous Week
+            <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Previous Week</span>
+            <span className="sm:hidden">Prev</span>
           </Button>
 
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+          <div className="text-center px-2">
+            <h2 className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100">
               Week of {weekDates[0].toLocaleDateString("en-US", { month: "long", day: "numeric" })}
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
               {weekDates[0].toLocaleDateString("en-US", { year: "numeric" })}
             </p>
           </div>
@@ -552,10 +625,11 @@ export default function SchedulePage() {
               newWeek.setDate(currentWeek.getDate() + 7)
               setCurrentWeek(newWeek)
             }}
-            className="bg-white/80 dark:bg-slate-700/80 hover:bg-white/90 dark:hover:bg-slate-600/90 border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200 dark:text-slate-200"
+            className="bg-white/80 dark:bg-slate-700/80 hover:bg-white/90 dark:hover:bg-slate-600/90 border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200 dark:text-slate-200 h-9 px-2 sm:px-4 text-xs sm:text-sm"
           >
-            Next Week
-            <ChevronRight className="w-4 h-4 ml-2" />
+            <span className="hidden sm:inline">Next Week</span>
+            <span className="sm:hidden">Next</span>
+            <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 sm:ml-2" />
           </Button>
         </div>
 
@@ -605,12 +679,157 @@ export default function SchedulePage() {
                 </div>
               ) : (
                 viewMode === 'agenda' ? (
-                  <div className="min-w-[720px] max-h-[calc(100vh-180px)] overflow-y-auto rounded-xl">
-                    {weekDays.map((day, idx) => {
-                      const items = (positionedByDay[day] || []).slice().sort((a, b) => a.startMin - b.startMin)
-                      const isCurrentDay = day === currentDay
-                      return (
-                        <div id={`student-agenda-day-${idx}`} key={day} className={`border-b ${
+                  isMobile ? (
+                    // Mobile: Swipeable Day Cards
+                    <div
+                      className="relative overflow-hidden"
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                    >
+                      {/* Day Navigation Dots */}
+                      <div className="flex justify-center gap-2 py-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm sticky top-0 z-20 border-b border-slate-200/50 dark:border-slate-700/50">
+                        {weekDays.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentDayIndex(idx)}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              idx === currentDayIndex
+                                ? 'w-8 bg-indigo-600 dark:bg-indigo-400'
+                                : 'w-2 bg-slate-300 dark:bg-slate-600'
+                            }`}
+                            aria-label={`Go to ${weekDays[idx]}`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Current Day Card */}
+                      <div className="px-4 py-6">
+                        {(() => {
+                          const day = weekDays[currentDayIndex]
+                          const items = (positionedByDay[day] || []).slice().sort((a, b) => a.startMin - b.startMin)
+                          const isCurrentDay = day === currentDay
+
+                          return (
+                            <div className="animate-fadeIn">
+                              {/* Day Header */}
+                              <div className={`rounded-t-xl p-4 ${
+                                isCurrentDay
+                                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                                  : 'bg-gradient-to-r from-slate-700 to-slate-600'
+                              }`}>
+                                <div className="flex items-center justify-between text-white">
+                                  <div>
+                                    <h3 className="text-2xl font-bold">{day}</h3>
+                                    <p className="text-sm opacity-90">
+                                      {weekDates[currentDayIndex]?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                  </div>
+                                  {isCurrentDay && (
+                                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm">
+                                      Today
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Classes List */}
+                              <div className="bg-white dark:bg-slate-800 rounded-b-xl shadow-lg">
+                                {items.length === 0 ? (
+                                  <div className="p-12 text-center">
+                                    <CalendarIcon className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">No classes today</p>
+                                    <p className="text-slate-400 dark:text-slate-500 text-sm mt-2">Enjoy your free time!</p>
+                                  </div>
+                                ) : (
+                                  <ul className="divide-y divide-slate-200/70 dark:divide-slate-700/70">
+                                    {items.map((evt, evtIdx) => {
+                                      const timeLabel = `${formatMinutesToLabel(evt.startMin)} – ${formatMinutesToLabel(evt.endMin)}`
+                                      return (
+                                        <li
+                                          key={evt.id}
+                                          className="p-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                                          style={{ animationDelay: `${evtIdx * 50}ms` }}
+                                        >
+                                          <div className="flex gap-4">
+                                            {/* Time Badge */}
+                                            <div className="flex-shrink-0">
+                                              <div className="w-20 h-20 rounded-xl flex flex-col items-center justify-center text-center"
+                                                style={{
+                                                  backgroundColor: evt.color || '#4f46e5',
+                                                  color: evt.textColor
+                                                }}
+                                              >
+                                                <div className="text-xs font-semibold opacity-90">
+                                                  {formatMinutesToLabel(evt.startMin).split(' ')[0]}
+                                                </div>
+                                                <div className="text-[10px] opacity-75">
+                                                  {formatMinutesToLabel(evt.startMin).split(' ')[1]}
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* Class Details */}
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-start justify-between mb-2">
+                                                <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
+                                                  {evt.subject}
+                                                </h4>
+                                                <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap ml-2">
+                                                  {formatMinutesToLabel(evt.endMin)}
+                                                </span>
+                                              </div>
+
+                                              <div className="space-y-1.5">
+                                                {evt.teacher && (
+                                                  <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                                    <User className="w-4 h-4 mr-2 text-indigo-500" />
+                                                    <span>{evt.teacher}</span>
+                                                  </div>
+                                                )}
+                                                {evt.room && (
+                                                  <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                                    <MapPin className="w-4 h-4 mr-2 text-emerald-500" />
+                                                    <span>{evt.room}</span>
+                                                  </div>
+                                                )}
+                                                {evt.building && (
+                                                  <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                                    <Building2 className="w-4 h-4 mr-2 text-amber-500" />
+                                                    <span>{evt.building}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </li>
+                                      )
+                                    })}
+                                  </ul>
+                                )}
+                              </div>
+
+                              {/* Swipe Hint */}
+                              <div className="text-center mt-4 text-xs text-slate-400 dark:text-slate-500">
+                                <span className="inline-flex items-center gap-2">
+                                  <ChevronLeft className="w-3 h-3" />
+                                  Swipe to navigate days
+                                  <ChevronRight className="w-3 h-3" />
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
+                  ) : (
+                    // Desktop: Full Agenda View
+                    <div className="min-w-[720px] max-h-[calc(100vh-180px)] overflow-y-auto rounded-xl">
+                      {weekDays.map((day, idx) => {
+                        const items = (positionedByDay[day] || []).slice().sort((a, b) => a.startMin - b.startMin)
+                        const isCurrentDay = day === currentDay
+                        return (
+                          <div id={`student-agenda-day-${idx}`} key={day} className={`border-b ${
                           isCurrentDay 
                             ? 'border-blue-200/70 dark:border-blue-700/70 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-900/10 dark:to-indigo-900/5' 
                             : 'border-slate-200/70 dark:border-slate-700/70'
@@ -671,8 +890,9 @@ export default function SchedulePage() {
                       )
                     })}
                   </div>
+                  )
                 ) : (
-                <div id="student-week-scroll" className="min-w-[1000px] max-h-[calc(100vh-180px)] overflow-y-auto rounded-xl bg-gradient-to-b from-white/70 to-white/40 dark:from-slate-800/60 dark:to-slate-800/30">
+                  <div id="student-week-scroll" className="min-w-[1000px] max-h-[calc(100vh-180px)] overflow-y-auto rounded-xl bg-gradient-to-b from-white/70 to-white/40 dark:from-slate-800/60 dark:to-slate-800/30">
                   <div className="grid grid-cols-[120px_repeat(5,1fr)]">
                   {/* Time ruler */}
                   <div className="relative border-r border-slate-200/70 dark:border-slate-700/70" style={{ height: visualTrackHeightPx }}>
@@ -788,42 +1008,42 @@ export default function SchedulePage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 dark:text-blue-200 text-sm font-medium">Total Classes</p>
-                  <p className="text-3xl font-bold">{schedules.length}</p>
-                  <p className="text-blue-100 dark:text-blue-200 text-xs">Per week</p>
+                  <p className="text-blue-100 dark:text-blue-200 text-xs sm:text-sm font-medium">Total Classes</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{schedules.length}</p>
+                  <p className="text-blue-100 dark:text-blue-200 text-[10px] sm:text-xs">Per week</p>
                 </div>
-                <BookOpen className="w-12 h-12 text-blue-200 dark:text-blue-300" />
+                <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 text-blue-200 dark:text-blue-300" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-100 dark:text-green-200 text-sm font-medium">Subjects</p>
-                  <p className="text-3xl font-bold">{new Set(schedules.map(s => s.subjectId)).size}</p>
-                  <p className="text-green-100 dark:text-green-200 text-xs">Active subjects</p>
+                  <p className="text-green-100 dark:text-green-200 text-xs sm:text-sm font-medium">Subjects</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{new Set(schedules.map(s => s.subjectId)).size}</p>
+                  <p className="text-green-100 dark:text-green-200 text-[10px] sm:text-xs">Active subjects</p>
                 </div>
-                <BookOpen className="w-12 h-12 text-green-200 dark:text-green-300" />
+                <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 text-green-200 dark:text-green-300" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 dark:text-purple-200 text-sm font-medium">Daily Average</p>
-                  <p className="text-3xl font-bold">{Math.round((schedules.length / 5) || 0)}</p>
-                  <p className="text-purple-100 dark:text-purple-200 text-xs">Classes per day</p>
+                  <p className="text-purple-100 dark:text-purple-200 text-xs sm:text-sm font-medium">Daily Average</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{Math.round((schedules.length / 5) || 0)}</p>
+                  <p className="text-purple-100 dark:text-purple-200 text-[10px] sm:text-xs">Classes per day</p>
                 </div>
-                <Clock className="w-12 h-12 text-purple-200 dark:text-purple-300" />
+                <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-purple-200 dark:text-purple-300" />
               </div>
             </CardContent>
           </Card>

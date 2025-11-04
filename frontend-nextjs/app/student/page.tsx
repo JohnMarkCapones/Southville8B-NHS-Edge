@@ -15,6 +15,7 @@ import { useUser } from "@/hooks/useUser"
 import { useMySchedule } from "@/hooks/useSchedules"
 import { useEvents } from "@/hooks/useEvents"
 import { EventStatus } from "@/lib/api/types/events"
+import { useStudentActivities } from "@/hooks/useStudentActivities"
 import {
   BookOpen,
   CalendarIcon,
@@ -89,6 +90,12 @@ export default function StudentDashboard() {
     status: EventStatus.PUBLISHED,
     startDate: today,
     limit: 10,
+  })
+
+  // Fetch student activities
+  const { data: activitiesResponse, isLoading: isLoadingActivities } = useStudentActivities({
+    limit: 10,
+    page: 1,
   })
 
   const sampleAnnouncements: AnnouncementData[] = [
@@ -292,24 +299,55 @@ export default function StudentDashboard() {
     completed: 5,
   }
 
-  const learningStats = [
-    { label: "Study Hours This Week", value: "12.5", icon: Timer, color: "bg-blue-100 text-blue-600" },
-    { label: "Study Sessions", value: "8/10", icon: CheckCircle2, color: "bg-green-100 text-green-600" },
-    { label: "Quiz Average", value: "94%", icon: Target, color: "bg-purple-100 text-purple-600" },
-    { label: "Reading Progress", value: "3 Books", icon: BookOpen, color: "bg-orange-100 text-orange-600" },
-  ]
-
   const motivationalQuote = {
     text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
     author: "Winston Churchill",
   }
 
-  const recentActivities = [
-    { action: "Submitted Math Assignment", time: "2 hours ago", icon: CheckCircle2, color: "text-green-500" },
-    { action: "Joined Science Study Group", time: "4 hours ago", icon: Users, color: "text-blue-500" },
-    { action: "Completed English Quiz", time: "1 day ago", icon: BookOpenCheck, color: "text-purple-500" },
-    { action: "Earned Perfect Attendance Badge", time: "2 days ago", icon: Award, color: "text-yellow-500" },
-  ]
+  // Use real activities from API or fallback to empty array
+  const recentActivities = activitiesResponse?.data?.map(activity => {
+    console.log('Activity metadata:', activity.metadata); // Debug log
+    return {
+      action: activity.title,
+      time: formatTimestamp(activity.activityTimestamp),
+      icon: getIconComponent(activity.icon || 'Activity'),
+      color: activity.color || 'text-gray-500',
+      description: activity.description,
+      metadata: activity.metadata,
+    };
+  }) || []
+
+  // Helper function to format timestamp
+  function formatTimestamp(timestamp: string): string {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`
+    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+  }
+
+  // Helper function to map icon strings to components
+  function getIconComponent(iconName: string) {
+    const iconMap: Record<string, any> = {
+      CheckCircle2,
+      Users,
+      BookOpenCheck,
+      Award,
+      Trophy,
+      BookOpen,
+      Brain,
+      Target,
+      Activity,
+      Lightbulb,
+      BookMarked,
+    }
+    return iconMap[iconName] || Activity
+  }
 
   const quickActions = [
     {
@@ -689,29 +727,6 @@ export default function StudentDashboard() {
           </Card>
         )}
 
-        {/* Learning Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {learningStats.map((stat, index) => (
-            <Card
-              key={index}
-              className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 group touch-manipulation"
-            >
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div
-                    className={`p-2 sm:p-3 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-200`}
-                  >
-                    <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground truncate">{stat.label}</p>
-                    <p className="font-bold text-base sm:text-lg">{stat.value}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
 
         {/* Main Dashboard Grid */}
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
@@ -736,7 +751,7 @@ export default function StudentDashboard() {
                     ))}
                   </div>
                 ) : upcomingClasses.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="flex flex-col items-center justify-center text-center py-8 min-h-[200px]">
                     <Clock className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                     <p className="text-gray-600 dark:text-gray-400 font-medium">No classes scheduled for today</p>
                     <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Enjoy your day off!</p>
@@ -792,7 +807,7 @@ export default function StudentDashboard() {
                     ))}
                   </div>
                 ) : !eventsResponse?.data || eventsResponse.data.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="flex flex-col items-center justify-center text-center py-8 min-h-[200px]">
                     <CalendarIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                     <p className="text-gray-600 dark:text-gray-400 font-medium">No upcoming events</p>
                     <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Check back later for new events!</p>
@@ -907,122 +922,142 @@ export default function StudentDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {/* Timeline line */}
-                  <div className="absolute left-4 top-8 bottom-0 w-px bg-gray-200 dark:bg-gray-700"></div>
-
-                  {/* Activity 1 */}
-                  <div className="relative flex items-start space-x-4 pb-6">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 relative z-10"></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          Submitted Math Assignment
-                        </h4>
-                        <span className="text-xs text-gray-500">2 hours ago</span>
+                {isLoadingActivities ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="p-4 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse">
+                        <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Assignment has been submitted to the teacher
-                      </p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <div className="flex items-center space-x-1 px-2 py-1 bg-red-50 dark:bg-red-900/20 rounded text-xs">
-                          <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          <span className="text-red-700 dark:text-red-300">assignment.pdf</span>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
+                ) : recentActivities.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-8 min-h-[200px]">
+                    <Activity className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">No recent activities</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Your activities will appear here as you engage with the platform</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6 relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-1 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"></div>
 
-                  {/* Activity 2 */}
-                  <div className="relative flex items-start space-x-4 pb-6">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 relative z-10"></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          Joined Science Study Group
-                        </h4>
-                        <span className="text-xs text-gray-500">4 hours ago</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Study session with classmates @2:30pm
-                      </p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <div className="flex items-center -space-x-1">
-                          <img
-                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
-                            src="/placeholder.svg?height=24&width=24"
-                            alt="Student 1"
-                          />
-                          <img
-                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
-                            src="/placeholder.svg?height=24&width=24"
-                            alt="Student 2"
-                          />
-                          <img
-                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
-                            src="/placeholder.svg?height=24&width=24"
-                            alt="Student 3"
-                          />
-                          <div className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">+2</span>
+                    {recentActivities.map((activity, index) => {
+                      const Icon = activity.icon
+                      // Extract color class (e.g., 'text-green-500' -> 'green')
+                      const colorMatch = activity.color.match(/text-(\w+)-/)
+                      const dotColor = colorMatch ? `bg-${colorMatch[1]}-500` : 'bg-gray-500'
+
+                      return (
+                        <div key={index} className="relative flex items-start space-x-4 pb-2">
+                          <div className={`w-2 h-2 ${dotColor} rounded-full mt-2 relative z-10`}></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Icon className={`w-4 h-4 ${activity.color}`} />
+                                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                  {activity.action}
+                                </h4>
+                              </div>
+                              <span className="text-xs text-gray-500">{activity.time}</span>
+                            </div>
+                            {activity.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {activity.description}
+                              </p>
+                            )}
+                            {/* Display metadata if available (quiz scores, file names, etc.) */}
+                            {activity.metadata && (
+                              <div className="flex items-center space-x-2 mt-2">
+                                {activity.metadata.score && activity.metadata.max_score && (
+                                  <div className="px-2 py-1 bg-green-50 dark:bg-green-900/20 rounded text-xs">
+                                    <span className="text-green-700 dark:text-green-300 font-medium">
+                                      Score: {activity.metadata.score}/{activity.metadata.max_score}
+                                    </span>
+                                  </div>
+                                )}
+                                {activity.metadata.file_name && activity.metadata.module_id && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const { getModuleDownloadUrl } = await import('@/lib/api/endpoints/modules');
+                                        const result = await getModuleDownloadUrl(activity.metadata.module_id);
+
+                                        // For PDF files, use downloadUrl
+                                        if (result.fileType === 'pdf' && result.downloadUrl) {
+                                          const link = document.createElement('a');
+                                          link.href = result.downloadUrl;
+                                          link.download = activity.metadata.file_name;
+                                          link.target = '_blank';
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                        }
+                                        // For PPTX files, open the first slide or download URL
+                                        else if (result.fileType === 'pptx' && result.downloadUrl) {
+                                          const link = document.createElement('a');
+                                          link.href = result.downloadUrl;
+                                          link.download = activity.metadata.file_name;
+                                          link.target = '_blank';
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to download file:', error);
+                                        alert('Failed to download file. Please try again.');
+                                      }
+                                    }}
+                                    className="flex items-center space-x-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-xs transition-colors cursor-pointer"
+                                  >
+                                    <BookOpen className="w-3 h-3 text-blue-500" />
+                                    <span className="text-blue-700 dark:text-blue-300 hover:underline">{activity.metadata.file_name}</span>
+                                    <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                  </button>
+                                )}
+                                {activity.metadata.club_name && (
+                                  <div className="flex items-center space-x-1 px-2 py-1 bg-purple-50 dark:bg-purple-900/20 rounded text-xs">
+                                    <Users className="w-3 h-3 text-purple-500" />
+                                    <span className="text-purple-700 dark:text-purple-300">{activity.metadata.club_name}</span>
+                                  </div>
+                                )}
+                                {activity.metadata.badge_name && (
+                                  <div className="flex items-center space-x-1 px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
+                                    <Trophy className="w-3 h-3 text-yellow-600" />
+                                    <span className="text-yellow-700 dark:text-yellow-300 font-medium">{activity.metadata.badge_name}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {/* Display journalism activity feedback (rejection, approval, revision) */}
+                            {activity.metadata && (activity.metadata.reason || activity.metadata.remarks || activity.metadata.feedback) && (
+                              <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                  {activity.metadata.reason ? 'Rejection Reason:' : activity.metadata.feedback ? 'Feedback:' : 'Remarks:'}
+                                </p>
+                                <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
+                                  {activity.metadata.reason || activity.metadata.feedback || activity.metadata.remarks}
+                                </p>
+                                {activity.metadata.article_id && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="mt-2 h-7 text-xs"
+                                    onClick={() => router.push(`/student/publisher/preview/${activity.metadata.article_id}`)}
+                                  >
+                                    View Article
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          <span className="font-medium">Maria Santos</span> (Study Leader)
-                        </div>
-                      </div>
-                    </div>
+                      )
+                    })}
                   </div>
-
-                  {/* Activity 3 */}
-                  <div className="relative flex items-start space-x-4 pb-6">
-                    <div className="w-2 h-2 bg-cyan-500 rounded-full mt-2 relative z-10"></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          Completed English Quiz
-                        </h4>
-                        <span className="text-xs text-gray-500">1 day ago</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Quiz completed with excellent results
-                      </p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <div className="px-2 py-1 bg-green-50 dark:bg-green-900/20 rounded text-xs">
-                          <span className="text-green-700 dark:text-green-300 font-medium">Score: 95/100</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Activity 4 */}
-                  <div className="relative flex items-start space-x-4">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 relative z-10"></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          Earned Perfect Attendance Badge
-                        </h4>
-                        <span className="text-xs text-gray-500">2 days ago</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Achievement unlocked for consistent attendance
-                      </p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <div className="flex items-center space-x-1 px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
-                          <Trophy className="w-3 h-3 text-yellow-600" />
-                          <span className="text-yellow-700 dark:text-yellow-300 font-medium">Perfect Attendance</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

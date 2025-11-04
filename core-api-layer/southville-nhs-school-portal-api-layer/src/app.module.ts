@@ -43,6 +43,7 @@ import { NewsModule } from './news/news.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { AcademicYearsModule } from './academic-years/academic-years.module';
 import { TopPerformersModule } from './top-performers/top-performers.module';
+import { StudentActivitiesModule } from './student-activities/student-activities.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
 import cloudflareImagesConfig from './config/cloudflare-images.config';
@@ -99,6 +100,7 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     SubjectsModule,
     AcademicYearsModule,
     TopPerformersModule,
+    StudentActivitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService, R2ConfigValidationService],

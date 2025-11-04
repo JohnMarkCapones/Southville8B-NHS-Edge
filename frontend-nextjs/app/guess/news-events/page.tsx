@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import {
   Newspaper,
   CalendarIcon,
@@ -13,154 +14,154 @@ import {
   Tag,
   Share2,
   BookOpen,
-  Trophy,
-  Users,
+  ChevronLeft,
+  ChevronRight,
   Music,
   Palette,
   Microscope,
   Globe,
   Heart,
+  Loader2,
 } from "lucide-react"
+import { newsApi } from "@/lib/api/endpoints/news"
+import { getEventsForMonth } from "@/lib/api/endpoints/events"
+import type { NewsArticle, NewsCategory } from "@/types/news"
+import type { Event } from "@/lib/api/types/events"
+
+const ITEMS_PER_PAGE = 6
 
 export default function NewsEventsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
 
-  const featuredNews = {
-    id: 1,
-    title: "Southville 8B NHS Wins State Science Fair Championship",
-    excerpt:
-      "Our students dominated the state science fair with groundbreaking projects in environmental science, robotics, and biotechnology, bringing home the championship trophy.",
-    content:
-      "In an unprecedented achievement, Southville 8B National High School has claimed the state science fair championship for the first time in school history. The victory came after months of preparation by our dedicated students and faculty mentors.",
-    author: "Dr. Sarah Chen",
-    date: "2024-02-10",
-    category: "Academic Achievement",
-    image: "/placeholder.svg?height=400&width=800",
-    tags: ["Science", "Achievement", "State Championship"],
-    readTime: "5 min read",
-    featured: true,
-  }
+  // State for data
+  const [featuredNews, setFeaturedNews] = useState<NewsArticle | null>(null)
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([])
+  const [categories, setCategories] = useState<NewsCategory[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+  const [newsLoading, setNewsLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(true)
 
-  const newsArticles = [
-    {
-      id: 2,
-      title: "New STEM Laboratory Opens with Cutting-Edge Equipment",
-      excerpt:
-        "State-of-the-art laboratory facilities now available for advanced chemistry, physics, and biology research.",
-      author: "Principal Martinez",
-      date: "2024-02-08",
-      category: "Facilities",
-      image: "/placeholder.svg?height=250&width=400",
-      tags: ["STEM", "Facilities", "Technology"],
-      readTime: "3 min read",
-    },
-    {
-      id: 3,
-      title: "Eagles Basketball Team Advances to State Finals",
-      excerpt: "Undefeated season continues as our basketball team secures their spot in the state championship game.",
-      author: "Coach Johnson",
-      date: "2024-02-05",
-      category: "Athletics",
-      image: "/placeholder.svg?height=250&width=400",
-      tags: ["Basketball", "Championship", "Athletics"],
-      readTime: "4 min read",
-    },
-    {
-      id: 4,
-      title: "Student Art Exhibition Showcases Creative Talent",
-      excerpt: "Annual art exhibition features stunning works from our talented visual arts students.",
-      author: "Ms. Rodriguez",
-      date: "2024-02-03",
-      category: "Arts",
-      image: "/placeholder.svg?height=250&width=400",
-      tags: ["Arts", "Exhibition", "Students"],
-      readTime: "3 min read",
-    },
-    {
-      id: 5,
-      title: "College Fair Connects Students with Universities",
-      excerpt: "Over 50 colleges and universities participated in our annual college fair event.",
-      author: "Counseling Department",
-      date: "2024-02-01",
-      category: "College Prep",
-      image: "/placeholder.svg?height=250&width=400",
-      tags: ["College", "Career", "Future"],
-      readTime: "2 min read",
-    },
-    {
-      id: 6,
-      title: "Environmental Club Launches Campus Sustainability Initiative",
-      excerpt: "Student-led initiative aims to make our campus carbon neutral by 2025.",
-      author: "Environmental Club",
-      date: "2024-01-28",
-      category: "Environment",
-      image: "/placeholder.svg?height=250&width=400",
-      tags: ["Environment", "Sustainability", "Student Initiative"],
-      readTime: "4 min read",
-    },
-  ]
+  // Fetch featured news - rotates hourly with most viewed published news
+  useEffect(() => {
+    const fetchFeaturedNews = async () => {
+      try {
+        const response = await newsApi.getNews({ sortBy: "popular", limit: 50 })
+        const publishedNews = response.data.filter((article) => article.status === "Published")
 
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "Spring Musical Auditions",
-      date: "2024-02-20",
-      time: "3:30 PM",
-      location: "Auditorium",
-      category: "Arts",
-      description: "Auditions for our spring production of 'High School Musical'",
-      icon: <Music className="w-5 h-5" />,
-    },
-    {
-      id: 2,
-      title: "Science Olympiad Regional Competition",
-      date: "2024-02-25",
-      time: "8:00 AM",
-      location: "University Campus",
-      category: "Academic",
-      description: "Regional competition for Science Olympiad team",
-      icon: <Microscope className="w-5 h-5" />,
-    },
-    {
-      id: 3,
-      title: "Parent-Teacher Conferences",
-      date: "2024-03-01",
-      time: "4:00 PM",
-      location: "School Campus",
-      category: "Academic",
-      description: "Quarterly parent-teacher conference sessions",
-      icon: <Users className="w-5 h-5" />,
-    },
-    {
-      id: 4,
-      title: "Art Show Opening Night",
-      date: "2024-03-05",
-      time: "6:00 PM",
-      location: "Arts Center",
-      category: "Arts",
-      description: "Opening reception for student art exhibition",
-      icon: <Palette className="w-5 h-5" />,
-    },
-    {
-      id: 5,
-      title: "State Basketball Championship",
-      date: "2024-03-08",
-      time: "7:00 PM",
-      location: "State Arena",
-      category: "Athletics",
-      description: "Eagles vs. Central High for state title",
-      icon: <Trophy className="w-5 h-5" />,
-    },
-  ]
+        if (publishedNews.length > 0) {
+          // Use current hour as seed for "random" selection that changes every hour
+          const currentHour = new Date().getHours()
+          const index = currentHour % publishedNews.length
+          setFeaturedNews(publishedNews[index])
+        }
+      } catch (error) {
+        console.error("Error fetching featured news:", error)
+      }
+    }
 
-  const categories = ["All", "Academic Achievement", "Athletics", "Arts", "Facilities", "College Prep", "Environment"]
+    fetchFeaturedNews()
+    // Refresh every hour
+    const interval = setInterval(fetchFeaturedNews, 3600000) // 1 hour in milliseconds
+    return () => clearInterval(interval)
+  }, [])
 
-  const filteredNews =
-    selectedCategory === "All" ? newsArticles : newsArticles.filter((article) => article.category === selectedCategory)
+  // Fetch all news articles
+  useEffect(() => {
+    const fetchNews = async () => {
+      setNewsLoading(true)
+      try {
+        const response = await newsApi.getNews({ limit: 100, sortBy: "newest" })
+        const published = response.data.filter((article) => article.status === "Published")
+        setNewsArticles(published)
+      } catch (error) {
+        console.error("Error fetching news:", error)
+      } finally {
+        setNewsLoading(false)
+      }
+    }
+
+    fetchNews()
+  }, [])
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const cats = await newsApi.getCategories()
+        setCategories(cats)
+      } catch (error) {
+        console.error("Error fetching categories:", error)
+      }
+    }
+
+    fetchCategories()
+  }, [])
+
+  // Fetch events for current/selected month
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setEventsLoading(true)
+      try {
+        const monthEvents = await getEventsForMonth(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
+        setEvents(monthEvents)
+      } catch (error) {
+        console.error("Error fetching events:", error)
+      } finally {
+        setEventsLoading(false)
+      }
+    }
+
+    fetchEvents()
+  }, [currentMonth]) // Re-fetch when month changes
+
+  // Update loading state
+  useEffect(() => {
+    if (!newsLoading && !eventsLoading) {
+      setLoading(false)
+    }
+  }, [newsLoading, eventsLoading])
+
+  // Filter news by category
+  const filteredNews = useMemo(() => {
+    if (selectedCategory === "All") return newsArticles
+    return newsArticles.filter((article) => article.category === selectedCategory)
+  }, [newsArticles, selectedCategory])
+
+  // Paginate filtered news
+  const paginatedNews = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return filteredNews.slice(startIndex, endIndex)
+  }, [filteredNews, currentPage])
+
+  const totalPages = Math.ceil(filteredNews.length / ITEMS_PER_PAGE)
+
+  // Get upcoming events (sorted by date)
+  const upcomingEvents = useMemo(() => {
+    const now = new Date()
+    return events
+      .filter((event) => new Date(`${event.date}T${event.time}`) >= now)
+      .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())
+      .slice(0, 5)
+  }, [events])
+
+  // Get days with events for calendar highlighting
+  const eventDays = useMemo(() => {
+    return events.map((event) => new Date(event.date))
+  }, [events])
+
+  // Reset to page 1 when category changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory])
 
   return (
     <div className="min-h-screen">
+      <GuessBreadcrumb items={[{ label: "News & Events" }]} />
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 text-white overflow-hidden">
         {/* Floating decorative elements */}
@@ -225,61 +226,69 @@ export default function NewsEventsPage() {
             </h2>
           </div>
 
-          <AnimatedCard variant="lift" className="overflow-hidden max-w-6xl mx-auto animate-fadeIn">
-            <div className="grid lg:grid-cols-2 gap-0">
-              <div className="relative">
-                <img
-                  src={featuredNews.image || "/placeholder.svg"}
-                  alt={featuredNews.title}
-                  className="w-full h-full object-cover min-h-[300px]"
-                />
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-gradient-to-r from-vibrant-orange to-vibrant-red text-white">
-                    Featured Story
-                  </Badge>
-                </div>
-              </div>
-              <div className="p-8 lg:p-12">
-                <div className="flex items-center gap-4 mb-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    {featuredNews.author}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {featuredNews.readTime}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CalendarIcon className="w-4 h-4" />
-                    {new Date(featuredNews.date).toLocaleDateString()}
-                  </div>
-                </div>
-
-                <h3 className="text-2xl lg:text-3xl font-bold mb-4 gradient-text">{featuredNews.title}</h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed text-lg">{featuredNews.excerpt}</p>
-
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {featuredNews.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      <Tag className="w-3 h-3 mr-1" />
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex gap-4">
-                  <AnimatedButton variant="gradient" animation="glow">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Read Full Story
-                  </AnimatedButton>
-                  <AnimatedButton variant="outline">
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share
-                  </AnimatedButton>
-                </div>
-              </div>
+          {!featuredNews ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          </AnimatedCard>
+          ) : (
+            <AnimatedCard variant="lift" className="overflow-hidden max-w-6xl mx-auto animate-fadeIn">
+              <div className="grid lg:grid-cols-2 gap-0">
+                <div className="relative">
+                  <img
+                    src={featuredNews.image || "/placeholder.svg"}
+                    alt={featuredNews.title}
+                    className="w-full h-full object-cover min-h-[300px]"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <Badge className="bg-gradient-to-r from-vibrant-orange to-vibrant-red text-white">
+                      Featured Story
+                    </Badge>
+                  </div>
+                </div>
+                <div className="p-8 lg:p-12">
+                  <div className="flex items-center gap-4 mb-4 text-sm text-muted-foreground flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <User className="w-4 h-4" />
+                      {featuredNews.author}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {featuredNews.readTime}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <CalendarIcon className="w-4 h-4" />
+                      {featuredNews.date}
+                    </div>
+                  </div>
+
+                  <h3 className="text-2xl lg:text-3xl font-bold mb-4 gradient-text">{featuredNews.title}</h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed text-lg">{featuredNews.excerpt}</p>
+
+                  {featuredNews.tags && featuredNews.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {featuredNews.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-4">
+                    <AnimatedButton variant="gradient" animation="glow">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Read Full Story
+                    </AnimatedButton>
+                    <AnimatedButton variant="outline">
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </AnimatedButton>
+                  </div>
+                </div>
+              </div>
+            </AnimatedCard>
+          )}
         </div>
       </section>
 
@@ -297,66 +306,130 @@ export default function NewsEventsPage() {
 
           {/* Category Filter */}
           <div className="flex flex-wrap justify-center gap-4 mb-12">
+            <AnimatedButton
+              variant={selectedCategory === "All" ? "gradient" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("All")}
+              animation="lift"
+            >
+              All
+            </AnimatedButton>
             {categories.map((category) => (
               <AnimatedButton
-                key={category}
-                variant={selectedCategory === category ? "gradient" : "outline"}
+                key={category.id}
+                variant={selectedCategory === category.name ? "gradient" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory(category.name)}
                 animation="lift"
               >
-                {category}
+                {category.name}
               </AnimatedButton>
             ))}
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredNews.map((article, index) => (
-              <AnimatedCard
-                key={article.id}
-                variant="lift"
-                className="overflow-hidden animate-slideInUp"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <img
-                  src={article.image || "/placeholder.svg"}
-                  alt={article.title}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant="outline" className="text-xs">
-                      {article.category}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{article.readTime}</span>
-                  </div>
+          {newsLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : paginatedNews.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground text-lg">No news articles found.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {paginatedNews.map((article, index) => (
+                  <AnimatedCard
+                    key={article.id}
+                    variant="lift"
+                    className="overflow-hidden animate-slideInUp"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <img
+                      src={article.image || "/placeholder.svg"}
+                      alt={article.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <Badge variant="outline" className="text-xs">
+                          {article.category}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{article.readTime}</span>
+                      </div>
 
-                  <h3 className="font-bold text-lg mb-3 line-clamp-2 hover:text-primary transition-colors">
-                    {article.title}
-                  </h3>
+                      <h3 className="font-bold text-lg mb-3 line-clamp-2 hover:text-primary transition-colors">
+                        {article.title}
+                      </h3>
 
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{article.excerpt}</p>
+                      <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{article.excerpt}</p>
 
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                    <span>By {article.author}</span>
-                    <span>{new Date(article.date).toLocaleDateString()}</span>
-                  </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                        <span>By {article.author}</span>
+                        <span>{article.date}</span>
+                      </div>
 
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {article.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
+                      {article.tags && article.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-4">
+                          {article.tags.slice(0, 3).map((tag, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      <AnimatedButton variant="outline" size="sm" className="w-full">
+                        Read More
+                      </AnimatedButton>
+                    </div>
+                  </AnimatedCard>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-12">
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    animation="lift"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </AnimatedButton>
+
+                  <div className="flex gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <AnimatedButton
+                        key={page}
+                        variant={currentPage === page ? "gradient" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        animation="lift"
+                        className="min-w-[40px]"
+                      >
+                        {page}
+                      </AnimatedButton>
                     ))}
                   </div>
 
-                  <AnimatedButton variant="outline" size="sm" className="w-full">
-                    Read More
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    animation="lift"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
                   </AnimatedButton>
                 </div>
-              </AnimatedCard>
-            ))}
-          </div>
+              )}
+            </>
+          )}
         </div>
       </section>
 
@@ -377,45 +450,67 @@ export default function NewsEventsPage() {
                 us for these special occasions.
               </p>
 
-              <div className="space-y-4">
-                {upcomingEvents.map((event, index) => (
-                  <AnimatedCard
-                    key={event.id}
-                    variant="lift"
-                    className="animate-slideInLeft"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-vibrant-purple to-vibrant-pink rounded-lg flex items-center justify-center text-white">
-                        {event.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">{event.title}</h4>
-                          <Badge variant="outline" className="text-xs">
-                            {event.category}
-                          </Badge>
+              {eventsLoading ? (
+                <div className="flex justify-center items-center py-10">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : upcomingEvents.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">No upcoming events at this time.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {upcomingEvents.map((event, index) => {
+                    const eventIcon = event.tags?.[0]?.name.toLowerCase().includes("music")
+                      ? <Music className="w-5 h-5" />
+                      : event.tags?.[0]?.name.toLowerCase().includes("science")
+                      ? <Microscope className="w-5 h-5" />
+                      : event.tags?.[0]?.name.toLowerCase().includes("art")
+                      ? <Palette className="w-5 h-5" />
+                      : <CalendarIcon className="w-5 h-5" />
+
+                    return (
+                      <AnimatedCard
+                        key={event.id}
+                        variant="lift"
+                        className="animate-slideInLeft"
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div className="w-12 h-12 bg-gradient-to-r from-vibrant-purple to-vibrant-pink rounded-lg flex items-center justify-center text-white flex-shrink-0">
+                            {eventIcon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-2 gap-2">
+                              <h4 className="font-semibold line-clamp-2">{event.title}</h4>
+                              {event.tags && event.tags.length > 0 && (
+                                <Badge variant="outline" className="text-xs flex-shrink-0">
+                                  {event.tags[0].name}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{event.description}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <CalendarIcon className="w-3 h-3" />
+                                {new Date(event.date).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {event.time}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Globe className="w-3 h-3" />
+                                {event.location}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{event.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="w-3 h-3" />
-                            {new Date(event.date).toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {event.time}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {event.location}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </AnimatedCard>
-                ))}
-              </div>
+                      </AnimatedCard>
+                    )
+                  })}
+                </div>
+              )}
 
               <div className="mt-8">
                 <AnimatedButton variant="gradient" size="lg" animation="glow">
@@ -432,20 +527,52 @@ export default function NewsEventsPage() {
                   mode="single"
                   selected={selectedDate}
                   onSelect={setSelectedDate}
+                  month={currentMonth}
+                  onMonthChange={(newMonth) => {
+                    setCurrentMonth(newMonth)
+                  }}
                   className="rounded-md border mx-auto"
+                  modifiers={{
+                    hasEvent: eventDays,
+                  }}
+                  modifiersClassNames={{
+                    hasEvent: "bg-primary/20 font-bold text-primary",
+                  }}
                 />
                 <div className="mt-6 space-y-4">
-                  <h4 className="font-semibold">This Month's Highlights</h4>
-                  <div className="space-y-3">
-                    {upcomingEvents.slice(0, 3).map((event) => (
-                      <div key={event.id} className="flex justify-between items-center text-sm">
-                        <span className="font-medium">{event.title}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {new Date(event.date).getDate()}
-                        </Badge>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">
+                      {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })} Events
+                    </h4>
+                    {!eventsLoading && events.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {events.length} {events.length === 1 ? "event" : "events"}
+                      </Badge>
+                    )}
                   </div>
+                  {eventsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    </div>
+                  ) : events.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-2">No events this month</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {events.slice(0, 5).map((event) => (
+                        <div key={event.id} className="flex justify-between items-center text-sm gap-2">
+                          <span className="font-medium line-clamp-1 flex-1">{event.title}</span>
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
+                            {new Date(event.date).getDate()}
+                          </Badge>
+                        </div>
+                      ))}
+                      {events.length > 5 && (
+                        <p className="text-xs text-muted-foreground text-center pt-2">
+                          +{events.length - 5} more events
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </AnimatedCard>
             </div>

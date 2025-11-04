@@ -166,6 +166,36 @@ export default function CreateArticlePage() {
     }))
   }
 
+  // Helper function to extract first image from HTML content
+  const extractFirstImageFromContent = (htmlContent: string): string | null => {
+    if (!htmlContent) return null
+
+    // Create a temporary div to parse HTML
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = htmlContent
+
+    // Find first img tag
+    const firstImg = tempDiv.querySelector('img')
+    return firstImg ? firstImg.src : null
+  }
+
+  // Get featured image (explicit upload takes priority, otherwise use first content image)
+  const getFeaturedImageUrl = (): string | undefined => {
+    // Priority 1: Explicitly uploaded featured image
+    if (formData.featuredImage) {
+      return formData.featuredImage
+    }
+
+    // Priority 2: First image from content
+    const firstContentImage = extractFirstImageFromContent(formData.content)
+    if (firstContentImage) {
+      return firstContentImage
+    }
+
+    // Priority 3: No image at all - undefined (let backend handle it)
+    return undefined
+  }
+
   const handleSaveDraft = async () => {
     // Validation
     if (!formData.title.trim() || !formData.content.trim() || !formData.contentJson) {
@@ -186,8 +216,9 @@ export default function CreateArticlePage() {
         articleJson: formData.contentJson,
         categoryId: formData.categoryId && /[0-9a-fA-F-]{36}/.test(formData.categoryId) ? formData.categoryId : undefined,
         tags: formData.tags.length ? formData.tags : undefined,
-        featuredImageUrl: formData.featuredImage || 'https://via.placeholder.com/800x400?text=No+Image',
+        featuredImageUrl: getFeaturedImageUrl(),
         authorName: formData.author || undefined,
+        coAuthorNames: formData.coAuthors.length ? formData.coAuthors : undefined,
         credits: formData.credits || undefined,
         reviewStatus: 'pending',
       }
@@ -229,8 +260,9 @@ export default function CreateArticlePage() {
           articleJson: formData.contentJson,
           categoryId: formData.categoryId && /[0-9a-fA-F-]{36}/.test(formData.categoryId) ? formData.categoryId : undefined,
           tags: formData.tags.length ? formData.tags : undefined,
-          featuredImageUrl: formData.featuredImage || 'https://via.placeholder.com/800x400?text=No+Image',
+          featuredImageUrl: getFeaturedImageUrl(),
           authorName: formData.author || undefined,
+          coAuthorNames: formData.coAuthors.length ? formData.coAuthors : undefined,
           credits: formData.credits || undefined,
           reviewStatus: 'pending',
         }
@@ -305,17 +337,20 @@ export default function CreateArticlePage() {
   const handleImageUpload = async (file: File) => {
     try {
       setIsUploadingImage(true)
-      
+
       const result = await newsApi.uploadImage(file)
-      
+
+      // Use Cloudflare Images URL (cf_image_url) if available, otherwise fall back to url
+      const imageUrl = result.cf_image_url || result.url
+
       setFormData((prev) => ({
         ...prev,
-        featuredImage: result.url,
+        featuredImage: imageUrl,
       }))
-      
+
       toast({
         title: "Image uploaded",
-        description: "Featured image has been uploaded successfully",
+        description: "Featured image has been uploaded successfully to Cloudflare",
       })
     } catch (error: any) {
       toast({
@@ -330,44 +365,63 @@ export default function CreateArticlePage() {
 
   return (
     <StudentLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 p-3 sm:p-4 md:p-6">
+        <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
+          {/* Enhanced Responsive Header */}
+          <div className="flex flex-col gap-4 sm:gap-6">
+            {/* Top Row: Back Button + Stats (Mobile) */}
+            <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.back()}
-                className="hover:bg-white/80 dark:hover:bg-slate-800/80"
+                className="hover:bg-white/80 dark:hover:bg-slate-800/80 group"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                <span className="hidden xs:inline">Back</span>
               </Button>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Write New Article
-                </h1>
-                <div className="flex items-center gap-4 mt-1">
-                  <p className="text-slate-600 dark:text-slate-400">Share your story with the school</p>
-                  {autoSaveStatus === "saving" && (
-                    <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 animate-pulse text-sm">
-                      <Clock className="h-3 w-3" />
-                      Saving...
-                    </span>
-                  )}
-                  {autoSaveStatus === "saved" && (
-                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1 text-sm">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Saved
-                    </span>
-                  )}
-                </div>
+
+              {/* Mobile Stats */}
+              <div className="flex md:hidden items-center gap-2">
+                <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80 text-xs">
+                  <FileText className="h-3 w-3 mr-1" />
+                  {wordCount}
+                </Badge>
+                <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80 text-xs">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {readingTime}m
+                </Badge>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-3 mr-4">
+            {/* Title Section */}
+            <div className="space-y-2 sm:space-y-3">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Write New Article
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                  Share your story with the school
+                </p>
+                {autoSaveStatus === "saving" && (
+                  <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 animate-pulse text-xs sm:text-sm">
+                    <Clock className="h-3 w-3" />
+                    Saving...
+                  </span>
+                )}
+                {autoSaveStatus === "saved" && (
+                  <span className="text-green-600 dark:text-green-400 flex items-center gap-1 text-xs sm:text-sm">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Saved
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              {/* Desktop Stats */}
+              <div className="hidden md:flex items-center gap-3 mr-auto">
                 <Badge variant="secondary" className="bg-white/80 dark:bg-slate-800/80">
                   <FileText className="h-3 w-3 mr-1" />
                   {wordCount} words
@@ -377,17 +431,25 @@ export default function CreateArticlePage() {
                   {readingTime} min read
                 </Badge>
               </div>
-              <Button variant="outline" onClick={handleSaveDraft} disabled={isLoading}>
+
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+              >
                 <Save className="h-4 w-4 mr-2" />
-                Save Draft
+                <span className="hidden xs:inline">Save Draft</span>
+                <span className="xs:hidden">Save</span>
               </Button>
               <Button
                 onClick={handleSubmitClick}
                 disabled={isLoading || !formData.title || !formData.content || !formData.contentJson}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
                 <Send className="h-4 w-4 mr-2" />
-                Submit for Review
+                <span className="hidden xs:inline">Submit for Review</span>
+                <span className="xs:hidden">Submit</span>
               </Button>
             </div>
           </div>

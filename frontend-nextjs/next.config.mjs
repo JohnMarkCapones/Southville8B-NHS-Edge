@@ -48,6 +48,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'a9f924050e1f1ee11d51659b08634fc4.r2.cloudflarestorage.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
     // Allow local images (required from Next.js 16)
     localPatterns: [

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { useAllUsersStats } from "@/hooks/useAllUsersStats"
 import { useAllUsers } from "@/hooks/useAllUsers"
 import type { User as ApiUser } from "@/lib/api/endpoints/users"
+import { updateUser } from "@/lib/api/endpoints/users"
 import {
   Search,
   Download,
@@ -62,6 +63,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label" // Added import for Label
+import { EditUserDialog } from "@/components/superadmin/dialogs/edit-user-dialog"
 
 const roleHierarchy = {
   Student: {
@@ -736,6 +738,7 @@ export function AllUsersManagementSection() {
     setSearchQuery: setApiSearchQuery,
     currentPage: apiCurrentPage,
     goToPage: apiGoToPage,
+    refetch,
   } = useAllUsers({
     enabled: true,
     initialPage: 1,
@@ -817,32 +820,8 @@ export function AllUsersManagementSection() {
 
   const [editUserDialog, setEditUserDialog] = useState<{
     isOpen: boolean
-    user: any
+    user: ApiUser | null
   }>({ isOpen: false, user: null })
-
-  const [editFormData, setEditFormData] = useState({
-    name: "",
-    email: "",
-    role: "",
-    status: "",
-    subRole: "",
-    phone: "",
-    address: "",
-    birthday: "",
-    emergencyContact: "",
-    // Student-specific
-    grade: "",
-    bloodType: "",
-    guardian: {
-      name: "",
-      relationship: "",
-      phone: "",
-      email: "",
-      address: "",
-    },
-    // Teacher/Admin-specific
-    department: "",
-  })
 
   const [primaryRoleMenu, setPrimaryRoleMenu] = useState<{
     x: number
@@ -970,52 +949,19 @@ export function AllUsersManagementSection() {
   }
 
   const handleEditUser = (user: any) => {
-    let guardianData = {
-      name: "",
-      relationship: "",
-      phone: "",
-      email: "",
-      address: "",
-    }
-
-    if (typeof user.guardian === "string") {
-      guardianData.name = user.guardian
-    } else if (user.guardian && typeof user.guardian === "object") {
-      guardianData = { ...guardianData, ...user.guardian }
-    }
-
-    setEditFormData({
-      name: user.name,
+    // Convert the display user to API user format for EditUserDialog
+    const apiUser: ApiUser = {
+      id: user.id,
       email: user.email,
-      role: user.role,
+      full_name: user.name || user.full_name,
+      role_id: user.role_id || "",
       status: user.status,
-      subRole: user.subRole || "",
-      phone: user.phone || "",
-      address: user.address || "",
-      birthday: user.birthday || "",
-      emergencyContact: user.emergencyContact || "",
-      grade: user.grade || "",
-      bloodType: user.bloodType || "",
-      guardian: guardianData,
-      department: user.department || "",
-    })
-    setEditUserDialog({ isOpen: true, user })
-  }
-
-  const handleSaveEditUser = () => {
-    if (!editUserDialog.user) return
-
-    // TODO: Implement actual API call to update user
-    console.log("[v0] Saving user changes:", editFormData)
-
-    toast({
-      title: "User Updated",
-      description: `${editFormData.name}'s information has been successfully updated.`,
-    })
-
-    setTimeout(() => {
-      setEditUserDialog({ isOpen: false, user: null })
-    }, 1500)
+      created_at: user.created_at || new Date().toISOString(),
+      updated_at: user.updated_at || new Date().toISOString(),
+      role: user.role ? { name: user.role } : undefined,
+      primary_domain_role: user.primary_domain_role,
+    }
+    setEditUserDialog({ isOpen: true, user: apiUser })
   }
 
   const handleDeleteUser = (user: any) => {
@@ -2975,435 +2921,16 @@ export function AllUsersManagementSection() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      {/* Edit User Dialog - New streamlined component for role and status editing */}
+      <EditUserDialog
+        user={editUserDialog.user}
         open={editUserDialog.isOpen}
         onOpenChange={(open) => !open && setEditUserDialog({ isOpen: false, user: null })}
-      >
-        <DialogContent className="bg-card border-border max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2">
-              <Edit className="w-5 h-5 text-blue-500" />
-              Edit User Information
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update user details and account settings. All changes will be saved immediately.
-            </DialogDescription>
-          </DialogHeader>
-          {editUserDialog.user && (
-            <div className="space-y-6 py-4">
-              {/* Basic Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <User className="w-4 h-4 text-blue-500" />
-                  <h3 className="font-semibold text-foreground">Basic Information</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name" className="text-foreground">
-                      Full Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="edit-name"
-                      value={editFormData.name}
-                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                      className="bg-background border-border text-foreground"
-                      placeholder="Enter full name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-email" className="text-foreground">
-                      Email Address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="edit-email"
-                      type="email"
-                      value={editFormData.email}
-                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                      className="bg-background border-border text-foreground"
-                      placeholder="Enter email address"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-phone" className="text-foreground">
-                      Phone Number
-                    </Label>
-                    <Input
-                      id="edit-phone"
-                      value={editFormData.phone}
-                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                      className="bg-background border-border text-foreground"
-                      placeholder="+63 912 345 6789"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-birthday" className="text-foreground">
-                      Birthday
-                    </Label>
-                    <Input
-                      id="edit-birthday"
-                      type="date"
-                      value={editFormData.birthday}
-                      onChange={(e) => setEditFormData({ ...editFormData, birthday: e.target.value })}
-                      className="bg-background border-border text-foreground"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-address" className="text-foreground">
-                    Address
-                  </Label>
-                  <Input
-                    id="edit-address"
-                    value={editFormData.address}
-                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
-                    className="bg-background border-border text-foreground"
-                    placeholder="Enter complete address"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-emergency" className="text-foreground">
-                    Emergency Contact
-                  </Label>
-                  <Input
-                    id="edit-emergency"
-                    value={editFormData.emergencyContact}
-                    onChange={(e) => setEditFormData({ ...editFormData, emergencyContact: e.target.value })}
-                    className="bg-background border-border text-foreground"
-                    placeholder="Name and phone number"
-                  />
-                </div>
-              </div>
-
-              {/* Role & Status Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <Shield className="w-4 h-4 text-purple-500" />
-                  <h3 className="font-semibold text-foreground">Role & Status</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-role" className="text-foreground">
-                      Primary Role <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={editFormData.role}
-                      onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
-                    >
-                      <SelectTrigger id="edit-role" className="bg-background border-border text-foreground">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        <SelectItem value="Student">Student</SelectItem>
-                        <SelectItem value="Teacher">Teacher</SelectItem>
-                        <SelectItem value="Administrator">Administrator</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-status" className="text-foreground">
-                      Account Status <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={editFormData.status}
-                      onValueChange={(value) => setEditFormData({ ...editFormData, status: value })}
-                    >
-                      <SelectTrigger id="edit-status" className="bg-background border-border text-foreground">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-subrole" className="text-foreground">
-                    Sub-Role / Position
-                  </Label>
-                  <Input
-                    id="edit-subrole"
-                    value={editFormData.subRole}
-                    onChange={(e) => setEditFormData({ ...editFormData, subRole: e.target.value })}
-                    className="bg-background border-border text-foreground"
-                    placeholder="e.g., Club President, Department Head, etc."
-                  />
-                </div>
-              </div>
-
-              {/* Student-Specific Section */}
-              {editFormData.role === "Student" && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-border">
-                    <GraduationCap className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-semibold text-foreground">Student Information</h3>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-grade" className="text-foreground">
-                        Grade/Section <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={editFormData.grade}
-                        onValueChange={(value) => setEditFormData({ ...editFormData, grade: value })}
-                      >
-                        <SelectTrigger id="edit-grade" className="bg-background border-border text-foreground">
-                          <SelectValue placeholder="Select grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Grade 7-A">Grade 7-A</SelectItem>
-                          <SelectItem value="Grade 7-B">Grade 7-B</SelectItem>
-                          <SelectItem value="Grade 7-C">Grade 7-C</SelectItem>
-                          <SelectItem value="Grade 7-D">Grade 7-D</SelectItem>
-                          <SelectItem value="Grade 8-A">Grade 8-A</SelectItem>
-                          <SelectItem value="Grade 8-B">Grade 8-B</SelectItem>
-                          <SelectItem value="Grade 8-C">Grade 8-C</SelectItem>
-                          <SelectItem value="Grade 8-D">Grade 8-D</SelectItem>
-                          <SelectItem value="Grade 9-A">Grade 9-A</SelectItem>
-                          <SelectItem value="Grade 9-B">Grade 9-B</SelectItem>
-                          <SelectItem value="Grade 9-C">Grade 9-C</SelectItem>
-                          <SelectItem value="Grade 9-D">Grade 9-D</SelectItem>
-                          <SelectItem value="Grade 10-A">Grade 10-A</SelectItem>
-                          <SelectItem value="Grade 10-B">Grade 10-B</SelectItem>
-                          <SelectItem value="Grade 10-C">Grade 10-C</SelectItem>
-                          <SelectItem value="Grade 10-D">Grade 10-D</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-blood-type" className="text-foreground">
-                        Blood Type
-                      </Label>
-                      <Select
-                        value={editFormData.bloodType}
-                        onValueChange={(value) => setEditFormData({ ...editFormData, bloodType: value })}
-                      >
-                        <SelectTrigger id="edit-blood-type" className="bg-background border-border text-foreground">
-                          <SelectValue placeholder="Select blood type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A+">A+</SelectItem>
-                          <SelectItem value="A-">A-</SelectItem>
-                          <SelectItem value="B+">B+</SelectItem>
-                          <SelectItem value="B-">B-</SelectItem>
-                          <SelectItem value="AB+">AB+</SelectItem>
-                          <SelectItem value="AB-">AB-</SelectItem>
-                          <SelectItem value="O+">O+</SelectItem>
-                          <SelectItem value="O-">O-</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {editFormData.role === "Student" && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-border">
-                    <Users className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-semibold text-foreground">Parent/Guardian Information</h3>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-guardian-name" className="text-foreground">
-                        Guardian Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="edit-guardian-name"
-                        value={editFormData.guardian.name}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            guardian: { ...editFormData.guardian, name: e.target.value },
-                          })
-                        }
-                        className="bg-background border-border text-foreground"
-                        placeholder="Enter guardian's full name"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-guardian-relationship" className="text-foreground">
-                        Relationship <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={editFormData.guardian.relationship}
-                        onValueChange={(value) =>
-                          setEditFormData({
-                            ...editFormData,
-                            guardian: { ...editFormData.guardian, relationship: value },
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          id="edit-guardian-relationship"
-                          className="bg-background border-border text-foreground"
-                        >
-                          <SelectValue placeholder="Select relationship" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Mother">Mother</SelectItem>
-                          <SelectItem value="Father">Father</SelectItem>
-                          <SelectItem value="Legal Guardian">Legal Guardian</SelectItem>
-                          <SelectItem value="Grandmother">Grandmother</SelectItem>
-                          <SelectItem value="Grandfather">Grandfather</SelectItem>
-                          <SelectItem value="Aunt">Aunt</SelectItem>
-                          <SelectItem value="Uncle">Uncle</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-guardian-phone" className="text-foreground">
-                        Guardian Phone <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="edit-guardian-phone"
-                        value={editFormData.guardian.phone}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            guardian: { ...editFormData.guardian, phone: e.target.value },
-                          })
-                        }
-                        className="bg-background border-border text-foreground"
-                        placeholder="+63 XXX XXX XXXX"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-guardian-email" className="text-foreground">
-                        Guardian Email
-                      </Label>
-                      <Input
-                        id="edit-guardian-email"
-                        type="email"
-                        value={editFormData.guardian.email}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            guardian: { ...editFormData.guardian, email: e.target.value },
-                          })
-                        }
-                        className="bg-background border-border text-foreground"
-                        placeholder="guardian@email.com"
-                      />
-                    </div>
-
-                    <div className="space-y-2 col-span-2">
-                      <Label htmlFor="edit-guardian-address" className="text-foreground">
-                        Guardian Address
-                      </Label>
-                      <Input
-                        id="edit-guardian-address"
-                        value={editFormData.guardian.address}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            guardian: { ...editFormData.guardian, address: e.target.value },
-                          })
-                        }
-                        className="bg-background border-border text-foreground"
-                        placeholder="Enter guardian's address"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Teaching/Administrative Information Section */}
-              {(editFormData.role === "Teacher" || editFormData.role === "Administrator") && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-border">
-                    <Briefcase className="w-4 h-4 text-orange-500" />
-                    <h3 className="font-semibold text-foreground">
-                      {editFormData.role === "Teacher" ? "Teaching" : "Administrative"} Information
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-department" className="text-foreground">
-                      Department
-                    </Label>
-                    <Select
-                      value={editFormData.department}
-                      onValueChange={(value) => setEditFormData({ ...editFormData, department: value })}
-                    >
-                      <SelectTrigger id="edit-department" className="bg-background border-border text-foreground">
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        <SelectItem value="Mathematics">Mathematics</SelectItem>
-                        <SelectItem value="Science">Science</SelectItem>
-                        <SelectItem value="English">English</SelectItem>
-                        <SelectItem value="Filipino">Filipino</SelectItem>
-                        <SelectItem value="Physical Education">Physical Education</SelectItem>
-                        <SelectItem value="Arts">Arts</SelectItem>
-                        <SelectItem value="History">History</SelectItem>
-                        <SelectItem value="Guidance">Guidance</SelectItem>
-                        <SelectItem value="Library">Library</SelectItem>
-                        <SelectItem value="Research">Research</SelectItem>
-                        <SelectItem value="Administration">Administration</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-
-              {/* Info Alert */}
-              <Alert className="border-blue-500/20 bg-blue-500/5">
-                <Info className="h-4 w-4 text-blue-500" />
-                <AlertDescription className="text-sm text-blue-600">
-                  Changes to user information will take effect immediately. The user may need to refresh their session
-                  to see all updates.
-                </AlertDescription>
-              </Alert>
-
-              {/* Current User Metadata */}
-              <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-                <div className="text-sm font-medium text-foreground">Account Metadata</div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground">User ID:</div>
-                  <div className="text-foreground font-mono">{editUserDialog.user.id}</div>
-                  <div className="text-muted-foreground">Join Date:</div>
-                  <div className="text-foreground">{editUserDialog.user.joinDate}</div>
-                  <div className="text-muted-foreground">Last Login:</div>
-                  <div className="text-foreground">{editUserDialog.user.lastLogin}</div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditUserDialog({ isOpen: false, user: null })}
-              className="border-border"
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleSaveEditUser}
-              disabled={!editFormData.name || !editFormData.email || !editFormData.role || !editFormData.status}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onSuccess={() => {
+          refetch()
+          setEditUserDialog({ isOpen: false, user: null })
+        }}
+      />
     </div>
   )
 }

@@ -15,6 +15,7 @@
 
 import { apiClient } from '../client';
 import { GalleryMediaType } from '../types/gallery';
+import { buildImageUrl } from '@/lib/utils/gallery-images';
 import type {
   GalleryItem,
   GalleryTag,
@@ -38,17 +39,23 @@ import type {
 /**
  * Transform backend gallery item to frontend format
  * Maps backend snake_case to camelCase and determines category
+ * Uses Cloudflare Images for proper image URLs
  */
 function transformBackendItemToFrontend(backendItem: GalleryItem): FrontendGalleryItem {
   // Determine category from tags
   const category = determineCategoryFromTags(backendItem.tags || []);
 
+  // Generate Cloudflare Images URLs from cf_image_id
+  const thumbnailUrl = buildImageUrl(backendItem.cf_image_id, 'thumbnail');
+  const cardUrl = buildImageUrl(backendItem.cf_image_id, 'card');
+  const publicUrl = buildImageUrl(backendItem.cf_image_id, 'public');
+
   return {
     id: backendItem.id,
     title: backendItem.title || backendItem.original_filename || 'Untitled',
     category,
-    image: backendItem.file_url,
-    thumbnail: backendItem.thumbnail_url,
+    image: publicUrl, // Full-size image for display
+    thumbnail: thumbnailUrl, // Optimized thumbnail for grids
     description: backendItem.caption || backendItem.alt_text || '',
     mediaType: backendItem.media_type,
     isFeatured: backendItem.is_featured,

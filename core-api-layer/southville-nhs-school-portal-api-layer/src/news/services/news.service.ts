@@ -379,6 +379,32 @@ export class NewsService {
       }
     }
 
+    // Update co-authors if provided
+    if (updateDto.coAuthorNames !== undefined) {
+      try {
+        // First, delete existing co-authors for this article
+        const { error: deleteError } = await supabase
+          .from('news_co_authors')
+          .delete()
+          .eq('news_id', newsId);
+
+        if (deleteError) {
+          this.logger.error('Error deleting old co-authors:', deleteError);
+        }
+
+        // Then add new co-authors if any
+        if (updateDto.coAuthorNames.length > 0) {
+          await this.addCoAuthorsInternal(
+            newsId,
+            updateDto.coAuthorNames,
+            userId,
+          );
+        }
+      } catch (error) {
+        this.logger.error('Error updating co-authors:', error);
+      }
+    }
+
     return this.mapToDto(updated);
   }
 
@@ -657,7 +683,7 @@ export class NewsService {
         category:news_categories(id, name, slug),
         tags:news_tags(tag:tags(id, name, slug)),
         co_authors:news_co_authors(
-          id, co_author_name, role
+          id, co_author_name
         )
       `,
       )
@@ -689,7 +715,7 @@ export class NewsService {
         category:news_categories(id, name, slug),
         tags:news_tags(tag:tags(id, name, slug)),
         co_authors:news_co_authors(
-          id, co_author_name, role
+          id, co_author_name
         )
       `,
       )
@@ -747,7 +773,17 @@ export class NewsService {
     // Removed status and visibility restrictions to allow viewing/editing all articles
     const { data, error } = await supabase
       .from('news')
-      .select('*')
+      .select(
+        `
+        *,
+        author:users!news_author_id_fkey(id, full_name, email),
+        category:news_categories(id, name, slug),
+        tags:news_tags(tag:tags(id, name, slug)),
+        co_authors:news_co_authors(
+          id, co_author_name
+        )
+      `,
+      )
       .eq('id', id)
       .is('deleted_at', null)
       .maybeSingle();
@@ -862,7 +898,6 @@ export class NewsService {
       .insert({
         news_id: newsId,
         co_author_name: addCoAuthorDto.coAuthorName.trim(),
-        role: addCoAuthorDto.role || 'co-author',
         added_by: userId,
       })
       .select();

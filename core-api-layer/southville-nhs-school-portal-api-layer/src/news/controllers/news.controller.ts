@@ -28,6 +28,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { AuthUser } from '../../auth/auth-user.decorator';
 import { R2StorageService } from '../../storage/r2-storage/r2-storage.service';
+import { CloudflareImagesService } from '../../gallery/services/cloudflare-images.service';
 import { NewsService } from '../services/news.service';
 import { NewsApprovalService } from '../services/news-approval.service';
 import { NewsReviewCommentsService } from '../services/news-review-comments.service';
@@ -57,6 +58,7 @@ export class NewsController {
     private readonly newsApprovalService: NewsApprovalService,
     private readonly newsReviewCommentsService: NewsReviewCommentsService,
     private readonly r2StorageService: R2StorageService,
+    private readonly cloudflareImagesService: CloudflareImagesService,
   ) {}
 
   // ============================================
@@ -181,7 +183,9 @@ export class NewsController {
     schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'R2 public URL of uploaded image' },
+        url: { type: 'string', description: 'Cloudflare Images public URL' },
+        cf_image_id: { type: 'string', description: 'Cloudflare Image ID' },
+        cf_image_url: { type: 'string', description: 'Cloudflare Images URL' },
         fileName: { type: 'string', description: 'Original file name' },
         fileSize: { type: 'number', description: 'File size in bytes' },
       },
@@ -263,41 +267,52 @@ export class NewsController {
         .replace(/-+/g, '-')
         .substring(0, 50);
 
-      // Generate unique file key for R2
-      const uniqueId = uuidv4();
-      const finalFilename = `${uniqueId}-${sanitizedName}${ext}`;
-      const fileKey = `news/images/${finalFilename}`;
+      this.logger.debug(`Uploading image to Cloudflare Images: ${imageFilename}`);
 
-      this.logger.debug(`Uploading image to R2: ${fileKey}`);
+      // Create file object for Cloudflare Images Service
+      const fileObject = {
+        buffer: imageBuffer,
+        originalname: imageFilename,
+        mimetype: imageMimeType,
+        size: imageBuffer.length,
+        fieldname: 'image',
+        encoding: '7bit',
+        destination: '',
+        filename: imageFilename,
+        path: '',
+      } as Express.Multer.File;
 
-      // Upload to R2
-      const uploadResult = await this.r2StorageService.uploadFile(
-        fileKey,
-        imageBuffer,
-        imageMimeType,
+      // Upload to Cloudflare Images
+      const uploadResult = await this.cloudflareImagesService.uploadImage(
+        fileObject,
+        {
+          uploadedBy: userId,
+          context: 'news',
+        },
       );
 
-      if (!uploadResult.success) {
-        this.logger.error(`R2 upload failed for ${fileKey}`);
-        throw new BadRequestException('Failed to upload image to storage');
-      }
+      this.logger.log(
+        `Image uploaded successfully to Cloudflare Images: ${uploadResult.cf_image_id}`,
+      );
 
-      this.logger.log(`Image uploaded successfully: ${fileKey}`);
-
+      // Return Cloudflare Images URL and metadata
       return {
-        url: uploadResult.publicUrl,
+        url: uploadResult.cf_image_url,
+        cf_image_id: uploadResult.cf_image_id,
+        cf_image_url: uploadResult.cf_image_url,
         fileName: imageFilename,
-        fileSize: imageBuffer.length,
+        fileSize: uploadResult.file_size_bytes,
+        mimeType: uploadResult.mime_type,
       };
     } catch (error) {
-      this.logger.error('Error uploading image:', error);
+      this.logger.error('Error uploading image to Cloudflare Images:', error);
 
       if (error instanceof BadRequestException) {
         throw error;
       }
 
       throw new BadRequestException(
-        `Failed to upload image: ${error.message || 'Unknown error'}`,
+        `Failed to upload image to Cloudflare Images: ${error.message || 'Unknown error'}`,
       );
     }
   }
@@ -743,11 +758,11 @@ export class NewsController {
 
   /**
    * Get news statistics (KPI counts)
-   * Teachers get their own stats, Admins get all stats
+   * Students get their own stats, Teachers get their own stats, Admins get all stats
    */
   @Get('stats')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get news statistics (KPI counts)' })
   @ApiResponse({

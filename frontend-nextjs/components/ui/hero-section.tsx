@@ -242,8 +242,8 @@ export function HeroSection() {
 
             {/* Right: Premium Quick Links grid (revamped) */}
             <div className="lg:justify-self-end w-full">
-              <div className="rounded-2xl p-5 sm:p-6 md:p-7 w-full max-w-md ml-auto bg-white/80 border border-white/60 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:border-slate-700/60">
-                <div className="flex items-center justify-between mb-4">
+              <div className="rounded-2xl p-4 sm:p-5 md:p-5 w-full max-w-md ml-auto bg-white/80 border border-white/60 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:border-slate-700/60">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-blue-600" />
                     <h2 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg md:text-xl font-semibold">
@@ -254,7 +254,7 @@ export function HeroSection() {
                 </div>
 
                 {/* New grid of actions (6 items) */}
-                <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                   {[
                     { title: "Academics", href: "/guess/academics", icon: BookOpen, desc: "Courses" },
                     { title: "Student Life", href: "/guess/student-life", icon: Users, desc: "Clubs" },
@@ -267,20 +267,20 @@ export function HeroSection() {
                       key={item.title}
                       href={item.href}
                       className={cn(
-                        "group relative rounded-xl p-3 sm:p-3.5 border overflow-hidden",
+                        "group relative rounded-xl p-2.5 sm:p-3 border overflow-hidden",
                         "bg-white/80 dark:bg-slate-800/70 border-slate-200/70 dark:border-slate-700/60",
                         "hover:shadow-md transition-all",
                       )}
                     >
                       {/* gradient ring on hover */}
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 ring-transparent group-hover:ring-2 group-hover:ring-blue-500/40 transition-all" />
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg grid place-items-center bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
-                          <item.icon className="w-5 h-5" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-lg grid place-items-center bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
+                          <item.icon className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-slate-900 dark:text-white truncate">{item.title}</div>
-                          <div className="text-[12px] text-slate-600 dark:text-slate-300">{item.desc}</div>
+                          <div className="text-[13px] sm:text-sm font-semibold text-slate-900 dark:text-white truncate">{item.title}</div>
+                          <div className="text-[11px] sm:text-[12px] text-slate-600 dark:text-slate-300">{item.desc}</div>
                         </div>
                       </div>
                     </Link>
@@ -288,14 +288,14 @@ export function HeroSection() {
                 </div>
 
                 {/* Accents */}
-                <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="mt-3 flex justify-center items-center gap-3">
                   {[
                     { icon: GraduationCap, label: "Excellence" },
                     { icon: Trophy, label: "Awards" },
                     { icon: BookOpen, label: "Learning" },
                   ].map(({ icon: Icon, label }) => (
-                    <div key={label} className="flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-300">
-                      <Icon className="w-4 h-4 text-blue-600" />
+                    <div key={label} className="flex items-center gap-1.5 text-[11px] sm:text-[12px] text-slate-600 dark:text-slate-300">
+                      <Icon className="w-3.5 h-3.5 text-blue-600" />
                       {label}
                     </div>
                   ))}

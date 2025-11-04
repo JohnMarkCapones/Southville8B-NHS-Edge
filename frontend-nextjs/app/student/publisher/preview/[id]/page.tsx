@@ -11,13 +11,16 @@ import {
   Users,
   Loader2,
   AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import StudentLayout from "@/components/student/student-layout"
-import { newsApi } from "@/lib/api/endpoints/news"
+import { newsApi, ApprovalHistoryRecord } from "@/lib/api/endpoints/news"
 import { NewsArticle } from "@/types/news"
 
 export default function PreviewArticlePage() {
@@ -27,22 +30,38 @@ export default function PreviewArticlePage() {
   const articleId = params.id as string
 
   const [article, setArticle] = useState<NewsArticle | null>(null)
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchArticle = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true)
         setError(null)
         const articleData = await newsApi.getNewsById(articleId)
-        
+
         if (!articleData) {
           setError("Article not found")
           return
         }
-        
+
         setArticle(articleData)
+
+        // Fetch approval history if article is not draft
+        if (articleData.status !== 'draft') {
+          try {
+            setIsLoadingHistory(true)
+            const history = await newsApi.getApprovalHistory(articleId)
+            setApprovalHistory(history)
+          } catch (historyError) {
+            console.error('Failed to fetch approval history:', historyError)
+            // Don't show error toast for approval history failure
+          } finally {
+            setIsLoadingHistory(false)
+          }
+        }
       } catch (error: any) {
         console.error('Failed to fetch article:', error)
         setError(error?.message || "Failed to load article")
@@ -57,7 +76,7 @@ export default function PreviewArticlePage() {
     }
 
     if (articleId) {
-      fetchArticle()
+      fetchData()
     }
   }, [articleId, toast])
 
@@ -238,6 +257,93 @@ export default function PreviewArticlePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Approval History Section */}
+          {article.status !== 'draft' && approvalHistory.length > 0 && (
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Review History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {isLoadingHistory ? (
+                    <div className="text-center py-4">
+                      <Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-600 mb-2" />
+                      <p className="text-sm text-slate-500">Loading review history...</p>
+                    </div>
+                  ) : (
+                    approvalHistory.map((record) => (
+                      <div
+                        key={record.id}
+                        className={`p-4 rounded-lg border-l-4 ${
+                          record.status === 'approved'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+                            : record.status === 'rejected'
+                            ? 'bg-red-50 dark:bg-red-900/20 border-red-500'
+                            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {record.status === 'approved' ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            ) : record.status === 'rejected' ? (
+                              <XCircle className="w-5 h-5 text-red-600" />
+                            ) : (
+                              <AlertCircle className="w-5 h-5 text-yellow-600" />
+                            )}
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">
+                              {record.status === 'approved'
+                                ? 'Approved'
+                                : record.status === 'rejected'
+                                ? 'Rejected'
+                                : 'Changes Requested'}
+                            </span>
+                          </div>
+                          <span className="text-sm text-slate-500 dark:text-slate-400">
+                            {new Date(record.action_at).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="mb-2">
+                          <p className="text-sm text-slate-700 dark:text-slate-300">
+                            Reviewed by:{' '}
+                            <span className="font-medium">
+                              {record.approver?.full_name || record.approver?.email || 'Unknown'}
+                            </span>
+                          </p>
+                        </div>
+
+                        {record.remarks && (
+                          <div className="mt-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded">
+                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              Feedback:
+                            </p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
+                              {record.remarks}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Helpful message for rejected articles */}
+                {approvalHistory.some((r) => r.status === 'rejected') && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Next Steps:</strong> Please review the feedback above and make the necessary
+                      changes to your article. Once updated, you can submit it again for review.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </StudentLayout>

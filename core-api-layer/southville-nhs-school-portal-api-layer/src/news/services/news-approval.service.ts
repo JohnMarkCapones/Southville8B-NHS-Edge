@@ -9,6 +9,8 @@ import { SupabaseService } from '../../supabase/supabase.service';
 import { NewsAccessService } from './news-access.service';
 import { ApproveNewsDto, RejectNewsDto } from '../dto';
 import { NewsApproval } from '../entities';
+import { StudentActivitiesService } from '../../student-activities/student-activities.service';
+import { ActivityType } from '../../student-activities/entities/student-activity.entity';
 
 /**
  * Service for handling news article approval workflow
@@ -21,6 +23,7 @@ export class NewsApprovalService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly newsAccessService: NewsAccessService,
+    private readonly studentActivitiesService: StudentActivitiesService,
   ) {}
 
   /**
@@ -99,10 +102,10 @@ export class NewsApprovalService {
     // Check if user can approve
     await this.newsAccessService.requireApprovalPermission(approverId);
 
-    // Get article
+    // Get article with author and title info
     const { data: article, error: fetchError } = await supabase
       .from('news')
-      .select('status')
+      .select('status, title, author_id, author:users!news_author_id_fkey(id, full_name)')
       .eq('id', newsId)
       .maybeSingle();
 
@@ -154,6 +157,40 @@ export class NewsApprovalService {
 
     this.logger.log(`Article ${newsId} approved by ${approverId}`);
 
+    // Get approver info for activity
+    const { data: approverData } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', approverId)
+      .single();
+
+    // Create activity timeline entry for the student author
+    try {
+      await this.studentActivitiesService.create({
+        studentUserId: article.author_id,
+        activityType: ActivityType.JOURNALISM_ARTICLE_APPROVED,
+        title: `📰 Article Approved: "${article.title}"`,
+        description: `Your article has been approved${approverData?.full_name ? ` by ${approverData.full_name}` : ''} and is ready to publish!`,
+        metadata: {
+          article_id: newsId,
+          article_title: article.title,
+          action_type: 'approved',
+          approved_by: approverId,
+          approver_name: approverData?.full_name || 'Unknown',
+          remarks: approveDto.remarks || null,
+        },
+        relatedEntityId: newsId,
+        relatedEntityType: 'news_article',
+        icon: 'CheckCircle2',
+        color: 'text-green-500',
+        isHighlighted: true,
+      });
+      this.logger.log(`✅ Activity timeline entry created for article approval`);
+    } catch (activityError) {
+      this.logger.error('Failed to create activity timeline entry:', activityError);
+      // Don't throw - activity is optional, approval already succeeded
+    }
+
     return {
       id: approvalRecord.id,
       news_id: approvalRecord.news_id,
@@ -184,10 +221,10 @@ export class NewsApprovalService {
     // Check if user can approve/reject
     await this.newsAccessService.requireApprovalPermission(approverId);
 
-    // Get article
+    // Get article with author and title info
     const { data: article, error: fetchError } = await supabase
       .from('news')
-      .select('status')
+      .select('status, title, author_id, author:users!news_author_id_fkey(id, full_name)')
       .eq('id', newsId)
       .maybeSingle();
 
@@ -238,6 +275,40 @@ export class NewsApprovalService {
     }
 
     this.logger.log(`Article ${newsId} rejected by ${approverId}`);
+
+    // Get approver info for activity
+    const { data: approverData } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', approverId)
+      .single();
+
+    // Create activity timeline entry for the student author
+    try {
+      await this.studentActivitiesService.create({
+        studentUserId: article.author_id,
+        activityType: ActivityType.JOURNALISM_ARTICLE_REJECTED,
+        title: `❌ Article Rejected: "${article.title}"`,
+        description: `Your article has been rejected${approverData?.full_name ? ` by ${approverData.full_name}` : ''}. Please review the feedback and revise.`,
+        metadata: {
+          article_id: newsId,
+          article_title: article.title,
+          action_type: 'rejected',
+          rejected_by: approverId,
+          rejector_name: approverData?.full_name || 'Unknown',
+          reason: rejectDto.remarks,
+        },
+        relatedEntityId: newsId,
+        relatedEntityType: 'news_article',
+        icon: 'XCircle',
+        color: 'text-red-500',
+        isHighlighted: true,
+      });
+      this.logger.log(`✅ Activity timeline entry created for article rejection`);
+    } catch (activityError) {
+      this.logger.error('Failed to create activity timeline entry:', activityError);
+      // Don't throw - activity is optional, rejection already succeeded
+    }
 
     return {
       id: rejectionRecord.id,

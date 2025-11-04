@@ -4,6 +4,7 @@ import { useState } from "react"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { FeatureCard } from "@/components/ui/feature-card"
 import { Badge } from "@/components/ui/badge"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import {
   BookOpen,
   Microscope,
@@ -32,14 +33,14 @@ export default function AcademicsClient() {
       title: "TLE (Technology and Livelihood Education)",
       description: "Practical skills development in technology, entrepreneurship, and livelihood preparation.",
       icon: <Wrench className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=400&fit=crop&q=80",
       badge: "Practical Skills",
     },
     {
       title: "Science",
       description: "Hands-on laboratory experiences in Biology, Chemistry, Physics, and Environmental Science.",
       icon: <Microscope className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&h=400&fit=crop&q=80",
       badge: "STEM Focus",
       variant: "featured" as const,
     },
@@ -48,21 +49,21 @@ export default function AcademicsClient() {
       description:
         "From basic arithmetic to advanced mathematics, building strong analytical and problem-solving skills.",
       icon: <Calculator className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&h=400&fit=crop&q=80",
       badge: "Core Subject",
     },
     {
       title: "Filipino",
       description: "Mastering the national language through literature, grammar, and cultural appreciation.",
       icon: <BookOpen className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop&q=80",
       badge: "National Language",
     },
     {
       title: "English",
       description: "Developing communication skills, critical thinking, and literary analysis in the global language.",
       icon: <Globe className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&h=400&fit=crop&q=80",
       badge: "Global Language",
     },
     {
@@ -70,49 +71,49 @@ export default function AcademicsClient() {
       description:
         "Understanding Philippine history, culture, government, and social studies for informed citizenship.",
       icon: <GraduationCap className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=400&fit=crop&q=80",
       badge: "Social Studies",
     },
     {
       title: "ESP (Edukasyon sa Pagpapakatao)",
       description: "Character development and values education for moral and ethical growth.",
       icon: <Heart className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&h=400&fit=crop&q=80",
       badge: "Values Education",
     },
     {
       title: "MAPEH",
       description: "Integrated Music, Arts, Physical Education, and Health for holistic development.",
       icon: <Palette className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=400&fit=crop&q=80",
       badge: "Integrated Program",
     },
     {
       title: "Music",
       description: "Musical appreciation, theory, and performance to develop artistic expression.",
       icon: <Music className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop&q=80",
       badge: "Creative Arts",
     },
     {
       title: "Arts",
       description: "Visual arts, creative expression, and artistic skills development.",
       icon: <Palette className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=400&fit=crop&q=80",
       badge: "Visual Arts",
     },
     {
       title: "Physical Education",
       description: "Promoting physical fitness, sports skills, and healthy lifestyle habits.",
       icon: <Dumbbell className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=400&fit=crop&q=80",
       badge: "Fitness & Sports",
     },
     {
       title: "Health",
       description: "Health education focusing on wellness, nutrition, and personal care.",
       icon: <Heart className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400",
+      image: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&h=400&fit=crop&q=80",
       badge: "Wellness Focus",
     },
   ]
@@ -152,6 +153,7 @@ export default function AcademicsClient() {
 
   return (
     <div className="min-h-screen">
+      <GuessBreadcrumb items={[{ label: "Academics" }]} />
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 dark:from-blue-800 dark:via-blue-700 dark:to-cyan-600 overflow-hidden">
         <div className="absolute inset-0 opacity-10 dark:opacity-20">
@@ -383,75 +385,6 @@ export default function AcademicsClient() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* STEM Focus Section */}
-      <section id="stem" className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="animate-slideInLeft">
-              <Badge variant="secondary" className="mb-4">
-                <Microscope className="w-4 h-4 mr-2" />
-                STEM Excellence
-              </Badge>
-              <h2 className="text-4xl font-bold mb-6 text-foreground">
-                Leading in{" "}
-                <span className="gradient-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-                  STEM Education
-                </span>
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Our STEM program integrates Science, Technology, Engineering, and Mathematics through hands-on learning,
-                research opportunities, and real-world problem solving. Students engage with cutting-edge technology and
-                work on projects that prepare them for STEM careers.
-              </p>
-
-              <div className="grid grid-cols-2 gap-6 mb-8">
-                {[
-                  { label: "Lab Equipment Value", value: "$500K+" },
-                  { label: "Research Projects", value: "25+" },
-                  { label: "STEM Competitions", value: "15+" },
-                  { label: "Industry Partners", value: "8+" },
-                ].map((stat, index) => (
-                  <div key={index} className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-primary mb-1">{stat.value}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              <AnimatedButton variant="gradient" size="lg" animation="glow">
-                <Microscope className="w-5 h-5 mr-2" />
-                Explore STEM Programs
-              </AnimatedButton>
-            </div>
-
-            <div className="animate-slideInRight">
-              <div className="relative">
-                <img
-                  src="/placeholder.svg?height=500&width=600"
-                  alt="STEM Laboratory"
-                  className="rounded-2xl shadow-2xl"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl" />
-
-                {/* Floating Stats */}
-                <div className="absolute top-4 right-4 bg-background/90 dark:bg-background/95 backdrop-blur-sm rounded-lg p-4 animate-float border border-border">
-                  <div className="text-2xl font-bold text-primary">95%</div>
-                  <div className="text-sm text-muted-foreground">STEM College Bound</div>
-                </div>
-
-                <div
-                  className="absolute bottom-4 left-4 bg-background/90 dark:bg-background/95 backdrop-blur-sm rounded-lg p-4 animate-float border border-border"
-                  style={{ animationDelay: "1s" }}
-                >
-                  <div className="text-2xl font-bold text-primary">12</div>
-                  <div className="text-sm text-muted-foreground">Science Fair Winners</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

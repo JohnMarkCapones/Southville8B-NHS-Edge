@@ -56,7 +56,8 @@ interface Article {
 // Helper function to transform NewsArticle to Article
 const transformNewsArticle = (newsArticle: NewsArticle): Article => {
   // Normalize status to lowercase for consistent filtering
-  const normalizeStatus = (status: string): Article["status"] => {
+  const normalizeStatus = (status: string | undefined): Article["status"] => {
+    if (!status) return 'draft'
     const statusMap: Record<string, Article["status"]> = {
       'draft': 'draft',
       'pending_approval': 'pending_approval',
@@ -72,20 +73,24 @@ const transformNewsArticle = (newsArticle: NewsArticle): Article => {
     }
     return statusMap[status] || 'draft'
   }
-  
+
+  const categoryName = typeof newsArticle.category === 'string'
+    ? newsArticle.category
+    : newsArticle.category?.name || "Uncategorized"
+
   return {
     id: newsArticle.id,
     title: newsArticle.title,
-    excerpt: newsArticle.description || newsArticle.excerpt || "",
-    category: newsArticle.category?.name || "Uncategorized",
+    excerpt: newsArticle.excerpt || "",
+    category: categoryName,
     status: normalizeStatus(newsArticle.status),
-    reviewStatus: newsArticle.reviewStatus,
+    reviewStatus: newsArticle.reviewStatus as Article["reviewStatus"],
     views: newsArticle.views || 0,
     likes: newsArticle.likes || 0,
-    comments: newsArticle.commentsCount || 0,
-    createdAt: newsArticle.createdAt,
-    publishedAt: newsArticle.publishedAt,
-    thumbnail: newsArticle.featuredImageUrl,
+    comments: newsArticle.comments || 0,
+    createdAt: newsArticle.date,
+    publishedAt: newsArticle.publishedDate,
+    thumbnail: newsArticle.image,
   }
 }
 

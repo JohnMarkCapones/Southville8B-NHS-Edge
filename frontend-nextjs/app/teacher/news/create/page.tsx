@@ -225,6 +225,36 @@ export default function CreateArticlePage() {
     return imgRegex.test(formData.articleHtml)
   }
 
+  // Helper function to extract first image from HTML content
+  const extractFirstImageFromContent = (htmlContent: string): string | null => {
+    if (!htmlContent) return null
+
+    // Create a temporary div to parse HTML
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = htmlContent
+
+    // Find first img tag
+    const firstImg = tempDiv.querySelector('img')
+    return firstImg ? firstImg.src : null
+  }
+
+  // Get featured image (explicit upload takes priority, otherwise use first content image)
+  const getFeaturedImageUrl = (): string | undefined => {
+    // Priority 1: Explicitly uploaded featured image
+    if (formData.featuredImageUrl) {
+      return formData.featuredImageUrl
+    }
+
+    // Priority 2: First image from content
+    const firstContentImage = extractFirstImageFromContent(formData.articleHtml)
+    if (firstContentImage) {
+      return firstContentImage
+    }
+
+    // Priority 3: No image at all - undefined (let backend handle it)
+    return undefined
+  }
+
   const handleSave = async (saveAsDraft: boolean = true) => {
     // Validation
     if (!formData.title.trim()) {
@@ -289,7 +319,7 @@ export default function CreateArticlePage() {
                     ? formData.categoryId : undefined,
         tags: formData.tags.length > 0 ? formData.tags : undefined,
         visibility: formData.visibility,
-        featuredImageUrl: formData.featuredImageUrl || undefined,
+        featuredImageUrl: getFeaturedImageUrl(),
         coAuthorNames: formData.coAuthorNames.length > 0 ? formData.coAuthorNames : undefined,
         scheduledDate: formData.scheduledDate || undefined,
         authorName: formData.author || undefined,

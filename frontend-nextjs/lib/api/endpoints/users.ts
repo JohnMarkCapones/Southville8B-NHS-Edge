@@ -300,3 +300,62 @@ export async function getAllUsersStats(): Promise<{
     throw error;
   }
 }
+
+/**
+ * Update user data type for PATCH requests
+ */
+export interface UpdateUserData {
+  email?: string;
+  fullName?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  // Add other fields as needed based on backend UpdateUserDto
+}
+
+/**
+ * Update a user by ID
+ *
+ * @param userId - User ID to update
+ * @param data - Partial user data to update
+ * @returns Promise with updated user data
+ *
+ * @example
+ * ```typescript
+ * const updated = await updateUser('user-id-123', {
+ *   fullName: 'John Smith',
+ *   status: 'Active'
+ * });
+ * ```
+ */
+export async function updateUser(userId: string, data: UpdateUserData): Promise<User> {
+  return apiClient.patch<User>(`/users/${userId}`, data);
+}
+
+/**
+ * Domain Role Management
+ *
+ * Note: Full domain role management has been moved to @/lib/api/endpoints/domains
+ * These functions are kept for backward compatibility
+ */
+
+/**
+ * Update user data (role and/or status)
+ *
+ * @param userId - User ID to update
+ * @param data - Data to update (role, status, etc.)
+ * @returns Promise with updated user data
+ *
+ * @example
+ * ```typescript
+ * const updated = await updateUserData('user-id-123', {
+ *   role: 'Student',
+ *   status: 'Active'
+ * });
+ * ```
+ */
+export async function updateUserData(
+  userId: string,
+  data: { role?: UserRole; status?: UserStatus }
+): Promise<User> {
+  return apiClient.patch<User>(`/users/${userId}`, data);
+}

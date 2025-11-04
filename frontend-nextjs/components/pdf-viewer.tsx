@@ -37,6 +37,7 @@ export default function PDFViewer({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pdfjsLib = useRef<any>(null)
   const [isPdfJsReady, setIsPdfJsReady] = useState(false)
+  const renderTaskRef = useRef<any>(null)
   
   // Unified toolbar button styles (light/dark)
   const toolbarButtonClass =
@@ -115,37 +116,62 @@ export default function PDFViewer({
 
     const renderPage = async () => {
       try {
+        // Cancel any ongoing render task before starting a new one
+        if (renderTaskRef.current) {
+          console.log('[PDFViewer] Cancelling previous render task')
+          renderTaskRef.current.cancel()
+          renderTaskRef.current = null
+        }
+
         const canvas = canvasRef.current
         if (!canvas) return
-        
+
         const context = canvas.getContext('2d')
         if (!context) return
-        
+
         const page = await pdfDoc.getPage(pageNum)
         const viewport = page.getViewport({ scale })
-        
+
         canvas.height = viewport.height
         canvas.width = viewport.width
-        
+
         const renderContext = {
           canvasContext: context,
           viewport: viewport
         }
-        
-        await page.render(renderContext).promise
+
+        // Store the render task so we can cancel it later if needed
+        renderTaskRef.current = page.render(renderContext)
+
+        await renderTaskRef.current.promise
+        renderTaskRef.current = null
         console.log('[PDFViewer] Page rendered:', pageNum)
-        
+
         // Notify parent component
         if (onPageChange) {
           onPageChange(pageNum)
         }
       } catch (err) {
+        // Ignore cancellation errors
+        if (err instanceof Error && err.message.includes('cancelled')) {
+          console.log('[PDFViewer] Render cancelled (expected)')
+          return
+        }
         console.error('[PDFViewer] Failed to render page:', err)
         setError(`Failed to render page: ${err instanceof Error ? err.message : 'Unknown error'}`)
       }
     }
 
     renderPage()
+
+    // Cleanup: cancel render task on unmount or when dependencies change
+    return () => {
+      if (renderTaskRef.current) {
+        console.log('[PDFViewer] Cleaning up: cancelling render task')
+        renderTaskRef.current.cancel()
+        renderTaskRef.current = null
+      }
+    }
   }, [pdfDoc, pageNum, scale, onPageChange])
 
   // Update zoom level
@@ -281,11 +307,11 @@ export default function PDFViewer({
   return (
     <Card className={className}>
       <CardContent className="p-0">
-        <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
+        <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-slate-900' : ''}`}>
           {/* Navigation Header */}
-          <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-white/60 backdrop-blur dark:bg-slate-900/70">
-            <CardTitle className="text-lg">PDF Viewer</CardTitle>
-            <div className="flex items-center gap-2">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 border-b bg-white/60 backdrop-blur dark:bg-slate-900/70 gap-2 sm:gap-0">
+            <CardTitle className="text-sm sm:text-lg">PDF Viewer</CardTitle>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2 w-full sm:w-auto">
               {/* Page Navigation */}
               <div className="flex items-center gap-1">
                 <Button
@@ -293,11 +319,11 @@ export default function PDFViewer({
                   size="sm"
                   onClick={goToPrevPage}
                   disabled={pageNum <= 1}
-                  className={toolbarButtonClass}
+                  className={`${toolbarButtonClass} h-8 w-8 p-0 sm:h-9 sm:w-9`}
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
-                <span className="text-sm font-medium px-2">
+                <span className="text-xs sm:text-sm font-medium px-1 sm:px-2 min-w-[3rem] sm:min-w-[4rem] text-center">
                   {pageNum} / {totalPagesCount}
                 </span>
                 <Button
@@ -305,67 +331,69 @@ export default function PDFViewer({
                   size="sm"
                   onClick={goToNextPage}
                   disabled={pageNum >= totalPagesCount}
-                  className={toolbarButtonClass}
+                  className={`${toolbarButtonClass} h-8 w-8 p-0 sm:h-9 sm:w-9`}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
-              
+
               {/* Zoom Controls */}
               <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={zoomOut}
-                  className={toolbarButtonClass}
+                  className={`${toolbarButtonClass} h-8 w-8 p-0 sm:h-9 sm:w-9`}
                 >
-                  <ZoomOut className="w-4 h-4" />
+                  <ZoomOut className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
-                <span className="text-sm font-medium px-2 min-w-[3rem] text-center">
+                <span className="text-xs sm:text-sm font-medium px-1 sm:px-2 min-w-[2.5rem] sm:min-w-[3rem] text-center">
                   {Math.round(scale * 100)}%
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={zoomIn}
-                  className={toolbarButtonClass}
+                  className={`${toolbarButtonClass} h-8 w-8 p-0 sm:h-9 sm:w-9`}
                 >
-                  <ZoomIn className="w-4 h-4" />
+                  <ZoomIn className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
-              
+
               {/* Action Buttons */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.open(fileUrl, '_blank')}
-                className={toolbarButtonClass}
+                className={`${toolbarButtonClass} h-8 px-2 sm:h-9 sm:px-3 hidden sm:flex`}
               >
-                <FileText className="w-4 h-4 mr-1" />
-                New Tab
+                <FileText className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                <span className="hidden md:inline">New Tab</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.open(fileUrl, '_blank')}
-                className={toolbarButtonClass}
+                className={`${toolbarButtonClass} h-8 w-8 p-0 sm:h-9 sm:w-9`}
+                title="Download"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={toggleFullscreen}
-                className={toolbarButtonClass}
+                className={`${toolbarButtonClass} h-8 w-8 p-0 sm:h-9 sm:w-9`}
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               >
-                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {isFullscreen ? <Minimize2 className="w-3 h-3 sm:w-4 sm:h-4" /> : <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />}
               </Button>
             </div>
           </CardHeader>
 
           {/* PDF Canvas */}
-          <div className={`${isFullscreen ? 'h-screen overflow-auto' : 'max-h-[600px] overflow-auto'} bg-gray-100 dark:bg-gray-800`}>
-            <div className="flex justify-center p-4">
+          <div className={`${isFullscreen ? 'h-screen overflow-auto' : 'max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] overflow-auto'} bg-gray-100 dark:bg-gray-800`}>
+            <div className="flex justify-center p-2 sm:p-4">
               <canvas
                 ref={canvasRef}
                 className="shadow-lg rounded-lg bg-white"

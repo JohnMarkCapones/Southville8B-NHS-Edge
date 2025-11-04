@@ -1511,4 +1511,239 @@ export class UsersService {
       );
     }
   }
+
+  // ===== Domain Role Management Methods =====
+
+  /**
+   * Get all domain roles assigned to a user
+   * @param userId - User ID
+   * @returns Promise<any[]> - Array of user domain role assignments
+   */
+  async getUserDomainRoles(userId: string): Promise<any[]> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // First check if user exists
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Get user's domain role assignments with joined data
+      const { data, error } = await supabase
+        .from('user_domain_roles')
+        .select(
+          `
+          *,
+          domain_role:domain_role_id(
+            id,
+            name,
+            domain_id,
+            domain:domain_id(
+              id,
+              type,
+              name
+            )
+          )
+        `,
+        )
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error(
+          `Error fetching domain roles for user ${userId}:`,
+          error,
+        );
+        throw new BadRequestException(
+          `Failed to fetch user domain roles: ${error.message}`,
+        );
+      }
+
+      return data || [];
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `Unexpected error fetching domain roles for user ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to fetch user domain roles',
+      );
+    }
+  }
+
+  /**
+   * Assign a domain role to a user
+   * @param userId - User ID
+   * @param domainRoleId - Domain role ID to assign
+   * @returns Promise<any> - Created user domain role assignment
+   */
+  async assignDomainRole(
+    userId: string,
+    domainRoleId: string,
+  ): Promise<any> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // Verify user exists
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Verify domain role exists
+      const { data: domainRole, error: roleError } = await supabase
+        .from('domain_roles')
+        .select('id, name, domain_id')
+        .eq('id', domainRoleId)
+        .single();
+
+      if (roleError || !domainRole) {
+        throw new NotFoundException(
+          `Domain role with ID ${domainRoleId} not found`,
+        );
+      }
+
+      // Check if assignment already exists
+      const { data: existing } = await supabase
+        .from('user_domain_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('domain_role_id', domainRoleId)
+        .single();
+
+      if (existing) {
+        throw new BadRequestException(
+          `User already has this domain role assigned`,
+        );
+      }
+
+      // Create assignment
+      const { data, error } = await supabase
+        .from('user_domain_roles')
+        .insert({
+          user_id: userId,
+          domain_role_id: domainRoleId,
+        })
+        .select(
+          `
+          *,
+          domain_role:domain_role_id(
+            id,
+            name,
+            domain_id,
+            domain:domain_id(
+              id,
+              type,
+              name
+            )
+          )
+        `,
+        )
+        .single();
+
+      if (error) {
+        this.logger.error('Error assigning domain role:', error);
+        throw new BadRequestException(
+          `Failed to assign domain role: ${error.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Assigned domain role ${domainRole.name} to user ${userId}`,
+      );
+
+      return data;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error('Unexpected error assigning domain role:', error);
+      throw new InternalServerErrorException('Failed to assign domain role');
+    }
+  }
+
+  /**
+   * Remove a domain role assignment from a user
+   * @param userId - User ID
+   * @param assignmentId - User domain role assignment ID
+   * @returns Promise<void>
+   */
+  async removeDomainRole(
+    userId: string,
+    assignmentId: string,
+  ): Promise<void> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // Verify assignment exists and belongs to user
+      const { data: assignment, error: fetchError } = await supabase
+        .from('user_domain_roles')
+        .select('id, user_id')
+        .eq('id', assignmentId)
+        .single();
+
+      if (fetchError || !assignment) {
+        throw new NotFoundException(
+          `Domain role assignment with ID ${assignmentId} not found`,
+        );
+      }
+
+      if (assignment.user_id !== userId) {
+        throw new BadRequestException(
+          `Assignment does not belong to user ${userId}`,
+        );
+      }
+
+      // Delete assignment
+      const { error } = await supabase
+        .from('user_domain_roles')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) {
+        this.logger.error('Error removing domain role assignment:', error);
+        throw new BadRequestException(
+          `Failed to remove domain role assignment: ${error.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Removed domain role assignment ${assignmentId} from user ${userId}`,
+      );
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        'Unexpected error removing domain role assignment:',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to remove domain role assignment',
+      );
+    }
+  }
 }

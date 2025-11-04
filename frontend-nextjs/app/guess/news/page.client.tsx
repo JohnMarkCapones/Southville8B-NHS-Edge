@@ -5,6 +5,7 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { cn } from "@/lib/utils"
@@ -238,6 +239,7 @@ export default function NewsClient() {
 
   return (
     <div className="min-h-screen bg-background">
+      <GuessBreadcrumb items={[{ label: "News" }]} />
       {/* Hero Section */}
       <section
         ref={heroRef}

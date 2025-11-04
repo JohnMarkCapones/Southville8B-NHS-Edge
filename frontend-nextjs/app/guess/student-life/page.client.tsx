@@ -7,6 +7,7 @@ import { FeatureCard } from "@/components/ui/feature-card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import {
   Users,
   MapPin,
@@ -168,6 +169,7 @@ export default function StudentLifeClient() {
 
   return (
     <div className="min-h-screen">
+      <GuessBreadcrumb items={[{ label: "Student Life" }]} />
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 dark:from-blue-800 dark:via-blue-700 dark:to-cyan-600 overflow-hidden">
         {/* Floating background elements */}

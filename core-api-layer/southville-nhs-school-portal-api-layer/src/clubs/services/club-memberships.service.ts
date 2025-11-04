@@ -7,6 +7,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { StudentActivitiesService } from '../../student-activities/student-activities.service';
+import { ActivityType } from '../../student-activities/entities/student-activity.entity';
 import { CreateClubMembershipDto } from '../dto/create-club-membership.dto';
 import { UpdateClubMembershipDto } from '../dto/update-club-membership.dto';
 import { ClubMembership } from '../models/club-membership.model';
@@ -15,7 +17,10 @@ import { ClubMembership } from '../models/club-membership.model';
 export class ClubMembershipsService {
   private readonly logger = new Logger(ClubMembershipsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly studentActivitiesService: StudentActivitiesService,
+  ) {}
 
   /**
    * Map DB record to DTO (snake_case to camelCase)
@@ -169,6 +174,29 @@ export class ClubMembershipsService {
       );
     }
 
+    // 🎯 CREATE ACTIVITY - Student joined club
+    try {
+      await this.studentActivitiesService.create({
+        studentUserId: createDto.studentId,
+        activityType: ActivityType.CLUB_JOINED,
+        title: `Joined ${data.club?.name || 'a club'}`,
+        description: `You are now a ${data.position?.name || 'member'}`,
+        metadata: {
+          club_id: data.club_id,
+          club_name: data.club?.name,
+          position_id: data.position_id,
+          position: data.position?.name,
+        },
+        relatedEntityId: data.club_id,
+        relatedEntityType: 'club',
+        icon: 'Users',
+        color: 'text-blue-500',
+      });
+    } catch (activityError) {
+      // Don't fail membership creation if activity logging fails
+      this.logger.error('Failed to create club joined activity:', activityError);
+    }
+
     return this.mapDbToDto(data);
   }
 
@@ -306,6 +334,33 @@ export class ClubMembershipsService {
     if (error || !data) {
       this.logger.error('Error updating membership:', error);
       throw new BadRequestException('Failed to update membership');
+    }
+
+    // 🎯 CREATE ACTIVITY - Position changed (promoted/demoted)
+    if (updateDto.positionId && existing.positionId !== updateDto.positionId) {
+      try {
+        await this.studentActivitiesService.create({
+          studentUserId: existing.studentId,
+          activityType: ActivityType.CLUB_POSITION_CHANGED,
+          title: `Promoted in ${data.club?.name || 'club'}`,
+          description: `Your role changed from ${existing.position?.name || 'member'} to ${data.position?.name || 'member'}`,
+          metadata: {
+            club_id: data.club_id,
+            club_name: data.club?.name,
+            old_position_id: existing.positionId,
+            old_position: existing.position?.name,
+            new_position_id: data.position_id,
+            new_position: data.position?.name,
+          },
+          relatedEntityId: data.club_id,
+          relatedEntityType: 'club',
+          icon: 'Trophy',
+          color: 'text-yellow-500',
+          isHighlighted: true, // Promotions are important!
+        });
+      } catch (activityError) {
+        this.logger.error('Failed to create position change activity:', activityError);
+      }
     }
 
     return this.mapDbToDto(data);

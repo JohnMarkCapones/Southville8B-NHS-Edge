@@ -105,6 +105,71 @@ export function TeacherHeader({ teacherName, teacherAvatar, department, teacherI
     console.log("[v0] All notifications marked as read")
   }
 
+  // Academic Year/Period State
+  const [activeYear, setActiveYear] = React.useState<any>(null)
+  const [currentPeriod, setCurrentPeriod] = React.useState<string>("Loading...")
+  const [academicLoading, setAcademicLoading] = React.useState(true)
+
+  // Load Academic Year and Period
+  React.useEffect(() => {
+    const loadAcademicData = async () => {
+      try {
+        setAcademicLoading(true)
+
+        // Import the API client dynamically to avoid SSR issues
+        const { academicYearsApi } = await import('@/lib/api/endpoints/academic-years')
+
+        // Load active academic year
+        const year = await academicYearsApi.getActive()
+        setActiveYear(year)
+
+        if (year) {
+          // Load periods for the active academic year
+          try {
+            const yearPeriods = await academicYearsApi.getPeriods(year.id)
+
+            // Determine current period based on today's date
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+
+            const sortedPeriods = yearPeriods.sort((a, b) =>
+              new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+            )
+
+            let foundPeriod = false
+            for (const period of sortedPeriods) {
+              const startDate = new Date(period.start_date)
+              const endDate = new Date(period.end_date)
+
+              startDate.setHours(0, 0, 0, 0)
+              endDate.setHours(23, 59, 59, 999)
+
+              if (today >= startDate && today <= endDate) {
+                setCurrentPeriod(period.period_name)
+                foundPeriod = true
+                break
+              }
+            }
+
+            if (!foundPeriod) {
+              setCurrentPeriod("No Active Period")
+            }
+          } catch (periodError) {
+            console.warn('Could not load periods:', periodError)
+            setCurrentPeriod("Period N/A")
+          }
+        }
+      } catch (err) {
+        console.error('Error loading academic data:', err)
+        setCurrentPeriod("N/A")
+      } finally {
+        setAcademicLoading(false)
+      }
+    }
+
+    loadAcademicData()
+  }, [])
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 backdrop-blur-xl border-white/20 shadow-lg">
@@ -126,20 +191,24 @@ export function TeacherHeader({ teacherName, teacherAvatar, department, teacherI
               </div>
             </AnimatedButton>
             <div className="hidden lg:flex items-center space-x-2 ml-4">
-              <Badge
-                variant="secondary"
-                className="bg-green-500/20 text-green-100 border-green-400/30 text-xs px-2 py-1 backdrop-blur-sm"
-              >
-                <Activity className="w-3 h-3 mr-1" />
-                Online
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-blue-500/20 text-blue-100 border-blue-400/30 text-xs px-2 py-1 backdrop-blur-sm"
-              >
-                <Clock className="w-3 h-3 mr-1" />
-                Period 3
-              </Badge>
+              <div className="flex flex-col items-end text-white/90 mr-2">
+                {academicLoading ? (
+                  <>
+                    <div className="text-xs font-semibold animate-pulse">Loading...</div>
+                    <div className="text-[10px] text-white/70 animate-pulse">Academic Info</div>
+                  </>
+                ) : activeYear ? (
+                  <>
+                    <div className="text-xs font-bold text-white shadow-sm">{currentPeriod}</div>
+                    <div className="text-[10px] text-white/80">Academic Year {activeYear.year_name}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xs font-semibold text-yellow-200">No Active Year</div>
+                    <div className="text-[10px] text-white/70">Setup Required</div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

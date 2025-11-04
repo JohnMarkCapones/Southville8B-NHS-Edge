@@ -38,6 +38,12 @@ export interface NewsApiResponse {
       name: string
     }
   }>
+  co_authors?: Array<{
+    id: string
+    co_author_name: string
+    role?: string
+  }>
+  credits?: string | null
   featured_image_url?: string
   // Fields that might not exist in API but we'll handle
   likes?: number
@@ -46,6 +52,20 @@ export interface NewsApiResponse {
   featured?: boolean
   trending?: boolean
   read_time?: string
+}
+
+export interface ApprovalHistoryRecord {
+  id: string
+  news_id: string
+  approver_id: string
+  status: 'approved' | 'rejected' | 'pending' | 'changes_requested'
+  remarks: string | null
+  action_at: string
+  approver?: {
+    id: string
+    full_name: string
+    email: string
+  }
 }
 
 export interface NewsCategoryApiResponse {
@@ -134,13 +154,17 @@ export interface UpdateNewsDto {
   featured_image_url?: string
   tags?: string[]
   authorName?: string
+  coAuthorNames?: string[]
   credits?: string
 }
 
 export interface UploadImageResponse {
-  url: string
+  url: string // Cloudflare Images URL (cf_image_url)
+  cf_image_url?: string // Cloudflare Images delivery URL
+  cf_image_id?: string // Cloudflare Images ID
   fileName: string
   fileSize: number
+  mimeType?: string
 }
 
 class NewsApiError extends Error {
@@ -317,6 +341,10 @@ function mapApiNewsToFrontend(apiNews: NewsApiResponse): NewsArticle {
     publishedDate: apiNews.published_date || '',
     deletedAt: apiNews.deleted_at,
     deletedBy: apiNews.deleted_by,
+    // Co-authors and credits
+    coAuthors: apiNews.co_authors?.map(ca => ca.co_author_name) || [],
+    credits: apiNews.credits || '',
+    articleJson: apiNews.article_json,
   } as any // Cast to any to allow extra fields
 }
 
@@ -784,8 +812,8 @@ export const newsApi = {
    */
   async approveNews(id: string, message?: string): Promise<NewsArticle> {
     try {
-      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/approve`, {
-        approval_message: message,
+      const response = await apiClient.post<NewsApiResponse>(`/news/${id}/approve`, {
+        remarks: message,
       })
       return mapApiNewsToFrontend(response)
     } catch (error) {
@@ -799,8 +827,8 @@ export const newsApi = {
    */
   async rejectNews(id: string, reason: string): Promise<NewsArticle> {
     try {
-      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/reject`, {
-        rejection_reason: reason,
+      const response = await apiClient.post<NewsApiResponse>(`/news/${id}/reject`, {
+        remarks: reason,
       })
       return mapApiNewsToFrontend(response)
     } catch (error) {
@@ -979,6 +1007,21 @@ export const newsApi = {
       return await apiClient.get('/news/journalism/kpis')
     } catch (error) {
       console.error('[newsApi.getJournalismKpis] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Get approval history for an article
+   * Shows all approve/reject actions with remarks
+   */
+  async getApprovalHistory(articleId: string): Promise<ApprovalHistoryRecord[]> {
+    try {
+      console.log(`[newsApi.getApprovalHistory] Fetching approval history for article ${articleId}`)
+      const response = await apiClient.get<ApprovalHistoryRecord[]>(`/news/${articleId}/approval-history`)
+      return response
+    } catch (error) {
+      console.error('[newsApi.getApprovalHistory] Error:', error)
       throw error
     }
   },

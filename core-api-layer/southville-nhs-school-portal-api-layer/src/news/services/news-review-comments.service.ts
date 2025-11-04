@@ -8,6 +8,8 @@ import {
 import { SupabaseService } from '../../supabase/supabase.service';
 import { CreateReviewCommentDto, UpdateReviewCommentDto } from '../dto';
 import { NewsReviewComment } from '../entities';
+import { StudentActivitiesService } from '../../student-activities/student-activities.service';
+import { ActivityType } from '../../student-activities/entities/student-activity.entity';
 
 /**
  * Service for managing news review comments
@@ -17,7 +19,10 @@ import { NewsReviewComment } from '../entities';
 export class NewsReviewCommentsService {
   private readonly logger = new Logger(NewsReviewCommentsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly studentActivitiesService: StudentActivitiesService,
+  ) {}
 
   /**
    * Get all review comments for a news article
@@ -69,15 +74,15 @@ export class NewsReviewCommentsService {
   ): Promise<NewsReviewComment> {
     const supabase = this.supabaseService.getServiceClient();
 
-    // Check if news article exists
-    const { data: newsExists, error: newsError } = await supabase
+    // Check if news article exists and get author info
+    const { data: newsArticle, error: newsError } = await supabase
       .from('news')
-      .select('id')
+      .select('id, title, author_id')
       .eq('id', newsId)
       .is('deleted_at', null)
       .maybeSingle();
 
-    if (newsError || !newsExists) {
+    if (newsError || !newsArticle) {
       throw new NotFoundException(`News article with ID ${newsId} not found`);
     }
 
@@ -111,6 +116,48 @@ export class NewsReviewCommentsService {
     this.logger.log(
       `Review comment created for news ${newsId} by user ${reviewerId}`,
     );
+
+    // Check if this is a revision request (starts with "REVISION REQUESTED:")
+    const isRevisionRequest = createDto.comment.startsWith('REVISION REQUESTED:');
+
+    if (isRevisionRequest) {
+      const feedbackText = createDto.comment.replace('REVISION REQUESTED:', '').trim();
+
+      // Get reviewer info
+      const { data: reviewerData } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', reviewerId)
+        .single();
+
+      // Create activity timeline entry for revision request
+      try {
+        await this.studentActivitiesService.create({
+          studentUserId: newsArticle.author_id,
+          activityType: ActivityType.JOURNALISM_ARTICLE_REVISION_REQUESTED,
+          title: `✏️ Revision Requested: "${newsArticle.title}"`,
+          description: `Your article needs revisions${reviewerData?.full_name ? ` requested by ${reviewerData.full_name}` : ''}. Please review the feedback and update your article.`,
+          metadata: {
+            article_id: newsId,
+            article_title: newsArticle.title,
+            action_type: 'revision_requested',
+            requested_by: reviewerId,
+            reviewer_name: reviewerData?.full_name || 'Unknown',
+            feedback: feedbackText,
+          },
+          relatedEntityId: newsId,
+          relatedEntityType: 'news_article',
+          icon: 'AlertTriangle',
+          color: 'text-orange-500',
+          isHighlighted: true,
+        });
+        this.logger.log(`✅ Activity timeline entry created for revision request`);
+      } catch (activityError) {
+        this.logger.error('Failed to create activity timeline entry:', activityError);
+        // Don't throw - activity is optional, comment already created
+      }
+    }
+
     return data;
   }
 
