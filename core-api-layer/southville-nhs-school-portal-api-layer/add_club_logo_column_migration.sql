@@ -20,3 +20,6 @@ COMMENT ON COLUMN clubs.club_logo IS 'Public URL to the club logo (e.g., Cloudfl
 
 
 
+
+
+

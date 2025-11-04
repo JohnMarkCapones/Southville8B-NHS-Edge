@@ -145,8 +145,7 @@ export default function CreateQuiz() {
     "Silver",
   ]
 
-  type ExpandableSection = "securedQuiz" | "questionPool"
-  const [expandedSections, setExpandedSections] = useState<Record<ExpandableSection, boolean>>({
+  const [expandedSections, setExpandedSections] = useState({
     securedQuiz: false,
     questionPool: false,
   })
@@ -237,7 +236,7 @@ export default function CreateQuiz() {
     router.push("/teacher/quiz/builder")
   }
 
-  const toggleSection = (section: ExpandableSection) => {
+  const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -289,14 +288,11 @@ export default function CreateQuiz() {
       "Force the quiz into full-screen mode and hide browser navigation, taskbar, and other UI elements that could be distracting or helpful for cheating.",
   }
 
-  const QuestionTooltip = ({ content, children }: { content: string; children?: React.ReactNode }) => (
+  const QuestionTooltip = ({ content, children }: { content: string; children: React.ReactNode }) => (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button 
-            className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 ml-2"
-            aria-label="Get help with quiz creation"
-          >
+          <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 ml-2">
             <HelpCircle className="w-3 h-3 text-gray-500 dark:text-gray-400" />
           </button>
         </TooltipTrigger>

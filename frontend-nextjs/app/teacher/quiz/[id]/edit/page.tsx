@@ -324,10 +324,7 @@ export default function EditQuiz() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button 
-            className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 ml-2"
-            aria-label="Get help with quiz editing"
-          >
+          <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 ml-2">
             <HelpCircle className="w-3 h-3 text-gray-500 dark:text-gray-400" />
           </button>
         </TooltipTrigger>
