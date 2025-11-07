@@ -142,8 +142,13 @@ export default function ProfileScreen() {
 
   // Helper function to get section name
   const getSectionName = () => {
-    // Use section name from nested object or fallback to placeholder
-    return user?.student?.section?.name || 'Newton';
+    // Check multiple possible paths for section data
+    // Backend may return 'section' (singular) or 'sections' (plural, could be array or object)
+    const section = user?.student?.section || 
+                    (Array.isArray(user?.student?.sections) 
+                      ? user?.student?.sections[0] 
+                      : user?.student?.sections);
+    return section?.name || 'N/A';
   };
 
   // Navigation handlers

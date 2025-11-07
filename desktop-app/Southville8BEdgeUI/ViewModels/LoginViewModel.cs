@@ -77,9 +77,17 @@ public partial class LoginViewModel : ViewModelBase
             {
                 var role = response.User.Role;
                 
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Role from response: '{role}'");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Role is null: {role == null}");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Role is empty: {string.IsNullOrEmpty(role)}");
+                
                 // Check if role is allowed to access desktop app
-                if (!_roleValidationService.IsRoleAllowed(role ?? ""))
+                var isAllowed = _roleValidationService.IsRoleAllowed(role ?? "");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] IsRoleAllowed returned: {isAllowed}");
+                
+                if (!isAllowed)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Access denied for role: '{role}'");
                     // Block access for unauthorized roles (like students)
                     await _authService.LogoutAsync(); // Clear tokens
                     _toastService.Error(
@@ -90,6 +98,8 @@ public partial class LoginViewModel : ViewModelBase
                     Password = string.Empty;
                     return;
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Access granted for role: '{role}'");
 
                 _toastService.Success($"Welcome back, {response.User.Email}!");
 

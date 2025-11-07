@@ -1886,6 +1886,9 @@ export class UsersService {
       throw new InternalServerErrorException(
         'Failed to remove domain role assignment',
       );
+    }
+  }
+
   /**
    * Import teachers from CSV data
    */

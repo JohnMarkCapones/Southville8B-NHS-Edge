@@ -727,7 +727,17 @@ await LoadSidebarEventsAsync();
         CurrentPage = "User Management"; 
         CloseUserDropdown(); 
     }
-    [RelayCommand] private void NavigateToChat() { var vm = new ChatViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Chat"; CloseUserDropdown(); }
+    [RelayCommand] 
+    private void NavigateToChat() 
+    { 
+        var chatService = ServiceLocator.Services.GetRequiredService<Services.IChatService>();
+        var vm = new ChatViewModel(chatService, _userId); 
+        vm.NavigateTo = inner => CurrentContent = inner; 
+        vm.NavigateBack = () => NavigateToDashboard(); 
+        CurrentContent = vm; 
+        CurrentPage = "Chat"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToProfile() { CurrentContent = new ProfileViewModel(); CurrentPage = "Profile"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(); CurrentPage = "Notifications"; CloseUserDropdown(); }

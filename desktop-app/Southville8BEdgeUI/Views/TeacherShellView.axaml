@@ -260,7 +260,6 @@
                                 </StackPanel>
                             </Button>
 
-                            <!-- COMMUNICATION section hidden
                             <TextBlock Text="COMMUNICATION" Classes="section-header"/>
                             <Button Classes="nav-item" Command="{Binding NavigateToMessagingCommand}" Classes.active="{Binding IsMessagingActive}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
@@ -268,7 +267,6 @@
                                     <TextBlock Text="Messaging" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            -->
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

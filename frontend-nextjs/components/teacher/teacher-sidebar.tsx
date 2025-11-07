@@ -20,6 +20,7 @@ import {
   Upload,
   FileText,
   UserCog,
+  MessageSquare,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -52,6 +53,12 @@ const sidebarItems = [
     href: "/teacher/schedule",
     icon: Calendar,
     id: "schedule",
+  },
+  {
+    title: "Chat",
+    href: "/teacher/chat",
+    icon: MessageSquare,
+    id: "chat",
   },
   {
     title: "Subjects",

@@ -502,7 +502,7 @@ public class MockApiClient : IApiClient
     public void SetAccessToken(string accessToken) { }
     public string? GetCurrentUserId() => "mock-user-id";
     public string? GetCachedToken() => "mock-token";
-    public void InvalidateCachePrefix(string prefix) { }
+     public void InvalidateCachePrefix(string prefix) { }
 
     // Alerts API (stubs for design-time)
     public Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50) => Task.FromResult<AlertListResponse?>(new AlertListResponse { Data = new List<AlertDto>() });

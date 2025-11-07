@@ -3,14 +3,22 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Media;
 using System.Collections.Specialized;
+using Microsoft.Extensions.DependencyInjection;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class ChatViewModel : ViewModelBase
 {
+    private readonly IChatService _chatService;
+    private readonly string _userId;
+
     public Action<ViewModelBase>? NavigateTo { get; set; }
     public Action? NavigateBack { get; set; } // newly added for shell back navigation
 
@@ -21,6 +29,9 @@ public partial class ChatViewModel : ViewModelBase
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private string _newMessage = "";
     [ObservableProperty] private string? _selectedUserType;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isLoadingMessages;
+    [ObservableProperty] private bool _isContactInfoModalVisible = false;
 
     public ObservableCollection<string> UserTypeOptions { get; } = new() { "All Users", "Admins", "Teachers" };
 
@@ -130,6 +141,212 @@ public partial class ChatViewModel : ViewModelBase
         }
     }
 
+    public ChatViewModel(IChatService chatService, string userId)
+    {
+        _chatService = chatService;
+        _userId = userId;
+        Conversations = new ObservableCollection<ChatConversationViewModel>();
+        FilteredConversations = new ObservableCollection<ChatConversationViewModel>();
+        Conversations.CollectionChanged += Conversations_CollectionChanged;
+
+        // Listen for theme changes to refresh dynamic brushes
+        if (Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged += (_, __) => RefreshAllThemeDependentBrushes();
+        }
+
+        _ = LoadConversationsAsync();
+    }
+
+    private async Task LoadConversationsAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            var response = await _chatService.GetConversationsAsync();
+            
+            if (response?.Conversations != null)
+            {
+                Conversations.Clear();
+                foreach (var dto in response.Conversations)
+                {
+                    var conv = MapConversationDtoToViewModel(dto);
+                    conv.RefreshTheme();
+                    Conversations.Add(conv);
+                }
+                ApplyFilters();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Error loading conversations: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            OnPropertyChanged(nameof(HasConversations));
+        }
+    }
+
+    private async Task LoadMessagesAsync(ChatConversationViewModel conversation)
+    {
+        if (string.IsNullOrEmpty(conversation.ConversationId))
+            return;
+
+        try
+        {
+            IsLoadingMessages = true;
+            var response = await _chatService.GetMessagesAsync(conversation.ConversationId);
+            
+            if (response?.Messages != null)
+            {
+                MergeMessages(conversation, response.Messages);
+                SortMessagesAscending(conversation);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Error loading messages: {ex.Message}");
+        }
+        finally
+        {
+            IsLoadingMessages = false;
+        }
+    }
+
+    private ChatConversationViewModel MapConversationDtoToViewModel(ConversationDto dto)
+    {
+        var otherParticipant = dto.Participants?
+            .FirstOrDefault(p => p.UserId != _userId)
+            ?.User;
+
+        var contactName = otherParticipant?.FullName ?? "Unknown";
+        var contactRole = dto.Participants?
+            .FirstOrDefault(p => p.UserId != _userId)
+            ?.Role ?? "User";
+        
+        // Capitalize role for display
+        contactRole = contactRole switch
+        {
+            "admin" => "Admin",
+            "teacher" => "Teacher",
+            "student" => "Student",
+            _ => contactRole
+        };
+
+        var initials = GetInitials(contactName);
+        var lastMessage = dto.LastMessage?.Content ?? "";
+        var lastMessageTime = dto.LastMessage?.CreatedAt ?? dto.UpdatedAt;
+
+        return new ChatConversationViewModel
+        {
+            ConversationId = dto.Id,
+            ContactName = contactName,
+            ContactRole = contactRole,
+            ContactInitials = initials,
+            LastMessage = lastMessage,
+            LastMessageTime = lastMessageTime,
+            IsOnline = false, // TODO: Implement presence tracking
+            UnreadCount = dto.UnreadCount,
+            Messages = new ObservableCollection<ChatMessageViewModel>()
+        };
+    }
+
+    private ChatMessageViewModel MapMessageDtoToViewModel(MessageDto dto)
+    {
+        var isFromCurrentUser = dto.SenderId == _userId;
+        var senderName = isFromCurrentUser ? "You" : (dto.Sender?.FullName ?? "Unknown");
+
+        return new ChatMessageViewModel
+        {
+            MessageId = ComputeMessageKey(dto),
+            SenderName = senderName,
+            Content = dto.Content,
+            Timestamp = dto.CreatedAt,
+            IsFromCurrentUser = isFromCurrentUser
+        };
+    }
+
+    private static string ComputeMessageKey(MessageDto dto)
+    {
+        // Prefer server id when available; otherwise use a deterministic composite key
+        if (!string.IsNullOrWhiteSpace(dto.Id))
+            return dto.Id;
+        var contentHash = dto.Content?.GetHashCode() ?? 0;
+        return $"{dto.SenderId}|{dto.CreatedAt.Ticks}|{contentHash}";
+    }
+
+    private static void SortMessagesAscending(ChatConversationViewModel conversation)
+    {
+        var ordered = conversation.Messages.OrderBy(m => m.Timestamp).ToList();
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            if (!ReferenceEquals(conversation.Messages[i], ordered[i]))
+            {
+                var currentIndex = conversation.Messages.IndexOf(ordered[i]);
+                if (currentIndex >= 0 && currentIndex != i)
+                {
+                    conversation.Messages.Move(currentIndex, i);
+                }
+            }
+        }
+    }
+
+    private void MergeMessages(ChatConversationViewModel conversation, IEnumerable<MessageDto> apiMessages)
+    {
+        // Index existing messages by MessageId when available
+        var existingById = conversation.Messages
+            .Where(m => !string.IsNullOrWhiteSpace(m.MessageId))
+            .ToDictionary(m => m.MessageId, m => m);
+
+        foreach (var dto in apiMessages)
+        {
+            var key = ComputeMessageKey(dto);
+
+            if (existingById.TryGetValue(key, out var existing))
+            {
+                // Refresh existing from server
+                existing.Timestamp = dto.CreatedAt;
+                existing.Content = dto.Content;
+                existing.MessageId = key; // ensure finalized id
+            }
+            else
+            {
+                // Try to reconcile with an optimistic message (same author, similar time, same content)
+                var optimisticMatch = conversation.Messages.FirstOrDefault(m =>
+                    m.MessageId.StartsWith("optimistic:") &&
+                    m.IsFromCurrentUser &&
+                    string.Equals(m.Content, dto.Content, StringComparison.Ordinal) &&
+                    Math.Abs((m.Timestamp - dto.CreatedAt).TotalMinutes) <= 2);
+
+                if (optimisticMatch != null)
+                {
+                    optimisticMatch.MessageId = key;
+                    optimisticMatch.Timestamp = dto.CreatedAt;
+                    optimisticMatch.Content = dto.Content;
+                }
+                else
+                {
+                    var vm = MapMessageDtoToViewModel(dto);
+                    vm.RefreshTheme();
+                    conversation.Messages.Add(vm);
+                }
+            }
+        }
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "U";
+        
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "U";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+
     private void Conversations_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.NewItems != null)
@@ -177,32 +394,79 @@ public partial class ChatViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SelectConversation(ChatConversationViewModel conversation)
+    private async void SelectConversation(ChatConversationViewModel conversation)
     {
         var wasSame = SelectedConversation == conversation;
         SelectedConversation = conversation;
-        conversation.UnreadCount = 0;
+        
+        // Load messages if not already loaded
+        if (conversation.Messages.Count == 0 && !string.IsNullOrEmpty(conversation.ConversationId))
+        {
+            await LoadMessagesAsync(conversation);
+        }
+        
+        // Mark as read
+        if (conversation.UnreadCount > 0 && !string.IsNullOrEmpty(conversation.ConversationId))
+        {
+            conversation.UnreadCount = 0;
+            _ = _chatService?.MarkAsReadAsync(conversation.ConversationId);
+        }
+        
         ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(conversation, ConversationNavigationType.OpenChat));
         if (wasSame) OnPropertyChanged(nameof(SelectedConversation));
     }
 
     [RelayCommand]
-    private void SendMessage()
+    private async void SendMessage()
     {
-        if (SelectedConversation == null || string.IsNullOrWhiteSpace(NewMessage)) return;
+        if (SelectedConversation == null || string.IsNullOrWhiteSpace(NewMessage) || _chatService == null)
+            return;
 
-        var text = NewMessage.Trim();
-        var msg = new ChatMessageViewModel
+        if (string.IsNullOrEmpty(SelectedConversation.ConversationId))
         {
-            SenderName = "You",
-            Content = text,
-            Timestamp = DateTime.Now,
-            IsFromCurrentUser = true
-        };
-        SelectedConversation.Messages.Add(msg);
-        SelectedConversation.LastMessage = text;
-        SelectedConversation.LastMessageTime = DateTime.Now;
+            System.Diagnostics.Debug.WriteLine("[ChatViewModel] Cannot send message: ConversationId is missing");
+            return;
+        }
+
+        var messageText = NewMessage.Trim();
         NewMessage = "";
+
+        // Optimistically add message to UI
+        var optimisticMessage = new ChatMessageViewModel
+        {
+            MessageId = $"optimistic:{Guid.NewGuid()}",
+            SenderName = "You",
+            Content = messageText,
+            Timestamp = DateTime.Now,
+            IsFromCurrentUser = true,
+            Status = MessageStatus.Sending
+        };
+        optimisticMessage.RefreshTheme();
+        SelectedConversation.Messages.Add(optimisticMessage);
+        SelectedConversation.LastMessage = messageText;
+        SelectedConversation.LastMessageTime = DateTime.Now;
+
+        // Send to API
+        try
+        {
+            var response = await _chatService.SendMessageAsync(SelectedConversation.ConversationId, messageText);
+            if (response != null)
+            {
+                // Update optimistic message with real data and finalized id
+                optimisticMessage.MessageId = ComputeMessageKey(response);
+                optimisticMessage.Timestamp = response.CreatedAt;
+                optimisticMessage.Content = response.Content;
+                optimisticMessage.Status = MessageStatus.Sent;
+                SortMessagesAscending(SelectedConversation);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Error sending message: {ex.Message}");
+            // Remove optimistic message on error
+            SelectedConversation.Messages.Remove(optimisticMessage);
+            NewMessage = messageText; // Restore message text
+        }
     }
 
     private void AddConversationFromResult(NewChatViewModel.ChatCreationResult result)
@@ -227,13 +491,73 @@ public partial class ChatViewModel : ViewModelBase
     [RelayCommand]
     private void StartNewChat()
     {
-        if (NavigateTo is null) return;
-        var newVm = new NewChatViewModel
+        if (NavigateTo is null || _chatService == null) return;
+        
+        var apiClient = ServiceLocator.Services.GetRequiredService<Services.IApiClient>();
+        var newVm = new NewChatViewModel(_chatService, apiClient, _userId)
         {
             NavigateBack = () => NavigateTo?.Invoke(this),
-            OnCreated = res => { AddConversationFromResult(res); NavigateTo?.Invoke(this); }
+            OnCreated = res => 
+            { 
+                // Reload conversations to include the new one
+                _ = LoadConversationsAsync();
+                NavigateTo?.Invoke(this); 
+            }
         };
         NavigateTo(newVm);
+    }
+
+    [RelayCommand]
+    private async Task ShowContactInfo()
+    {
+        IsContactInfoModalVisible = true;
+    }
+
+    [RelayCommand]
+    private void CloseContactInfoModal()
+    {
+        IsContactInfoModalVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task DeleteConversation()
+    {
+        if (SelectedConversation == null || string.IsNullOrEmpty(SelectedConversation.ConversationId) || _chatService == null)
+            return;
+
+        var conversationId = SelectedConversation.ConversationId;
+        var conversationName = SelectedConversation.ContactName;
+
+        try
+        {
+            var success = await _chatService.DeleteConversationAsync(conversationId);
+            
+            if (success)
+            {
+                // Remove conversation from collections
+                Conversations.Remove(SelectedConversation);
+                FilteredConversations.Remove(SelectedConversation);
+                
+                // Clear selection (navigate back to list)
+                SelectedConversation = null;
+                
+                // Close modal
+                IsContactInfoModalVisible = false;
+                
+                // Reload conversations to refresh the list
+                _ = LoadConversationsAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Conversation with {conversationName} deleted successfully");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Failed to delete conversation with {conversationName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Error deleting conversation: {ex.Message}");
+        }
     }
 
     // Method to request navigation back to conversations (for mobile back button)
@@ -258,6 +582,8 @@ public enum ConversationNavigationType { OpenChat, BackToConversations }
 
 public partial class ChatConversationViewModel : ViewModelBase
 {
+    public string ConversationId { get; set; } = ""; // Store API conversation ID
+
     [ObservableProperty] private string _contactName = "";
     [ObservableProperty] private string _contactRole = "";
     [ObservableProperty] private string _contactInitials = "";
@@ -312,15 +638,32 @@ public partial class ChatConversationViewModel : ViewModelBase
     }
 }
 
+public enum MessageStatus
+{
+    Sending,
+    Sent
+}
+
 public partial class ChatMessageViewModel : ViewModelBase
 {
+    // Stable identifier for reconciliation between optimistic and server messages
+    public string MessageId { get; set; } = ""; // optimistic messages use prefix: "optimistic:"
     [ObservableProperty] private string _senderName = "";
     [ObservableProperty] private string _content = "";
     [ObservableProperty] private DateTime _timestamp;
     [ObservableProperty] private bool _isFromCurrentUser;
+    [ObservableProperty] private MessageStatus _status = MessageStatus.Sent; // Default to Sent for received messages
 
-    public string TimestampText => Timestamp.ToString("HH:mm");
+    public string TimestampText => Timestamp.ToString("h:mm tt");
     public string MessageAlignment => IsFromCurrentUser ? "Right" : "Left";
+    public bool IsSending => Status == MessageStatus.Sending;
+    public bool IsSentStatus => Status == MessageStatus.Sent;
+
+    partial void OnStatusChanged(MessageStatus value)
+    {
+        OnPropertyChanged(nameof(IsSending));
+        OnPropertyChanged(nameof(IsSentStatus));
+    }
 
     private static IBrush Resolve(string key, string fallback)
     {
@@ -333,7 +676,7 @@ public partial class ChatMessageViewModel : ViewModelBase
     }
 
     public IBrush MessageBackgroundBrush => IsFromCurrentUser
-        ? Resolve("IndigoBrush", "AccentBrush")
+        ? Resolve("DangerBrush", "AccentBrush")
         : Resolve("CardBackgroundBrush", "PageBackgroundBrush");
 
     public IBrush MessageTextBrush => IsFromCurrentUser

@@ -36,6 +36,24 @@ namespace Southville8BEdgeUI
                     // Services
                     services.AddSingleton<ITokenStorageService, TokenStorageService>();
                     services.AddSingleton<IApiClient, ApiClient>();
+                    
+                    // ChatService uses its own HttpClient instance with chat API base URL
+                    services.AddSingleton<IChatService>(sp =>
+                    {
+                        var httpClient = new HttpClient();
+                        var config = sp.GetRequiredService<IConfiguration>();
+                        var tokenStorage = sp.GetRequiredService<ITokenStorageService>();
+                        
+                        // Configure chat API base URL
+                        var chatApiUrl = config["ChatApiSettings:BaseUrl"] ?? "http://localhost:3001/api/v1";
+                        var baseUrl = chatApiUrl.TrimEnd('/');
+                        httpClient.BaseAddress = new Uri(baseUrl + "/");
+                        httpClient.Timeout = TimeSpan.FromSeconds(120);
+                        httpClient.DefaultRequestHeaders.Accept.Add(
+                            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+                        
+                        return new ChatService(httpClient, tokenStorage);
+                    });
                     services.AddSingleton<IAuthService, AuthService>();
                     services.AddSingleton<IRoleValidationService, RoleValidationService>();
                     services.AddSingleton<ISseService, SseService>();

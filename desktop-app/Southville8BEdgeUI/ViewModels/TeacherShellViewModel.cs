@@ -1195,7 +1195,8 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToMessaging()
     {
-        var vm = new MessagingViewModel();
+        var chatService = ServiceLocator.Services.GetRequiredService<Services.IChatService>();
+        var vm = new MessagingViewModel(chatService, _userId);
         vm.NavigateTo = inner => CurrentContent = inner;
         CurrentContent = vm;
         CurrentPage = "Messaging";

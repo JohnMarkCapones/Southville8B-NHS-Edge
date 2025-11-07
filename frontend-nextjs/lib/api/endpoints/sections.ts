@@ -172,3 +172,17 @@ export const getTeacherSections = async (teacherUserId: string): Promise<Section
 
   return response || []; // Backend returns array directly, not wrapped in { data: ... }
 };
+
+/**
+ * Get teacher's assigned sections (for current authenticated teacher)
+ * 
+ * @returns Promise with teacher's sections including students
+ */
+export const getMySections = async (): Promise<SectionWithStudents[]> => {
+  const response = await apiClient.request<SectionWithStudents[]>(`/sections/my-sections`, {
+    method: 'GET',
+    requiresAuth: true,
+  });
+
+  return response || [];
+};

@@ -173,11 +173,6 @@ export default function LoginScreen() {
         >
           {/* Header Section */}
           <View style={styles.headerContainer}>
-            {/* Back Button */}
-            <TouchableOpacity style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#000000" />
-            </TouchableOpacity>
-
             {/* Help Button */}
             <TouchableOpacity
               style={styles.helpButton}
@@ -369,25 +364,6 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: "flex-start",
     marginTop: 20,
-  },
-  backButton: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   helpButton: {
     position: "absolute",
