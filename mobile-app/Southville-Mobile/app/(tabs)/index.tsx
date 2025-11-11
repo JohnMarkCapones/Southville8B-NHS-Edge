@@ -676,6 +676,8 @@ export default function HomeScreen() {
           </Text>
         </View>
       )}
+      {/* Reusable Header */}
+      <ReusableHeader title="Home" showWelcomeSection={true} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -688,9 +690,6 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Reusable Header */}
-        <ReusableHeader title="Home" showWelcomeSection={true} />
-
         {/* Creative Search Bar */}
         <View style={styles.searchSection}>
           <View

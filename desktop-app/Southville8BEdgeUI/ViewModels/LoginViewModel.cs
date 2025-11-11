@@ -305,6 +305,16 @@ public partial class LoginViewModel : ViewModelBase
         ClearError();
     }
 
+    [RelayCommand]
+    private void OpenTermsAndConditions()
+    {
+        if (NavigateTo == null) return;
+        
+        var termsVm = new TermsAndConditionsViewModel();
+        termsVm.NavigateBack = (viewModel) => NavigateTo?.Invoke(viewModel);
+        NavigateTo(termsVm);
+    }
+
     private void SetError(string message)
     {
         ErrorMessage = message;

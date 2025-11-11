@@ -738,7 +738,17 @@ await LoadSidebarEventsAsync();
         CurrentPage = "Chat"; 
         CloseUserDropdown(); 
     }
-    [RelayCommand] private void NavigateToProfile() { CurrentContent = new ProfileViewModel(); CurrentPage = "Profile"; CloseUserDropdown(); }
+    [RelayCommand] 
+    private void NavigateToProfile() 
+    { 
+        var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var vm = new ProfileViewModel(apiClient, toastService);
+        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        CurrentContent = vm; 
+        CurrentPage = "Profile"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(); CurrentPage = "Notifications"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToHelpGuide() { CurrentContent = new HelpGuideViewModel(); CurrentPage = "Help Guide"; CloseUserDropdown(); }

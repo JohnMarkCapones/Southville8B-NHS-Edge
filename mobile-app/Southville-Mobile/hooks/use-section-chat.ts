@@ -4,6 +4,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { getCachedChat, setCachedChat, updateCachedChatMessages } from "@/lib/chat-cache";
 
 export type ChatMessage = {
 	id: string;
@@ -333,7 +334,32 @@ export function useSectionChat(options?: UseSectionChatOptions): UseSectionChatR
 					setConversationId(resolvedConvId);
 				}
 
-				// Load messages directly from Supabase
+				// Try to load from cache first (if conversationId is available)
+				if (resolvedConvId && !cancelled) {
+					try {
+						const cached = await getCachedChat(resolvedConvId);
+						if (cached && !cancelled) {
+							if (__DEV__) console.log("[useSectionChat] Loaded from cache:", cached.messages.length, "messages");
+							// Show cached messages immediately
+							setMessages(cached.messages);
+							// Restore participants map from cache
+							if (cached.participantsMap) {
+								participantsMapRef.current = new Map(Object.entries(cached.participantsMap));
+								// Also update the local participantsMap for sender name resolution
+								Object.entries(cached.participantsMap).forEach(([id, data]) => {
+									participantsMap.set(id, data);
+								});
+							}
+							// Set loading to false so UI shows cached data immediately
+							setLoading(false);
+						}
+					} catch (cacheError) {
+						if (__DEV__) console.warn("[useSectionChat] Error loading cache:", cacheError);
+						// Continue with API fetch if cache fails
+					}
+				}
+
+				// Load messages directly from Supabase (background refresh)
 				if (supabase && resolvedConvId && !cancelled) {
 					if (__DEV__) console.log("[useSectionChat] Fetching messages from Supabase for conv:", resolvedConvId);
 					
@@ -400,10 +426,20 @@ export function useSectionChat(options?: UseSectionChatOptions): UseSectionChatR
 								sender_name: usersMap.get(m.sender_id)?.full_name ?? null,
 							})) as ChatMessage[];
 							
-							if (!cancelled) {
-								setMessages(normalized);
-								if (__DEV__) console.log("[useSectionChat] Loaded", normalized.length, "messages from Supabase", normalized.slice(0, 2));
+						if (!cancelled) {
+							setMessages(normalized);
+							if (__DEV__) console.log("[useSectionChat] Loaded", normalized.length, "messages from Supabase", normalized.slice(0, 2));
+							// Save to cache after successful fetch
+							try {
+								await setCachedChat(resolvedConvId, {
+									messages: normalized,
+									conversationId: resolvedConvId,
+									participantsMap: Object.fromEntries(participantsMap),
+								});
+							} catch (cacheError) {
+								if (__DEV__) console.warn("[useSectionChat] Error saving cache:", cacheError);
 							}
+						}
 						} else if (simpleError) {
 							console.error("[useSectionChat] Simple query error:", simpleError);
 						} else {
@@ -489,6 +525,16 @@ export function useSectionChat(options?: UseSectionChatOptions): UseSectionChatR
 						if (!cancelled) {
 							setMessages(normalized);
 							if (__DEV__) console.log("[useSectionChat] Loaded", normalized.length, "messages from Supabase (with join)", normalized.slice(0, 2));
+							// Save to cache after successful fetch
+							try {
+								await setCachedChat(resolvedConvId, {
+									messages: normalized,
+									conversationId: resolvedConvId,
+									participantsMap: Object.fromEntries(participantsMap),
+								});
+							} catch (cacheError) {
+								if (__DEV__) console.warn("[useSectionChat] Error saving cache:", cacheError);
+							}
 						}
 					} else {
 						if (__DEV__) console.warn("[useSectionChat] No messagesData and no error - empty result for conv:", resolvedConvId);
@@ -575,7 +621,14 @@ export function useSectionChat(options?: UseSectionChatOptions): UseSectionChatR
 				setMessages(prev => {
 					// Avoid duplicates
 					if (prev.some(m => m.id === msg.id)) return prev;
-					return [...prev, msg];
+					const updated = [...prev, msg];
+					// Update cache with new message
+					if (conversationId) {
+						updateCachedChatMessages(conversationId, [msg], "append").catch((cacheError) => {
+							if (__DEV__) console.warn("[useSectionChat] Error updating cache with realtime message:", cacheError);
+						});
+					}
+					return updated;
 				});
 			})
 			.subscribe((status: any) => {
@@ -625,6 +678,8 @@ export function useSectionChat(options?: UseSectionChatOptions): UseSectionChatR
 				console.warn("[useSectionChat] sendMessage failed:", resp.status, text?.slice(0, 200));
 				throw new Error(`Failed to send message: ${resp.status}`);
 			}
+			// Cache will be updated via realtime subscription when message arrives
+			// But we can also refresh cache after a short delay to ensure it's up to date
 			return;
 		}
 		// Fallback: insert directly (requires Supabase RLS/config)
@@ -633,7 +688,8 @@ export function useSectionChat(options?: UseSectionChatOptions): UseSectionChatR
 			.from("messages")
 			.insert({ conversation_id: conversationId, content });
 		if (insertError) throw new Error(insertError.message);
-	}, [chatServiceBase, conversationId]);
+		// Cache will be updated via realtime subscription when message arrives
+	}, [chatServiceBase, conversationId, tokens]);
 
 	return {
 		conversationId,

@@ -194,6 +194,58 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<bool> UpdateUserAsync(string userId, UpdateUserDto dto)
+    {
+        try
+        {
+            await PatchAsync($"users/{userId}", dto);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateStudentAsync(string userId, UpdateStudentDto dto)
+    {
+        try
+        {
+            await PatchAsync($"students/{userId}", dto);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateTeacherAsync(string userId, UpdateTeacherDto dto)
+    {
+        try
+        {
+            await PatchAsync($"teachers/{userId}", dto);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateAdminAsync(string userId, UpdateAdminDto dto)
+    {
+        try
+        {
+            await PatchAsync($"admins/{userId}", dto);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> DeleteUserAsync(string userId)
     {
         try

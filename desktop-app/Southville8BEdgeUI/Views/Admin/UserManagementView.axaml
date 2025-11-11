@@ -545,7 +545,7 @@
 								</Grid>
 
 								<!-- Action Buttons -->
-								<Grid x:Name="ActionButtonsGrid" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+								<Grid x:Name="ActionButtonsGrid" ColumnDefinitions="*,Auto,Auto,Auto">
 									<Button Grid.Column="0"
                                             x:Name="ViewDetailsButton"
                                             Content="View Details"
@@ -561,21 +561,13 @@
                                             IsEnabled="{Binding CanEdit}"
                                             Margin="8,0,0,0"/>
 									<Button Grid.Column="2"
-                                            x:Name="ToggleStatusButton"
-                                            Content="{Binding StatusActionText}"
-                                            Classes="secondary small"
-                                            Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ToggleUserStatusCommand}"
-                                            CommandParameter="{Binding}"
-                                            IsEnabled="{Binding CanToggleStatus}"
-                                            Margin="8,0,0,0"/>
-									<Button Grid.Column="3"
                                             x:Name="ResetPasswordButton"
                                             Content="Reset PW"
                                             Classes="secondary small"
                                             Command="{Binding $parent[UserControl].((vm:UserManagementViewModel)DataContext).ResetPasswordCommand}"
                                             CommandParameter="{Binding}"
                                             Margin="8,0,0,0"/>
-									<Button Grid.Column="4"
+									<Button Grid.Column="3"
                                             x:Name="DeleteButton"
                                             Content="Delete"
                                             Classes="danger small"

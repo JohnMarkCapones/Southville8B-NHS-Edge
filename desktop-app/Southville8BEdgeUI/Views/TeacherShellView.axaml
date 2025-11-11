@@ -402,6 +402,13 @@
                                                     </StackPanel>
                                                 </Button>
 
+                                                <Button Classes="dropdown-item" Command="{Binding NavigateToHelpGuideCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <ic:FluentIcon Icon="Question" IconSize="Size16"/>
+                                                        <TextBlock Text="Help Guide" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
                                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/>
 
                                                 <Button Classes="dropdown-item" Command="{Binding ToggleDarkModeCommand}">

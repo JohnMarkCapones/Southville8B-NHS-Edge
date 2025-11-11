@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Dimensions,
@@ -63,12 +69,36 @@ export function ChatHeads({ visible, unreadCount = 0 }: ChatHeadsProps) {
     return x + SIZE / 2 < w / 2 ? LEFT_EDGE_X : RIGHT_EDGE_X;
   };
 
+  const panStartRef = useRef({ x: 0, y: 0, time: 0 });
+  const hasMovedRef = useRef(false);
+
+  const handleChatHeadPress = useCallback(() => {
+    console.log("[ChatHeads] Chat head clicked");
+    console.log("[ChatHeads] Unread count:", unreadCount);
+    console.log("[ChatHeads] Navigating to chat screen");
+    router.push({ pathname: "/chat" as any });
+  }, [router, unreadCount]);
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
+        onMoveShouldSetPanResponder: (evt, gestureState) => {
+          // Track if user has moved significantly (dragging)
+          const moved =
+            Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+          if (moved) {
+            hasMovedRef.current = true;
+          }
+          return true;
+        },
+        onPanResponderGrant: (evt) => {
+          panStartRef.current = {
+            x: evt.nativeEvent.pageX,
+            y: evt.nativeEvent.pageY,
+            time: Date.now(),
+          };
+          hasMovedRef.current = false;
           setIsPressed(true);
           pan.setOffset({ x: (pan as any).x._value, y: (pan as any).y._value });
           pan.setValue({ x: 0, y: 0 });
@@ -76,11 +106,27 @@ export function ChatHeads({ visible, unreadCount = 0 }: ChatHeadsProps) {
         onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
           useNativeDriver: false,
         }),
-        onPanResponderRelease: () => {
+        onPanResponderRelease: (evt, gestureState) => {
           setIsPressed(false);
           pan.flattenOffset();
 
-          // Current absolute position (top-left coordinate system)
+          // Check if it was a tap (not a drag)
+          const moveDistance = Math.sqrt(
+            gestureState.dx * gestureState.dx +
+              gestureState.dy * gestureState.dy
+          );
+          const timeElapsed = Date.now() - panStartRef.current.time;
+          const wasTap =
+            !hasMovedRef.current && moveDistance < 10 && timeElapsed < 300;
+
+          if (wasTap) {
+            // It was a tap, trigger navigation
+            console.log("[ChatHeads] Tap detected in PanResponder");
+            handleChatHeadPress();
+            return;
+          }
+
+          // It was a drag, handle the snap
           const currentX = (pan as any).x._value as number;
           const currentY = (pan as any).y._value as number;
 
@@ -95,7 +141,7 @@ export function ChatHeads({ visible, unreadCount = 0 }: ChatHeadsProps) {
           }).start();
         },
       }),
-    [pan]
+    [pan, handleChatHeadPress]
   );
 
   // Keep on screen after layout
@@ -145,7 +191,7 @@ export function ChatHeads({ visible, unreadCount = 0 }: ChatHeadsProps) {
       {...panResponder.panHandlers}
     >
       <Pressable
-        onPress={() => router.push({ pathname: "/chat" as any })}
+        onPress={handleChatHeadPress}
         style={({ pressed }) => [styles.bubble, pressed && { opacity: 0.9 }]}
       >
         <Ionicons name="chatbubble-ellipses" size={24} color="#FFFFFF" />

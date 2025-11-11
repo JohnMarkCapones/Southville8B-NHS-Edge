@@ -101,7 +101,7 @@ public partial class UserDetailViewModel : ViewModelBase
             }
             else if (response.Teacher != null)
             {
-                PhoneNumber = response.Teacher.PhoneNumber;
+                // Note: Teachers table doesn't have phone_number column
                 Department = response.Teacher.Department?.DepartmentName;
                 SubjectSpecialization = response.Teacher.SubjectSpecialization?.SubjectName;
                 AdvisorySection = response.Teacher.AdvisorySection?.Name;

@@ -86,14 +86,20 @@ public class TeacherDetail
     [JsonPropertyName("middle_name")]
     public string? MiddleName { get; set; }
     
-    [JsonPropertyName("phone_number")]
-    public string? PhoneNumber { get; set; }
-    
     [JsonPropertyName("age")]
     public int? Age { get; set; }
     
     [JsonPropertyName("birthday")]
     public string? Birthday { get; set; }
+    
+    [JsonPropertyName("department_id")]
+    public string? DepartmentId { get; set; }
+    
+    [JsonPropertyName("subject_specialization_id")]
+    public string? SubjectSpecializationId { get; set; }
+    
+    [JsonPropertyName("advisory_section_id")]
+    public string? AdvisorySectionId { get; set; }
     
     [JsonPropertyName("department")]
     public DepartmentInfo? Department { get; set; }

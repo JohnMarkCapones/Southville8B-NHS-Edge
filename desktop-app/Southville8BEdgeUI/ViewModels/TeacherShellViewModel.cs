@@ -972,6 +972,14 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private void NavigateToHelpGuide()
+    {
+        CurrentContent = new Teacher.HelpGuideViewModel();
+        CurrentPage = "Help Guide";
+        IsUserDropdownVisible = false;
+    }
+
+    [RelayCommand]
     private async Task Logout()
     {
         try
@@ -1208,6 +1216,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     public bool IsStudentManagementActive => CurrentPage == "Student Management";
     public bool IsMyAnnouncementsActive => CurrentPage == "My Announcements";
     public bool IsMessagingActive => CurrentPage == "Messaging";
+    public bool IsHelpGuideActive => CurrentPage == "Help Guide";
 
     partial void OnCurrentPageChanged(string value)
     {
@@ -1217,6 +1226,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsStudentManagementActive));
         OnPropertyChanged(nameof(IsMyAnnouncementsActive));
         OnPropertyChanged(nameof(IsMessagingActive));
+        OnPropertyChanged(nameof(IsHelpGuideActive));
     }
 
     partial void OnIsLeftSidebarVisibleChanged(bool value) => OnPropertyChanged(nameof(ShowLeftSidebarToggle));

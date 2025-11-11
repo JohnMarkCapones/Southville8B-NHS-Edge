@@ -457,6 +457,10 @@ public class MockApiClient : IApiClient
     public Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<bool> UpdateUserStatusAsync(string userId, string status) => Task.FromResult(false);
+    public Task<bool> UpdateUserAsync(string userId, UpdateUserDto dto) => Task.FromResult(false);
+    public Task<bool> UpdateStudentAsync(string userId, UpdateStudentDto dto) => Task.FromResult(false);
+    public Task<bool> UpdateTeacherAsync(string userId, UpdateTeacherDto dto) => Task.FromResult(false);
+    public Task<bool> UpdateAdminAsync(string userId, UpdateAdminDto dto) => Task.FromResult(false);
     public Task<bool> DeleteUserAsync(string userId) => Task.FromResult(false);
     public Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
     public Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, AppState } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, AppState, ScrollView, Keyboard, Platform, KeyboardAvoidingView } from 'react-native';
 import { Stack, useRouter, useRootNavigationState } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,6 +48,11 @@ export default function ChangePasswordScreen() {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogProps, setDialogProps] = useState<{ variant: 'success'|'error'|'info'; title: string; message?: string; bullets?: string[]; autoDismissMs?: number } | null>(null);
   const appStateRef = useRef(AppState.currentState);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const currentPasswordInputRef = useRef<TextInput>(null);
+  const newPasswordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
+  const focusedInputRef = useRef<TextInput | null>(null);
 
   // Handle app state changes to reset modal state when app resumes
   useEffect(() => {
@@ -62,6 +67,37 @@ export default function ChangePasswordScreen() {
 
     return () => {
       subscription.remove();
+    };
+  }, []);
+
+  // Handle keyboard visibility
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        console.log('[ChangePassword] Keyboard showing');
+        setIsKeyboardVisible(true);
+        // Restore focus to the input that was focused before keyboard appeared
+        // Use a small delay to ensure the keyboard is fully shown
+        setTimeout(() => {
+          if (focusedInputRef.current) {
+            focusedInputRef.current.focus();
+          }
+        }, 100);
+      }
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        console.log('[ChangePassword] Keyboard hiding');
+        setIsKeyboardVisible(false);
+        focusedInputRef.current = null;
+      }
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
     };
   }, []);
 
@@ -100,6 +136,126 @@ export default function ChangePasswordScreen() {
     if (confirmPassword !== newPassword) return 'Confirm password does not match the new password.';
     return null;
   };
+
+  // Render form content (shared between ScrollView and View)
+  const renderFormContent = () => (
+    <View style={[styles.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
+      <View style={styles.inputGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>Current Password</Text>
+        <View style={[styles.passwordRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TextInput
+            ref={currentPasswordInputRef}
+            style={[styles.input, { color: colors.text }]}
+            secureTextEntry={!showCurrent}
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="Enter current password"
+            placeholderTextColor={colors.icon}
+            autoCapitalize="none"
+            onFocus={() => {
+              focusedInputRef.current = currentPasswordInputRef.current;
+            }}
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity onPress={() => setShowCurrent(v => !v)}>
+            <Ionicons name={showCurrent ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>New Password</Text>
+        <View style={[styles.passwordRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TextInput
+            ref={newPasswordInputRef}
+            style={[styles.input, { color: colors.text }]}
+            secureTextEntry={!showNew}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="Enter new password"
+            placeholderTextColor={colors.icon}
+            autoCapitalize="none"
+            onFocus={() => {
+              focusedInputRef.current = newPasswordInputRef.current;
+            }}
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity onPress={() => setShowNew(v => !v)}>
+            <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Password Requirements */}
+        {newPassword.length > 0 && (
+          <View style={[styles.requirementsContainer, { 
+            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB'
+          }]}>
+            <Text style={[styles.requirementsTitle, { color: colors.text }]}>Password Requirements:</Text>
+            <RequirementItem 
+              met={newPassword.length >= 8}
+              text="At least 8 characters"
+              colors={colors}
+            />
+            <RequirementItem 
+              met={/[A-Z]/.test(newPassword)}
+              text="Include uppercase letter (A-Z)"
+              colors={colors}
+            />
+            <RequirementItem 
+              met={/[a-z]/.test(newPassword)}
+              text="Include lowercase letter (a-z)"
+              colors={colors}
+            />
+            <RequirementItem 
+              met={/[0-9]/.test(newPassword)}
+              text="Include number (0-9)"
+              colors={colors}
+            />
+            <RequirementItem 
+              met={/[!@#$%^&]/.test(newPassword)}
+              text="Include special character (!@#$%^&)"
+              colors={colors}
+            />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>Confirm New Password</Text>
+        <View style={[styles.passwordRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TextInput
+            ref={confirmPasswordInputRef}
+            style={[styles.input, { color: colors.text }]}
+            secureTextEntry={!showConfirm}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Re-enter new password"
+            placeholderTextColor={colors.icon}
+            autoCapitalize="none"
+            onFocus={() => {
+              focusedInputRef.current = confirmPasswordInputRef.current;
+            }}
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity onPress={() => setShowConfirm(v => !v)}>
+            <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.submitButton,
+          { backgroundColor: loading ? '#9CA3AF' : (isDark ? '#374151' : colors.tint) }
+        ]}
+        onPress={onSubmit}
+        disabled={loading}
+      >
+        <Text style={[styles.submitText, { color: '#FFFFFF' }]}>{loading ? 'Please wait…' : 'Change Password'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const onSubmit = async () => {
     const err = validate();
@@ -156,109 +312,22 @@ export default function ChangePasswordScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        <View style={styles.content}>
-          <View style={[styles.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Current Password</Text>
-              <View style={[styles.passwordRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  secureTextEntry={!showCurrent}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  placeholder="Enter current password"
-                  placeholderTextColor={colors.icon}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowCurrent(v => !v)}>
-                  <Ionicons name={showCurrent ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>New Password</Text>
-              <View style={[styles.passwordRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  secureTextEntry={!showNew}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder="Enter new password"
-                  placeholderTextColor={colors.icon}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowNew(v => !v)}>
-                  <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
-                </TouchableOpacity>
-              </View>
-              
-              {/* Password Requirements */}
-              {newPassword.length > 0 && (
-                <View style={[styles.requirementsContainer, { 
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB'
-                }]}>
-                  <Text style={[styles.requirementsTitle, { color: colors.text }]}>Password Requirements:</Text>
-                  <RequirementItem 
-                    met={newPassword.length >= 8}
-                    text="At least 8 characters"
-                    colors={colors}
-                  />
-                  <RequirementItem 
-                    met={/[A-Z]/.test(newPassword)}
-                    text="Include uppercase letter (A-Z)"
-                    colors={colors}
-                  />
-                  <RequirementItem 
-                    met={/[a-z]/.test(newPassword)}
-                    text="Include lowercase letter (a-z)"
-                    colors={colors}
-                  />
-                  <RequirementItem 
-                    met={/[0-9]/.test(newPassword)}
-                    text="Include number (0-9)"
-                    colors={colors}
-                  />
-                  <RequirementItem 
-                    met={/[!@#$%^&]/.test(newPassword)}
-                    text="Include special character (!@#$%^&)"
-                    colors={colors}
-                  />
-                </View>
-              )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Confirm New Password</Text>
-              <View style={[styles.passwordRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  secureTextEntry={!showConfirm}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Re-enter new password"
-                  placeholderTextColor={colors.icon}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowConfirm(v => !v)}>
-                  <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                { backgroundColor: loading ? '#9CA3AF' : (isDark ? '#374151' : colors.tint) }
-              ]}
-              onPress={onSubmit}
-              disabled={loading}
-            >
-              <Text style={[styles.submitText, { color: '#FFFFFF' }]}>{loading ? 'Please wait…' : 'Change Password'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <KeyboardAvoidingView
+          style={styles.content}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+            scrollEnabled={true}
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled={true}
+          >
+            {renderFormContent()}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
       <ModalDialog
         visible={dialogVisible}
@@ -307,6 +376,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold' },
   placeholder: { width: 40 },
   content: { flex: 1, padding: 20 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
   card: {
     borderRadius: 16,
     padding: 16,

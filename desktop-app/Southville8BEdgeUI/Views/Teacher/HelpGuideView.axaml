@@ -2,11 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
              xmlns:avalonConv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
              xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
-             x:Class="Southville8BEdgeUI.Views.Admin.HelpGuideView"
+             x:Class="Southville8BEdgeUI.Views.Teacher.HelpGuideView"
              x:DataType="vm:HelpGuideViewModel">
 
     <UserControl.Styles>
@@ -85,14 +86,6 @@
         </Style>
 
         <!-- Buttons -->
-        <Style Selector="Button.danger">
-            <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
         <Style Selector="Button.category-item">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -104,6 +97,12 @@
         </Style>
         <Style Selector="Button.category-item:pointerover">
             <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+        </Style>
+        <Style Selector="Button.category-item.selected">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+        <Style Selector="Button.category-item.selected TextBlock.category-title">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
         </Style>
 
         <!-- Icon Style -->
@@ -123,27 +122,19 @@
                     <ic:FluentIcon Icon="Notepad" IconSize="Size20" Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="Help Guide" Classes="page-title"/>
                 </StackPanel>
-                <TextBlock Text="Find answers to your questions and learn how to use the system effectively" Classes="page-subtitle"/>
+                <TextBlock Text="Find answers to your questions and learn how to use the Teacher Portal effectively" Classes="page-subtitle"/>
             </StackPanel>
 
             <!-- Search Bar -->
             <Border Grid.Row="1" Classes="search-card" Margin="0,0,0,24">
-                <StackPanel Spacing="12">
-                    <TextBox Text="{Binding SearchText}" Watermark="Search help articles..."/>
-                    <Button Classes="danger" Command="{Binding SearchHelpCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <ic:FluentIcon Icon="Search" IconSize="Size16"/>
-                            <TextBlock Text="Search"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <TextBox Text="{Binding SearchText}" Watermark="Search help articles..."/>
             </Border>
 
             <!-- Content Area -->
             <Grid Grid.Row="2" ColumnDefinitions="300,*">
                 <!-- Categories List -->
                 <Border Grid.Column="0" Classes="categories-card" Margin="0,0,16,0">
-                    <Grid RowDefinitions="Auto,*,Auto">
+                    <Grid RowDefinitions="Auto,*">
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,0,16">
                             <ic:FluentIcon Icon="List" IconSize="Size16" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <TextBlock Text="Help Categories" Classes="section-title"/>
@@ -153,8 +144,8 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Button Classes="category-item"
-                                                Command="{Binding $parent[UserControl].((vm:HelpGuideViewModel)DataContext).SelectCategoryCommand}"
-                                                CommandParameter="{Binding}">
+                                                Click="CategoryButton_Click"
+                                                Classes.selected="{Binding $parent[UserControl].((vm:HelpGuideViewModel)DataContext).SelectedCategory, Converter={x:Static converters:ObjectConverters.IsEqual}, ConverterParameter={Binding}}">
                                             <StackPanel Spacing="4">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <ic:FluentIcon Icon="Notepad" IconSize="Size16" Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -167,12 +158,6 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <Button Grid.Row="2" Classes="danger" HorizontalAlignment="Stretch" Margin="0,16,0,0" Command="{Binding ContactSupportCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                <ic:FluentIcon Icon="Chat" IconSize="Size16"/>
-                                <TextBlock Text="Contact Support"/>
-                            </StackPanel>
-                        </Button>
                     </Grid>
                 </Border>
 
@@ -215,3 +200,4 @@
         </Grid>
     </Border>
 </UserControl>
+

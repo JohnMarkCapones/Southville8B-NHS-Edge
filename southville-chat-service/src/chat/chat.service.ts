@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseService } from '../common/supabase/supabase.service';
+import { retryWithBackoff } from '../common/utils/retry.util';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
@@ -15,30 +16,91 @@ import {
 import { Message, MessageWithSender } from './entities/message.entity';
 import { ConversationParticipant } from './entities/participant.entity';
 
+interface RoleCacheEntry {
+  role: string;
+  timestamp: number;
+}
+
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
+  private readonly roleCache = new Map<string, RoleCacheEntry>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   constructor(private supabaseService: SupabaseService) {}
 
   /**
-   * Get user role from database
+   * Get user role from database with caching and retry logic
    */
   private async getUserRole(userId: string): Promise<string | null> {
-    const supabase = this.supabaseService.getServiceClient();
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('roles!inner(name)')
-      .eq('id', userId)
-      .single();
-
-    if (error || !data) {
-      this.logger.error(`Failed to get role for user ${userId}:`, error);
-      return null;
+    // Check cache first
+    const cached = this.roleCache.get(userId);
+    if (cached) {
+      const age = Date.now() - cached.timestamp;
+      if (age < this.CACHE_TTL) {
+        this.logger.debug(`Role cache hit for user ${userId}: ${cached.role}`);
+        return cached.role;
+      }
+      // Cache expired, remove it
+      this.roleCache.delete(userId);
     }
 
-    return (data as any)?.roles?.name || null;
+    try {
+      // Use retry logic with exponential backoff
+      const role = await retryWithBackoff(
+        async () => {
+          const supabase = this.supabaseService.getServiceClient();
+
+          const { data, error } = await supabase
+            .from('users')
+            .select('roles!inner(name)')
+            .eq('id', userId)
+            .single();
+
+          if (error || !data) {
+            throw new Error(
+              `Failed to get role for user ${userId}: ${error?.message || 'No data returned'}`,
+            );
+          }
+
+          const roleName = (data as any)?.roles?.name || null;
+          if (!roleName) {
+            throw new Error(`No role found for user ${userId}`);
+          }
+
+          return roleName;
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 100,
+          maxDelay: 2000,
+          backoffMultiplier: 2,
+          timeout: 10000, // 10 seconds
+        },
+      );
+
+      // Cache the result
+      if (role) {
+        this.roleCache.set(userId, {
+          role,
+          timestamp: Date.now(),
+        });
+        this.logger.debug(`Role fetched and cached for user ${userId}: ${role}`);
+      }
+
+      return role;
+    } catch (error: any) {
+      // Log error with context
+      this.logger.error(
+        `Failed to get role for user ${userId} after retries: ${error.message}`,
+      );
+
+      // Clear cache entry if it exists to allow fresh retry
+      this.roleCache.delete(userId);
+
+      // Return null gracefully instead of throwing
+      return null;
+    }
   }
 
   /**
@@ -80,10 +142,17 @@ export class ChatService {
     limit: number;
   }> {
     const supabase = this.supabaseService.getServiceClient();
+    
+    // getUserRole already has retry logic built in, but provide better error message
     const userRole = await this.getUserRole(userId);
 
     if (!userRole) {
-      throw new NotFoundException('User role not found');
+      this.logger.error(
+        `Cannot load conversations: User role not found for user ${userId} after retries`,
+      );
+      throw new NotFoundException(
+        'User role not found. Please try again or contact support if the issue persists.',
+      );
     }
 
     // Get all conversations where user is a participant
@@ -530,9 +599,10 @@ export class ChatService {
       .select('*', { count: 'exact', head: true })
       .eq('conversation_id', conversationId);
 
-    // Get role for each sender
-    const messagesWithRole = await Promise.all(
-      (messages || []).map(async (msg: any) => {
+    // Get role for each sender (resilient - one failure doesn't break all)
+    const messagesList = messages || [];
+    const messagesWithRole = await Promise.allSettled(
+      messagesList.map(async (msg: any) => {
         const role = await this.getUserRole(msg.sender_id);
         return {
           ...msg,
@@ -544,8 +614,28 @@ export class ChatService {
       }),
     );
 
+    // Process results - handle both fulfilled and rejected promises
+    const processedMessages = messagesWithRole.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        // If role fetch failed, use message with 'Unknown' role
+        const msg = messagesList[index];
+        this.logger.warn(
+          `Failed to get role for sender ${msg?.sender_id || 'unknown'}, using 'Unknown': ${result.reason?.message || 'Unknown error'}`,
+        );
+        return {
+          ...msg,
+          sender: {
+            ...msg.sender,
+            role: 'Unknown',
+          },
+        };
+      }
+    });
+
     return {
-      messages: messagesWithRole.reverse() as MessageWithSender[], // Reverse to show oldest first
+      messages: processedMessages.reverse() as MessageWithSender[], // Reverse to show oldest first
       total: count || 0,
       page,
       limit,
