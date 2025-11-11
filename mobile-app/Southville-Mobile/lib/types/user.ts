@@ -23,11 +23,21 @@ export interface StudentInfo {
   middle_name?: string;
   grade_level?: string;
   section_id?: string;
+  // Backend may return 'section' (singular) or 'sections' (plural, could be array or object)
   section?: {
     id: string;
     name: string;
     grade_level?: string;
   };
+  sections?: {
+    id: string;
+    name: string;
+    grade_level?: string;
+  } | Array<{
+    id: string;
+    name: string;
+    grade_level?: string;
+  }>;
   age?: number;
   birthday?: string;
   honor_status?: string;

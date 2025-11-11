@@ -28,6 +28,10 @@ public interface IApiClient
     Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto);
     Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto);
     Task<bool> UpdateUserStatusAsync(string userId, string status);
+    Task<bool> UpdateUserAsync(string userId, UpdateUserDto dto);
+    Task<bool> UpdateStudentAsync(string userId, UpdateStudentDto dto);
+    Task<bool> UpdateTeacherAsync(string userId, UpdateTeacherDto dto);
+    Task<bool> UpdateAdminAsync(string userId, UpdateAdminDto dto);
     Task<bool> DeleteUserAsync(string userId);
     Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto);
     Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto);

@@ -1,0 +1,801 @@
+TEACHER DESKTOP FLOWCHART - SHAPE DEFINITIONS
+Based on Admin-Desktop.drawio patterns
+==========================================
+
+SHAPE TYPE MAPPING:
+- Start/End: ellipse (oval)
+- Process: rounded=0 (rectangle)
+- Decision: rhombus (diamond)
+- Input/Output: shape=parallelogram (parallelogram)
+- Connector: shape=offPageConnector (off-page connector)
+- Merge Point: shape=orEllipse (circle for merging flows)
+- Section Title: text with fontSize=20, fontStyle=3
+
+==========================================
+APPLICATION STARTUP & AUTHENTICATION FLOW
+==========================================
+
+Start
+  Shape: ellipse
+  Style: ellipse;whiteSpace=wrap;html=1;
+
+App Launches
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Load Required Services
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Open Main Window
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Login Screen
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Remember Me?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Input Email & Password
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Check if valid token exists
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Extract role from token
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Validate input (not empty)
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Attempt login
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Login successful?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Check user role
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Teacher?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+STD (connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+Load Teacher Dashboard
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+==========================================
+TEACHER DASHBOARD FLOW
+==========================================
+
+Show Teacher Dashboard
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+User Action?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+VSP (Schedule Planner connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+VGE (Grade Entry connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+VSM (Student Management connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+VMA (My Announcements connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+VMS (Messaging connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+PRO (Profile connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+SET (Settings connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+NOT (Notifications connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+HEL (Help Guide connector)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+Logout?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+SCHEDULE PLANNER FLOW (VSP)
+==========================================
+
+Load Schedule Planner View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Schedule Planner
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Filter by Week?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Load Filtered Schedules
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Filtered Schedules
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+View Schedule Details?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Display Schedule Details View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+GRADE ENTRY FLOW (VGE)
+==========================================
+
+Load Grade Entry View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Grade Entry
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Select Grading Period/School Year?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Load Students with GWA
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Student Grades
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Edit Grades?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Update Grade Value
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Mark as Dirty
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Save All Grades?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Validate Grades Range
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Create or Update?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Create GWA Entry
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Update GWA Entry
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Success Modal
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+STUDENT MANAGEMENT FLOW (VSM)
+==========================================
+
+Load Student Management View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Student Management
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Search Students?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Input Search Query
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Filter Students
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Filtered Students
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Select Student?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Show Student Details
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+MY ANNOUNCEMENTS FLOW (VMA)
+==========================================
+
+Load My Announcements View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show My Announcements
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Actions (based on UI in screenshot)
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+  Yes paths: Refresh → Refresh Announcements
+            Change Filter → Change Filter decision
+            Edit → Edit Announcement
+            View → View Announcement
+            Delete → Delete Announcement
+            Quick Create → Quick Create form
+  No path: Back to Show My Announcements or STD
+
+Refresh Announcements (toolbar button)
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+  Next: Show My Announcements (refresh data)
+
+Change Filter (dropdown: All/…)
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+  Yes path: Apply Filter
+  No path: Back to Show My Announcements
+
+Apply Filter
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+  Next: Display Filtered List
+
+Display Filtered List
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+  Next: Back to Show My Announcements or STD
+
+Edit Announcement (card pencil)
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+  Next: Show My Announcements (after edit) or STD
+
+View Announcement (card eye)
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+  Next: Back to Show My Announcements or STD
+
+Delete Announcement (card trash)
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+  Next: Show My Announcements (after delete) or STD
+
+Quick Create (form section)
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+  Next: Submit Quick Create
+
+Submit Quick Create
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+  Next: Show My Announcements (refresh with new announcement) or STD
+
+==========================================
+MESSAGING FLOW (VMS)
+==========================================
+
+Load Messaging View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Messaging View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Action?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+New Chat?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Load New Chat View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show New Chat View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Input Basic Chat Information
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Create Chat?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Saving Information
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Create Chat via API
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success Creating Chat
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Search Conversation?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Input Conversation Search
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Loading Query
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Conversation
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Filter Chat?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Select Filter Options
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Load Filter
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Filtered Chat
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Select Conversation?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Load Messages for Conversation
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Message Area
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Type a message?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Send Message
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Add Optimistic Message
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Send Message via API
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Update Message Status to Sent
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Remove Optimistic Message
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Chat info?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Show Contact Info Modal
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Delete Conversation?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Show Delete Chat Modal
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Are You Sure?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Delete Chat via API
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success Deletion
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+PROFILE FLOW (PRO)
+==========================================
+
+Load Profile View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Profile View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Change Password?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Load Change Password View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Change Password Modal
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Input Current Password
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Input New Password
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Input Confirm Password
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Validate Password?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Show Validation Error
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Update Password?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Processing Password Change
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Change Password via API
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success Updating Password
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+SETTINGS FLOW (SET)
+==========================================
+
+Load Settings View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Settings View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Update Settings?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Modify Settings
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Save Settings
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Success Updated Settings
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+==========================================
+NOTIFICATIONS FLOW (NOT)
+==========================================
+
+Load Notification View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Notifications View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Action?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Mark All Read?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Mark All Notification Read
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success Mark
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Clear All?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Show Confirmation Modal
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Are you sure?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Clear all Notifications
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Mark one notification?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Mark Notification Read
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success Mark
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Delete one notification?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Delete Notification
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Success Deletion
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Back?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+==========================================
+HELP GUIDE FLOW (HEL)
+==========================================
+
+Load Help View
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Help View
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Search?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Query Search
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Search Help
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Open Help Card?
+  Shape: Decision (Diamond)
+  Style: rhombus;whiteSpace=wrap;html=1;
+
+Load Help Card
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Display Specific Help Card
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+==========================================
+LOGOUT FLOW
+==========================================
+
+Clear Cached ViewModels
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Reset Current Content
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Call AuthService Logout
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Reset Theme to Light Mode
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+Show Success Toast
+  Shape: Input/Output (Parallelogram)
+  Style: shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;
+
+Navigate to Login
+  Shape: Process (Rectangle)
+  Style: rounded=0;whiteSpace=wrap;html=1;
+
+==========================================
+MERGE POINTS & CONNECTORS
+==========================================
+
+STD (connector - return to dashboard)
+  Shape: Connector (Off-page)
+  Style: shape=offPageConnector;whiteSpace=wrap;html=1;
+
+STD Merge Point (where multiple flows converge)
+  Shape: Merge Point (Circle)
+  Style: shape=orEllipse;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;
+
+==========================================
+SECTION TITLES
+==========================================
+
+All section titles (e.g., "Application Startup & Authentication Flow", "Teacher Dashboard Flow", etc.)
+  Shape: Text Label
+  Style: text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;strokeWidth=1;fontSize=20;fontStyle=3
+
+==========================================
+EDGE LABELS
+==========================================
+
+All decision edges (yes/no labels)
+  Shape: Edge Label
+  Style: edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];
+  Note: These are separate cells with connectable="0" attached to edge elements
+
+==========================================
+SUMMARY OF SHAPE PATTERNS
+==========================================
+
+ELLIPSE (Start/End):
+- Start node
+- STD connector (when used as endpoint)
+
+RECTANGLE (Process):
+- All "Load X View" operations
+- All "Load X" data operations
+- All "Update X" operations
+- All "Create X" operations
+- All "Delete X" operations
+- All "Validate X" operations
+- All "Mark X" operations
+- All "Reset X" operations
+- All "Call X" operations
+- All "Processing X" operations
+- All "Apply X" operations
+- All "Reload X" operations
+- All "Save X" operations
+- All "Filter X" operations
+- All "Query X" operations
+
+RHOMBUS (Decision):
+- All questions ending with "?"
+- All conditional checks
+- All "X?" patterns
+
+PARALLELOGRAM (Input/Output):
+- All "Show X" operations (screens, views, modals, dialogs)
+- All "Display X" operations
+- All "Input X" operations
+- All "Select X" operations
+- All "Modify X" operations
+- All success/error messages
+- All "View X" operations
+
+OFF-PAGE CONNECTOR:
+- All feature connectors (VSP, VGE, VSM, VMA, VMS, PRO, SET, NOT, HEL)
+- STD connector (for returning to dashboard)
+
+OR-ELLIPSE (Merge Point):
+- Points where multiple flows converge before returning to dashboard
+

@@ -94,6 +94,22 @@
         <Style Selector="TextBox:focus, ComboBox:focus">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
+        <!-- Read-only TextBox styling -->
+        <Style Selector="TextBox[IsReadOnly=True]">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsEnabled" Value="True"/>
+            <Setter Property="Cursor" Value="Arrow"/>
+        </Style>
+        <Style Selector="TextBox[IsReadOnly=True]:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="TextBox[IsReadOnly=True]:focus">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
 
         <!-- BUTTONS -->
         <Style Selector="Button.outline">

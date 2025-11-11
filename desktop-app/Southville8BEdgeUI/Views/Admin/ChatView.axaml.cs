@@ -147,23 +147,17 @@ public partial class ChatView : UserControl
         // Remove focus restoration code completely
     }
         
-    // Simplified and immediate scroll method
+    // Scroll last chat item into view using ListBox internal ScrollViewer
     private void ScrollToBottomOfMessages()
     {
-        if (MessagesScrollViewer != null && !_isScrolling)
-        {
-            _isScrolling = true;
+        if (MessagesListBox == null)
+            return;
 
-            try
-            {
-                // Immediate scroll without dispatcher delays
-                MessagesScrollViewer.ScrollToEnd();
-            }
-            finally
-            {
-                // Reset flag after a minimal delay
-                Dispatcher.UIThread.Post(() => _isScrolling = false, DispatcherPriority.Normal);
-            }
+        if (DataContext is ChatViewModel vm && vm.SelectedConversation?.Messages is { Count: > 0 } msgs)
+        {
+            var last = msgs[^1];
+            // Use UI thread to ensure container is realized
+            Dispatcher.UIThread.Post(() => MessagesListBox.ScrollIntoView(last), DispatcherPriority.Render);
         }
     }
 
@@ -811,7 +805,10 @@ public partial class ChatView : UserControl
 
     private void InfoButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("Info button clicked");
+        if (DataContext is ChatViewModel viewModel)
+        {
+            viewModel.ShowContactInfoCommand.Execute(null);
+        }
     }
 
     // Configuration class for layout strategies

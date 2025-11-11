@@ -437,7 +437,15 @@ Status = dto.Status,
         NavigateTo?.Invoke(vm);
     }
     
-    [RelayCommand] private void EditUser(UserViewModel user) { }
+    [RelayCommand] 
+    private void EditUser(UserViewModel user)
+    {
+        var vm = new EditUserViewModel(_apiClient, _toastService, user.Id, user.Role)
+        {
+            NavigateBack = () => NavigateTo?.Invoke(this)
+        };
+        NavigateTo?.Invoke(vm);
+    }
 
     [RelayCommand] private void ToggleUserStatus(UserViewModel user)
     {

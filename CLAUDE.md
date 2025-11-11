@@ -196,6 +196,38 @@ const form = useForm({
 - Use `not-found.tsx` files for 404 pages
 - Both patterns are available at various route levels
 
+## Environment Variables
+
+The frontend requires the following environment variables for chat realtime functionality:
+
+### Required for Chat Realtime
+
+- **`NEXT_PUBLIC_SUPABASE_URL`** - Your Supabase project URL (e.g., `https://xxxxxxxxxxxxx.supabase.co`)
+- **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** - Supabase anonymous/public key (safe for client-side)
+
+These values should match the same credentials used in `southville-chat-service/.env`:
+- `SUPABASE_URL` → `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_ANON_KEY` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Optional
+
+- **`NEXT_PUBLIC_CHAT_SERVICE_URL`** - Chat service base URL (defaults to `http://localhost:3001`)
+
+### Setup
+
+1. Create a `.env.local` file in `frontend-nextjs/` directory
+2. Copy the Supabase credentials from your main API or chat service `.env` file
+3. Prefix them with `NEXT_PUBLIC_` for client-side access
+
+Example `.env.local`:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_CHAT_SERVICE_URL=http://localhost:3001
+```
+
+**Note**: The `NEXT_PUBLIC_` prefix is required for Next.js to expose these variables to the client-side code.
+
 ## Important Notes
 
 - This project uses **Next.js 15 App Router** (not Pages Router)
@@ -204,6 +236,7 @@ const form = useForm({
 - TypeScript is strictly enforced
 - All new components should follow the established shadcn/ui patterns
 - Dark mode is supported via `next-themes` provider
+- Chat uses **Supabase Realtime** for instant message updates (no polling)
 
 ## Commit Convention
 

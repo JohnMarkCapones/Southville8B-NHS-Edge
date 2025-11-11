@@ -1,0 +1,1559 @@
+erDiagram
+  %% Southville 8B NHS Edge - Public schema ERD
+  %% Following Gliffy ERD principles: https://www.gliffy.com/blog/how-to-draw-an-entity-relationship-diagram
+  %%
+  %% Components:
+  %% - Entities: Tables represented as rectangles with attributes listed inside
+  %% - Attributes: Properties of entities (columns with data types)
+  %% - Relationships: Actions/verbs describing how entities interact (e.g., "Has", "Creates", "Belongs to")
+  %% - Cardinality: Numerical relationships between entities
+  %%
+  %% Notation:
+  %% - PK marks primary keys
+  %% - Data types taken from Postgres (snake_case preserved)
+  %% - Relationships use verb-based labels (following Gliffy principles)
+  %% - Cardinality: ||--o{ = one-to-many, ||--|| = one-to-one, }o--o{ = many-to-many
+
+  academic_calendar {
+    uuid id PK
+    varchar year
+    varchar month_name
+    varchar term
+    date start_date
+    date end_date
+    int total_days
+    text description
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  academic_calendar_days {
+    bigint id PK
+    uuid academic_calendar_id
+    date date
+    varchar day_of_week
+    int week_number
+    boolean is_weekend
+    boolean is_holiday
+    boolean is_current_day
+    varchar marker_icon
+    varchar marker_color
+    text note
+    timestamptz created_at
+  }
+
+  academic_calendar_markers {
+    bigint id PK
+    uuid academic_calendar_id
+    bigint academic_calendar_day_id
+    varchar color
+    varchar icon
+    varchar label
+    int order_priority
+    timestamptz created_at
+  }
+
+  academic_periods {
+    uuid id PK
+    uuid academic_year_id
+    varchar period_name
+    int period_order
+    date start_date
+    date end_date
+    boolean is_grading_period
+    numeric weight
+    text description
+    timestamptz created_at
+    timestamptz updated_at
+    uuid created_by
+    uuid updated_by
+  }
+
+  academic_year_settings {
+    uuid id PK
+    varchar setting_key
+    jsonb setting_value
+    text description
+    timestamptz created_at
+    timestamptz updated_at
+    uuid updated_by
+  }
+
+  academic_year_templates {
+    uuid id PK
+    varchar template_name
+    varchar structure
+    text description
+    jsonb periods_config
+    boolean is_default
+    timestamptz created_at
+    timestamptz updated_at
+    uuid created_by
+  }
+
+  academic_years {
+    uuid id PK
+    varchar year_name
+    date start_date
+    date end_date
+    varchar structure
+    boolean is_active
+    boolean is_archived
+    text description
+    timestamptz created_at
+    timestamptz updated_at
+    uuid created_by
+    uuid updated_by
+  }
+
+  admins {
+    uuid id PK
+    uuid user_id
+    text role_description
+    varchar name
+    varchar email
+    varchar phone_number
+  }
+
+  alert_reads {
+    uuid alert_id PK
+    uuid user_id PK
+    timestamptz read_at
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  alerts {
+    uuid id PK
+    varchar type
+    varchar title
+    text message
+    uuid created_by
+    timestamptz expires_at
+    timestamptz created_at
+    uuid recipient_id
+    boolean is_read
+    timestamptz updated_at
+  }
+
+  announcement_sections {
+    uuid id PK
+    uuid announcement_id
+    uuid section_id
+    timestamptz created_at
+  }
+
+  announcement_tags {
+    uuid announcement_id
+    uuid tag_id
+  }
+
+  announcement_targets {
+    uuid announcement_id
+    uuid role_id
+  }
+
+  announcements {
+    uuid id PK
+    uuid user_id
+    varchar title
+    text content
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz expires_at
+    varchar type
+    varchar visibility
+  }
+
+  banner_notifications {
+    uuid id PK
+    text message
+    varchar short_message
+    varchar type
+    boolean is_active
+    boolean is_dismissible
+    boolean has_action
+    varchar action_label
+    varchar action_url
+    timestamptz start_date
+    timestamptz end_date
+    uuid created_by
+    varchar template
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  buildings {
+    uuid id PK
+    varchar building_name
+    varchar code
+    int capacity
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  campus_facilities {
+    uuid id PK
+    varchar name
+    varchar image_url
+    text description
+    timestamptz created_at
+    timestamptz updated_at
+    uuid building_id
+    uuid floor_id
+    int capacity
+    varchar type
+    varchar status
+    uuid domain_id
+    uuid created_by
+  }
+
+  club_announcements {
+    uuid id PK
+    uuid club_id
+    varchar title
+    text content
+    varchar priority
+    uuid created_by
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_benefits {
+    uuid id PK
+    uuid club_id
+    varchar title
+    varchar description
+    int order_index
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_faqs {
+    uuid id PK
+    uuid club_id
+    varchar question
+    varchar answer
+    int order_index
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_form_answers {
+    uuid id PK
+    uuid response_id
+    uuid question_id
+    text answer_text
+    text answer_value
+    timestamptz created_at
+  }
+
+  club_form_question_options {
+    uuid id PK
+    uuid question_id
+    text option_text
+    text option_value
+    int order_index
+    timestamptz created_at
+  }
+
+  club_form_questions {
+    uuid id PK
+    uuid form_id
+    text question_text
+    varchar question_type
+    boolean required
+    int order_index
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_form_responses {
+    uuid id PK
+    uuid form_id
+    uuid user_id
+    varchar status
+    uuid reviewed_by
+    timestamptz reviewed_at
+    text review_notes
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_forms {
+    uuid id PK
+    uuid club_id
+    uuid created_by
+    varchar name
+    text description
+    boolean is_active
+    boolean auto_approve
+    varchar form_type
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_goals {
+    uuid id PK
+    uuid club_id
+    varchar goal_text
+    int order_index
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  club_positions {
+    uuid id PK
+    varchar name
+    text description
+    int level
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  clubs {
+    uuid id PK
+    varchar name
+    text description
+    uuid president_id
+    uuid vp_id
+    uuid secretary_id
+    uuid advisor_id
+    uuid domain_id
+    timestamptz created_at
+    timestamptz updated_at
+    uuid co_advisor_id
+    varchar mission_statement
+    varchar mission_title
+    text mission_description
+    varchar email
+    int championship_wins
+    varchar benefits_title
+    text benefits_description
+    text club_image
+    text r2_club_image_key
+    text club_logo
+  }
+
+  conversation_participants {
+    uuid conversation_id
+    uuid user_id
+    text role
+    timestamptz last_read_at
+    timestamptz joined_at
+  }
+
+  conversations {
+    uuid id PK
+    text type
+    text title
+    uuid created_by
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  daily_logins {
+    uuid id PK
+    uuid user_id
+    date login_date
+    timestamptz created_at
+  }
+
+  departments {
+    uuid id PK
+    varchar department_name
+    text description
+    uuid head_id
+    timestamp created_at
+    timestamp updated_at
+    boolean is_active
+  }
+
+  departments_information {
+    uuid id PK
+    uuid department_id
+    varchar office_name
+    varchar contact_person
+    text description
+    varchar email
+    varchar contact_number
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  domain_role_permissions {
+    numeric id PK
+    timestamptz created_at
+    uuid domain_role_id
+    uuid permission_id
+    boolean allowed
+  }
+
+  domain_roles {
+    uuid id PK
+    timestamptz created_at
+    uuid domain_id
+    text name
+  }
+
+  domains {
+    uuid id PK
+    text type
+    text name
+    timestamptz created_at
+    uuid created_by
+  }
+
+  emergency_contacts {
+    uuid id PK
+    uuid student_id
+    varchar guardian_name
+    varchar relationship
+    varchar phone_number
+    varchar email
+    varchar address
+    boolean is_primary
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  event_additional_info {
+    uuid id PK
+    uuid event_id
+    varchar title
+    text content
+    int order_index
+    timestamptz created_at
+  }
+
+  event_highlights {
+    uuid id PK
+    uuid event_id
+    varchar title
+    text content
+    varchar image_url
+    int order_index
+    timestamptz created_at
+  }
+
+  event_schedule {
+    uuid id PK
+    uuid event_id
+    time activity_time
+    text activity_description
+    int order_index
+    timestamptz created_at
+  }
+
+  event_tags {
+    uuid event_id
+    uuid tag_id
+  }
+
+  events {
+    uuid id PK
+    varchar title
+    text description
+    date date
+    time time
+    varchar location
+    uuid organizer_id
+    varchar event_image
+    varchar status
+    varchar visibility
+    timestamptz created_at
+    timestamptz updated_at
+    text full_description
+    boolean is_featured
+    timestamptz deleted_at
+    text cf_image_id
+    text cf_image_url
+    int image_file_size
+    varchar image_mime_type
+    uuid deleted_by
+    uuid club_id
+  }
+
+  events_faq {
+    uuid id PK
+    uuid event_id
+    varchar question
+    text answer
+    timestamptz created_at
+  }
+
+  faq {
+    uuid id PK
+    varchar question
+    text answer
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  floors {
+    uuid id PK
+    uuid building_id
+    varchar name
+    int number
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  gallery_albums {
+    uuid id PK
+    varchar title
+    text description
+    varchar slug
+    varchar category
+    uuid cover_image_id
+    varchar color_theme
+    varchar visibility
+    boolean is_featured
+    int featured_order
+    date event_date
+    varchar location
+    int items_count
+    int views_count
+    uuid created_by
+    uuid updated_by
+    uuid deleted_by
+    boolean is_deleted
+    timestamptz deleted_at
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  gallery_downloads {
+    uuid id PK
+    uuid item_id
+    uuid user_id
+    inet ip_address
+    text user_agent
+    boolean success
+    timestamptz downloaded_at
+  }
+
+  gallery_item_tags {
+    uuid id PK
+    uuid item_id
+    uuid tag_id
+    uuid created_by
+    timestamptz created_at
+  }
+
+  gallery_items {
+    uuid id PK
+    varchar original_filename
+    bigint file_size_bytes
+    varchar mime_type
+    varchar media_type
+    int width
+    int height
+    int duration_seconds
+    varchar title
+    text caption
+    varchar alt_text
+    int display_order
+    boolean is_cover
+    boolean is_featured
+    varchar photographer_name
+    text photographer_credit
+    timestamptz taken_at
+    varchar location
+    int views_count
+    int downloads_count
+    uuid uploaded_by
+    uuid updated_by
+    uuid deleted_by
+    boolean is_deleted
+    timestamptz deleted_at
+    timestamptz created_at
+    timestamptz updated_at
+    text cf_image_id
+    text cf_image_url
+  }
+
+  gallery_tags {
+    uuid id PK
+    varchar name
+    varchar slug
+    text description
+    varchar color
+    int usage_count
+    uuid created_by
+    timestamptz created_at
+  }
+
+  gallery_views {
+    uuid id PK
+    varchar viewable_type
+    uuid viewable_id
+    uuid user_id
+    inet ip_address
+    timestamptz viewed_at
+  }
+
+  hotspots {
+    uuid id PK
+    uuid location_id
+    varchar label
+    numeric x_position
+    numeric y_position
+    uuid link_to_location_id
+    timestamptz created_at
+  }
+
+  locations {
+    uuid id PK
+    varchar name
+    text description
+    varchar image_type
+    text image_url
+    text preview_image_url
+    timestamptz created_at
+  }
+
+  messages {
+    uuid id PK
+    uuid conversation_id
+    uuid sender_id
+    text content
+    text message_type
+    text attachment_url
+    timestamptz created_at
+  }
+
+  module_download_logs {
+    uuid id PK
+    uuid module_id
+    uuid user_id
+    timestamptz downloaded_at
+    text ip_address
+    text user_agent
+    boolean success
+  }
+
+  modules {
+    uuid id PK
+    varchar title
+    text description
+    varchar file_url
+    uuid uploaded_by
+    text r2_file_key
+    bigint file_size_bytes
+    varchar mime_type
+    boolean is_global
+    boolean is_deleted
+    timestamptz deleted_at
+    uuid deleted_by
+    uuid subject_id
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  news {
+    uuid id PK
+    varchar title
+    varchar slug
+    jsonb article_json
+    text article_html
+    text description
+    text featured_image
+    varchar status
+    varchar visibility
+    timestamptz published_date
+    uuid author_id
+    uuid category_id
+    int views
+    timestamptz deleted_at
+    uuid deleted_by
+    timestamptz created_at
+    timestamptz updated_at
+    varchar r2_featured_image_key
+    timestamptz scheduled_date
+    varchar author_name
+    varchar credits
+    varchar review_status
+  }
+
+  news_approval {
+    uuid id PK
+    uuid news_id
+    uuid approver_id
+    varchar status
+    text remarks
+    timestamptz action_at
+  }
+
+  news_categories {
+    uuid id PK
+    varchar name
+    varchar slug
+    text description
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  news_co_authors {
+    uuid id PK
+    uuid news_id
+    uuid added_by
+    timestamptz created_at
+    varchar co_author_name
+  }
+
+  news_review_comments {
+    uuid id PK
+    uuid news_id
+    uuid reviewer_id
+    text comment
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz deleted_at
+    uuid deleted_by
+  }
+
+  news_tags {
+    uuid news_id
+    uuid tag_id
+  }
+
+  permissions {
+    uuid id PK
+    text key
+    text description
+    timestamptz created_at
+  }
+
+  positions {
+    uuid id PK
+    uuid role_id
+    varchar name
+    varchar description
+    varchar key
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  profiles {
+    uuid id PK
+    uuid user_id
+    varchar avatar
+    varchar address
+    text bio
+    varchar phone_number
+    json social_media_links
+  }
+
+  question_bank {
+    uuid id PK
+    uuid teacher_id
+    text question_text
+    varchar question_type
+    uuid subject_id
+    varchar topic
+    varchar difficulty
+    text[] tags
+    numeric default_points
+    jsonb choices
+    jsonb correct_answer
+    boolean allow_partial_credit
+    int time_limit_seconds
+    timestamptz created_at
+    timestamptz updated_at
+    text explanation
+    boolean is_public
+    boolean is_deleted
+  }
+
+  quiz_access_links {
+    uuid link_id PK
+    uuid quiz_id
+    varchar access_token
+    varchar link_type
+    boolean is_active
+    timestamptz expires_at
+    varchar access_code
+    int max_uses
+    int use_count
+    boolean requires_auth
+    boolean is_revoked
+    timestamptz revoked_at
+    uuid created_by
+    timestamptz created_at
+    timestamptz last_used_at
+  }
+
+  quiz_access_logs {
+    uuid id PK
+    uuid link_id
+    uuid quiz_id
+    uuid student_id
+    timestamptz accessed_at
+    inet ip_address
+    text user_agent
+    boolean access_granted
+    text denial_reason
+    jsonb metadata
+  }
+
+  quiz_active_sessions {
+    uuid session_id PK
+    uuid quiz_id
+    uuid student_id
+    uuid attempt_id
+    timestamptz started_at
+    timestamptz last_synced_at
+    boolean is_active
+    text initial_device_fingerprint
+    inet initial_ip_address
+    text initial_user_agent
+    timestamptz last_heartbeat
+    text current_device_fingerprint
+    inet current_ip_address
+    text current_user_agent
+    text terminated_reason
+  }
+
+  quiz_activity_logs {
+    uuid id PK
+    uuid participant_id
+    uuid session_id
+    uuid quiz_id
+    uuid student_id
+    varchar event_type
+    text message
+    jsonb metadata
+    timestamptz timestamp
+  }
+
+  quiz_analytics {
+    uuid id PK
+    uuid quiz_id
+    int total_attempts
+    int total_students
+    int completed_attempts
+    numeric average_score
+    numeric highest_score
+    numeric lowest_score
+    numeric median_score
+    numeric pass_rate
+    int average_time_taken_seconds
+    int fastest_completion_seconds
+    int slowest_completion_seconds
+    timestamptz last_calculated_at
+  }
+
+  quiz_attempts {
+    uuid attempt_id PK
+    uuid quiz_id
+    uuid student_id
+    int attempt_number
+    numeric score
+    numeric max_possible_score
+    varchar status
+    boolean terminated_by_teacher
+    text termination_reason
+    timestamptz started_at
+    timestamptz submitted_at
+    int time_taken_seconds
+    uuid[] questions_shown
+    timestamptz created_at
+  }
+
+  quiz_choices {
+    uuid choice_id PK
+    uuid question_id
+    text choice_text
+    boolean is_correct
+    int order_index
+    jsonb metadata
+    timestamptz created_at
+  }
+
+  quiz_device_sessions {
+    uuid id PK
+    uuid session_id
+    text device_fingerprint
+    inet ip_address
+    text user_agent
+    varchar screen_resolution
+    jsonb browser_info
+    varchar device_type
+    timestamptz first_seen_at
+    timestamptz last_seen_at
+    boolean is_current
+  }
+
+  quiz_flags {
+    uuid id PK
+    uuid participant_id
+    uuid session_id
+    uuid quiz_id
+    uuid student_id
+    varchar flag_type
+    text message
+    varchar severity
+    jsonb metadata
+    timestamptz timestamp
+  }
+
+  quiz_participants {
+    uuid id PK
+    uuid session_id
+    uuid quiz_id
+    uuid student_id
+    varchar status
+    int progress
+    int current_question_index
+    int questions_answered
+    int total_questions
+    timestamptz start_time
+    timestamptz end_time
+    int flag_count
+    int idle_time_seconds
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  quiz_question_metadata {
+    uuid id PK
+    uuid question_id
+    varchar metadata_type
+    jsonb metadata
+    timestamptz created_at
+  }
+
+  quiz_question_stats {
+    uuid id PK
+    uuid question_id
+    uuid quiz_id
+    int total_attempts
+    int correct_count
+    int incorrect_count
+    int skipped_count
+    numeric difficulty_score
+    int average_time_spent_seconds
+    numeric discrimination_index
+    timestamptz last_calculated_at
+  }
+
+  quiz_questions {
+    uuid question_id PK
+    uuid quiz_id
+    text question_text
+    varchar question_type
+    int order_index
+    numeric points
+    boolean allow_partial_credit
+    int time_limit_seconds
+    boolean is_pool_question
+    uuid source_question_bank_id
+    timestamptz created_at
+    timestamptz updated_at
+    jsonb correct_answer
+    jsonb settings
+    varchar description
+    boolean is_required
+    boolean is_randomize
+    boolean case_sensitive
+    boolean whitespace_sensitive
+  }
+
+  quiz_section_settings {
+    uuid id PK
+    uuid quiz_id
+    uuid section_id
+    timestamptz start_date
+    timestamptz end_date
+    int time_limit_override
+    timestamptz created_at
+  }
+
+  quiz_sections {
+    uuid id PK
+    uuid quiz_id
+    uuid section_id
+    timestamptz assigned_at
+  }
+
+  quiz_session_answers {
+    uuid id PK
+    uuid session_id
+    uuid question_id
+    uuid temporary_choice_id
+    uuid[] temporary_choice_ids
+    text temporary_answer_text
+    jsonb temporary_answer_json
+    timestamptz last_updated
+    int time_spent_seconds
+  }
+
+  quiz_settings {
+    uuid id PK
+    uuid quiz_id
+    boolean lockdown_browser
+    boolean anti_screenshot
+    boolean disable_copy_paste
+    boolean disable_right_click
+    boolean require_fullscreen
+    boolean track_tab_switches
+    boolean track_device_changes
+    boolean track_ip_changes
+    int tab_switch_warning_threshold
+    timestamptz created_at
+    boolean secured_quiz
+    boolean quiz_lockdown
+    boolean lockdown_ui
+    boolean question_pool
+    boolean stratified_sampling
+    int total_questions
+    int pool_size
+    boolean strict_time_limit
+    boolean auto_save
+    boolean backtracking_control
+    varchar visibility
+    varchar access_code
+    varchar publish_mode
+  }
+
+  quiz_student_answers {
+    uuid answer_id PK
+    uuid attempt_id
+    uuid question_id
+    uuid choice_id
+    uuid[] choice_ids
+    text answer_text
+    jsonb answer_json
+    numeric points_awarded
+    boolean is_correct
+    uuid graded_by
+    timestamptz graded_at
+    text grader_feedback
+    int time_spent_seconds
+    timestamptz answered_at
+  }
+
+  quiz_student_summary {
+    uuid id PK
+    uuid student_id
+    uuid quiz_id
+    uuid last_attempt_id
+    int attempts_count
+    numeric highest_score
+    numeric lowest_score
+    numeric latest_score
+    numeric average_score
+    varchar status
+    boolean passed
+    timestamptz last_updated
+  }
+
+  quizzes {
+    uuid quiz_id PK
+    varchar title
+    text description
+    uuid subject_id
+    uuid teacher_id
+    varchar type
+    varchar grading_type
+    int time_limit
+    timestamptz start_date
+    timestamptz end_date
+    varchar status
+    int version
+    uuid parent_quiz_id
+    varchar visibility
+    int question_pool_size
+    int questions_to_display
+    boolean allow_retakes
+    boolean allow_backtracking
+    boolean shuffle_questions
+    boolean shuffle_choices
+    numeric total_points
+    numeric passing_score
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz deleted_at
+    uuid deleted_by
+  }
+
+  roles {
+    uuid id PK
+    varchar name
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  rooms {
+    uuid id PK
+    uuid floor_id
+    varchar name
+    varchar room_number
+    int capacity
+    varchar status
+    int display_order
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  schedule_audit {
+    bigint id PK
+    uuid schedule_id
+    text action
+    uuid actor_id
+    jsonb diff
+    timestamptz created_at
+  }
+
+  schedule_templates {
+    uuid id PK
+    text name
+    text description
+    text grade_level
+    jsonb payload
+    uuid created_by
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  schedules {
+    uuid id PK
+    uuid subject_id
+    uuid teacher_id
+    uuid section_id
+    uuid room_id
+    uuid building_id
+    varchar day_of_week
+    time start_time
+    time end_time
+    varchar school_year
+    varchar semester
+    timestamptz created_at
+    timestamptz updated_at
+    text status
+    boolean is_published
+    timestamptz published_at
+    text recurring_rule
+    int version
+    varchar grading_period
+  }
+
+  schedules_audit_log {
+    uuid id PK
+    uuid schedule_id
+    uuid actor_user_id
+    text action
+    jsonb changed_fields
+    jsonb before
+    jsonb after
+    text note
+    timestamptz created_at
+  }
+
+  section_modules {
+    uuid id PK
+    uuid section_id
+    uuid module_id
+    boolean visible
+    timestamptz assigned_at
+    uuid assigned_by
+  }
+
+  sections {
+    uuid id PK
+    varchar name
+    varchar grade_level
+    uuid teacher_id
+    timestamp created_at
+    timestamp updated_at
+    uuid room_id
+    uuid building_id
+    uuid floor_id
+    varchar status
+  }
+
+  student_activities {
+    uuid id PK
+    uuid student_user_id
+    student_activities_activity_type activity_type
+    varchar title
+    text description
+    jsonb metadata
+    uuid related_entity_id
+    varchar related_entity_type
+    varchar icon
+    varchar color
+    boolean is_highlighted
+    boolean is_visible
+    timestamptz activity_timestamp
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  student_club_memberships {
+    uuid id PK
+    uuid student_id
+    uuid club_id
+    uuid position_id
+    date joined_at
+    boolean is_active
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  student_rankings {
+    uuid id PK
+    uuid student_id
+    varchar grade_level
+    int rank
+    varchar honor_status
+    varchar quarter
+    varchar school_year
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  student_schedule {
+    uuid id PK
+    uuid schedule_id
+    uuid student_id
+    timestamptz created_at
+  }
+
+  students {
+    uuid id PK
+    uuid user_id
+    text first_name
+    text last_name
+    text middle_name
+    text student_id
+    text lrn_id
+    varchar grade_level
+    int enrollment_year
+    text honor_status
+    int rank
+    uuid section_id
+    int age
+    date birthday
+    timestamptz deleted_at
+  }
+
+  students_gwa {
+    uuid id PK
+    uuid student_id
+    numeric gwa
+    varchar grading_period
+    varchar school_year
+    varchar remarks
+    varchar honor_status
+    uuid recorded_by
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  subjects {
+    uuid id PK
+    varchar subject_name
+    text description
+    int grade_level
+    uuid department_id
+    varchar color_hex
+    timestamp created_at
+    timestamp updated_at
+    varchar code
+    varchar status
+    varchar visibility
+    int[] grade_levels
+    boolean is_deleted
+  }
+
+  tags {
+    uuid id PK
+    varchar name
+    varchar color
+    timestamptz created_at
+    varchar slug
+  }
+
+  teacher_file_downloads {
+    uuid id PK
+    uuid file_id
+    uuid user_id
+    timestamptz downloaded_at
+    text ip_address
+    text user_agent
+    boolean success
+  }
+
+  teacher_files {
+    uuid id PK
+    uuid folder_id
+    varchar title
+    text description
+    varchar file_url
+    text r2_file_key
+    bigint file_size_bytes
+    varchar mime_type
+    varchar original_filename
+    boolean is_deleted
+    timestamptz deleted_at
+    uuid deleted_by
+    uuid uploaded_by
+    uuid updated_by
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  teacher_folders {
+    uuid id PK
+    varchar name
+    text description
+    uuid parent_id
+    boolean is_deleted
+    timestamptz deleted_at
+    uuid deleted_by
+    uuid created_by
+    uuid updated_by
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  teachers {
+    uuid id PK
+    uuid user_id
+    varchar first_name
+    varchar last_name
+    varchar middle_name
+    int age
+    uuid subject_specialization_id
+    uuid department_id
+    uuid advisory_section_id
+    timestamp created_at
+    timestamp updated_at
+    date birthday
+    timestamptz deleted_at
+  }
+
+  user_domain_roles {
+    uuid id PK
+    timestamptz created_at
+    uuid user_id
+    uuid domain_role_id
+  }
+
+  user_positions {
+    uuid id PK
+    uuid user_id
+    uuid position_id
+    timestamp assigned_at
+  }
+
+  user_preferences {
+    uuid id PK
+    uuid user_id
+    varchar web_theme
+    varchar desktop_theme
+    varchar language
+    timestamp created_at
+    timestamp updated_at
+    timestamp deleted_at
+  }
+
+  user_push_tokens {
+    uuid id PK
+    uuid user_id
+    text token
+    text platform
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  users {
+    uuid id PK
+    varchar full_name
+    varchar email
+    varchar password_hash
+    uuid role_id
+    timestamp created_at
+    timestamp updated_at
+    varchar status
+    timestamptz last_login_at
+  }
+
+  %% Relationships (following Gliffy ERD principles - using verbs to describe actions)
+  %% Cardinality notation: ||--o{ = one-to-many, ||--|| = one-to-one, }o--o{ = many-to-many
+  
+  academic_calendar ||--o{ academic_calendar_days : "Has"
+  academic_calendar ||--o{ academic_calendar_markers : "Contains"
+  academic_calendar_days ||--o{ academic_calendar_markers : "Has"
+  academic_years ||--o{ academic_periods : "Contains"
+  users ||--o{ academic_periods : "Creates"
+  users ||--o{ academic_periods : "Updates"
+  users ||--o{ academic_year_settings : "Updates"
+  users ||--o{ academic_year_templates : "Creates"
+  users ||--o{ academic_years : "Creates"
+  users ||--o{ academic_years : "Updates"
+  users ||--|| admins : "Is"
+  users ||--o{ alert_reads : "Reads"
+  alerts ||--o{ alert_reads : "Has"
+  users ||--o{ alerts : "Receives"
+  users ||--o{ alerts : "Creates"
+  sections ||--o{ announcement_sections : "Receives"
+  announcements ||--o{ announcement_sections : "Targets"
+  announcements }o--o{ tags : "Tagged with"
+  tags }o--o{ announcements : "Tags"
+  announcements }o--o{ roles : "Targets"
+  roles }o--o{ announcements : "Receives"
+  users ||--o{ announcements : "Creates"
+  floors ||--o{ campus_facilities : "Contains"
+  domains ||--o{ campus_facilities : "Belongs to"
+  users ||--o{ campus_facilities : "Creates"
+  buildings ||--o{ campus_facilities : "Contains"
+  clubs ||--o{ club_announcements : "Publishes"
+  clubs ||--o{ club_benefits : "Offers"
+  clubs ||--o{ club_faqs : "Has"
+  club_form_questions ||--o{ club_form_answers : "Answered in"
+  club_form_responses ||--o{ club_form_answers : "Contains"
+  club_form_questions ||--o{ club_form_question_options : "Has"
+  club_forms ||--o{ club_form_questions : "Contains"
+  users ||--o{ club_form_responses : "Submits"
+  club_forms ||--o{ club_form_responses : "Receives"
+  users ||--o{ club_form_responses : "Reviews"
+  users ||--o{ club_forms : "Creates"
+  clubs ||--o{ club_forms : "Has"
+  clubs ||--o{ club_goals : "Has"
+  users ||--o{ clubs : "Advises"
+  users ||--o{ clubs : "Co-advises"
+  users ||--o{ clubs : "Presides"
+  users ||--o{ clubs : "Vice presides"
+  users ||--o{ clubs : "Secretaries"
+  domains ||--o{ clubs : "Contains"
+  conversations ||--o{ conversation_participants : "Has"
+  users }o--o{ conversations : "Participates in"
+  users ||--o{ conversations : "Creates"
+  users ||--o{ daily_logins : "Logs in"
+  users ||--o{ departments : "Heads"
+  departments ||--o{ departments_information : "Has"
+  domain_roles ||--o{ domain_role_permissions : "Has"
+  permissions }o--o{ domain_roles : "Granted to"
+  domains ||--o{ domain_roles : "Has"
+  users ||--o{ domains : "Creates"
+  students ||--o{ emergency_contacts : "Has"
+  events ||--o{ event_additional_info : "Has"
+  events ||--o{ event_highlights : "Has"
+  events ||--o{ event_schedule : "Has"
+  events }o--o{ tags : "Tagged with"
+  tags }o--o{ events : "Tags"
+  users ||--o{ events : "Organizes"
+  users ||--o{ events : "Deletes"
+  clubs ||--o{ events : "Hosts"
+  events ||--o{ events_faq : "Has"
+  buildings ||--o{ floors : "Has"
+  gallery_items ||--o{ gallery_albums : "Covers"
+  gallery_items ||--o{ gallery_downloads : "Downloaded as"
+  gallery_items }o--o{ gallery_tags : "Tagged with"
+  gallery_tags }o--o{ gallery_items : "Tags"
+  locations ||--o{ hotspots : "Has"
+  locations ||--o{ hotspots : "Links to"
+  conversations ||--o{ messages : "Contains"
+  users ||--o{ messages : "Sends"
+  users ||--o{ module_download_logs : "Downloads"
+  modules ||--o{ module_download_logs : "Downloaded as"
+  users ||--o{ modules : "Uploads"
+  users ||--o{ modules : "Deletes"
+  subjects ||--o{ modules : "Has"
+  news_categories ||--o{ news : "Categorizes"
+  users ||--o{ news : "Authors"
+  users ||--o{ news : "Deletes"
+  news ||--o{ news_approval : "Requires"
+  users ||--o{ news_approval : "Approves"
+  users ||--o{ news_co_authors : "Adds"
+  news ||--o{ news_co_authors : "Has"
+  news ||--o{ news_review_comments : "Receives"
+  users ||--o{ news_review_comments : "Reviews"
+  users ||--o{ news_review_comments : "Deletes"
+  news }o--o{ tags : "Tagged with"
+  tags }o--o{ news : "Tags"
+  roles ||--o{ positions : "Has"
+  users ||--|| profiles : "Has"
+  quizzes ||--o{ quiz_access_links : "Has"
+  quiz_access_links ||--o{ quiz_access_logs : "Generates"
+  quizzes ||--o{ quiz_access_logs : "Accessed via"
+  quizzes ||--o{ quiz_active_sessions : "Has"
+  quiz_attempts ||--o{ quiz_active_sessions : "Creates"
+  quiz_active_sessions ||--o{ quiz_activity_logs : "Logs"
+  quizzes ||--o{ quiz_activity_logs : "Tracks"
+  quiz_participants ||--o{ quiz_activity_logs : "Generates"
+  quizzes ||--|| quiz_analytics : "Has"
+  quizzes ||--o{ quiz_attempts : "Receives"
+  quiz_questions ||--o{ quiz_choices : "Has"
+  quiz_active_sessions ||--o{ quiz_device_sessions : "Uses"
+  quiz_participants ||--o{ quiz_flags : "Raises"
+  quiz_active_sessions ||--o{ quiz_flags : "Generates"
+  quizzes ||--o{ quiz_flags : "Receives"
+  quizzes ||--o{ quiz_participants : "Has"
+  quiz_active_sessions ||--o{ quiz_participants : "Tracks"
+  quiz_questions ||--|| quiz_question_metadata : "Has"
+  quiz_questions ||--|| quiz_question_stats : "Has"
+  quizzes ||--o{ quiz_question_stats : "Tracks"
+  quizzes ||--o{ quiz_questions : "Contains"
+  question_bank ||--o{ quiz_questions : "Sources"
+  quizzes ||--o{ quiz_section_settings : "Configures for"
+  quizzes }o--o{ sections : "Assigned to"
+  sections }o--o{ quizzes : "Receives"
+  quiz_active_sessions ||--o{ quiz_session_answers : "Stores"
+  quiz_questions ||--o{ quiz_session_answers : "Answered in"
+  quizzes ||--|| quiz_settings : "Has"
+  quiz_attempts ||--o{ quiz_student_answers : "Contains"
+  quiz_questions ||--o{ quiz_student_answers : "Answered in"
+  quiz_choices ||--o{ quiz_student_answers : "Selected in"
+  quizzes ||--o{ quiz_student_summary : "Summarizes"
+  quiz_attempts ||--o{ quiz_student_summary : "Updates"
+  quizzes ||--o{ quizzes : "Parent of"
+  floors ||--o{ rooms : "Contains"
+  schedules ||--o{ schedule_audit : "Audits"
+  teachers ||--o{ schedules : "Teaches"
+  subjects ||--o{ schedules : "Taught in"
+  buildings ||--o{ schedules : "Houses"
+  rooms ||--o{ schedules : "Hosts"
+  sections ||--o{ schedules : "Attends"
+  schedules ||--o{ schedules_audit_log : "Logs"
+  users ||--o{ schedules_audit_log : "Performs"
+  users ||--o{ section_modules : "Assigns"
+  modules }o--o{ sections : "Assigned to"
+  sections }o--o{ modules : "Receives"
+  floors ||--o{ sections : "Contains"
+  users ||--o{ sections : "Advisers"
+  club_positions ||--o{ student_club_memberships : "Held in"
+  clubs }o--o{ students : "Has members"
+  students }o--o{ clubs : "Joins"
+  students ||--o{ student_rankings : "Ranked in"
+  schedules }o--o{ students : "Enrolled in"
+  students }o--o{ schedules : "Takes"
+  sections ||--o{ students : "Contains"
+  users ||--|| students : "Is"
+  students ||--o{ students_gwa : "Earns"
+  teachers ||--o{ students_gwa : "Records"
+  departments ||--o{ subjects : "Offers"
+  users ||--o{ teacher_file_downloads : "Downloads"
+  users ||--o{ teacher_files : "Uploads"
+  users ||--o{ teacher_files : "Updates"
+  users ||--o{ teacher_files : "Deletes"
+  teacher_folders ||--o{ teacher_files : "Contains"
+  teacher_folders ||--o{ teacher_folders : "Parent of"
+  users ||--o{ teacher_folders : "Creates"
+  users ||--o{ teacher_folders : "Updates"
+  users ||--o{ teacher_folders : "Deletes"
+  sections ||--o{ teachers : "Advised by"
+  subjects ||--o{ teachers : "Specializes in"
+  departments ||--o{ teachers : "Belongs to"
+  users ||--|| teachers : "Is"
+  domain_roles }o--o{ users : "Assigned to"
+  users }o--o{ domain_roles : "Has"
+  users }o--o{ positions : "Holds"
+  positions }o--o{ users : "Assigned to"
+  users ||--|| user_preferences : "Has"
+  users ||--o{ user_push_tokens : "Registers"
+  roles ||--o{ users : "Assigned to"
+

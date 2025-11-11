@@ -3,10 +3,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Southville8BEdgeUI.ViewModels.Teacher"
+             xmlns:converters="using:Southville8BEdgeUI.Converters"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="480"
              x:Class="Southville8BEdgeUI.Views.Teacher.NewChatView"
              x:DataType="vm:NewChatViewModel"
              Background="{DynamicResource PageBackgroundBrush}">
+  <UserControl.Resources>
+    <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+  </UserControl.Resources>
   <UserControl.Styles>
     <Style Selector="Border.form-card">
       <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
@@ -28,7 +32,7 @@
       <Setter Property="Margin" Value="0,14,0,4"/>
     </Style>
     <!-- Input styles (exclude CheckBox because it doesn't support CornerRadius) -->
-    <Style Selector="TextBox, ComboBox">
+    <Style Selector="TextBox, ComboBox, ListBox">
       <Setter Property="Margin" Value="0,4,0,8"/>
       <Setter Property="CornerRadius" Value="6"/>
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -45,7 +49,7 @@
       <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
-    <Style Selector="TextBox:focus-within, ComboBox:focus-within">
+    <Style Selector="TextBox:focus-within, ComboBox:focus-within, ListBox:focus-within">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
       <Setter Property="BorderThickness" Value="2"/>
     </Style>
@@ -70,16 +74,27 @@
     <Border Classes="form-card">
       <StackPanel>
         <TextBlock Text="Start New Conversation" Classes="title"/>
-        <TextBlock Text="Create a new chat thread with a parent, teacher, or admin." Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,16"/>
+        <TextBlock Text="Select a teacher or admin to start a conversation." Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,16"/>
 
-        <TextBlock Text="Contact Name" Classes="label"/>
-        <TextBox Text="{Binding ContactName}" Watermark="Full name"/>
+        <TextBlock Text="Select User" Classes="label"/>
+        <TextBox Text="{Binding UserSearch}" Watermark="Search teachers or admins..."/>
 
-        <TextBlock Text="Role" Classes="label"/>
-        <ComboBox SelectedItem="{Binding ContactRole}" ItemsSource="{Binding RoleOptions}" PlaceholderText="Select role"/>
+        <!-- Loading Indicator -->
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,8" IsVisible="{Binding IsLoadingUsers}">
+          <TextBlock Text="Loading users..." Foreground="{DynamicResource TextMutedBrush}"/>
+        </StackPanel>
 
-        <TextBlock Text="Initials (optional)" Classes="label"/>
-        <TextBox Text="{Binding Initials}" Watermark="Auto if blank" MaxLength="4"/>
+        <!-- User Selection List -->
+        <ListBox ItemsSource="{Binding FilteredUsers}" SelectedItem="{Binding SelectedUser}" Height="200" Margin="0,4,0,8" IsVisible="{Binding IsLoadingUsers, Converter={StaticResource InverseBoolConverter}}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="8">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Text="{Binding Role}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
 
         <TextBlock Text="First Message (optional)" Classes="label"/>
         <TextBox Text="{Binding FirstMessage}" AcceptsReturn="True" Height="140" TextWrapping="Wrap" Watermark="Type a greeting or leave empty"/>
