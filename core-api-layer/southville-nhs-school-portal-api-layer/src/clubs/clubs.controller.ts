@@ -387,7 +387,10 @@ export class ClubsController {
     schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', example: 'https://imagedelivery.net/<account-hash>/<image-id>/public' },
+        url: {
+          type: 'string',
+          example: 'https://imagedelivery.net/<account-hash>/<image-id>/public',
+        },
         cf_image_id: { type: 'string', description: 'Cloudflare Images ID' },
         cf_image_url: { type: 'string' },
         fileName: { type: 'string' },
@@ -398,7 +401,10 @@ export class ClubsController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid image file' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
   async uploadClubImage(@Req() request: any, @AuthUser('id') userId: string) {
     try {
       // Parse multipart data using Fastify

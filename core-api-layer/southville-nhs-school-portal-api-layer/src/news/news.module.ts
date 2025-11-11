@@ -32,7 +32,13 @@ import { NewsReviewCommentsService } from './services/news-review-comments.servi
  * Supports journalism domain with position-based permissions
  */
 @Module({
-  imports: [SupabaseModule, AuthModule, StorageModule, StudentActivitiesModule, GalleryModule],
+  imports: [
+    SupabaseModule,
+    AuthModule,
+    StorageModule,
+    StudentActivitiesModule,
+    GalleryModule,
+  ],
   controllers: [
     NewsController,
     NewsCategoriesController,

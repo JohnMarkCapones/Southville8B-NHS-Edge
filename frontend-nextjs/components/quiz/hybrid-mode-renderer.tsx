@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -16,6 +16,7 @@ interface HybridModeRendererProps {
   onResponseChange: (questionId: string, response: QuizResponse) => void
   onSubmit: () => void
   timeRemaining: number
+  markQuestionViewed?: (questionId: string) => void
 }
 
 export function HybridModeRenderer({
@@ -24,6 +25,7 @@ export function HybridModeRenderer({
   onResponseChange,
   onSubmit,
   timeRemaining,
+  markQuestionViewed,
 }: HybridModeRendererProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -47,6 +49,17 @@ export function HybridModeRenderer({
 
   const currentSection = sections[currentSectionIndex]
   const currentSectionQuestions = quiz.questions.filter((q) => currentSection.questionIds.includes(q.id))
+
+  // ✅ TIME TRACKING: Mark questions as viewed based on current section mode
+  useEffect(() => {
+    if (markQuestionViewed && currentSection.mode === "form") {
+      // Form mode: all questions in section are visible, mark all as viewed
+      currentSectionQuestions.forEach((question) => {
+        markQuestionViewed(question.id)
+      })
+    }
+    // Sequential mode time tracking is handled by SequentialModeRenderer
+  }, [currentSectionIndex, currentSection.mode, currentSectionQuestions, markQuestionViewed])
 
   const getAnsweredCount = (questions: typeof quiz.questions) => {
     return questions.filter((q) => responses[q.id]).length
@@ -139,6 +152,7 @@ export function HybridModeRenderer({
           onPrevious={handleSequentialPrevious}
           onSubmit={handleSectionComplete}
           timeRemaining={timeRemaining}
+          markQuestionViewed={markQuestionViewed}
         />
         <QuizSubmissionDialog
           open={showSubmissionDialog}

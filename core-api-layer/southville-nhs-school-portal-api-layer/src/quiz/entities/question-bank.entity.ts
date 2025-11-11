@@ -62,6 +62,52 @@ export class QuestionBank {
   })
   time_limit_seconds?: number;
 
+  @ApiProperty({
+    description: 'Explanation or rationale for the correct answer',
+    required: false,
+  })
+  explanation?: string;
+
+  @ApiProperty({
+    description: 'Make this question available publicly to other teachers',
+    required: false,
+  })
+  is_public?: boolean;
+
+  // ============================================================================
+  // Image Support Fields (Cloudflare Images)
+  // ============================================================================
+
+  @ApiProperty({
+    description: 'Cloudflare Images ID for question image',
+    required: false,
+  })
+  question_image_id?: string;
+
+  @ApiProperty({
+    description: 'Full Cloudflare Images delivery URL for question image',
+    required: false,
+  })
+  question_image_url?: string;
+
+  @ApiProperty({
+    description: 'File size in bytes of question image',
+    required: false,
+  })
+  question_image_file_size?: number;
+
+  @ApiProperty({
+    description: 'MIME type of question image',
+    required: false,
+  })
+  question_image_mime_type?: string;
+
+  @ApiProperty({
+    description: 'JSONB object storing image data for each choice (used for multiple choice questions)',
+    required: false,
+  })
+  choices_image_data?: Record<string, any>;
+
   @ApiProperty({ description: 'Created at timestamp' })
   created_at: string;
 

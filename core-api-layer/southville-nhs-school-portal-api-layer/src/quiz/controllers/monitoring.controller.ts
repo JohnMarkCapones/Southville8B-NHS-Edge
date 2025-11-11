@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Logger,
 } from '@nestjs/common';
@@ -48,9 +49,18 @@ export class MonitoringController {
   async getActiveParticipants(
     @Param('quizId') quizId: string,
     @AuthUser() user: SupabaseUser,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    this.logger.log(`Fetching active participants for quiz ${quizId}`);
-    return this.monitoringService.getActiveParticipants(quizId, user.id);
+    this.logger.log(
+      `Fetching active participants for quiz ${quizId} (page: ${page || 1}, limit: ${limit || 50})`,
+    );
+    return this.monitoringService.getActiveParticipants(
+      quizId,
+      user.id,
+      page || 1,
+      limit || 50,
+    );
   }
 
   @Get('quiz/:quizId/flags')
@@ -72,6 +82,29 @@ export class MonitoringController {
   ) {
     this.logger.log(`Fetching flags for quiz ${quizId}`);
     return this.monitoringService.getQuizFlags(quizId, user.id);
+  }
+
+  @Get('quiz/:quizId/export')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Export monitoring report (for CSV/PDF generation)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Monitoring report exported successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teachers and Admins only',
+  })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
+  async exportMonitoringReport(
+    @Param('quizId') quizId: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    this.logger.log(`Exporting monitoring report for quiz ${quizId}`);
+    return this.monitoringService.exportMonitoringReport(quizId, user.id);
   }
 
   @Post('attempt/:attemptId/terminate')

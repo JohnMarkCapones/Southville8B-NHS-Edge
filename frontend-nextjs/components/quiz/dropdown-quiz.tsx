@@ -23,6 +23,18 @@ export default function DropdownQuiz({
           {question.required && <span className="text-red-500 ml-1">*</span>}
         </Label>
         {question.description && <p className="text-sm text-muted-foreground mt-1">{question.description}</p>}
+
+        {/* Question Image */}
+        {(question as any).question_image_url && (
+          <div className="mt-3">
+            <img
+              src={(question as any).question_image_url}
+              alt="Question"
+              className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+              loading="lazy"
+            />
+          </div>
+        )}
       </div>
 
       <Select value={value?.toString()} onValueChange={(val) => onChange(Number.parseInt(val))} disabled={disabled}>

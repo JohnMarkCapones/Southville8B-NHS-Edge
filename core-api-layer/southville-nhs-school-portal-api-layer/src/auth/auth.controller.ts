@@ -325,7 +325,8 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'If the email is registered as an admin, a password reset link has been sent',
+    description:
+      'If the email is registered as an admin, a password reset link has been sent',
     schema: {
       type: 'object',
       properties: {

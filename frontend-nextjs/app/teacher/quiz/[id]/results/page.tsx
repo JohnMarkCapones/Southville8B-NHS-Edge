@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, use } from "react"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,139 +37,56 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-// Mock quiz data
-const quizData = {
-  id: "QZ001",
-  title: "Mathematics - Algebra Basics",
-  subject: "Mathematics",
-  grade: "Grade 8",
-  questions: 15,
-  duration: 30,
-  totalAttempts: 45,
-  avgScore: 82.5,
-  created: "2024-01-10",
-  dueDate: "2024-01-25",
-  status: "completed",
+// Default empty quiz data structure
+const defaultQuizData = {
+  id: "",
+  title: "Loading...",
+  subject: "",
+  grade: "",
+  questions: 0,
+  duration: 0,
+  totalAttempts: 0,
+  avgScore: 0,
+  created: "",
+  dueDate: "",
+  status: "draft",
 }
 
-// Mock questions data
-const questionsData = [
-  {
-    id: 1,
-    question: "What is the value of x in the equation 2x + 5 = 15?",
-    type: "Multiple Choice",
-    correctAnswer: "x = 5",
-    options: ["x = 3", "x = 5", "x = 7", "x = 10"],
-    difficulty: "Medium",
-    avgScore: 85.2,
-    correctCount: 38,
-    totalAttempts: 45,
-    timeSpent: "2.3m",
-    needsGrading: false,
-  },
-  {
-    id: 2,
-    question: "Simplify the expression: 3(x + 4) - 2x",
-    type: "Short Answer",
-    correctAnswer: "x + 12",
-    difficulty: "Easy",
-    avgScore: 92.1,
-    correctCount: 41,
-    totalAttempts: 45,
-    timeSpent: "1.8m",
-    needsGrading: true, // Essay question needs grading
-    ungradedCount: 12, // Number of ungraded submissions
-  },
-  {
-    id: 3,
-    question: "Which of the following is a quadratic equation?",
-    type: "Multiple Choice",
-    correctAnswer: "x² + 3x + 2 = 0",
-    options: ["2x + 5 = 0", "x² + 3x + 2 = 0", "3x - 7 = 0", "x/2 + 1 = 0"],
-    difficulty: "Hard",
-    avgScore: 67.8,
-    correctCount: 30,
-    totalAttempts: 45,
-    timeSpent: "3.1m",
-    needsGrading: false,
-  },
-  {
-    id: 4,
-    question:
-      "Explain the concept of variables in algebra and provide two real-world examples of how variables are used.",
-    type: "Long Answer",
-    difficulty: "Medium",
-    avgScore: 0, // Not yet graded
-    correctCount: 0,
-    totalAttempts: 45,
-    timeSpent: "5.2m",
-    needsGrading: true, // Essay question needs grading
-    ungradedCount: 45, // All submissions need grading
-    maxPoints: 10,
-  },
-  {
-    id: 5,
-    question: "Describe the steps to solve a linear equation. Use an example to illustrate your explanation.",
-    type: "Long Answer",
-    difficulty: "Hard",
-    avgScore: 0, // Not yet graded
-    correctCount: 0,
-    totalAttempts: 45,
-    timeSpent: "6.5m",
-    needsGrading: true, // Essay question needs grading
-    ungradedCount: 45, // All submissions need grading
-    maxPoints: 10,
-  },
-]
+// Helper function to clean fill-in-blank question display
+const formatQuestionText = (questionText: string): string => {
+  if (!questionText) return ""
+  // Replace {{blank_0}}, {{blank_1}}, etc. with visual placeholders
+  return questionText.replace(/{{blank_\d+}}/g, "_______")
+}
 
-// Mock students data
-const studentsData = [
-  {
-    id: "ST001",
-    name: "Adit Irwan",
-    avatar: "/placeholder.svg?height=40&width=40",
-    score: 95,
-    timeSpent: "28m",
-    attempts: 1,
-    completedAt: "2024-01-20 14:30",
-    answers: [
-      { questionId: 1, answer: "x = 5", isCorrect: true, timeSpent: "2.1m" },
-      { questionId: 2, answer: "x + 12", isCorrect: true, timeSpent: "1.5m" },
-      { questionId: 3, answer: "x² + 3x + 2 = 0", isCorrect: true, timeSpent: "2.8m" },
-    ],
-  },
-  {
-    id: "ST002",
-    name: "Arif Brata",
-    avatar: "/placeholder.svg?height=40&width=40",
-    score: 78,
-    timeSpent: "32m",
-    attempts: 2,
-    completedAt: "2024-01-20 15:45",
-    answers: [
-      { questionId: 1, answer: "x = 3", isCorrect: false, timeSpent: "3.2m" },
-      { questionId: 2, answer: "x + 12", isCorrect: true, timeSpent: "2.1m" },
-      { questionId: 3, answer: "x² + 3x + 2 = 0", isCorrect: true, timeSpent: "3.5m" },
-    ],
-  },
-  {
-    id: "ST003",
-    name: "Ardhi Irwandi",
-    avatar: "/placeholder.svg?height=40&width=40",
-    score: 89,
-    timeSpent: "25m",
-    attempts: 1,
-    completedAt: "2024-01-20 16:20",
-    answers: [
-      { questionId: 1, answer: "x = 5", isCorrect: true, timeSpent: "1.8m" },
-      { questionId: 2, answer: "x + 10", isCorrect: false, timeSpent: "2.3m" },
-      { questionId: 3, answer: "x² + 3x + 2 = 0", isCorrect: true, timeSpent: "2.9m" },
-    ],
-  },
-]
+// Helper function to format student answers (especially for fill-in-blank)
+const formatStudentAnswer = (answer: any): string => {
+  if (!answer) return "No answer provided"
 
-export default function QuizResultsPage({ params }: { params: { id: string } }) {
+  // If it's an array (fill-in-blank or checkbox), format it nicely
+  if (Array.isArray(answer)) {
+    return answer.map((item, idx) => `Blank ${idx + 1}: "${item}"`).join(", ")
+  }
+
+  // If it's an object, try to stringify it nicely
+  if (typeof answer === "object") {
+    try {
+      return JSON.stringify(answer, null, 2)
+    } catch {
+      return String(answer)
+    }
+  }
+
+  // Otherwise, just return as string
+  return String(answer)
+}
+
+export default function QuizResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const { toast } = useToast()
+  const { id: quizId } = use(params)
+
+  // State
   const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStudent, setSelectedStudent] = useState(0)
@@ -176,7 +94,159 @@ export default function QuizResultsPage({ params }: { params: { id: string } }) 
   const [classFilter, setClassFilter] = useState("all") // all, passed, failed
   const [sortBy, setSortBy] = useState("name") // name, score, performance
 
-  const totalUngradedEssays = questionsData
+  // Backend state
+  const [isLoading, setIsLoading] = useState(false)
+  const [backendError, setBackendError] = useState<Error | null>(null)
+  const [quizData, setQuizData] = useState<any>(null)
+  const [analyticsData, setAnalyticsData] = useState<any>(null)
+  const [questionAnalytics, setQuestionAnalytics] = useState<any>(null)
+  const [studentPerformance, setStudentPerformance] = useState<any>(null)
+  const [studentAnswers, setStudentAnswers] = useState<any>(null)
+  const [isLoadingAnswers, setIsLoadingAnswers] = useState(false)
+
+  // Backend integration: Load quiz data and analytics
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      setBackendError(null)
+
+      try {
+        const { quizApi } = await import("@/lib/api/endpoints")
+
+        // Load base quiz data first (to get all questions)
+        const quiz = await quizApi.teacher.getQuizById(quizId)
+        setQuizData(quiz)
+
+        // Then load analytics data in parallel
+        const [quizAnalytics, questionStats, studentStats] = await Promise.all([
+          quizApi.analytics.getQuizAnalytics(quizId).catch(() => null),
+          quizApi.analytics.getQuestionAnalytics(quizId).catch(() => null),
+          quizApi.analytics.getStudentPerformance(quizId).catch(() => null),
+        ])
+
+        setAnalyticsData(quizAnalytics)
+        setQuestionAnalytics(questionStats)
+        setStudentPerformance(studentStats)
+
+        toast({
+          title: "Data Loaded",
+          description: "Quiz and analytics loaded successfully.",
+        })
+      } catch (error) {
+        console.error("Error loading data:", error)
+        setBackendError(error as Error)
+        toast({
+          title: "Failed to Load Data",
+          description: "Could not load quiz data. Check your connection.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [quizId, toast])
+
+  // Backend integration: Load student answers when student is selected
+  useEffect(() => {
+    const loadStudentAnswers = async () => {
+      // Only fetch if we have student performance data
+      if (!studentPerformance?.students || studentPerformance.students.length === 0 || selectedStudent >= studentPerformance.students.length) {
+        setStudentAnswers(null)
+        return
+      }
+
+      const student = studentPerformance.students[selectedStudent]
+      if (!student || !student.student_id) {
+        setStudentAnswers(null)
+        return
+      }
+
+      setIsLoadingAnswers(true)
+      try {
+        const { quizApi } = await import("@/lib/api/endpoints")
+        const answers = await quizApi.analytics.getStudentAnswers(quizId, student.student_id)
+        setStudentAnswers(answers)
+      } catch (error) {
+        console.error("Error loading student answers:", error)
+        setStudentAnswers(null)
+        toast({
+          title: "Failed to Load Answers",
+          description: "Could not load student answers.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingAnswers(false)
+      }
+    }
+
+    loadStudentAnswers()
+  }, [selectedStudent, studentPerformance, quizId, toast])
+
+  // Backend integration: Transform analytics data for UI
+  const transformedQuizData = quizData ? {
+    ...defaultQuizData,
+    id: quizId,
+    title: quizData.title || analyticsData?.quizTitle || "Quiz Results",
+    subject: quizData.subject?.subject_name || "",
+    grade: quizData.grade_level || "",
+    questions: quizData.questions?.length || 0,
+    duration: quizData.time_limit || 0,
+    totalAttempts: analyticsData?.totalAttempts || 0,
+    avgScore: analyticsData?.averageScore || 0,
+    created: quizData.created_at || "",
+    dueDate: quizData.due_date || "",
+    status: quizData.status || "draft",
+  } : { ...defaultQuizData, id: quizId }
+
+  // Transform questions: Use base quiz data, augment with analytics
+  const transformedQuestions = quizData?.questions ? quizData.questions.map((q: any, index: number) => {
+    // Find matching analytics data for this question (by question_id)
+    const analytics = questionAnalytics?.questions?.find((qa: any) => qa.question_id === q.question_id)
+
+    return {
+      id: q.question_id, // UUID for internal use
+      questionNumber: index + 1, // Display number (Question 1, Question 2, etc.)
+      question: q.question_text || `Question ${index + 1}`,
+      type: q.question_type || "Multiple Choice",
+      correctAnswer: q.correct_answer,
+      options: q.options || [],
+      difficulty: q.difficulty || "medium",
+      // Use analytics if available, otherwise default to 0
+      avgScore: analytics?.correct_rate || 0,
+      correctCount: analytics?.correct_attempts || 0,
+      totalAttempts: analytics?.total_attempts || 0,
+      timeSpent: analytics?.average_time_spent
+        ? `${Math.floor(analytics.average_time_spent / 60)}:${String(analytics.average_time_spent % 60).padStart(2, '0')}`
+        : "0:00",
+      needsGrading: q.question_type === "essay" || q.question_type === "short_answer",
+      ungradedCount: 0, // Would need additional API call to get ungraded count
+    }
+  }) : []
+
+  const transformedStudents = studentPerformance?.students ? studentPerformance.students.map((s: any) => {
+    const timeInSeconds = s.time_spent || 0
+
+    return {
+      id: s.student_id,
+      name: s.student_name || 'Unknown Student',
+      email: s.student_email || "",
+      avatar: "/placeholder.svg?height=40&width=40",
+      score: s.percentage || 0,
+      totalQuestions: s.max_score || 0,
+      correctAnswers: Math.round((s.score / s.max_score) * s.max_score) || 0,
+      attempts: s.attempt_number || 1,
+      attemptCount: s.attempt_number || 1, // Used for attempt patterns analysis
+      timeSpent: timeInSeconds, // Time in seconds (for calculations)
+      timeSpentDisplay: timeInSeconds ? `${Math.floor(timeInSeconds / 60)}m` : "0m", // Time display string
+      completedAt: s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "Not completed",
+      status: s.status || "completed",
+      answers: [], // Detailed answers not available in performance summary
+    }
+  }) : []
+
+  const totalUngradedEssays = transformedQuestions
     .filter((q) => q.needsGrading)
     .reduce((sum, q) => sum + (q.ungradedCount || 0), 0)
 
@@ -187,33 +257,12 @@ export default function QuizResultsPage({ params }: { params: { id: string } }) 
     { id: "students", label: "Students", icon: Users },
   ]
 
-  const extendedQuestionsData = Array.from({ length: 30 }, (_, index) => ({
-    id: index + 1,
-    question: `Question ${index + 1}: ${questionsData[index % questionsData.length]?.question || "Sample question text"}`,
-    type: questionsData[index % questionsData.length]?.type || "Multiple Choice",
-    difficulty: ["Easy", "Medium", "Hard"][index % 3],
-    avgScore: Math.floor(Math.random() * 40) + 60,
-    correctCount: Math.floor(Math.random() * 15) + 10,
-    totalAttempts: 25,
-    timeSpent: Math.floor(Math.random() * 180) + 60,
-  }))
-
-  const extendedStudentsData = studentsData.map((student) => ({
-    ...student,
-    answers: Array.from({ length: 10 }, (_, index) => ({
-      questionId: index + 1,
-      answer: `Answer ${index + 1}`,
-      isCorrect: Math.random() > 0.3, // 70% chance of being correct
-      timeSpent: Math.floor(Math.random() * 120) + 30,
-    })),
-  }))
-
-  const filteredStudents = extendedStudentsData.filter((student) => {
+  const filteredStudents = transformedStudents.filter((student) => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesFilter =
       classFilter === "all" ||
-      (classFilter === "passed" && student.score >= 80) ||
-      (classFilter === "failed" && student.score < 80)
+      (classFilter === "passed" && student.score >= 75) ||
+      (classFilter === "failed" && student.score < 75)
     return matchesSearch && matchesFilter
   })
 
@@ -222,15 +271,13 @@ export default function QuizResultsPage({ params }: { params: { id: string } }) 
       case "score":
         return b.score - a.score
       case "performance":
-        const aCorrect = a.answers.filter((ans) => ans.isCorrect).length
-        const bCorrect = b.answers.filter((ans) => ans.isCorrect).length
-        return bCorrect - aCorrect
+        return b.correctAnswers - a.correctAnswers
       default:
         return a.name.localeCompare(b.name)
     }
   })
 
-  const filteredQuestions = questionsData.filter(
+  const filteredQuestions = transformedQuestions.filter(
     (question) => filterDifficulty === "all" || question.difficulty.toLowerCase() === filterDifficulty,
   )
 
@@ -240,21 +287,21 @@ export default function QuizResultsPage({ params }: { params: { id: string } }) 
       const content = `
 Quiz Results Report
 ==================
-Quiz: ${quizData.title}
-Subject: ${quizData.subject}
-Grade: ${quizData.grade}
-Total Attempts: ${quizData.totalAttempts}
-Average Score: ${quizData.avgScore}%
+Quiz: ${transformedQuizData.title}
+Subject: ${transformedQuizData.subject}
+Grade: ${transformedQuizData.grade}
+Total Attempts: ${transformedQuizData.totalAttempts}
+Average Score: ${transformedQuizData.avgScore}%
 
 Student Results:
-${studentsData.map((student) => `${student.name}: ${student.score}% (${student.timeSpent})`).join("\n")}
+${transformedStudents.map((student) => `${student.name}: ${student.score}% (${student.timeSpentDisplay})`).join("\n")}
       `
 
       const blob = new Blob([content], { type: "text/plain" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `${quizData.title}_results.txt`
+      a.download = `${transformedQuizData.title}_results.txt`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -264,8 +311,8 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
       const headers = ["Student Name", "Score (%)", "Time Spent", "Attempts", "Completed At"]
       const csvContent = [
         headers.join(","),
-        ...studentsData.map((student) =>
-          [student.name, student.score, student.timeSpent, student.attempts, student.completedAt].join(","),
+        ...transformedStudents.map((student) =>
+          [student.name, student.score, student.timeSpentDisplay, student.attempts, student.completedAt].join(","),
         ),
       ].join("\n")
 
@@ -273,7 +320,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `${quizData.title}_results.csv`
+      a.download = `${transformedQuizData.title}_results.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -317,7 +364,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
               </div>
               <div>
                 <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-                  {quizData.title}
+                  {transformedQuizData.title}
                 </h1>
                 <p className="text-blue-100 text-lg">Quiz Results & Analytics</p>
               </div>
@@ -327,19 +374,19 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
             <div className="flex flex-wrap gap-4 mt-4">
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
                 <Users className="w-4 h-4" />
-                <span className="text-sm font-medium">{quizData.totalAttempts} Attempts</span>
+                <span className="text-sm font-medium">{transformedQuizData.totalAttempts} Attempts</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
                 <Award className="w-4 h-4" />
-                <span className="text-sm font-medium">{quizData.avgScore}% Avg Score</span>
+                <span className="text-sm font-medium">{transformedQuizData.avgScore}% Avg Score</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
                 <BookOpen className="w-4 h-4" />
-                <span className="text-sm font-medium">{quizData.questions} Questions</span>
+                <span className="text-sm font-medium">{transformedQuestions.length} Questions</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm font-medium">{quizData.duration}m Duration</span>
+                <span className="text-sm font-medium">{transformedQuizData.duration}m Duration</span>
               </div>
             </div>
           </div>
@@ -415,8 +462,8 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                         </h3>
                         <p className="text-red-700 dark:text-red-300 mb-4">
                           {totalUngradedEssays} essay submission{totalUngradedEssays !== 1 ? "s" : ""} from{" "}
-                          {questionsData.filter((q) => q.needsGrading).length} question
-                          {questionsData.filter((q) => q.needsGrading).length !== 1 ? "s" : ""} need your review to
+                          {transformedQuestions.filter((q) => q.needsGrading).length} question
+                          {transformedQuestions.filter((q) => q.needsGrading).length !== 1 ? "s" : ""} need your review to
                           complete the grading process.
                         </p>
                         <Button
@@ -441,14 +488,13 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                 <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 shadow-lg">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">
-                      Completion Rate
+                      Total Attempts
                     </CardTitle>
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-green-900 dark:text-green-100">100%</div>
-                    <Progress value={100} className="mt-3 h-2" />
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">All students completed</p>
+                    <div className="text-3xl font-bold text-green-900 dark:text-green-100">{transformedQuizData.totalAttempts || 0}</div>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">{transformedStudents.length || 0} students participated</p>
                   </CardContent>
                 </Card>
 
@@ -460,9 +506,9 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                     <Award className="h-5 w-5 text-blue-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{quizData.avgScore}%</div>
-                    <Progress value={quizData.avgScore} className="mt-3 h-2" />
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Above target (75%)</p>
+                    <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{transformedQuizData.avgScore || 0}%</div>
+                    <Progress value={transformedQuizData.avgScore || 0} className="mt-3 h-2" />
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">{transformedQuizData.avgScore >= 75 ? 'Above' : 'Below'} target (75%)</p>
                   </CardContent>
                 </Card>
 
@@ -474,21 +520,23 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                     <Clock className="h-5 w-5 text-orange-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">28.3m</div>
-                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">Out of 30m allowed</p>
+                    <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
+                      {analyticsData?.averageTimeSpent ? `${Math.round(analyticsData.averageTimeSpent / 60)}m` : '0m'}
+                    </div>
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">Average completion time</p>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200 dark:border-purple-800 shadow-lg">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                      Retake Rate
+                      Pass Rate
                     </CardTitle>
                     <TrendingUp className="h-5 w-5 text-purple-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">22.2%</div>
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">10 students retook</p>
+                    <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">{analyticsData?.passRate || 0}%</div>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">Students scoring 75% or above</p>
                   </CardContent>
                 </Card>
               </div>
@@ -504,28 +552,44 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { range: "0-15 min", count: 5, percentage: 11.1, color: "bg-red-500" },
-                      { range: "15-20 min", count: 8, percentage: 17.8, color: "bg-orange-500" },
-                      { range: "20-25 min", count: 12, percentage: 26.7, color: "bg-yellow-500" },
-                      { range: "25-30 min", count: 15, percentage: 33.3, color: "bg-green-500" },
-                      { range: "30+ min", count: 5, percentage: 11.1, color: "bg-blue-500" },
-                    ].map((item) => (
-                      <div key={item.range} className="flex items-center gap-4">
-                        <div className="w-20 text-sm font-medium text-slate-700 dark:text-slate-300">{item.range}</div>
-                        <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-6 relative overflow-hidden">
-                          <div
-                            className={`${item.color} h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
-                            style={{ width: `${item.percentage}%` }}
-                          >
-                            <span className="text-white text-xs font-medium">{item.count}</span>
+                    {(() => {
+                      // Calculate time distribution from real student data
+                      const totalStudents = transformedStudents.length || 1;
+                      const timeRanges = [
+                        { range: "0-15 min", min: 0, max: 15, count: 0, color: "bg-red-500" },
+                        { range: "15-20 min", min: 15, max: 20, count: 0, color: "bg-orange-500" },
+                        { range: "20-25 min", min: 20, max: 25, count: 0, color: "bg-yellow-500" },
+                        { range: "25-30 min", min: 25, max: 30, count: 0, color: "bg-green-500" },
+                        { range: "30+ min", min: 30, max: Infinity, count: 0, color: "bg-blue-500" },
+                      ];
+
+                      // Count students in each time range
+                      transformedStudents.forEach(student => {
+                        const timeInMinutes = student.timeSpent ? student.timeSpent / 60 : 0;
+                        const range = timeRanges.find(r => timeInMinutes >= r.min && timeInMinutes < r.max);
+                        if (range) range.count++;
+                      });
+
+                      return timeRanges.map((item) => {
+                        const percentage = totalStudents > 0 ? (item.count / totalStudents) * 100 : 0;
+                        return (
+                          <div key={item.range} className="flex items-center gap-4">
+                            <div className="w-20 text-sm font-medium text-slate-700 dark:text-slate-300">{item.range}</div>
+                            <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-6 relative overflow-hidden">
+                              <div
+                                className={`${item.color} h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
+                                style={{ width: `${Math.max(percentage, 5)}%` }}
+                              >
+                                <span className="text-white text-xs font-medium">{item.count}</span>
+                              </div>
+                            </div>
+                            <div className="w-16 text-sm text-slate-600 dark:text-slate-400 text-right">
+                              {percentage.toFixed(1)}%
+                            </div>
                           </div>
-                        </div>
-                        <div className="w-16 text-sm text-slate-600 dark:text-slate-400 text-right">
-                          {item.percentage}%
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      });
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -541,23 +605,53 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
-                      <div className="text-3xl font-bold text-green-700 dark:text-green-300 mb-2">92.1%</div>
-                      <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">Easy Questions</div>
-                      <Progress value={92.1} className="h-2" />
-                    </div>
-                    <div className="text-center p-6 rounded-xl bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-800">
-                      <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-300 mb-2">85.2%</div>
-                      <div className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">
-                        Medium Questions
-                      </div>
-                      <Progress value={85.2} className="h-2" />
-                    </div>
-                    <div className="text-center p-6 rounded-xl bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800">
-                      <div className="text-3xl font-bold text-red-700 dark:text-red-300 mb-2">67.8%</div>
-                      <div className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">Hard Questions</div>
-                      <Progress value={67.8} className="h-2" />
-                    </div>
+                    {(() => {
+                      // Calculate average correct rate for each difficulty level
+                      const difficulties = ['easy', 'medium', 'hard'];
+                      const difficultyData = difficulties.map(difficulty => {
+                        const questions = transformedQuestions.filter(q => q.difficulty === difficulty);
+                        const avgCorrectRate = questions.length > 0
+                          ? questions.reduce((sum, q) => sum + (q.avgScore || 0), 0) / questions.length
+                          : 0;
+                        return { difficulty, avgCorrectRate, count: questions.length };
+                      });
+
+                      const easyData = difficultyData[0];
+                      const mediumData = difficultyData[1];
+                      const hardData = difficultyData[2];
+
+                      return (
+                        <>
+                          <div className="text-center p-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                            <div className="text-3xl font-bold text-green-700 dark:text-green-300 mb-2">
+                              {easyData.avgCorrectRate.toFixed(1)}%
+                            </div>
+                            <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">
+                              Easy Questions ({easyData.count})
+                            </div>
+                            <Progress value={easyData.avgCorrectRate} className="h-2" />
+                          </div>
+                          <div className="text-center p-6 rounded-xl bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-800">
+                            <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-300 mb-2">
+                              {mediumData.avgCorrectRate.toFixed(1)}%
+                            </div>
+                            <div className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">
+                              Medium Questions ({mediumData.count})
+                            </div>
+                            <Progress value={mediumData.avgCorrectRate} className="h-2" />
+                          </div>
+                          <div className="text-center p-6 rounded-xl bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800">
+                            <div className="text-3xl font-bold text-red-700 dark:text-red-300 mb-2">
+                              {hardData.avgCorrectRate.toFixed(1)}%
+                            </div>
+                            <div className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">
+                              Hard Questions ({hardData.count})
+                            </div>
+                            <Progress value={hardData.avgCorrectRate} className="h-2" />
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -576,58 +670,103 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4">Attempts Distribution</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">1 Attempt</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                              <div className="bg-green-500 h-2 rounded-full" style={{ width: "77.8%" }}></div>
-                            </div>
-                            <span className="text-sm font-medium text-slate-900 dark:text-white">35 students</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">2 Attempts</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                              <div className="bg-blue-500 h-2 rounded-full" style={{ width: "17.8%" }}></div>
-                            </div>
-                            <span className="text-sm font-medium text-slate-900 dark:text-white">8 students</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">3+ Attempts</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                              <div className="bg-orange-500 h-2 rounded-full" style={{ width: "4.4%" }}></div>
-                            </div>
-                            <span className="text-sm font-medium text-slate-900 dark:text-white">2 students</span>
-                          </div>
-                        </div>
+                        {(() => {
+                          // Calculate attempt distribution from real student data
+                          const totalStudents = transformedStudents.length || 1;
+                          const oneAttempt = transformedStudents.filter(s => s.attemptCount === 1).length;
+                          const twoAttempts = transformedStudents.filter(s => s.attemptCount === 2).length;
+                          const threeOrMore = transformedStudents.filter(s => s.attemptCount >= 3).length;
+
+                          const oneAttemptPct = totalStudents > 0 ? (oneAttempt / totalStudents) * 100 : 0;
+                          const twoAttemptsPct = totalStudents > 0 ? (twoAttempts / totalStudents) * 100 : 0;
+                          const threeOrMorePct = totalStudents > 0 ? (threeOrMore / totalStudents) * 100 : 0;
+
+                          return (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">1 Attempt</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div className="bg-green-500 h-2 rounded-full" style={{ width: `${oneAttemptPct}%` }}></div>
+                                  </div>
+                                  <span className="text-sm font-medium text-slate-900 dark:text-white">{oneAttempt} students</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">2 Attempts</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${twoAttemptsPct}%` }}></div>
+                                  </div>
+                                  <span className="text-sm font-medium text-slate-900 dark:text-white">{twoAttempts} students</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">3+ Attempts</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${threeOrMorePct}%` }}></div>
+                                  </div>
+                                  <span className="text-sm font-medium text-slate-900 dark:text-white">{threeOrMore} students</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4">Score Improvement</h4>
                       <div className="space-y-3">
-                        <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                              Average Improvement
-                            </span>
-                            <span className="text-lg font-bold text-green-800 dark:text-green-200">+12.5%</span>
-                          </div>
-                          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Students who retook the quiz
-                          </p>
-                        </div>
-                        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                              Best Improvement
-                            </span>
-                            <span className="text-lg font-bold text-blue-800 dark:text-blue-200">+28%</span>
-                          </div>
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Single student improvement</p>
-                        </div>
+                        {(() => {
+                          // Calculate score improvement for students who retook the quiz
+                          const studentsWithMultipleAttempts = transformedStudents.filter(s => s.attemptCount > 1);
+
+                          if (studentsWithMultipleAttempts.length === 0) {
+                            return (
+                              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800">
+                                <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
+                                  No retakes yet
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          // For now, show count of students who improved (score improvement tracking needs backend enhancement)
+                          const avgImprovement = 0; // Would need historical attempt data from backend
+                          const bestImprovement = 0; // Would need historical attempt data from backend
+
+                          return (
+                            <>
+                              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                                    Students with Retakes
+                                  </span>
+                                  <span className="text-lg font-bold text-green-800 dark:text-green-200">
+                                    {studentsWithMultipleAttempts.length}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                  Total students who retook
+                                </p>
+                              </div>
+                              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Avg Attempts per Student
+                                  </span>
+                                  <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
+                                    {transformedStudents.length > 0
+                                      ? (transformedStudents.reduce((sum, s) => sum + s.attemptCount, 0) / transformedStudents.length).toFixed(1)
+                                      : '0'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Average across all students</p>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -645,28 +784,35 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { range: "90-100%", count: 15, percentage: 33.3, color: "bg-green-500" },
-                      { range: "80-89%", count: 18, percentage: 40.0, color: "bg-blue-500" },
-                      { range: "70-79%", count: 8, percentage: 17.8, color: "bg-yellow-500" },
-                      { range: "60-69%", count: 3, percentage: 6.7, color: "bg-orange-500" },
-                      { range: "Below 60%", count: 1, percentage: 2.2, color: "bg-red-500" },
-                    ].map((item) => (
-                      <div key={item.range} className="flex items-center gap-4">
-                        <div className="w-20 text-sm font-medium text-slate-700 dark:text-slate-300">{item.range}</div>
-                        <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-6 relative overflow-hidden">
-                          <div
-                            className={`${item.color} h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
-                            style={{ width: `${item.percentage}%` }}
-                          >
-                            <span className="text-white text-xs font-medium">{item.count}</span>
-                          </div>
-                        </div>
-                        <div className="w-16 text-sm text-slate-600 dark:text-slate-400 text-right">
-                          {item.percentage}%
-                        </div>
-                      </div>
-                    ))}
+                    {analyticsData?.scoreDistribution && analyticsData.scoreDistribution.length > 0 ? (
+                      analyticsData.scoreDistribution
+                        .filter((item: any) => item.count > 0)
+                        .map((item: any, index: number) => {
+                          const totalStudents = transformedStudents.length || 1;
+                          const percentage = (item.count / totalStudents) * 100;
+                          const rangeStart = parseInt(item.range.split('-')[0]);
+                          const color = rangeStart >= 90 ? "bg-green-500" : rangeStart >= 80 ? "bg-blue-500" : rangeStart >= 70 ? "bg-yellow-500" : rangeStart >= 60 ? "bg-orange-500" : "bg-red-500";
+
+                          return (
+                            <div key={item.range} className="flex items-center gap-4">
+                              <div className="w-20 text-sm font-medium text-slate-700 dark:text-slate-300">{item.range}%</div>
+                              <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-6 relative overflow-hidden">
+                                <div
+                                  className={`${color} h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
+                                  style={{ width: `${Math.max(percentage, 5)}%` }}
+                                >
+                                  <span className="text-white text-xs font-medium">{item.count}</span>
+                                </div>
+                              </div>
+                              <div className="w-16 text-sm text-slate-600 dark:text-slate-400 text-right">
+                                {percentage.toFixed(1)}%
+                              </div>
+                            </div>
+                          );
+                        })
+                    ) : (
+                      <p className="text-center text-slate-500 dark:text-slate-400 py-8">No submission data yet</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -682,8 +828,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {studentsData
-                      .sort((a, b) => b.score - a.score)
+                    {sortedStudents
                       .slice(0, 5)
                       .map((student, index) => (
                         <div
@@ -716,7 +861,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                             <div>
                               <p className="font-semibold text-slate-900 dark:text-white">{student.name}</p>
                               <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Completed in {student.timeSpent}
+                                Completed in {student.timeSpentDisplay}
                               </p>
                             </div>
                           </div>
@@ -755,18 +900,39 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
 
               {/* Questions Analysis */}
               <div className="space-y-4">
-                {filteredQuestions.map((question) => (
-                  <Card
-                    key={question.id}
-                    className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg text-slate-900 dark:text-white mb-2">
-                            Question {question.id}
-                          </CardTitle>
-                          <p className="text-slate-700 dark:text-slate-300 mb-3">{question.question}</p>
+                {filteredQuestions.length === 0 ? (
+                  <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg">
+                    <CardContent className="p-12 text-center">
+                      <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                        No Questions Found
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400 mb-4">
+                        {transformedQuestions.length === 0
+                          ? "This quiz doesn't have any questions yet, or the question data hasn't been loaded."
+                          : "No questions match the selected difficulty filter."}
+                      </p>
+                      {transformedQuestions.length === 0 && (
+                        <Button onClick={() => router.push(`/teacher/quiz/${quizId}/builder`)} className="mt-2">
+                          <BookOpen className="w-4 h-4 mr-2" />
+                          Add Questions to Quiz
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredQuestions.map((question) => (
+                    <Card
+                      key={question.id}
+                      className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg text-slate-900 dark:text-white mb-2">
+                              Question {question.questionNumber}
+                            </CardTitle>
+                            <p className="text-slate-700 dark:text-slate-300 mb-3">{formatQuestionText(question.question)}</p>
                           <div className="flex flex-wrap gap-2">
                             <Badge
                               variant="secondary"
@@ -820,7 +986,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                                 </div>
                               </div>
                               <Button
-                                onClick={() => router.push(`/teacher/quiz/${params.id}/grade?question=${question.id}`)}
+                                onClick={() => router.push(`/teacher/quiz/${quizId}/grade?question=${question.id}`)}
                                 className="bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
                               >
                                 <Edit3 className="w-4 h-4 mr-2" />
@@ -887,7 +1053,8 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -899,7 +1066,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Class Performance</h2>
                   <p className="text-slate-600 dark:text-slate-400">
-                    Detailed view of all student results across {extendedQuestionsData.length} questions
+                    Detailed view of all student results across {transformedQuestions.length} questions
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -979,15 +1146,17 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                             <th className="text-left p-3 font-semibold text-slate-900 dark:text-white sticky left-[260px] bg-slate-50 dark:bg-slate-900 min-w-[100px]">
                               Points
                             </th>
-                            {extendedQuestionsData.map((question, index) => (
+                            {transformedQuestions.map((question, index) => (
                               <th
                                 key={question.id}
                                 className="text-center p-2 font-semibold text-slate-900 dark:text-white min-w-[70px] max-w-[70px]"
                               >
                                 <div className="flex flex-col items-center">
-                                  <span className="text-xs">Q{question.id}</span>
+                                  <span className="text-xs">Q{question.questionNumber}</span>
                                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
-                                    {Math.round((question.correctCount / question.totalAttempts) * 100)}%
+                                    {question.totalAttempts > 0
+                                      ? `${Math.round((question.correctCount / question.totalAttempts) * 100)}%`
+                                      : '0%'}
                                   </span>
                                 </div>
                               </th>
@@ -1030,7 +1199,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                                   </span>
                                 </div>
                               </td>
-                              {extendedQuestionsData.map((question) => {
+                              {transformedQuestions.map((question) => {
                                 const answer = student.answers.find((a) => a.questionId === question.id)
                                 return (
                                   <td key={question.id} className="p-2 text-center">
@@ -1115,7 +1284,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                       </div>
                       <div>
                         <p className="text-xl font-bold text-orange-900 dark:text-orange-100">
-                          {extendedQuestionsData.length}
+                          {transformedQuestions.length}
                         </p>
                         <p className="text-xs text-orange-600 dark:text-orange-400">Questions</p>
                       </div>
@@ -1232,8 +1401,8 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                             <Award className="w-8 h-8 text-purple-600" />
                             <div>
                               <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                                {filteredStudents[selectedStudent]?.answers?.filter((a) => a.isCorrect).length || 0}/
-                                {filteredStudents[selectedStudent]?.answers?.length || 0}
+                                {studentAnswers?.answers?.filter((a: any) => a.isCorrect).length || 0}/
+                                {studentAnswers?.answers?.length || 0}
                               </p>
                               <p className="text-sm text-purple-600 dark:text-purple-400">Correct</p>
                             </div>
@@ -1243,9 +1412,15 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                         {/* Individual Answers */}
                         <div className="space-y-4">
                           <h3 className="text-xl font-bold text-slate-900 dark:text-white">Individual Answers</h3>
-                          {filteredStudents[selectedStudent]?.answers?.map((answer, index) => {
-                            const question = questionsData.find((q) => q.id === answer.questionId)
-                            return (
+                          {isLoadingAnswers ? (
+                            <div className="flex items-center justify-center py-12">
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-school-blue"></div>
+                                <p className="text-slate-500 dark:text-slate-400">Loading answers...</p>
+                              </div>
+                            </div>
+                          ) : studentAnswers?.answers && studentAnswers.answers.length > 0 ? (
+                            studentAnswers.answers.map((answer: any) => (
                               <div
                                 key={answer.questionId}
                                 className="p-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900"
@@ -1253,9 +1428,21 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                                 <div className="flex items-start justify-between mb-4">
                                   <div className="flex-1">
                                     <h4 className="font-semibold text-lg text-slate-900 dark:text-white mb-2">
-                                      Question {answer.questionId}
+                                      Question {answer.questionNumber}
                                     </h4>
-                                    <p className="text-slate-700 dark:text-slate-300 mb-3">{question?.question}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 mb-3">{formatQuestionText(answer.questionText)}</p>
+
+                                    {/* Question Image */}
+                                    {answer.questionImageUrl && (
+                                      <div className="mt-3 mb-3">
+                                        <img
+                                          src={answer.questionImageUrl}
+                                          alt="Question"
+                                          className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                                          loading="lazy"
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     {answer.isCorrect ? (
@@ -1289,7 +1476,7 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                                             : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
                                         }`}
                                       >
-                                        {answer.answer}
+                                        {formatStudentAnswer(answer.studentAnswer)}
                                       </p>
                                     </div>
                                     <div>
@@ -1297,18 +1484,28 @@ ${studentsData.map((student) => `${student.name}: ${student.score}% (${student.t
                                         Correct Answer:
                                       </p>
                                       <p className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200">
-                                        {question?.correctAnswer}
+                                        {formatStudentAnswer(answer.correctAnswer)}
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Time spent: {answer.timeSpent}</span>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                      <Clock className="w-4 h-4" />
+                                      <span>Time spent: {answer.timeSpent ? `${answer.timeSpent}s` : "N/A"}</span>
+                                    </div>
+                                    <div className="text-sm font-medium">
+                                      <span className="text-slate-600 dark:text-slate-400">Points: </span>
+                                      <span className={answer.isCorrect ? "text-green-600" : "text-red-600"}>
+                                        {answer.pointsAwarded}/{answer.maxPoints}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            )
-                          }) || <p className="text-slate-500 dark:text-slate-400">No answers available</p>}
+                            ))
+                          ) : (
+                            <p className="text-slate-500 dark:text-slate-400 text-center py-8">No answers available for this student</p>
+                          )}
                         </div>
                       </div>
                     </CardContent>

@@ -45,10 +45,13 @@ export class StudentActivitiesService {
       color: createDto.color,
       is_highlighted: createDto.isHighlighted ?? false,
       is_visible: createDto.isVisible ?? true,
-      activity_timestamp: createDto.activityTimestamp || new Date().toISOString(),
+      activity_timestamp:
+        createDto.activityTimestamp || new Date().toISOString(),
     };
 
-    this.logger.debug(`Inserting activity data: ${JSON.stringify(activityData, null, 2)}`);
+    this.logger.debug(
+      `Inserting activity data: ${JSON.stringify(activityData, null, 2)}`,
+    );
 
     const { data, error } = await serviceClient
       .from('student_activities')
@@ -174,7 +177,9 @@ export class StudentActivitiesService {
     activityId: string,
     studentUserId: string,
   ): Promise<StudentActivityDto> {
-    this.logger.log(`Fetching activity ${activityId} for student ${studentUserId}`);
+    this.logger.log(
+      `Fetching activity ${activityId} for student ${studentUserId}`,
+    );
 
     // Use service client (no RLS policies)
     const client = this.supabaseService.getServiceClient();
@@ -215,10 +220,11 @@ export class StudentActivitiesService {
       .eq('id', activityId)
       .single();
 
-    if (!existingActivity || existingActivity.student_user_id !== studentUserId) {
-      throw new ForbiddenException(
-        'You can only update your own activities',
-      );
+    if (
+      !existingActivity ||
+      existingActivity.student_user_id !== studentUserId
+    ) {
+      throw new ForbiddenException('You can only update your own activities');
     }
 
     // Update visibility
@@ -270,7 +276,9 @@ export class StudentActivitiesService {
     recentActivityCount: number;
     highlightedCount: number;
   }> {
-    this.logger.log(`Fetching activity statistics for student ${studentUserId}`);
+    this.logger.log(
+      `Fetching activity statistics for student ${studentUserId}`,
+    );
 
     // Use service client (no RLS policies)
     const client = this.supabaseService.getServiceClient();
@@ -299,9 +307,7 @@ export class StudentActivitiesService {
     });
 
     // Count highlighted
-    const highlightedCount = activities.filter(
-      (a) => a.is_highlighted,
-    ).length;
+    const highlightedCount = activities.filter((a) => a.is_highlighted).length;
 
     // Count recent (last 7 days)
     const sevenDaysAgo = new Date();

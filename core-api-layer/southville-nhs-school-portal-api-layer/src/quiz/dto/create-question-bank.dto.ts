@@ -6,6 +6,9 @@ import {
   IsEnum,
   IsArray,
   IsUUID,
+  IsUrl,
+  IsInt,
+  IsObject,
   MinLength,
   Min,
 } from 'class-validator';
@@ -143,4 +146,84 @@ export class CreateQuestionBankDto {
     minimum: 1,
   })
   timeLimitSeconds?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description: 'Optional explanation or rationale for the correct answer',
+    required: false,
+    example: 'Because 2+2 equals 4 by basic arithmetic rules.',
+  })
+  explanation?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({
+    description: 'Make this question available publicly to other teachers',
+    required: false,
+    default: false,
+  })
+  isPublic?: boolean;
+
+  // ============================================================================
+  // Image Support Fields (Cloudflare Images)
+  // ============================================================================
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    example: 'quiz-q-1f3b8bf5-b165-473c-9740-aaa4912516f8',
+    description: 'Cloudflare Images ID for question image',
+    required: false,
+  })
+  questionImageId?: string;
+
+  @IsOptional()
+  @IsUrl()
+  @ApiProperty({
+    example: 'https://imagedelivery.net/abc123/quiz-q-1f3b8bf5/card',
+    description: 'Full Cloudflare Images delivery URL for question image',
+    required: false,
+  })
+  questionImageUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @ApiProperty({
+    example: 1048576,
+    description: 'File size in bytes of question image',
+    required: false,
+    minimum: 0,
+  })
+  questionImageFileSize?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    example: 'image/png',
+    description: 'MIME type of question image (e.g., image/jpeg, image/png)',
+    required: false,
+  })
+  questionImageMimeType?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ApiProperty({
+    example: {
+      choices: [
+        {
+          text: 'Paris',
+          imageId: 'quiz-c-abc123',
+          imageUrl: 'https://imagedelivery.net/abc123/quiz-c-abc123/card',
+          fileSize: 524288,
+          mimeType: 'image/jpeg',
+        },
+      ],
+    },
+    description:
+      'JSONB object storing image data for each choice (used for multiple choice questions in question bank)',
+    required: false,
+  })
+  choicesImageData?: Record<string, any>;
 }

@@ -37,8 +37,7 @@ import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TeacherFilesModule } from './teacher-files/teacher-files.module';
 import { TeacherActivityModule } from './teacher-activity/teacher-activity.module';
-// TEMPORARILY DISABLED - Quiz module commented out for development
-// import { QuizModule } from './quiz/quiz.module';
+import { QuizModule } from './quiz/quiz.module';
 import { NewsModule } from './news/news.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { SearchModule } from './search/search.module';
@@ -94,8 +93,7 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     SubjectsModule,
     TeacherFilesModule,
     TeacherActivityModule,
-    // TEMPORARILY DISABLED - Quiz module commented out for development
-    // QuizModule,
+    QuizModule,
     NewsModule,
     GalleryModule,
     SubjectsModule,

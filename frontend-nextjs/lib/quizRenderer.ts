@@ -29,6 +29,7 @@ const QUIZ_COMPONENTS = {
   "drag-and-drop": DragAndDropQuiz,
   "true-false": TrueFalseQuiz,
   "matching-pair": MatchingPairQuiz,
+  matching: MatchingPairQuiz, // ✅ Alias for backend compatibility
   "fill-in-blank": FillInBlankQuiz,
   ordering: OrderingQuiz,
 } as const
@@ -112,6 +113,7 @@ export function validateQuizResponse(question: Question, response: any): boolean
       return Array.isArray(response) && response.length > 0
 
     case "matching-pair":
+    case "matching": // ✅ Alias for backend compatibility
       return typeof response === "object" && Object.keys(response).length > 0
 
     case "fill-in-blank":

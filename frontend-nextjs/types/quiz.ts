@@ -19,6 +19,15 @@ export interface BaseQuestion {
   title: string
   description?: string
   required?: boolean
+  // Image support (Cloudflare Images)
+  question_image_url?: string // Snake case from backend
+  question_image_id?: string
+  question_image_file_size?: number
+  question_image_mime_type?: string
+  questionImageUrl?: string // Camel case alias
+  questionImageId?: string
+  questionImageFileSize?: number
+  questionImageMimeType?: string
 }
 
 export interface ShortAnswerQuestion extends BaseQuestion {

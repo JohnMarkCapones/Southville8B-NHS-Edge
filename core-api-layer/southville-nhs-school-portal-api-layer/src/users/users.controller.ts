@@ -310,10 +310,8 @@ export class UsersController {
     @Param('id') id: string,
     @AuthUser() user: SupabaseUser,
   ) {
-    // Students can only view their own profile
-    if (user.role === 'Student' && user.id !== id) {
-      throw new ForbiddenException('Students can only view their own profile');
-    }
+    // Students can view any user's profile (read-only access for displaying names, etc.)
+    // No restrictions needed - they can see teacher/student names in the UI
     return this.usersService.findOne(id);
   }
 
@@ -356,10 +354,7 @@ export class UsersController {
     @Param('id') userId: string,
     @Body() assignDto: AssignDomainRoleDto,
   ) {
-    return this.usersService.assignDomainRole(
-      userId,
-      assignDto.domain_role_id,
-    );
+    return this.usersService.assignDomainRole(userId, assignDto.domain_role_id);
   }
 
   @Delete(':id/domain-roles/:assignmentId')

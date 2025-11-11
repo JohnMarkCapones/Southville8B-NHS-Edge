@@ -105,7 +105,9 @@ export class NewsApprovalService {
     // Get article with author and title info
     const { data: article, error: fetchError } = await supabase
       .from('news')
-      .select('status, title, author_id, author:users!news_author_id_fkey(id, full_name)')
+      .select(
+        'status, title, author_id, author:users!news_author_id_fkey(id, full_name)',
+      )
       .eq('id', newsId)
       .maybeSingle();
 
@@ -185,9 +187,14 @@ export class NewsApprovalService {
         color: 'text-green-500',
         isHighlighted: true,
       });
-      this.logger.log(`✅ Activity timeline entry created for article approval`);
+      this.logger.log(
+        `✅ Activity timeline entry created for article approval`,
+      );
     } catch (activityError) {
-      this.logger.error('Failed to create activity timeline entry:', activityError);
+      this.logger.error(
+        'Failed to create activity timeline entry:',
+        activityError,
+      );
       // Don't throw - activity is optional, approval already succeeded
     }
 
@@ -224,7 +231,9 @@ export class NewsApprovalService {
     // Get article with author and title info
     const { data: article, error: fetchError } = await supabase
       .from('news')
-      .select('status, title, author_id, author:users!news_author_id_fkey(id, full_name)')
+      .select(
+        'status, title, author_id, author:users!news_author_id_fkey(id, full_name)',
+      )
       .eq('id', newsId)
       .maybeSingle();
 
@@ -304,9 +313,14 @@ export class NewsApprovalService {
         color: 'text-red-500',
         isHighlighted: true,
       });
-      this.logger.log(`✅ Activity timeline entry created for article rejection`);
+      this.logger.log(
+        `✅ Activity timeline entry created for article rejection`,
+      );
     } catch (activityError) {
-      this.logger.error('Failed to create activity timeline entry:', activityError);
+      this.logger.error(
+        'Failed to create activity timeline entry:',
+        activityError,
+      );
       // Don't throw - activity is optional, rejection already succeeded
     }
 

@@ -12,7 +12,11 @@ import {
   IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { DayOfWeek, Semester, GradingPeriod } from '../entities/schedule.entity';
+import {
+  DayOfWeek,
+  Semester,
+  GradingPeriod,
+} from '../entities/schedule.entity';
 
 @ValidatorConstraint({ name: 'isValidTimeFormat', async: false })
 class IsValidTimeFormatConstraint implements ValidatorConstraintInterface {

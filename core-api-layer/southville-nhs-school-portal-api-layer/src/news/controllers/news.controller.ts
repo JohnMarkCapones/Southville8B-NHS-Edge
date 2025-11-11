@@ -267,7 +267,9 @@ export class NewsController {
         .replace(/-+/g, '-')
         .substring(0, 50);
 
-      this.logger.debug(`Uploading image to Cloudflare Images: ${imageFilename}`);
+      this.logger.debug(
+        `Uploading image to Cloudflare Images: ${imageFilename}`,
+      );
 
       // Create file object for Cloudflare Images Service
       const fileObject = {
@@ -656,7 +658,11 @@ export class NewsController {
     @Query('forceApprove') forceApprove?: string,
   ) {
     const shouldForceApprove = forceApprove === 'true';
-    await this.newsApprovalService.publishArticle(id, userId, shouldForceApprove);
+    await this.newsApprovalService.publishArticle(
+      id,
+      userId,
+      shouldForceApprove,
+    );
     return { message: 'Article published successfully' };
   }
 

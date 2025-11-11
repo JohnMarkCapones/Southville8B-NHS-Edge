@@ -41,10 +41,15 @@ export class NewsKpiService {
 
     const membersByPositionMapped = (membersByPosition || []).map((r: any) => ({
       position: r.name,
-      count: Array.isArray(r.member_count) ? (r.member_count[0]?.count ?? 0) : 0,
+      count: Array.isArray(r.member_count)
+        ? (r.member_count[0]?.count ?? 0)
+        : 0,
     }));
 
-    const totalMembers = membersByPositionMapped.reduce((s, r) => s + r.count, 0);
+    const totalMembers = membersByPositionMapped.reduce(
+      (s, r) => s + r.count,
+      0,
+    );
 
     // Unique positions occupancy
     const uniquePositions = ['Adviser', 'Editor-in-Chief'];
@@ -53,12 +58,17 @@ export class NewsKpiService {
       .select('name, id')
       .eq('domain_id', domainId)
       .in('name', uniquePositions);
-    const roleNameToId = new Map(uniqueData?.map((r: any) => [r.name, r.id]) || []);
+    const roleNameToId = new Map(
+      uniqueData?.map((r: any) => [r.name, r.id]) || [],
+    );
 
     const occupied: Record<string, boolean> = {};
     for (const up of uniquePositions) {
       const roleId = roleNameToId.get(up);
-      if (!roleId) { occupied[up] = false; continue; }
+      if (!roleId) {
+        occupied[up] = false;
+        continue;
+      }
       const { data } = await supabase
         .from('user_domain_roles')
         .select('id')
@@ -75,13 +85,24 @@ export class NewsKpiService {
       .neq('user_id', null);
     const jmAuthorIds = (authorIds || []).map((r: any) => r.user_id);
 
-    const statuses = ['draft','pending_approval','approved','published','archived'];
+    const statuses = [
+      'draft',
+      'pending_approval',
+      'approved',
+      'published',
+      'archived',
+    ];
     const breakdown: { status: string; count: number }[] = [];
     for (const s of statuses) {
       const { count } = await supabase
         .from('news')
         .select('id', { count: 'exact', head: true })
-        .in('author_id', jmAuthorIds.length ? jmAuthorIds : ['00000000-0000-0000-0000-000000000000'])
+        .in(
+          'author_id',
+          jmAuthorIds.length
+            ? jmAuthorIds
+            : ['00000000-0000-0000-0000-000000000000'],
+        )
         .eq('status', s);
       breakdown.push({ status: s, count: count || 0 });
     }
@@ -90,15 +111,23 @@ export class NewsKpiService {
     const { data: activeRows } = await supabase
       .from('news')
       .select('author_id')
-      .gte('updated_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
-    const activeContributors30d = new Set((activeRows || []).map((r: any) => r.author_id)).size;
+      .gte(
+        'updated_at',
+        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      );
+    const activeContributors30d = new Set(
+      (activeRows || []).map((r: any) => r.author_id),
+    ).size;
 
     // Top contributors 90d
     const { data: published90 } = await supabase
       .from('news')
       .select('author_id, users:author_id(full_name)')
       .eq('status', 'published')
-      .gte('published_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
+      .gte(
+        'published_date',
+        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+      );
     const countMap = new Map<string, { name: string; count: number }>();
     for (const row of published90 || []) {
       const id = row.author_id;
@@ -125,14 +154,4 @@ export class NewsKpiService {
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
 

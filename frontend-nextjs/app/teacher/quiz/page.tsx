@@ -75,14 +75,24 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useQuiz } from "@/hooks/useQuiz" // Backend integration
+import { Loader2, RefreshCw } from "lucide-react" // Already imported above, but adding reference
+import { getTeacherSections } from "@/lib/api/endpoints/sections" // For fetching teacher's sections
+import { getCurrentUser } from "@/lib/api/endpoints/auth" // For getting authenticated user
+import { questionBankApi } from "@/lib/api/endpoints/question-bank" // For Question Bank CRUD operations
+import { SectionAssignmentModal } from "@/components/quiz/SectionAssignmentModal" // Section assignment modal
+import { quizApi } from "@/lib/api/endpoints/quiz" // For quiz API calls
+import { getSubjects, type Subject } from "@/lib/api/endpoints/subjects" // For fetching subjects
+import { getUserProfile } from "@/lib/api/endpoints/auth" // For fetching user profiles
 
-// Mock quiz data
+// Mock quiz data (kept as fallback)
 const quizzesData = [
   {
     id: "QZ001",
     title: "Mathematics - Algebra Basics",
     subject: "Mathematics",
     grade: "Grade 8",
+    creator: "Teacher Name",
     questions: 15,
     duration: 30,
     status: "active",
@@ -283,6 +293,21 @@ const getStatusIcon = (status: string) => {
 export default function TeacherQuizPage() {
   const router = useRouter()
   const { toast } = useToast() // Initialize toast
+
+  // Backend integration: useQuiz hook
+  const {
+    quizzes: backendQuizzes,
+    isLoading: loadingBackendQuizzes,
+    isSaving,
+    isDeleting,
+    error: backendError,
+    getQuizzes,
+    deleteQuiz: deleteQuizBackend,
+    publishQuiz: publishQuizBackend,
+    scheduleQuiz: scheduleQuizBackend,
+    cloneQuiz: cloneQuizBackend,
+  } = useQuiz()
+
   const [activeTab, setActiveTab] = useState("all-quizzes")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("all")
@@ -302,7 +327,198 @@ export default function TeacherQuizPage() {
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [shareQuiz, setShareQuiz] = useState<any>(null)
 
-  const [quizzes, setQuizzes] = useState(quizzesData)
+  // Schedule dialog state
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
+  const [quizToSchedule, setQuizToSchedule] = useState<any>(null)
+  const [scheduleStartDate, setScheduleStartDate] = useState("")
+  const [scheduleStartTime, setScheduleStartTime] = useState("")
+  const [scheduleEndDate, setScheduleEndDate] = useState("")
+  const [scheduleEndTime, setScheduleEndTime] = useState("")
+  const [selectedSections, setSelectedSections] = useState<string[]>([])
+  const [availableSections, setAvailableSections] = useState<any[]>([])
+  const [allTeacherSections, setAllTeacherSections] = useState<any[]>([])
+  const [availableGrades, setAvailableGrades] = useState<string[]>([])
+  const [selectedGrade, setSelectedGrade] = useState<string>("all")
+  const [loadingSections, setLoadingSections] = useState(false)
+
+  // Section assignment modal state
+  const [sectionModalOpen, setSectionModalOpen] = useState(false)
+  const [quizForSectionAssignment, setQuizForSectionAssignment] = useState<any>(null)
+  const [autoPublishAfterAssignment, setAutoPublishAfterAssignment] = useState(false)
+
+  // Subject and grade mapping state
+  const [subjectsMap, setSubjectsMap] = useState<Map<string, string>>(new Map()) // subject_id -> subject_name
+  const [quizGradesMap, setQuizGradesMap] = useState<Map<string, string>>(new Map()) // quiz_id -> grade display
+  const [creatorsMap, setCreatorsMap] = useState<Map<string, string>>(new Map()) // user_id -> user_name
+  const [loadingSubjects, setLoadingSubjects] = useState(false)
+
+  /**
+   * Load subjects and create id -> name mapping
+   */
+  const loadSubjects = async () => {
+    setLoadingSubjects(true)
+    try {
+      const response = await getSubjects({ limit: 1000 })
+      const map = new Map<string, string>()
+      response.data.forEach((subject: Subject) => {
+        map.set(subject.id, subject.subject_name)
+      })
+      setSubjectsMap(map)
+      console.log('[QuizPage] Loaded subjects:', map.size)
+      console.log('[QuizPage] Subject IDs:', Array.from(map.keys()))
+    } catch (error) {
+      console.error('[QuizPage] Error loading subjects:', error)
+      toast({
+        title: 'Warning',
+        description: 'Failed to load subjects. Some quiz data may show as "Not Set".',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingSubjects(false)
+    }
+  }
+
+  /**
+   * Calculate grade levels from quiz's assigned sections
+   */
+  const calculateQuizGrade = async (quizId: string): Promise<string> => {
+    try {
+      const assignedSections = await quizApi.teacher.getAssignedSections(quizId)
+
+      if (!assignedSections || assignedSections.length === 0) {
+        return "Not Set"
+      }
+
+      // Extract unique grade levels
+      const grades = assignedSections
+        .map((s: any) => s.grade_level)
+        .filter((grade: any) => grade !== null && grade !== undefined)
+        .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i) // unique
+        .sort()
+
+      if (grades.length === 0) return "Not Set"
+      if (grades.length === 1) return `Grade ${grades[0]}`
+      if (grades.length <= 3) return grades.map((g: any) => `Grade ${g}`).join(", ")
+      return `Grade ${grades[0]}-${grades[grades.length - 1]}` // e.g., "Grade 10-12"
+    } catch (error) {
+      console.error('[QuizPage] Error calculating grade for quiz:', quizId, error)
+      return "Not Set"
+    }
+  }
+
+  /**
+   * Load grade levels for all quizzes
+   */
+  const loadQuizGrades = async (quizIds: string[]) => {
+    const gradesMap = new Map<string, string>()
+
+    // Load grades in parallel for better performance
+    await Promise.all(
+      quizIds.map(async (quizId) => {
+        const grade = await calculateQuizGrade(quizId)
+        gradesMap.set(quizId, grade)
+      })
+    )
+
+    setQuizGradesMap(gradesMap)
+    console.log('[QuizPage] Loaded grades for', gradesMap.size, 'quizzes')
+  }
+
+  /**
+   * Load creator/teacher names for quizzes
+   */
+  const loadCreatorNames = async (creatorIds: string[]) => {
+    const uniqueIds = [...new Set(creatorIds)] // Remove duplicates
+    const creatorsMap = new Map<string, string>()
+
+    await Promise.all(
+      uniqueIds.map(async (userId) => {
+        try {
+          const userProfile = await getUserProfile(userId)
+          const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || userProfile.email || 'Unknown'
+          creatorsMap.set(userId, fullName)
+        } catch (error) {
+          console.error('[QuizPage] Error fetching user profile for:', userId, error)
+          creatorsMap.set(userId, 'Unknown')
+        }
+      })
+    )
+
+    setCreatorsMap(creatorsMap)
+    console.log('[QuizPage] Loaded creator names for', creatorsMap.size, 'users')
+  }
+
+  // Load subjects on component mount
+  useEffect(() => {
+    loadSubjects()
+  }, [])
+
+  // Load grades and creators when backend quizzes change
+  useEffect(() => {
+    if (backendQuizzes.length > 0) {
+      const quizIds = backendQuizzes.map((q: any) => q.quiz_id)
+      const creatorIds = backendQuizzes.map((q: any) => q.created_by).filter((id: any) => id)
+
+      loadQuizGrades(quizIds)
+      loadCreatorNames(creatorIds)
+    }
+  }, [backendQuizzes])
+
+  // Transform backend quizzes to match UI format
+  const transformedBackendQuizzes = backendQuizzes.map((quiz: any) => {
+    // Map backend status to UI status
+    let uiStatus = "draft"
+    const backendStatus = quiz.status?.toLowerCase()
+    if (backendStatus === "published") {
+      uiStatus = "active"  // ✅ Map "published" to "active" for UI
+    } else if (backendStatus === "scheduled") {
+      uiStatus = "scheduled"
+    } else if (backendStatus === "draft") {
+      uiStatus = "draft"
+    }
+
+    // ✅ Get subject name from map, fallback to "Not Set"
+    let subjectName = "Not Set"
+    if (quiz.subject_id) {
+      const foundSubject = subjectsMap.get(quiz.subject_id)
+      if (foundSubject) {
+        subjectName = foundSubject
+      } else {
+        console.warn('[QuizPage] Subject not found in map:', quiz.subject_id, 'for quiz:', quiz.title)
+        subjectName = "Not Set"
+      }
+    }
+
+    // ✅ Get grade from map, fallback to "Not Set"
+    const gradeDisplay = quizGradesMap.get(quiz.quiz_id) || "Not Set"
+
+    // ✅ Get creator name from map, fallback to "Unknown"
+    const creatorName = quiz.created_by
+      ? (creatorsMap.get(quiz.created_by) || "Loading...")
+      : "Unknown"
+
+    return {
+      id: quiz.quiz_id,
+      title: quiz.title,
+      subject: subjectName,
+      grade: gradeDisplay,
+      creator: creatorName, // ✅ Added creator name
+      questions: quiz.question_count || 0, // ✅ From backend question count
+      duration: quiz.time_limit || 30,
+      status: uiStatus,
+      attempts: 0, // TODO: Get from analytics
+      avgScore: 0, // TODO: Get from analytics
+      created: quiz.created_at,
+      dueDate: quiz.end_date || quiz.created_at,
+      type: quiz.quiz_type || "mixed",
+      scheduledDate: quiz.start_date,
+    }
+  })
+
+  // Backend data merged with mock fallback
+  const quizzes = backendError || backendQuizzes.length === 0
+    ? quizzesData
+    : transformedBackendQuizzes
 
   const [statusConfirmation, setStatusConfirmation] = useState<{
     open: boolean
@@ -340,6 +556,115 @@ export default function TeacherQuizPage() {
 
   const [editWarningOpen, setEditWarningOpen] = useState(false)
   const [questionToEdit, setQuestionToEdit] = useState<any>(null)
+
+  // Question Bank API state
+  const [questionBankData, setQuestionBankData] = useState<any[]>([])
+  const [isLoadingQuestionBank, setIsLoadingQuestionBank] = useState(false)
+  const [questionBankError, setQuestionBankError] = useState<string | null>(null)
+
+  // Fetch quizzes from backend on mount and filter changes
+  useEffect(() => {
+    getQuizzes({
+      page: 1,
+      limit: 100, // Get all quizzes for now
+      // We'll filter client-side using existing filter logic
+    })
+  }, []) // Only fetch once on mount
+
+  // Show error toast if backend fails
+  useEffect(() => {
+    if (backendError) {
+      toast({
+        title: "Unable to fetch quizzes",
+        description: "Showing example quizzes. Check your connection.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
+  }, [backendError, toast])
+
+  // Load question bank data when tab is active
+  useEffect(() => {
+    if (activeTab === "question-bank") {
+      loadQuestionBankData()
+    }
+  }, [activeTab, questionSearchQuery, selectedQuestionType, selectedDifficulty])
+
+  const loadQuestionBankData = async () => {
+    setIsLoadingQuestionBank(true)
+    setQuestionBankError(null)
+
+    try {
+      const response = await questionBankApi.getQuestions({
+        page: 1,
+        limit: 100,
+        search: questionSearchQuery || undefined,
+        difficulty: selectedDifficulty !== "all" ? selectedDifficulty : undefined,
+        questionType: selectedQuestionType !== "all" ? mapUIQuestionTypeToBackend(selectedQuestionType) : undefined,
+      })
+
+      // Transform backend data to UI format
+      const transformedData = response.data.map((q: any) => ({
+        id: q.id,
+        type: formatQuestionType(q.question_type),
+        question: q.question_text,
+        subject: q.topic || "General", // Use topic field
+        difficulty: capitalizeFirst(q.difficulty),
+        points: q.default_points,
+        tags: q.tags || [],
+        usedIn: 0, // TODO: Get usage count from backend
+        createdAt: new Date(q.created_at).toISOString().split('T')[0],
+        options: q.choices?.map((c: any) => c.choice_text) || [],
+        correctAnswer: q.correct_answer,
+        explanation: q.explanation || "",
+      }))
+
+      setQuestionBankData(transformedData)
+    } catch (error: any) {
+      console.error("Failed to load question bank:", error)
+      setQuestionBankError(error.message || "Failed to load questions")
+      setQuestionBankData([]) // Clear data on error
+    } finally {
+      setIsLoadingQuestionBank(false)
+    }
+  }
+
+  // Helper function to map UI question types to backend format
+  const mapUIQuestionTypeToBackend = (uiType: string): string => {
+    const mapping: Record<string, string> = {
+      // From wizard (kebab-case)
+      "multiple-choice": "multiple_choice",
+      "true-false": "true_false",
+      "short-answer": "short_answer",
+      "essay": "essay",
+      "fill-blank": "fill_in_blank",
+      // From display (title case)
+      "Multiple Choice": "multiple_choice",
+      "True/False": "true_false",
+      "Short Answer": "short_answer",
+      "Essay": "essay",
+      "Fill in the Blank": "fill_in_blank",
+    }
+    return mapping[uiType] || uiType
+  }
+
+  // Helper function to map backend types to UI format
+  const formatQuestionType = (backendType: string): string => {
+    const mapping: Record<string, string> = {
+      "multiple_choice": "Multiple Choice",
+      "true_false": "True/False",
+      "short_answer": "Short Answer",
+      "essay": "Essay",
+      "fill_in_blank": "Fill in the Blank",
+    }
+    return mapping[backendType] || backendType
+  }
+
+  // Helper function to capitalize first letter
+  const capitalizeFirst = (str: string): string => {
+    if (!str) return str
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -418,19 +743,222 @@ export default function TeacherQuizPage() {
     setDeleteDialogOpen(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (quizToDelete) {
-      // Here you would implement the actual delete logic
-      setQuizzes((prevQuizzes) => prevQuizzes.filter((q) => q.id !== quizToDelete.id))
-      console.log("Deleting quiz:", quizToDelete.id)
-      toast({
-        title: "Quiz Deleted",
-        description: `"${quizToDelete.title}" has been successfully deleted.`,
-        variant: "destructive",
-        duration: 3000,
-      })
+      // Backend integration: Delete quiz via API
+      const success = await deleteQuizBackend(quizToDelete.id || quizToDelete.quiz_id)
+
+      if (success) {
+        // Refetch quizzes to update the list
+        await getQuizzes({ page: 1, limit: 100 })
+        toast({
+          title: "Quiz Deleted",
+          description: `"${quizToDelete.title}" has been successfully deleted.`,
+          variant: "destructive",
+          duration: 3000,
+        })
+      }
+      // Error toast is handled by the hook itself
+
       setDeleteDialogOpen(false)
       setQuizToDelete(null)
+    }
+  }
+
+  // Schedule dialog handlers
+  const handleScheduleClick = async (quiz: any) => {
+    setQuizToSchedule(quiz)
+
+    // Load teacher's sections only
+    setLoadingSections(true)
+    try {
+      // Get current user from API
+      const currentUser = await getCurrentUser()
+      console.log("Current user full object:", JSON.stringify(currentUser, null, 2))
+
+      // Try different possible field names
+      const userId = currentUser?.id || currentUser?.user_id || (currentUser as any)?.userId
+      console.log("Extracted User ID:", userId)
+
+      if (!userId) {
+        console.error("All user fields:", Object.keys(currentUser || {}))
+        throw new Error("Unable to get user information. Please try logging in again.")
+      }
+
+      // Fetch only sections that this teacher handles
+      const teacherSections = await getTeacherSections(userId)
+      console.log("Loaded teacher sections:", teacherSections)
+
+      // Store all teacher sections
+      setAllTeacherSections(teacherSections)
+
+      // Extract unique grade levels (filter out null/undefined)
+      const grades = [...new Set(
+        teacherSections
+          .map(s => s.grade_level)
+          .filter(g => g !== null && g !== undefined && g !== "")
+      )].sort()
+
+      setAvailableGrades(grades)
+
+      // Initially show all teacher's sections
+      setAvailableSections(teacherSections)
+      setSelectedGrade("all")
+    } catch (error) {
+      console.error("Failed to load sections:", error)
+      setAvailableSections([])
+      toast({
+        title: "Error",
+        description: "Failed to load sections. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingSections(false)
+    }
+
+    // Set default start date/time to tomorrow
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(9, 0, 0, 0)
+    setScheduleStartDate(tomorrow.toISOString().split("T")[0])
+    setScheduleStartTime("09:00")
+    setScheduleEndDate("")
+    setScheduleEndTime("")
+    setSelectedSections([])
+
+    setScheduleDialogOpen(true)
+  }
+
+  // Section assignment handler
+  const handleManageSectionsClick = (quiz: any) => {
+    setQuizForSectionAssignment(quiz)
+    setAutoPublishAfterAssignment(false) // Manual assignment, don't auto-publish
+    setSectionModalOpen(true)
+  }
+
+  const handleSectionAssignmentComplete = async (selectedSectionIds?: string[]) => {
+    // Refetch quizzes to update the list with new section data
+    await getQuizzes({ page: 1, limit: 100 })
+
+    // ✅ Reload grade for the updated quiz
+    if (quizForSectionAssignment) {
+      const quizId = quizForSectionAssignment.id || quizForSectionAssignment.quiz_id
+      const updatedGrade = await calculateQuizGrade(quizId)
+      setQuizGradesMap(prev => new Map(prev).set(quizId, updatedGrade))
+      console.log('[QuizPage] Updated grade for quiz:', quizId, '→', updatedGrade)
+    }
+
+    // ✅ AUTO-PUBLISH: If we were waiting to publish after assignment
+    if (autoPublishAfterAssignment && quizForSectionAssignment && selectedSectionIds) {
+      const quizId = quizForSectionAssignment.id || quizForSectionAssignment.quiz_id
+
+      try {
+        console.log('[Auto-Publish] Publishing quiz with sections:', selectedSectionIds)
+
+        // Publish with the selected sections (in one atomic operation)
+        const success = await publishQuizBackend(quizId, selectedSectionIds)
+
+        if (success) {
+          toast({
+            title: "Quiz Published!",
+            description: `Quiz assigned to ${selectedSectionIds.length} section(s) and published successfully.`,
+            duration: 4000,
+          })
+          await getQuizzes({ page: 1, limit: 100 })
+          // Reload grade again after publish
+          const updatedGrade = await calculateQuizGrade(quizId)
+          setQuizGradesMap(prev => new Map(prev).set(quizId, updatedGrade))
+        }
+      } catch (error) {
+        console.error('[Auto-Publish] Error:', error)
+        toast({
+          title: "Publishing Failed",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        // Reset auto-publish flag
+        setAutoPublishAfterAssignment(false)
+      }
+    }
+  }
+
+  // Handle grade filter change
+  const handleGradeFilterChange = (grade: string) => {
+    setSelectedGrade(grade)
+
+    if (grade === "all") {
+      setAvailableSections(allTeacherSections)
+    } else {
+      const filtered = allTeacherSections.filter(s => s.grade_level === grade)
+      setAvailableSections(filtered)
+    }
+
+    // Clear selected sections when changing grade
+    setSelectedSections([])
+  }
+
+  const handleScheduleConfirm = async () => {
+    if (!quizToSchedule) return
+
+    // Validation
+    if (!scheduleStartDate || !scheduleStartTime) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a start date and time.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (selectedSections.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one section.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Combine date and time
+    const startDateTime = new Date(`${scheduleStartDate}T${scheduleStartTime}:00`)
+    let endDateTime = undefined
+    if (scheduleEndDate && scheduleEndTime) {
+      endDateTime = new Date(`${scheduleEndDate}T${scheduleEndTime}:00`)
+
+      if (endDateTime <= startDateTime) {
+        toast({
+          title: "Validation Error",
+          description: "End date must be after start date.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    // Check if start date is in the future
+    const now = new Date()
+    if (startDateTime <= now) {
+      toast({
+        title: "Validation Error",
+        description: "Start date must be in the future. Cannot schedule quiz for past dates.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Schedule the quiz
+    const success = await scheduleQuizBackend(quizToSchedule.id, {
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime?.toISOString(),
+      sectionIds: selectedSections,
+    })
+
+    if (success) {
+      // Refetch quizzes to update the list
+      await getQuizzes({ page: 1, limit: 100 })
+      setScheduleDialogOpen(false)
+      setQuizToSchedule(null)
     }
   }
 
@@ -478,22 +1006,85 @@ export default function TeacherQuizPage() {
     })
   }
 
-  const updateQuizStatus = (quizId: string, newStatus: string) => {
-    setQuizzes((prevQuizzes) =>
-      prevQuizzes.map((quiz) =>
-        quiz.id === quizId
-          ? { ...quiz, status: newStatus.toLowerCase() } // Ensure status is lowercase for consistency
-          : quiz,
-      ),
-    )
+  const updateQuizStatus = async (quizId: string, newStatus: string) => {
+    // Backend integration: Publish quiz if status is active/published
+    if (newStatus.toLowerCase() === "active" || newStatus.toLowerCase() === "published") {
+      // ✅ CHECK: Does this quiz have section assignments?
+      try {
+        const assignedSections = await quizApi.teacher.getAssignedSections(quizId)
 
-    // Show success toast
-    toast({
-      title: "Status Updated!",
-      description: `Quiz status has been changed to ${newStatus}.`,
-      variant: "success",
-      duration: 4000,
-    })
+        if (!assignedSections || assignedSections.length === 0) {
+          // ❌ NO SECTIONS! Show warning and open modal
+          toast({
+            title: "Section Assignment Required",
+            description: "Please assign this quiz to sections before publishing.",
+            variant: "destructive",
+          })
+
+          // Find the quiz object to pass to modal
+          const quiz = quizzes.find((q: any) => (q.id || q.quiz_id) === quizId)
+          if (quiz) {
+            setQuizForSectionAssignment(quiz)
+            setAutoPublishAfterAssignment(true) // Auto-publish after assignment
+            setSectionModalOpen(true)
+          }
+          return // Stop here, don't publish yet
+        }
+
+        // ✅ HAS SECTIONS! Proceed with publish
+        const sectionIds = assignedSections.map((s: any) => s.section_id || s.id)
+        const success = await publishQuizBackend(quizId, sectionIds)
+
+        if (success) {
+          // Refetch quizzes to update the list
+          await getQuizzes({ page: 1, limit: 100 })
+          toast({
+            title: "Quiz Published!",
+            description: `Quiz has been published and is now live for ${sectionIds.length} section(s).`,
+            duration: 4000,
+          })
+        }
+      } catch (error) {
+        console.error('[Publish] Error checking sections:', error)
+        toast({
+          title: "Error",
+          description: "Failed to check section assignments. Please try again.",
+          variant: "destructive",
+        })
+      }
+      // Error toast is handled by the hook
+    } else {
+      // For other status changes (draft, paused, archived, scheduled), use updateQuiz
+      try {
+        const statusMap: Record<string, string> = {
+          'active': 'published',
+          'draft': 'draft',
+          'paused': 'draft', // Map paused to draft in backend
+          'archived': 'archived',
+          'scheduled': 'scheduled'
+        }
+
+        const backendStatus = statusMap[newStatus.toLowerCase()] || 'draft'
+
+        await quizApi.teacher.updateQuiz(quizId, { status: backendStatus as any })
+
+        // Immediately refetch to update UI
+        await getQuizzes({ page: 1, limit: 100 })
+
+        toast({
+          title: "Status Updated!",
+          description: `Quiz status has been changed to ${newStatus}.`,
+          duration: 4000,
+        })
+      } catch (error) {
+        console.error('[Status Update] Error:', error)
+        toast({
+          title: "Error",
+          description: "Failed to update quiz status. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
   }
 
   const requestStatusChange = (quizId: string, quizTitle: string, newStatus: string) => {
@@ -549,9 +1140,10 @@ export default function TeacherQuizPage() {
         case "active":
           requestStatusChange(contextMenu.quiz.id, contextMenu.quiz.title, "Active")
           break
-        // Add 'scheduled' action to context menu for scheduled quizzes
+        // Add 'scheduled' action to context menu - opens schedule dialog
         case "scheduled":
-          requestStatusChange(contextMenu.quiz.id, contextMenu.quiz.title, "Scheduled")
+          handleScheduleClick(contextMenu.quiz)
+          setContextMenu({ show: false, x: 0, y: 0, quiz: null })
           break
       }
     }
@@ -584,113 +1176,86 @@ export default function TeacherQuizPage() {
     setContextMenu({ show: false, x: 0, y: 0, quiz: null })
   }
 
-  // Mock question bank data
-  const questionBankData = [
-    {
-      id: "q1",
-      type: "Multiple Choice",
-      question: "What is the quadratic formula?",
-      subject: "Mathematics",
-      difficulty: "Medium",
-      points: 2,
-      tags: ["algebra", "equations"],
-      usedIn: 3,
-      createdAt: "2024-01-15",
-      options: [
-        "x = (-b ± √(b²-4ac)) / 2a",
-        "x = (b ± √(b²-4ac)) / 2a",
-        "x = (-b ± √(b²-4ac)) / a",
-        "x = (b ± √(b²-4ac)) / a",
-      ],
-      correctAnswer: "x = (-b ± √(b²-4ac)) / 2a",
-      explanation: "The quadratic formula solves for x in any quadratic equation of the form ax² + bx + c = 0.",
-    },
-    {
-      id: "q2",
-      type: "True/False",
-      question: "The mitochondria is the powerhouse of the cell.",
-      subject: "Science",
-      difficulty: "Easy",
-      points: 1,
-      tags: ["biology", "cells"],
-      usedIn: 5,
-      createdAt: "2024-01-14",
-      correctAnswer: "true",
-      explanation:
-        "The mitochondria are responsible for generating most of the cell's supply of adenosine triphosphate (ATP), used as a source of chemical energy.",
-    },
-    {
-      id: "q3",
-      type: "Essay",
-      question: "Explain the water cycle in your own words.",
-      subject: "Science",
-      difficulty: "Hard",
-      points: 5,
-      tags: ["earth science", "water"],
-      usedIn: 2,
-      createdAt: "2024-01-13",
-      explanation:
-        "Key points to cover include evaporation, transpiration, condensation, precipitation, and collection. Discuss the role of the sun and gravity.",
-    },
-    {
-      id: "q4",
-      type: "Multiple Choice",
-      question: "What is the capital of France?",
-      subject: "Geography",
-      difficulty: "Easy",
-      points: 1,
-      tags: ["europe", "capitals"],
-      usedIn: 8,
-      createdAt: "2024-01-12",
-      options: ["Berlin", "Madrid", "Paris", "Rome"],
-      correctAnswer: "Paris",
-      explanation: "Paris is the capital and most populous city of France.",
-    },
-    {
-      id: "q5",
-      type: "Short Answer",
-      question: "Solve for x: 2x + 5 = 15",
-      subject: "Mathematics",
-      difficulty: "Medium",
-      points: 2,
-      tags: ["algebra", "equations"],
-      usedIn: 4,
-      createdAt: "2024-01-11",
-      correctAnswer: "x=5",
-      explanation: "Subtract 5 from both sides (2x = 10), then divide by 2 (x = 5).",
-    },
-  ]
-
-  const filteredQuestions = questionBankData.filter((q) => {
-    const matchesSearch =
-      q.question.toLowerCase().includes(questionSearchQuery.toLowerCase()) ||
-      q.tags.some((tag) => tag.toLowerCase().includes(questionSearchQuery.toLowerCase()))
-    const matchesType = selectedQuestionType === "all" || q.type === selectedQuestionType
-    const matchesDifficulty = selectedDifficulty === "all" || q.difficulty.toLowerCase() === selectedDifficulty
-    return matchesSearch && matchesType && matchesDifficulty
-  })
-
-  const handleAddQuestion = () => {
-    if (editingQuestionId) {
-      console.log("[v0] Editing question:", editingQuestionId, newQuestion)
-      // Edit question logic here
+  const handleAddQuestion = async () => {
+    if (!newQuestion.question.trim()) {
       toast({
-        title: "Question Updated",
-        description: `Question "${newQuestion.question.substring(0, 30)}..." has been updated.`,
-        variant: "success",
+        title: "Validation Error",
+        description: "Question text is required.",
+        variant: "destructive",
         duration: 3000,
       })
-    } else {
-      console.log("[v0] Adding new question:", newQuestion)
-      // Add question logic here
+      return
+    }
+
+    try {
+      if (editingQuestionId) {
+        // Update existing question
+        const updateData = {
+          questionText: newQuestion.question,
+          questionType: mapUIQuestionTypeToBackend(newQuestion.type),
+          topic: newQuestion.subject || undefined, // Use topic field instead of subjectId
+          difficulty: newQuestion.difficulty.toLowerCase(),
+          defaultPoints: newQuestion.points,
+          tags: newQuestion.tags,
+          correctAnswer: newQuestion.correctAnswer || null,
+          explanation: newQuestion.explanation || null,
+          choices: newQuestion.type === "multiple-choice"
+            ? newQuestion.options.filter(opt => opt.trim()).map((text, index) => ({
+                choice_text: text,
+                is_correct: text === newQuestion.correctAnswer,
+                order_index: index
+              }))
+            : undefined
+        }
+
+        await questionBankApi.updateQuestion(editingQuestionId, updateData)
+
+        toast({
+          title: "Question Updated",
+          description: `Question "${newQuestion.question.substring(0, 30)}..." has been updated.`,
+          duration: 3000,
+        })
+      } else {
+        // Create new question
+        const createData = {
+          questionText: newQuestion.question,
+          questionType: mapUIQuestionTypeToBackend(newQuestion.type),
+          topic: newQuestion.subject || undefined, // Use topic field instead of subjectId
+          difficulty: newQuestion.difficulty.toLowerCase(),
+          defaultPoints: newQuestion.points,
+          tags: newQuestion.tags,
+          correctAnswer: newQuestion.correctAnswer || null,
+          explanation: newQuestion.explanation || null,
+          choices: newQuestion.type === "multiple-choice"
+            ? newQuestion.options.filter(opt => opt.trim()).map((text, index) => ({
+                choice_text: text,
+                is_correct: text === newQuestion.correctAnswer,
+                order_index: index
+              }))
+            : undefined
+        }
+
+        await questionBankApi.createQuestion(createData)
+
+        toast({
+          title: "Question Added",
+          description: `New question "${newQuestion.question.substring(0, 30)}..." added to your bank.`,
+          duration: 3000,
+        })
+      }
+
+      // Reload question bank data
+      await loadQuestionBankData()
+      handleCloseQuestionDialog()
+    } catch (error: any) {
+      console.error("Failed to save question:", error)
       toast({
-        title: "Question Added",
-        description: `New question "${newQuestion.question.substring(0, 30)}..." added to your bank.`,
-        variant: "success",
-        duration: 3000,
+        title: editingQuestionId ? "Update Failed" : "Create Failed",
+        description: error.message || "Failed to save question. Please try again.",
+        variant: "destructive",
+        duration: 5000,
       })
     }
-    handleCloseQuestionDialog()
   }
 
   const handleCloseQuestionDialog = () => {
@@ -755,17 +1320,33 @@ export default function TeacherQuizPage() {
     setDeleteConfirmOpen(true)
   }
 
-  const confirmDeleteQuestion = () => {
-    console.log("[v0] Deleting question:", questionToDelete)
-    // Delete question logic here
-    toast({
-      title: "Question Deleted",
-      description: `Question with ID ${questionToDelete} has been deleted.`,
-      variant: "destructive",
-      duration: 3000,
-    })
-    setDeleteConfirmOpen(false)
-    setQuestionToDelete(null)
+  const confirmDeleteQuestion = async () => {
+    if (!questionToDelete) return
+
+    try {
+      await questionBankApi.deleteQuestion(questionToDelete)
+
+      toast({
+        title: "Question Deleted",
+        description: "The question has been successfully deleted.",
+        variant: "destructive",
+        duration: 3000,
+      })
+
+      // Reload question bank data
+      await loadQuestionBankData()
+    } catch (error: any) {
+      console.error("Failed to delete question:", error)
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete question. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    } finally {
+      setDeleteConfirmOpen(false)
+      setQuestionToDelete(null)
+    }
   }
 
   const questionBankDataMock = [
@@ -845,7 +1426,8 @@ export default function TeacherQuizPage() {
     },
   ]
 
-  const filteredQuestionsBank = questionBankDataMock.filter((q) => {
+  // Use real data from API instead of mock data
+  const filteredQuestionsBank = questionBankData.filter((q) => {
     const matchesSearch =
       q.question.toLowerCase().includes(questionSearchQuery.toLowerCase()) ||
       q.tags.some((tag) => tag.toLowerCase().includes(questionSearchQuery.toLowerCase()))
@@ -854,15 +1436,36 @@ export default function TeacherQuizPage() {
     return matchesSearch && matchesType && matchesDifficulty
   })
 
-  const handleBulkDelete = () => {
-    console.log("[v0] Deleting questions:", selectedQuestions)
-    toast({
-      title: "Questions Deleted",
-      description: `${selectedQuestions.length} question(s) have been deleted.`,
-      variant: "destructive",
-      duration: 3000,
-    })
-    setSelectedQuestions([])
+  const handleBulkDelete = async () => {
+    if (selectedQuestions.length === 0) return
+
+    try {
+      // Delete all selected questions
+      await Promise.all(
+        selectedQuestions.map((questionId) =>
+          questionBankApi.deleteQuestion(questionId)
+        )
+      )
+
+      toast({
+        title: "Questions Deleted",
+        description: `${selectedQuestions.length} question(s) have been deleted.`,
+        variant: "destructive",
+        duration: 3000,
+      })
+
+      // Reload question bank data
+      await loadQuestionBankData()
+      setSelectedQuestions([])
+    } catch (error: any) {
+      console.error("Failed to delete questions:", error)
+      toast({
+        title: "Bulk Delete Failed",
+        description: error.message || "Failed to delete some questions. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
   }
 
   const toggleQuestionSelection = (questionId: string) => {
@@ -907,8 +1510,37 @@ export default function TeacherQuizPage() {
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
                 <Users className="w-4 h-4" />
-                <span className="text-sm font-medium">{quizzes.reduce((acc, q) => acc + q.attempts, 0)} Attempts</span>
+                <span className="text-sm font-medium">{quizzes.reduce((acc, q) => acc + q.attempts || 0, 0)} Attempts</span>
               </div>
+              {/* Backend Status Indicator */}
+              {loadingBackendQuizzes && (
+                <div className="flex items-center gap-2 bg-blue-500/20 rounded-lg px-3 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm font-medium">Loading...</span>
+                </div>
+              )}
+              {backendError && (
+                <div className="flex items-center gap-2 bg-yellow-500/20 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Demo Mode</span>
+                </div>
+              )}
+              {!loadingBackendQuizzes && !backendError && backendQuizzes.length > 0 && (
+                <div className="flex items-center gap-2 bg-green-500/20 rounded-lg px-3 py-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">Live Data</span>
+                </div>
+              )}
+              {/* Refresh Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => getQuizzes({ page: 1, limit: 100 })}
+                disabled={loadingBackendQuizzes}
+                className="bg-white/10 hover:bg-white/20"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingBackendQuizzes ? "animate-spin" : ""}`} />
+              </Button>
             </div>
           </div>
 
@@ -1160,12 +1792,39 @@ export default function TeacherQuizPage() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="flex items-center gap-2"
-                                    onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                    onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                   >
                                     <Edit className="w-4 h-4" />
                                     Edit Quiz
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="flex items-center gap-2">
+                                  <DropdownMenuItem
+                                    className="flex items-center gap-2 text-purple-600 dark:text-purple-400"
+                                    onClick={() => handleScheduleClick(quiz)}
+                                  >
+                                    <Calendar className="w-4 h-4" />
+                                    Schedule
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="flex items-center gap-2 text-blue-600 dark:text-blue-400"
+                                    onClick={() => handleManageSectionsClick(quiz)}
+                                  >
+                                    <Users className="w-4 h-4" />
+                                    Manage Sections
+                                  </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="flex items-center gap-2"
+                                    onClick={async () => {
+                                      const result = await cloneQuizBackend(quiz.id || quiz.quiz_id)
+                                      if (result) {
+                                        await getQuizzes({ page: 1, limit: 100 })
+                                        toast({
+                                          title: "Quiz Duplicated",
+                                          description: `"${quiz.title}" has been duplicated successfully.`,
+                                          duration: 3000,
+                                        })
+                                      }
+                                    }}
+                                  >
                                     <Copy className="w-4 h-4" />
                                     Duplicate
                                   </DropdownMenuItem>
@@ -1259,7 +1918,7 @@ export default function TeacherQuizPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="flex items-center gap-2"
-                                  onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                  onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                 >
                                   <Edit className="w-4 h-4" />
                                   Edit Quiz
@@ -1392,7 +2051,7 @@ export default function TeacherQuizPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="flex items-center gap-2"
-                                  onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                  onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                 >
                                   <Edit className="w-4 h-4" />
                                   Edit Quiz
@@ -1518,12 +2177,25 @@ export default function TeacherQuizPage() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="flex items-center gap-2"
-                                    onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                    onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                   >
                                     <Edit className="w-4 h-4" />
                                     Edit Quiz
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="flex items-center gap-2">
+                                  <DropdownMenuItem
+                                    className="flex items-center gap-2"
+                                    onClick={async () => {
+                                      const result = await cloneQuizBackend(quiz.id || quiz.quiz_id)
+                                      if (result) {
+                                        await getQuizzes({ page: 1, limit: 100 })
+                                        toast({
+                                          title: "Quiz Duplicated",
+                                          description: `"${quiz.title}" has been duplicated successfully.`,
+                                          duration: 3000,
+                                        })
+                                      }
+                                    }}
+                                  >
                                     <Copy className="w-4 h-4" />
                                     Duplicate
                                   </DropdownMenuItem>
@@ -1642,7 +2314,7 @@ export default function TeacherQuizPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="flex items-center gap-2"
-                                  onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                  onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                 >
                                   <Edit className="w-4 h-4" />
                                   Edit Quiz
@@ -1802,11 +2474,7 @@ export default function TeacherQuizPage() {
                                       className="h-8 px-2 hover:bg-green-100 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 font-medium"
                                       title="Publish Now"
                                       onClick={() => {
-                                        toast({
-                                          title: "Quiz Published",
-                                          description: `"${quiz.title}" has been published and is now live for students.`,
-                                        })
-                                        // Optionally update the status to 'active' here
+                                        // ✅ Validation and toast handled by updateQuizStatus
                                         updateQuizStatus(quiz.id, "active")
                                       }}
                                     >
@@ -1827,7 +2495,7 @@ export default function TeacherQuizPage() {
                                       size="sm"
                                       className="h-8 w-8 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
                                       title="Edit Schedule"
-                                      onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                      onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                     >
                                       <Edit className="w-4 h-4" />
                                     </Button>
@@ -2056,7 +2724,7 @@ export default function TeacherQuizPage() {
                                     size="sm"
                                     className="h-8 w-8 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
                                     title="Edit Quiz"
-                                    onClick={() => router.push(`/teacher/quiz/${quiz.id}/edit`)}
+                                    onClick={() => router.push(`/teacher/quiz/builder?quizId=${quiz.id}`)}
                                   >
                                     <Edit className="w-4 h-4" />
                                   </Button>
@@ -2827,7 +3495,7 @@ export default function TeacherQuizPage() {
                       {questionToDelete && (
                         <div className="py-4">
                           {(() => {
-                            const question = questionBankDataMock.find((q) => q.id === questionToDelete) // Use the mock data
+                            const question = questionBankData.find((q) => q.id === questionToDelete)
                             if (question && question.usedIn > 0) {
                               return (
                                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -2868,12 +3536,40 @@ export default function TeacherQuizPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {filteredQuestionsBank.map((q) => (
-                      <div
-                        key={q.id}
-                        className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800"
-                      >
+                  {/* Loading State */}
+                  {isLoadingQuestionBank ? (
+                    <div className="text-center py-16">
+                      <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+                      <p className="text-slate-600 dark:text-slate-400 font-medium">Loading your question bank...</p>
+                    </div>
+                  ) : /* Error State */
+                  questionBankError ? (
+                    <div className="text-center py-12">
+                      <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                      <p className="text-red-600 dark:text-red-400 font-medium mb-2">Failed to load questions</p>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">{questionBankError}</p>
+                      <Button onClick={loadQuestionBankData} variant="outline" size="sm">
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try Again
+                      </Button>
+                    </div>
+                  ) : /* Empty State */
+                  filteredQuestionsBank.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Search className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+                      <p className="text-slate-600 dark:text-slate-400 text-center">
+                        {questionBankData.length === 0
+                          ? "No questions yet. Create your first question!"
+                          : "No questions found matching your filters."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredQuestionsBank.map((q) => (
+                        <div
+                          key={q.id}
+                          className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800"
+                        >
                         <div className="flex items-start gap-4">
                           <Checkbox
                             checked={selectedQuestions.includes(q.id)}
@@ -2950,24 +3646,8 @@ export default function TeacherQuizPage() {
                         </div>
                       </div>
                     ))}
-
-                    {filteredQuestionsBank.length === 0 && (
-                      <div className="text-center py-12">
-                        <BookOpen className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No questions found</h3>
-                        <p className="text-slate-600 dark:text-slate-400 mb-4">Try adjusting your search or filters</p>
-                        <Button
-                          onClick={() => {
-                            setQuestionSearchQuery("")
-                            setSelectedQuestionType("all")
-                            setSelectedDifficulty("all")
-                          }}
-                        >
-                          Clear Filters
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -3144,13 +3824,13 @@ export default function TeacherQuizPage() {
             <Play className="w-4 h-4 text-green-600" />
             Active (Online)
           </button>
-          {/* Add 'Scheduled' action to context menu */}
+          {/* Schedule quiz action - opens schedule dialog */}
           <button
             onClick={() => handleContextMenuAction("scheduled")}
             className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-700 dark:text-slate-300"
           >
             <Calendar className="w-4 h-4 text-purple-600" />
-            Scheduled
+            Schedule Quiz
           </button>
 
           <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
@@ -3256,6 +3936,210 @@ export default function TeacherQuizPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Schedule Quiz Dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-purple-600" />
+              Schedule Quiz: {quizToSchedule?.title}
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-400">
+              Set the start and end dates for this quiz, and assign it to sections.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Start Date & Time */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-900 dark:text-white">
+                Start Date & Time <span className="text-red-500">*</span>
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="date"
+                    value={scheduleStartDate}
+                    onChange={(e) => setScheduleStartDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="time"
+                    value={scheduleStartTime}
+                    onChange={(e) => setScheduleStartTime(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Quiz will become available to students at this date and time
+              </p>
+            </div>
+
+            {/* End Date & Time (Optional) */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-900 dark:text-white">
+                End Date & Time (Optional)
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="date"
+                    value={scheduleEndDate}
+                    onChange={(e) => setScheduleEndDate(e.target.value)}
+                    min={scheduleStartDate || new Date().toISOString().split("T")[0]}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="time"
+                    value={scheduleEndTime}
+                    onChange={(e) => setScheduleEndTime(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Quiz will no longer be available after this date and time (leave blank for no end date)
+              </p>
+            </div>
+
+            {/* Grade Level Filter */}
+            {availableGrades.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-900 dark:text-white">
+                  Filter by Grade Level
+                </Label>
+                <Select value={selectedGrade} onValueChange={handleGradeFilterChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select grade level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grades ({allTeacherSections.length} sections)</SelectItem>
+                    {availableGrades.map((grade) => {
+                      const count = allTeacherSections.filter(s => s.grade_level === grade).length
+                      return (
+                        <SelectItem key={grade} value={grade}>
+                          {grade} ({count} {count === 1 ? 'section' : 'sections'})
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Showing only grades you teach
+                </p>
+              </div>
+            )}
+
+            {/* Section Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-slate-900 dark:text-white">
+                Assign to Sections <span className="text-red-500">*</span>
+              </Label>
+              {loadingSections ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                </div>
+              ) : !availableSections || availableSections.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <Info className="w-8 h-8 mx-auto mb-2" />
+                  <p>
+                    {selectedGrade === "all"
+                      ? "You are not assigned to any sections yet"
+                      : `No sections found for ${selectedGrade}`}
+                  </p>
+                  {selectedGrade !== "all" && (
+                    <button
+                      onClick={() => handleGradeFilterChange("all")}
+                      className="mt-2 text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400"
+                    >
+                      Show all grades
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2 bg-slate-50 dark:bg-slate-800/50">
+                  {availableSections.map((section) => (
+                    <div key={section.id} className="flex items-center space-x-3 p-2 hover:bg-white dark:hover:bg-slate-700/50 rounded">
+                      <Checkbox
+                        id={`section-${section.id}`}
+                        checked={selectedSections.includes(section.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedSections([...selectedSections, section.id])
+                          } else {
+                            setSelectedSections(selectedSections.filter((id) => id !== section.id))
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`section-${section.id}`}
+                        className="text-sm text-slate-900 dark:text-white flex-1 cursor-pointer"
+                      >
+                        {section.name} {section.grade_level && `- ${section.grade_level}`}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Selected {selectedSections.length} of {availableSections.length} section{availableSections.length !== 1 ? "s" : ""}
+                {selectedGrade !== "all" && ` in ${selectedGrade}`}
+              </p>
+            </div>
+
+            {/* Validation Warning */}
+            {scheduleStartDate && scheduleStartTime && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-800 dark:text-amber-200">
+                    <p className="font-medium mb-1">Please verify:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Start date must be in the future</li>
+                      <li>End date must be after start date (if provided)</li>
+                      <li>At least one section must be selected</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setScheduleDialogOpen(false)}
+              className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleScheduleConfirm}
+              disabled={isSaving || !scheduleStartDate || !scheduleStartTime || selectedSections.length === 0}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Scheduling...
+                </>
+              ) : (
+                <>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Schedule Quiz
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
           <AlertDialogHeader>
@@ -3349,6 +4233,18 @@ export default function TeacherQuizPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Section Assignment Modal */}
+      {quizForSectionAssignment && (
+        <SectionAssignmentModal
+          open={sectionModalOpen}
+          onOpenChange={setSectionModalOpen}
+          quizId={quizForSectionAssignment.id || quizForSectionAssignment.quiz_id}
+          quizTitle={quizForSectionAssignment.title}
+          onAssignmentComplete={handleSectionAssignmentComplete}
+          skipApiCall={autoPublishAfterAssignment}
+        />
+      )}
     </div>
   )
 }

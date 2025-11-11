@@ -809,7 +809,7 @@ export class AuthService {
       // Note: generateLink creates a recovery link that must be sent via email
       // We'll use resetPasswordForEmail which sends the email directly
       const authClient = this.getAuthClient();
-      
+
       // Get redirect URL from config or use default
       const redirectTo = this.configService.get<string>(
         'auth.passwordResetRedirectUrl',

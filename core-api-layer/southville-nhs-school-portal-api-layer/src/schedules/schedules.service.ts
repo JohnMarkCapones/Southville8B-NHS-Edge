@@ -63,7 +63,9 @@ export class SchedulesService {
       // Map grading period to semester for backwards compatibility
       // Q1, Q2 → 1st semester; Q3, Q4 → 2nd semester
       const semester = dto.gradingPeriod
-        ? (dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2') ? '1st' : '2nd'
+        ? dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2'
+          ? '1st'
+          : '2nd'
         : '1st'; // Default to 1st semester if not provided
 
       const { data, error } = await supabase
@@ -92,7 +94,14 @@ export class SchedulesService {
       }
 
       // Audit log
-      await this.logAudit({ action: 'create', scheduleId: (data as any)?.id, actorUserId: null, before: null, after: data, changedFields: null })
+      await this.logAudit({
+        action: 'create',
+        scheduleId: data?.id,
+        actorUserId: null,
+        before: null,
+        after: data,
+        changedFields: null,
+      });
 
       // Invalidate related caches
       await this.invalidateRelatedCaches(dto);
@@ -234,8 +243,8 @@ export class SchedulesService {
       if (semester) {
         query = query.eq('semester', semester);
       }
-      if ((filters as any).status) {
-        query = query.eq('status', (filters as any).status);
+      if (filters.status) {
+        query = query.eq('status', filters.status);
       }
       if (search) {
         query = query.or(
@@ -442,14 +451,17 @@ export class SchedulesService {
         updateData.grading_period = dto.gradingPeriod;
         // Auto-map grading period to semester if semester not explicitly provided
         if (dto.semester === undefined) {
-          updateData.semester = (dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2') ? '1st' : '2nd';
+          updateData.semester =
+            dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2'
+              ? '1st'
+              : '2nd';
         }
       }
 
       if (dto.semester !== undefined) updateData.semester = dto.semester;
 
       // before snapshot
-      const before = await this.findOne(id).catch(()=>null)
+      const before = await this.findOne(id).catch(() => null);
 
       const { data, error } = await supabase
         .from('schedules')
@@ -464,7 +476,14 @@ export class SchedulesService {
       }
 
       // Audit log
-      await this.logAudit({ action: 'update', scheduleId: id, actorUserId: null, before, after: data, changedFields: updateData })
+      await this.logAudit({
+        action: 'update',
+        scheduleId: id,
+        actorUserId: null,
+        before,
+        after: data,
+        changedFields: updateData,
+      });
 
       // Invalidate cache
       await this.cacheManager.del(cacheKey);
@@ -487,7 +506,7 @@ export class SchedulesService {
       await this.findOne(id);
 
       // before snapshot
-      const before = await this.findOne(id).catch(()=>null)
+      const before = await this.findOne(id).catch(() => null);
 
       const { error } = await supabase.from('schedules').delete().eq('id', id);
 
@@ -497,7 +516,14 @@ export class SchedulesService {
       }
 
       // Audit log
-      await this.logAudit({ action: 'delete', scheduleId: id, actorUserId: null, before, after: null, changedFields: null })
+      await this.logAudit({
+        action: 'delete',
+        scheduleId: id,
+        actorUserId: null,
+        before,
+        after: null,
+        changedFields: null,
+      });
 
       // Invalidate cache
       await this.cacheManager.del(`schedule:${id}`);
@@ -694,7 +720,9 @@ export class SchedulesService {
       // Cache the result
       await this.cacheManager.set(cacheKey, schedules, this.DETAILED_CACHE_TTL);
 
-      this.logger.log(`Found ${schedules.length} schedules for student ${studentId} in section ${student.section_id}`);
+      this.logger.log(
+        `Found ${schedules.length} schedules for student ${studentId} in section ${student.section_id}`,
+      );
       return schedules;
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -958,7 +986,9 @@ export class SchedulesService {
 
     // If no subjectId provided, return all teachers
     if (!subjectId) {
-      this.logger.log('[listTeachersBySubject] No subjectId provided, fetching all teachers');
+      this.logger.log(
+        '[listTeachersBySubject] No subjectId provided, fetching all teachers',
+      );
 
       const { data: allTeachers, error: allTeachersError } = await supabase
         .from('teachers')
@@ -967,14 +997,17 @@ export class SchedulesService {
         .order('first_name', { ascending: true });
 
       if (allTeachersError) {
-        this.logger.error('[listTeachersBySubject] Error fetching all teachers', allTeachersError);
+        this.logger.error(
+          '[listTeachersBySubject] Error fetching all teachers',
+          allTeachersError,
+        );
         return [];
       }
 
       if (allTeachers) {
         // Get user data for all teachers in one query
         const userIds = allTeachers.map((t: any) => t.user_id).filter(Boolean);
-        let userDataMap = new Map<string, any>();
+        const userDataMap = new Map<string, any>();
 
         if (userIds.length > 0) {
           const { data: users, error: usersError } = await supabase
@@ -1005,26 +1038,34 @@ export class SchedulesService {
         }
       }
 
-      this.logger.log(`[listTeachersBySubject] Returning ${result.length} total teachers`);
+      this.logger.log(
+        `[listTeachersBySubject] Returning ${result.length} total teachers`,
+      );
       return result;
     }
 
-    this.logger.log(`[listTeachersBySubject] Looking for teachers for subject: ${subjectId}`);
+    this.logger.log(
+      `[listTeachersBySubject] Looking for teachers for subject: ${subjectId}`,
+    );
 
     // First, get teachers with subject_specialization_id matching the subject
     // This is the primary way to find teachers qualified to teach a subject
-    const { data: teachersBySpecialization, error: specializationError } = await supabase
-      .from('teachers')
-      .select('id, first_name, last_name, middle_name, user_id')
-      .eq('subject_specialization_id', subjectId)
-      .is('deleted_at', null)
-      .order('first_name', { ascending: true });
+    const { data: teachersBySpecialization, error: specializationError } =
+      await supabase
+        .from('teachers')
+        .select('id, first_name, last_name, middle_name, user_id')
+        .eq('subject_specialization_id', subjectId)
+        .is('deleted_at', null)
+        .order('first_name', { ascending: true });
 
     if (specializationError) {
-      this.logger.error('[listTeachersBySubject] Error fetching teachers by specialization', {
-        subjectId,
-        error: specializationError,
-      });
+      this.logger.error(
+        '[listTeachersBySubject] Error fetching teachers by specialization',
+        {
+          subjectId,
+          error: specializationError,
+        },
+      );
     } else {
       this.logger.log(
         `[listTeachersBySubject] Found ${teachersBySpecialization?.length || 0} teachers by specialization`,
@@ -1033,8 +1074,10 @@ export class SchedulesService {
 
     if (!specializationError && teachersBySpecialization) {
       // Get user data for all teachers in one query
-      const userIds = teachersBySpecialization.map((t: any) => t.user_id).filter(Boolean);
-      let userDataMap = new Map<string, any>();
+      const userIds = teachersBySpecialization
+        .map((t: any) => t.user_id)
+        .filter(Boolean);
+      const userDataMap = new Map<string, any>();
 
       if (userIds.length > 0) {
         const { data: users, error: usersError } = await supabase
@@ -1086,19 +1129,24 @@ export class SchedulesService {
     }
 
     if (!schedulesError && schedulesData) {
-      const teacherIds = [...new Set(schedulesData.map((s: any) => s.teacher_id).filter(Boolean))];
-      
+      const teacherIds = [
+        ...new Set(schedulesData.map((s: any) => s.teacher_id).filter(Boolean)),
+      ];
+
       if (teacherIds.length > 0) {
-        const { data: teachersFromSchedules, error: teachersError } = await supabase
-          .from('teachers')
-          .select('id, first_name, last_name, middle_name, user_id')
-          .in('id', teacherIds)
-          .is('deleted_at', null);
+        const { data: teachersFromSchedules, error: teachersError } =
+          await supabase
+            .from('teachers')
+            .select('id, first_name, last_name, middle_name, user_id')
+            .in('id', teacherIds)
+            .is('deleted_at', null);
 
         if (!teachersError && teachersFromSchedules) {
           // Get user data for these teachers
-          const userIds = teachersFromSchedules.map((t: any) => t.user_id).filter(Boolean);
-          let userDataMap = new Map<string, any>();
+          const userIds = teachersFromSchedules
+            .map((t: any) => t.user_id)
+            .filter(Boolean);
+          const userDataMap = new Map<string, any>();
 
           if (userIds.length > 0) {
             const { data: users, error: usersError } = await supabase
@@ -1142,14 +1190,26 @@ export class SchedulesService {
   /**
    * Admin – publish or unpublish a schedule
    */
-  async setPublishState(id: string, publish: boolean): Promise<{ id: string; status: string; is_published: boolean; published_at: string | null }> {
+  async setPublishState(
+    id: string,
+    publish: boolean,
+  ): Promise<{
+    id: string;
+    status: string;
+    is_published: boolean;
+    published_at: string | null;
+  }> {
     const supabase = this.getSupabaseClient();
 
     const updatePayload: any = publish
-      ? { status: 'published', is_published: true, published_at: new Date().toISOString() }
+      ? {
+          status: 'published',
+          is_published: true,
+          published_at: new Date().toISOString(),
+        }
       : { status: 'draft', is_published: false, published_at: null };
 
-    const before = await this.findOne(id).catch(()=>null)
+    const before = await this.findOne(id).catch(() => null);
 
     const { data, error } = await supabase
       .from('schedules')
@@ -1162,7 +1222,14 @@ export class SchedulesService {
       throw new InternalServerErrorException('Failed to update publish state');
     }
 
-    await this.logAudit({ action: publish ? 'publish' : 'unpublish', scheduleId: id, actorUserId: null, before, after: data, changedFields: updatePayload })
+    await this.logAudit({
+      action: publish ? 'publish' : 'unpublish',
+      scheduleId: id,
+      actorUserId: null,
+      before,
+      after: data,
+      changedFields: updatePayload,
+    });
 
     await this.invalidateAllCaches();
     return data as any;
@@ -1172,17 +1239,26 @@ export class SchedulesService {
     const supabase = this.getSupabaseClient();
     const { data, error } = await supabase
       .from('schedules_audit_log')
-      .select('id, action, changed_fields, before, after, note, created_at, actor_user_id, actor:users!actor_user_id(id, full_name, email)')
+      .select(
+        'id, action, changed_fields, before, after, note, created_at, actor_user_id, actor:users!actor_user_id(id, full_name, email)',
+      )
       .eq('schedule_id', scheduleId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false });
     if (error) {
-      this.logger.error('Failed to fetch audit logs', error)
-      return []
+      this.logger.error('Failed to fetch audit logs', error);
+      return [];
     }
-    return data || []
+    return data || [];
   }
 
-  private async logAudit(params: { action: 'create'|'update'|'delete'|'publish'|'unpublish'; scheduleId: string; actorUserId: string | null; before: any; after: any; changedFields: any }) {
+  private async logAudit(params: {
+    action: 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
+    scheduleId: string;
+    actorUserId: string | null;
+    before: any;
+    after: any;
+    changedFields: any;
+  }) {
     try {
       const supabase = this.getSupabaseClient();
       await supabase.from('schedules_audit_log').insert({
@@ -1192,9 +1268,9 @@ export class SchedulesService {
         before: params.before || null,
         after: params.after || null,
         changed_fields: params.changedFields || null,
-      })
+      });
     } catch (e) {
-      this.logger.warn('Audit log insert failed', e as any)
+      this.logger.warn('Audit log insert failed', e);
     }
   }
 
@@ -1208,12 +1284,20 @@ export class SchedulesService {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) {
-      throw new InternalServerErrorException('Failed to fetch schedule templates');
+      throw new InternalServerErrorException(
+        'Failed to fetch schedule templates',
+      );
     }
     return data || [];
   }
 
-  async createTemplate(input: { name: string; description?: string; grade_level?: string; payload: any; created_by?: string }): Promise<any> {
+  async createTemplate(input: {
+    name: string;
+    description?: string;
+    grade_level?: string;
+    payload: any;
+    created_by?: string;
+  }): Promise<any> {
     const supabase = this.getSupabaseClient();
     const { data, error } = await supabase
       .from('schedule_templates')
@@ -1227,9 +1311,10 @@ export class SchedulesService {
       .select('*')
       .single();
     if (error) {
-      throw new InternalServerErrorException('Failed to create schedule template');
+      throw new InternalServerErrorException(
+        'Failed to create schedule template',
+      );
     }
     return data;
   }
 }
-   

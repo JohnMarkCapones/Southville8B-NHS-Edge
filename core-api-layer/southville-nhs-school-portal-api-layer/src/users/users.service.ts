@@ -1731,10 +1731,7 @@ export class UsersService {
    * @param domainRoleId - Domain role ID to assign
    * @returns Promise<any> - Created user domain role assignment
    */
-  async assignDomainRole(
-    userId: string,
-    domainRoleId: string,
-  ): Promise<any> {
+  async assignDomainRole(userId: string, domainRoleId: string): Promise<any> {
     try {
       const supabase = this.getSupabaseClient();
 
@@ -1830,10 +1827,7 @@ export class UsersService {
    * @param assignmentId - User domain role assignment ID
    * @returns Promise<void>
    */
-  async removeDomainRole(
-    userId: string,
-    assignmentId: string,
-  ): Promise<void> {
+  async removeDomainRole(userId: string, assignmentId: string): Promise<void> {
     try {
       const supabase = this.getSupabaseClient();
 
@@ -2061,7 +2055,7 @@ export class UsersService {
         // Supabase may return 'YYYY-MM-DD' or a full timestamp string
         // Convert via Date to consistently get UTC date component
         try {
-          return new Date(d as any).toISOString().split('T')[0];
+          return new Date(d).toISOString().split('T')[0];
         } catch (_) {
           // Fallback: if already 'YYYY-MM-DD'
           return String(d).split('T')[0];

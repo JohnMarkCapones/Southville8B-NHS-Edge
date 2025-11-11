@@ -17,7 +17,13 @@ import { ClubBenefitsService } from './services/club-benefits.service';
 import { ClubFaqsService } from './services/club-faqs.service';
 
 @Module({
-  imports: [SupabaseModule, AuthModule, StorageModule, GalleryModule, StudentActivitiesModule],
+  imports: [
+    SupabaseModule,
+    AuthModule,
+    StorageModule,
+    GalleryModule,
+    StudentActivitiesModule,
+  ],
   controllers: [
     ClubsController,
     ClubFormsController,

@@ -86,7 +86,7 @@ export class AutoGradingService {
         case 'fill_in_blank':
           return await this.gradeFillInBlank(
             questionId,
-            studentAnswer.answerText || '',
+            studentAnswer.answerJson || [],
             question.points,
           );
 
@@ -224,50 +224,102 @@ export class AutoGradingService {
 
   /**
    * Grade fill-in-blank question
-   * Supports case-insensitive and multiple acceptable answers
+   * Supports case-insensitive comparison for each blank
+   * Student answer format: ["Paris", "Manila"] (array of strings)
+   * Correct answer stored in metadata.blank_positions: [{blank_id: 0, answer: "Paris"}, ...]
    */
   private async gradeFillInBlank(
     questionId: string,
-    studentAnswer: string,
+    studentAnswers: string[] | any,
     maxPoints: number = 1,
   ): Promise<GradingResult> {
-    if (!studentAnswer) {
+    // Ensure studentAnswers is an array
+    if (!Array.isArray(studentAnswers) || studentAnswers.length === 0) {
       return { isCorrect: false, pointsAwarded: 0 };
     }
 
-    // Fetch correct answer from database
-    const supabase = this.supabaseService.getClient();
-    const { data: choices, error } = await supabase
-      .from('quiz_choices')
-      .select('*')
+    // Fetch correct answers from question metadata
+    const supabase = this.supabaseService.getServiceClient();
+    const { data: questionData, error: questionError } = await supabase
+      .from('quiz_questions')
+      .select('question_text')
       .eq('question_id', questionId)
-      .eq('is_correct', true);
+      .single();
 
-    if (error || !choices || choices.length === 0) {
+    if (questionError || !questionData) {
+      this.logger.error(`Failed to fetch question for fill-in-blank grading: ${questionError?.message}`);
       return { isCorrect: false, pointsAwarded: 0 };
     }
 
-    const correctAnswer = choices[0].choice_text;
+    // Extract correct answers from metadata
+    const { data: metadata, error: metadataError } = await supabase
+      .from('quiz_question_metadata')
+      .select('metadata')
+      .eq('question_id', questionId)
+      .single();
+
+    if (metadataError || !metadata || !metadata.metadata) {
+      this.logger.error(`No metadata found for fill-in-blank question ${questionId}`);
+      return { isCorrect: false, pointsAwarded: 0 };
+    }
+
+    const blankPositions = metadata.metadata.blank_positions || [];
+    const blankCount = metadata.metadata.blank_count || blankPositions.length;
+
+    if (blankCount === 0) {
+      this.logger.error(`No blanks found in metadata for question ${questionId}`);
+      return { isCorrect: false, pointsAwarded: 0 };
+    }
+
+    // Check if student provided answers for all blanks
+    if (studentAnswers.length !== blankCount) {
+      this.logger.warn(
+        `Student provided ${studentAnswers.length} answers but question has ${blankCount} blanks`
+      );
+      return { isCorrect: false, pointsAwarded: 0 };
+    }
+
+    // Grade each blank (case-insensitive comparison)
     const caseSensitive = false; // Default to case-insensitive
-    const acceptableAnswers = Array.isArray(correctAnswer)
-      ? correctAnswer
-      : [correctAnswer];
+    let correctBlanks = 0;
 
-    // Normalize answers
-    const normalizedStudent = caseSensitive
-      ? studentAnswer.trim()
-      : studentAnswer.trim().toLowerCase();
+    for (let i = 0; i < blankCount; i++) {
+      const studentAnswer = studentAnswers[i];
+      const correctAnswer = blankPositions[i]?.answer || '';
 
-    const isCorrect = acceptableAnswers.some((answer) => {
+      if (!studentAnswer || !correctAnswer) {
+        continue; // Skip if either is empty
+      }
+
+      // Normalize for comparison
+      const normalizedStudent = caseSensitive
+        ? studentAnswer.trim()
+        : studentAnswer.trim().toLowerCase();
+
       const normalizedCorrect = caseSensitive
-        ? answer.trim()
-        : answer.trim().toLowerCase();
-      return normalizedStudent === normalizedCorrect;
-    });
+        ? correctAnswer.trim()
+        : correctAnswer.trim().toLowerCase();
+
+      if (normalizedStudent === normalizedCorrect) {
+        correctBlanks++;
+      }
+    }
+
+    // All-or-nothing grading (must get ALL blanks correct)
+    const isCorrect = correctBlanks === blankCount;
+    const pointsAwarded = isCorrect ? maxPoints : 0;
+
+    this.logger.log(
+      `Fill-in-blank grading: ${correctBlanks}/${blankCount} blanks correct, ` +
+      `awarded ${pointsAwarded}/${maxPoints} points`
+    );
 
     return {
       isCorrect,
-      pointsAwarded: isCorrect ? maxPoints : 0,
+      pointsAwarded,
+      feedback: isCorrect
+        ? undefined
+        : `${correctBlanks}/${blankCount} blanks correct`,
     };
   }
 
@@ -356,40 +408,56 @@ export class AutoGradingService {
     studentAnswer: any,
     maxPoints: number = 1,
   ): Promise<GradingResult> {
-    if (!studentAnswer) {
+    if (!studentAnswer || typeof studentAnswer !== 'object') {
       return { isCorrect: false, pointsAwarded: 0 };
     }
 
-    // Fetch correct answer from database
-    const supabase = this.supabaseService.getClient();
-    const { data: choices, error } = await supabase
-      .from('quiz_choices')
-      .select('*')
+    // ✅ FIX: Fetch correct answer from quiz_question_metadata
+    const supabase = this.supabaseService.getServiceClient();
+    const { data: metadataRecord, error: metadataError } = await supabase
+      .from('quiz_question_metadata')
+      .select('metadata')
       .eq('question_id', questionId)
-      .eq('is_correct', true);
+      .single();
 
-    if (error || !choices || choices.length === 0) {
+    if (metadataError || !metadataRecord || !metadataRecord.metadata) {
+      this.logger.error(`No metadata found for matching question ${questionId}`);
       return { isCorrect: false, pointsAwarded: 0 };
     }
 
-    const correctAnswer = choices[0].metadata; // Matching answers are stored in metadata
+    // ✅ FIX: Access matching_pairs from metadata
+    const correctAnswer = metadataRecord.metadata.matching_pairs || {};
 
+    if (Object.keys(correctAnswer).length === 0) {
+      this.logger.error(`No matching pairs found in metadata for question ${questionId}`);
+      return { isCorrect: false, pointsAwarded: 0 };
+    }
+
+    // Grade: Compare student answer with correct answer
     let matchedCount = 0;
-    let totalPairs = 0;
+    let totalPairs = Object.keys(correctAnswer).length;
 
-    for (const [leftId, rightId] of Object.entries(correctAnswer)) {
-      totalPairs++;
-      if (studentAnswer[leftId] === rightId) {
+    for (const [leftItem, correctRightItem] of Object.entries(correctAnswer)) {
+      if (studentAnswer[leftItem] === correctRightItem) {
         matchedCount++;
       }
     }
 
+    // Partial credit grading
     const isCorrect = matchedCount === totalPairs;
     const pointsAwarded = (matchedCount / totalPairs) * maxPoints;
+
+    this.logger.log(
+      `Matching grading: ${matchedCount}/${totalPairs} pairs correct, ` +
+      `awarded ${Math.round(pointsAwarded * 100) / 100}/${maxPoints} points`
+    );
 
     return {
       isCorrect,
       pointsAwarded: Math.round(pointsAwarded * 100) / 100,
+      feedback: isCorrect
+        ? undefined
+        : `${matchedCount}/${totalPairs} pairs matched correctly`,
     };
   }
 
