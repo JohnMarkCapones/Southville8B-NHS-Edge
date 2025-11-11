@@ -41,6 +41,8 @@ export class QuestionBankService {
           correct_answer: createDto.correctAnswer,
           allow_partial_credit: createDto.allowPartialCredit || false,
           time_limit_seconds: createDto.timeLimitSeconds,
+          explanation: createDto.explanation,
+          is_public: createDto.isPublic || false,
         })
         .select()
         .single();
@@ -76,6 +78,8 @@ export class QuestionBankService {
       topic,
       difficulty,
       questionType,
+      search,
+      tags,
       sortBy = 'created_at',
       sortOrder = 'desc',
     } = filters;
@@ -99,6 +103,16 @@ export class QuestionBankService {
     }
     if (questionType) {
       query = query.eq('question_type', questionType);
+    }
+
+    // Text search filter (case-insensitive search in question_text)
+    if (search) {
+      query = query.ilike('question_text', `%${search}%`);
+    }
+
+    // Tag array filter (questions containing all specified tags)
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      query = query.contains('tags', tags);
     }
 
     // Apply sorting
@@ -235,5 +249,54 @@ export class QuestionBankService {
     }
 
     this.logger.log(`Question bank item deleted: ${id}`);
+  }
+
+  /**
+   * Get usage statistics for a question
+   * Shows how many quizzes use this question and which quizzes
+   */
+  async getUsageStats(questionId: string, teacherId: string): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+
+    // 1. Verify ownership
+    await this.findOne(questionId, teacherId);
+
+    // 2. Count quiz questions using this question bank item
+    const {
+      data: usages,
+      error,
+      count,
+    } = await supabase
+      .from('quiz_questions')
+      .select(
+        `
+        question_id,
+        quiz_id,
+        quizzes!inner(
+          quiz_id,
+          title,
+          status
+        )
+      `,
+        { count: 'exact' },
+      )
+      .eq('source_question_bank_id', questionId);
+
+    if (error) {
+      this.logger.error('Error fetching usage statistics:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch usage statistics',
+      );
+    }
+
+    return {
+      usage_count: count || 0,
+      quizzes:
+        usages?.map((u: any) => ({
+          quiz_id: u.quizzes.quiz_id,
+          title: u.quizzes.title,
+          status: u.quizzes.status,
+        })) || [],
+    };
   }
 }

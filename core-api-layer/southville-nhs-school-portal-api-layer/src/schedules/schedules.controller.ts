@@ -250,12 +250,18 @@ export class SchedulesController {
 
   @Get('teachers')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'List teachers that teach a given subject via schedules' })
+  @ApiOperation({
+    summary: 'List teachers that teach a given subject via schedules',
+  })
   @ApiQuery({ name: 'subjectId', required: false, type: String })
   async listTeachersBySubject(@Query('subjectId') subjectId: string) {
-    this.logger.log(`[listTeachersBySubject] Received request with subjectId: ${subjectId}`);
+    this.logger.log(
+      `[listTeachersBySubject] Received request with subjectId: ${subjectId}`,
+    );
     const result = await this.schedulesService.listTeachersBySubject(subjectId);
-    this.logger.log(`[listTeachersBySubject] Returning ${result.length} teachers`);
+    this.logger.log(
+      `[listTeachersBySubject] Returning ${result.length} teachers`,
+    );
     return result;
   }
 
@@ -376,9 +382,12 @@ export class SchedulesController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Get audit trail for a schedule (Admin/Teacher)' })
   @ApiParam({ name: 'id', description: 'Schedule ID' })
-  @ApiResponse({ status: 200, description: 'Audit logs retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Audit logs retrieved successfully',
+  })
   async getAudit(@Param('id') id: string) {
-    return this.schedulesService.getAuditLogs(id)
+    return this.schedulesService.getAuditLogs(id);
   }
 
   @Patch(':id')
@@ -555,7 +564,12 @@ export class SchedulesController {
   async setPublish(
     @Param('id') id: string,
     @Query('publish', new ParseBoolPipe()) publish: boolean,
-  ): Promise<{ id: string; status: string; is_published: boolean; published_at: string | null }> {
+  ): Promise<{
+    id: string;
+    status: string;
+    is_published: boolean;
+    published_at: string | null;
+  }> {
     return this.schedulesService.setPublishState(id, publish);
   }
 
@@ -571,9 +585,17 @@ export class SchedulesController {
   @ApiOperation({ summary: 'Create a schedule template (Admin)' })
   async createTemplate(
     @Body()
-    body: { name: string; description?: string; grade_level?: string; payload: any },
+    body: {
+      name: string;
+      description?: string;
+      grade_level?: string;
+      payload: any;
+    },
     @AuthUser() user: any,
   ): Promise<any> {
-    return this.schedulesService.createTemplate({ ...body, created_by: user?.id });
+    return this.schedulesService.createTemplate({
+      ...body,
+      created_by: user?.id,
+    });
   }
 }

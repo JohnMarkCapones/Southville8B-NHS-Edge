@@ -127,7 +127,8 @@ export class CreateClubDto {
 
   @ApiPropertyOptional({
     description: 'Benefits section description',
-    example: 'Join our club to develop leadership skills, network with peers, and participate in exciting competitions.',
+    example:
+      'Join our club to develop leadership skills, network with peers, and participate in exciting competitions.',
   })
   @IsOptional()
   @IsString()

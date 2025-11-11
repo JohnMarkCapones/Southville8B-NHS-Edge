@@ -1,5 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
@@ -20,11 +25,4 @@ export class NewsKpiController {
     return this.newsKpiService.getKpis();
   }
 }
-
-
-
-
-
-
-
 

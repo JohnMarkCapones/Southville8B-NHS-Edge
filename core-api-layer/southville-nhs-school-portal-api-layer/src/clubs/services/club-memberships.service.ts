@@ -194,7 +194,10 @@ export class ClubMembershipsService {
       });
     } catch (activityError) {
       // Don't fail membership creation if activity logging fails
-      this.logger.error('Failed to create club joined activity:', activityError);
+      this.logger.error(
+        'Failed to create club joined activity:',
+        activityError,
+      );
     }
 
     return this.mapDbToDto(data);
@@ -359,7 +362,10 @@ export class ClubMembershipsService {
           isHighlighted: true, // Promotions are important!
         });
       } catch (activityError) {
-        this.logger.error('Failed to create position change activity:', activityError);
+        this.logger.error(
+          'Failed to create position change activity:',
+          activityError,
+        );
       }
     }
 

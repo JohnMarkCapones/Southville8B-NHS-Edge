@@ -15,14 +15,14 @@ import { SupabaseUser } from '../../auth/interfaces/supabase-user.interface';
 
 @ApiTags('Quiz Analytics')
 @ApiBearerAuth('JWT-auth')
-@Controller('quiz-analytics')
+@Controller('analytics')
 @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
 export class AnalyticsController {
   private readonly logger = new Logger(AnalyticsController.name);
 
   constructor(private readonly analyticsService: AnalyticsService) {}
 
-  @Get('quiz/:quizId/overview')
+  @Get('quiz/:quizId')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Get overall quiz analytics (scores, pass rate, etc.)',
@@ -89,5 +89,29 @@ export class AnalyticsController {
   ) {
     this.logger.log(`Fetching student performance for quiz ${quizId}`);
     return this.analyticsService.getStudentPerformance(quizId, user.id);
+  }
+
+  @Get('quiz/:quizId/students/:studentId/answers')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get detailed answers for a specific student in a quiz',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Student answers retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only view answers for your own quizzes',
+  })
+  @ApiResponse({ status: 404, description: 'Quiz or student not found' })
+  async getStudentAnswers(
+    @Param('quizId') quizId: string,
+    @Param('studentId') studentId: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    this.logger.log(`Fetching answers for student ${studentId} in quiz ${quizId}`);
+    return this.analyticsService.getStudentAnswers(quizId, studentId, user.id);
   }
 }

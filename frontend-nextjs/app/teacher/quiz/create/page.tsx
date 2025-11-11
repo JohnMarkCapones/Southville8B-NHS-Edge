@@ -43,9 +43,47 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useQuiz } from "@/hooks/useQuiz" // Backend integration
+import { useToast } from "@/hooks/use-toast"
+import { QuizType, GradingType } from "@/lib/api/types/quiz"
+import { useTeacherAssignments } from "@/hooks/useTeacherAssignments" // Teacher assignments
+import { apiClient } from "@/lib/api/client"
 
 export default function CreateQuiz() {
   const router = useRouter()
+  const { toast } = useToast()
+
+  // Backend integration: useQuiz hook
+  const { createQuiz, isSaving } = useQuiz()
+
+  // Backend integration: Fetch teacher's assigned subjects/sections/grades
+  const [teacherUserId, setTeacherUserId] = useState<string | null>(null)
+  const {
+    subjects: teacherSubjects,
+    sections: teacherSections,
+    gradeLevels: teacherGrades,
+    isLoading: loadingAssignments,
+  } = useTeacherAssignments(teacherUserId)
+
+  // Fetch teacher user ID on mount
+  useEffect(() => {
+    const fetchTeacherId = async () => {
+      try {
+        const userProfile = await apiClient.get<any>('/users/me')
+        const teacherId = userProfile.teacher?.id || userProfile.id
+        setTeacherUserId(teacherId)
+      } catch (error) {
+        console.error("Error fetching teacher ID:", error)
+        toast({
+          title: "Warning",
+          description: "Could not load your assigned subjects and sections. Using default options.",
+          variant: "destructive",
+        })
+      }
+    }
+    fetchTeacherId()
+  }, [])
+
   const [animatingToggles, setAnimatingToggles] = useState<Set<string>>(new Set())
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [formProgress, setFormProgress] = useState(0)
@@ -55,9 +93,9 @@ export default function CreateQuiz() {
     visibility: "assigned" as "assigned" | "school-wide",
     accessCode: "",
     title: "",
-    subjects: ["Mathematics"], // Dynamic array of subjects
-    grades: ["Grade 8"], // Dynamic array of grades
-    sections: ["Section A"], // Dynamic array of sections
+    subjects: [] as string[], // Will be populated from teacher's assignments
+    grades: [] as string[], // Will be populated from teacher's assignments
+    sections: [] as string[], // Will be populated from teacher's assignments
     timeLimitMinutes: 30, // How long students have to complete the quiz
     // </CHANGE>
     description: "",
@@ -92,64 +130,82 @@ export default function CreateQuiz() {
   const [newGrade, setNewGrade] = useState("")
   const [newSection, setNewSection] = useState("")
 
-  const subjectOptions = [
-    "Mathematics",
-    "Science",
-    "English",
-    "Filipino",
-    "Social Studies",
-    "Physical Education",
-    "Music",
-    "Arts",
-    "Technology and Livelihood Education",
-    "Values Education",
-    "Computer Science",
-    "Physics",
-    "Chemistry",
-    "Biology",
-  ]
+  // Backend integration: Use teacher's assigned subjects/sections/grades (or fallback to defaults)
+  const subjectOptions = teacherSubjects.length > 0
+    ? teacherSubjects.map(s => s.name)
+    : [
+        "Mathematics",
+        "Science",
+        "English",
+        "Filipino",
+        "Social Studies",
+        "Physical Education",
+        "Music",
+        "Arts",
+        "Technology and Livelihood Education",
+        "Values Education",
+        "Computer Science",
+        "Physics",
+        "Chemistry",
+        "Biology",
+      ]
 
-  const gradeOptions = [
-    "Grade 7",
-    "Grade 8",
-    "Grade 9",
-    "Grade 10",
-    "Grade 11",
-    "Grade 12",
-    "Kindergarten",
-    "Grade 1",
-    "Grade 2",
-    "Grade 3",
-    "Grade 4",
-    "Grade 5",
-    "Grade 6",
-  ]
+  const gradeOptions = teacherGrades.length > 0
+    ? teacherGrades
+    : [
+        "Grade 7",
+        "Grade 8",
+        "Grade 9",
+        "Grade 10",
+        "Grade 11",
+        "Grade 12",
+        "Kindergarten",
+        "Grade 1",
+        "Grade 2",
+        "Grade 3",
+        "Grade 4",
+        "Grade 5",
+        "Grade 6",
+      ]
 
-  const sectionOptions = [
-    "Section A",
-    "Section B",
-    "Section C",
-    "Section D",
-    "Section E",
-    "Section F",
-    "Section G",
-    "Section H",
-    "Section I",
-    "Section J",
-    "Diamond",
-    "Emerald",
-    "Ruby",
-    "Sapphire",
-    "Pearl",
-    "Gold",
-    "Silver",
-  ]
+  const sectionOptions = teacherSections.length > 0
+    ? teacherSections.map(s => s.name)
+    : [
+        "Section A",
+        "Section B",
+        "Section C",
+        "Section D",
+        "Section E",
+        "Section F",
+        "Section G",
+        "Section H",
+        "Section I",
+        "Section J",
+        "Diamond",
+        "Emerald",
+        "Ruby",
+        "Sapphire",
+        "Pearl",
+        "Gold",
+        "Silver",
+      ]
 
-  type ExpandableSection = "securedQuiz" | "questionPool"
-  const [expandedSections, setExpandedSections] = useState<Record<ExpandableSection, boolean>>({
+  const [expandedSections, setExpandedSections] = useState({
     securedQuiz: false,
     questionPool: false,
   })
+
+  // Auto-populate form with teacher's first assignments when loaded
+  useEffect(() => {
+    if (!loadingAssignments && teacherSubjects.length > 0 && newQuiz.subjects.length === 0) {
+      setNewQuiz(prev => ({
+        ...prev,
+        subjects: [teacherSubjects[0].name],
+        grades: teacherGrades.length > 0 ? [teacherGrades[0]] : [],
+        sections: teacherSections.length > 0 ? [teacherSections[0].name] : [],
+      }))
+    }
+  }, [loadingAssignments, teacherSubjects, teacherGrades, teacherSections, newQuiz.subjects.length])
 
   useEffect(() => {
     const requiredFields = ["title", "subjects", "grades", "sections"]
@@ -219,7 +275,7 @@ export default function CreateQuiz() {
     }
   }
 
-  const handleCreateQuestions = () => {
+  const handleCreateQuestions = async () => {
     // Validate required fields
     if (
       !newQuiz.title ||
@@ -227,17 +283,100 @@ export default function CreateQuiz() {
       newQuiz.grades.length === 0 ||
       newQuiz.sections.length === 0
     ) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (Title, Subject, Grade, Section)",
+        variant: "destructive",
+      })
       return
     }
 
-    // Store quiz details in localStorage or state management
-    localStorage.setItem("quizDetails", JSON.stringify(newQuiz))
+    // Backend integration: Create quiz via API
+    // Map subject name to subject ID from teacher's assignments
+    const selectedSubject = teacherSubjects.find(s => s.name === newQuiz.subjects[0])
+    const subjectId = selectedSubject?.id || newQuiz.subjects[0] // Fallback to name if ID not found
 
-    // Navigate to quiz builder
-    router.push("/teacher/quiz/builder")
+    // Map quiz type to backend enum values
+    const typeMapping = {
+      "long-form": "form",        // form = all questions on one page
+      "one-at-a-time": "sequential", // sequential = one question at a time
+      "mixed": "mixed"            // mixed = combination
+    }
+
+    const quizData = {
+      title: newQuiz.title,
+      description: newQuiz.description || undefined,
+      subjectId: subjectId,       // ✅ camelCase (not subject_id)
+      type: typeMapping[newQuiz.testType] || "form", // ✅ "type" (not quiz_type)
+      gradingType: "auto",        // ✅ camelCase (not grading_type), values: "auto", "manual", "hybrid"
+      timeLimit: newQuiz.timeLimitMinutes || undefined, // ✅ camelCase (not time_limit), in MINUTES
+      startDate: newQuiz.scheduleOpenDate ?
+        new Date(`${newQuiz.scheduleOpenDate}T${newQuiz.scheduleOpenTime || '00:00'}`).toISOString() :
+        undefined, // ✅ camelCase (not start_date)
+      endDate: newQuiz.scheduleCloseDate ?
+        new Date(`${newQuiz.scheduleCloseDate}T${newQuiz.scheduleCloseTime || '23:59'}`).toISOString() :
+        undefined, // ✅ camelCase (not end_date)
+
+      // ✅ Quiz Settings - Security features
+      securedQuiz: newQuiz.securedQuiz,
+      quizLockdown: newQuiz.quizLockdown,
+      antiScreenshot: newQuiz.antiScreenshot,
+      disableCopyPaste: newQuiz.disableCopyPaste,
+      disableRightClick: newQuiz.disableRightClick,
+      lockdownUI: newQuiz.lockdownUI,
+
+      // ✅ Quiz Settings - Question pool
+      questionPool: newQuiz.questionPool,
+      stratifiedSampling: newQuiz.stratifiedSampling,
+      totalQuestions: newQuiz.questionPool ? newQuiz.totalQuestions : undefined,
+      poolSize: newQuiz.questionPool ? newQuiz.poolSize : undefined,
+
+      // ✅ Quiz Settings - Behavior
+      strictTimeLimit: newQuiz.strictTimeLimit,
+      autoSave: newQuiz.autoSave,
+      backtrackingControl: newQuiz.backtrackingControl,
+      shuffleQuestions: newQuiz.shuffleQuestions,
+
+      // ✅ Quiz Settings - Other
+      // Don't send visibility here - it's already in the main quizzes table
+      accessCode: newQuiz.accessCode || undefined,
+      publishMode: newQuiz.publishMode,
+    }
+
+    const createdQuiz = await createQuiz(quizData)
+
+    if (createdQuiz) {
+      // Map section names to section IDs from teacher's assignments
+      const selectedSectionIds = newQuiz.sections
+        .map(sectionName => teacherSections.find(s => s.name === sectionName)?.id)
+        .filter(Boolean) as string[]
+
+      // Store quiz details + section assignment data in localStorage for later
+      // Section assignment will happen AFTER publishing (backend requirement)
+      localStorage.setItem("quizDetails", JSON.stringify({
+        ...newQuiz,
+        quizId: createdQuiz.quiz_id,
+        pendingSectionAssignment: {
+          sectionIds: selectedSectionIds.length > 0 ? selectedSectionIds : newQuiz.sections,
+          sectionNames: newQuiz.sections, // Store names for display
+          startDate: quizData.startDate,
+          endDate: quizData.endDate,
+          timeLimit: quizData.timeLimit,
+        }
+      }))
+
+      toast({
+        title: "Quiz Created",
+        description: "Quiz created successfully. Add questions and publish to assign to sections.",
+      })
+
+      // Navigate to quiz builder with quiz ID
+      router.push(`/teacher/quiz/builder?quizId=${createdQuiz.quiz_id}`)
+    }
+    // Error toast is handled by the hook
   }
 
-  const toggleSection = (section: ExpandableSection) => {
+  const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -289,14 +428,11 @@ export default function CreateQuiz() {
       "Force the quiz into full-screen mode and hide browser navigation, taskbar, and other UI elements that could be distracting or helpful for cheating.",
   }
 
-  const QuestionTooltip = ({ content, children }: { content: string; children?: React.ReactNode }) => (
+  const QuestionTooltip = ({ content, children }: { content: string; children: React.ReactNode }) => (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button 
-            className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 ml-2"
-            aria-label="Get help with quiz creation"
-          >
+          <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 ml-2">
             <HelpCircle className="w-3 h-3 text-gray-500 dark:text-gray-400" />
           </button>
         </TooltipTrigger>

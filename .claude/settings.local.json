@@ -24,7 +24,14 @@
       "Bash(timeout 1 ping:*)",
       "Bash(dir:*)",
       "Bash(timeout 5 echo:*)",
-      "Bash(timeout 30 npm run build:*)"
+      "Bash(timeout 30 npm run build:*)",
+      "Bash(copy \"frontend-nextjs\\app\\teacher\\quiz\\page.tsx\" \"frontend-nextjs\\app\\teacher\\quiz\\page-backup-before-integration.tsx\")",
+      "Bash(copy \"frontend-nextjs\\app\\teacher\\quiz\\builder\\page.tsx\" \"frontend-nextjs\\app\\teacher\\quiz\\builder\\page-backup-before-integration.tsx\")",
+      "Bash(Select-Object -First 100)",
+      "Bash(cd:*)",
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(Get-Content nul)"
     ],
     "deny": [],
     "ask": []

@@ -69,7 +69,7 @@ export class StudentActivitiesController {
    */
   @Get('my-activities')
   @Roles(UserRole.STUDENT)
-  @ApiOperation({ summary: 'Get current student\'s activities' })
+  @ApiOperation({ summary: "Get current student's activities" })
   @ApiResponse({
     status: 200,
     description: 'Activities retrieved successfully',
@@ -201,9 +201,7 @@ export class StudentActivitiesController {
     @Param('activityId') activityId: string,
     @AuthUser() user: SupabaseUser,
   ) {
-    this.logger.log(
-      `Admin ${user.email} deleting activity ${activityId}`,
-    );
+    this.logger.log(`Admin ${user.email} deleting activity ${activityId}`);
     await this.studentActivitiesService.remove(activityId);
     return { message: 'Activity deleted successfully' };
   }

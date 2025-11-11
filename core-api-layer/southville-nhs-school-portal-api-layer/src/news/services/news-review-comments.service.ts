@@ -118,10 +118,14 @@ export class NewsReviewCommentsService {
     );
 
     // Check if this is a revision request (starts with "REVISION REQUESTED:")
-    const isRevisionRequest = createDto.comment.startsWith('REVISION REQUESTED:');
+    const isRevisionRequest = createDto.comment.startsWith(
+      'REVISION REQUESTED:',
+    );
 
     if (isRevisionRequest) {
-      const feedbackText = createDto.comment.replace('REVISION REQUESTED:', '').trim();
+      const feedbackText = createDto.comment
+        .replace('REVISION REQUESTED:', '')
+        .trim();
 
       // Get reviewer info
       const { data: reviewerData } = await supabase
@@ -151,9 +155,14 @@ export class NewsReviewCommentsService {
           color: 'text-orange-500',
           isHighlighted: true,
         });
-        this.logger.log(`✅ Activity timeline entry created for revision request`);
+        this.logger.log(
+          `✅ Activity timeline entry created for revision request`,
+        );
       } catch (activityError) {
-        this.logger.error('Failed to create activity timeline entry:', activityError);
+        this.logger.error(
+          'Failed to create activity timeline entry:',
+          activityError,
+        );
         // Don't throw - activity is optional, comment already created
       }
     }

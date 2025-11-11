@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -15,6 +15,7 @@ interface FormModeRendererProps {
   onResponseChange: (questionId: string, response: QuizResponse) => void
   onSubmit: () => void
   timeRemaining: number
+  markQuestionViewed?: (questionId: string) => void
 }
 
 export function FormModeRenderer({
@@ -23,9 +24,19 @@ export function FormModeRenderer({
   onResponseChange,
   onSubmit,
   timeRemaining,
+  markQuestionViewed,
 }: FormModeRendererProps) {
   const [showValidation, setShowValidation] = useState(false)
   const [showSubmissionDialog, setShowSubmissionDialog] = useState(false)
+
+  // ✅ TIME TRACKING: Mark all questions as viewed when form mode renders (all questions shown at once)
+  useEffect(() => {
+    if (markQuestionViewed) {
+      quiz.questions.forEach((question) => {
+        markQuestionViewed(question.id)
+      })
+    }
+  }, [quiz.questions, markQuestionViewed])
 
   const getAnsweredCount = () => {
     return quiz.questions.filter((q) => responses[q.id]).length

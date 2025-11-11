@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { CloudflareImagesService } from '../../common/services/cloudflare-images.service';
 import {
   CreateQuizDto,
   UpdateQuizDto,
@@ -20,7 +21,10 @@ import { Quiz, QuizQuestion, QuizSettings } from '../entities';
 export class QuizService {
   private readonly logger = new Logger(QuizService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly cloudflareImagesService: CloudflareImagesService,
+  ) {}
 
   /**
    * Create a new quiz (draft status)
@@ -75,6 +79,38 @@ export class QuizService {
         );
       }
 
+      // ✅ Create quiz_settings record
+      const { error: settingsError } = await supabase
+        .from('quiz_settings')
+        .insert({
+          quiz_id: quiz.quiz_id,
+          // Security features
+          secured_quiz: createQuizDto.securedQuiz || false,
+          quiz_lockdown: createQuizDto.quizLockdown || false,
+          anti_screenshot: createQuizDto.antiScreenshot || false,
+          disable_copy_paste: createQuizDto.disableCopyPaste || false,
+          disable_right_click: createQuizDto.disableRightClick || false,
+          lockdown_ui: createQuizDto.lockdownUI || false,
+          // Question pool
+          question_pool: createQuizDto.questionPool || false,
+          stratified_sampling: createQuizDto.stratifiedSampling || false,
+          total_questions: createQuizDto.totalQuestions,
+          pool_size: createQuizDto.poolSize,
+          // Behavior
+          strict_time_limit: createQuizDto.strictTimeLimit || false,
+          auto_save: createQuizDto.autoSave !== false, // default true
+          backtracking_control: createQuizDto.backtrackingControl || false,
+          // Other
+          access_code: createQuizDto.accessCode,
+          publish_mode: createQuizDto.publishMode || 'immediate',
+        });
+
+      if (settingsError) {
+        this.logger.error('Error creating quiz settings:', settingsError);
+        // Don't throw error - settings are optional, quiz still valid
+        this.logger.warn(`Quiz ${quiz.quiz_id} created without settings`);
+      }
+
       this.logger.log(`Quiz created successfully: ${quiz.quiz_id}`);
       return quiz;
     } catch (error) {
@@ -102,9 +138,24 @@ export class QuizService {
       status,
       sortBy = 'created_at',
       sortOrder = 'desc',
+      includeDeleted = false, // New parameter to include deleted quizzes
     } = filters;
 
-    let query = supabase.from('quizzes').select('*', { count: 'exact' });
+    // ✅ SELECT WITH QUESTION COUNT
+    // Use LEFT JOIN to count questions per quiz
+    let query = supabase.from('quizzes').select(
+      `
+        *,
+        quiz_questions(count)
+      `,
+      { count: 'exact' },
+    );
+
+    // ✅ FILTER OUT SOFT-DELETED QUIZZES BY DEFAULT
+    // Only show deleted quizzes if explicitly requested (for archived view)
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
 
     // Apply filters
     if (teacherId) {
@@ -114,7 +165,12 @@ export class QuizService {
       query = query.eq('subject_id', subjectId);
     }
     if (status) {
-      query = query.eq('status', status);
+      // If status is 'archived', show deleted quizzes instead
+      if (status === 'archived') {
+        query = query.not('deleted_at', 'is', null); // Show only deleted
+      } else {
+        query = query.eq('status', status);
+      }
     }
 
     // Apply sorting
@@ -132,8 +188,16 @@ export class QuizService {
       throw new InternalServerErrorException('Failed to fetch quizzes');
     }
 
+    // ✅ TRANSFORM DATA TO INCLUDE QUESTION COUNT
+    // Supabase returns quiz_questions as array with count, extract it
+    const transformedData = data?.map((quiz) => ({
+      ...quiz,
+      question_count: quiz.quiz_questions?.[0]?.count || 0,
+      quiz_questions: undefined, // Remove the nested array
+    }));
+
     return {
-      data,
+      data: transformedData,
       pagination: {
         page,
         limit,
@@ -145,13 +209,32 @@ export class QuizService {
 
   /**
    * Get a single quiz by ID
+   * @param quizId - The quiz ID
+   * @param currentUserId - Optional user ID to filter student attempts (for students, shows only their attempts)
    */
-  async findQuizById(quizId: string): Promise<Quiz> {
+  async findQuizById(quizId: string, currentUserId?: string): Promise<Quiz> {
     const supabase = this.supabaseService.getClient();
 
     const { data: quiz, error } = await supabase
       .from('quizzes')
-      .select('*')
+      .select(
+        `
+        *,
+        quiz_questions (
+          *,
+          quiz_choices (*),
+          quiz_question_metadata (*)
+        ),
+        quiz_settings (*),
+        quiz_attempts!quiz_attempts_quiz_id_fkey (
+          attempt_id,
+          student_id,
+          status,
+          started_at,
+          submitted_at
+        )
+      `,
+      )
       .eq('quiz_id', quizId)
       .single();
 
@@ -161,6 +244,107 @@ export class QuizService {
       }
       this.logger.error('Error fetching quiz:', error);
       throw new InternalServerErrorException('Failed to fetch quiz');
+    }
+
+    // ✅ CHECK IF QUIZ IS SOFT-DELETED
+    if (quiz && quiz.deleted_at) {
+      throw new NotFoundException('Quiz has been deleted');
+    }
+
+    // Rename quiz_questions to questions for consistency with frontend
+    if (quiz && quiz.quiz_questions) {
+      quiz.questions = quiz.quiz_questions;
+      delete quiz.quiz_questions;
+    }
+
+    // ✅ Extract and flatten quiz_question_metadata for easier frontend access
+    if (quiz && quiz.questions) {
+      this.logger.log(`[MATCHING DEBUG] Processing ${quiz.questions.length} questions for metadata extraction`);
+
+      quiz.questions = quiz.questions.map((question: any) => {
+        this.logger.log(`[MATCHING DEBUG] Question ${question.question_id} (${question.question_type}):`);
+        this.logger.log(`[MATCHING DEBUG]   - quiz_question_metadata present: ${!!question.quiz_question_metadata}`);
+
+        if (question.quiz_question_metadata) {
+          this.logger.log(`[MATCHING DEBUG]   - quiz_question_metadata is array: ${Array.isArray(question.quiz_question_metadata)}`);
+          this.logger.log(`[MATCHING DEBUG]   - quiz_question_metadata type: ${typeof question.quiz_question_metadata}`);
+        }
+
+        // ✅ FIX: Handle both array and object formats from Supabase
+        let metadataRecord: any = null;
+
+        if (question.quiz_question_metadata) {
+          if (Array.isArray(question.quiz_question_metadata)) {
+            // Array format: take first item
+            metadataRecord = question.quiz_question_metadata[0];
+            this.logger.log(`[MATCHING DEBUG]   - Array format, length: ${question.quiz_question_metadata.length}`);
+          } else if (typeof question.quiz_question_metadata === 'object') {
+            // Object format: use it directly
+            metadataRecord = question.quiz_question_metadata;
+            this.logger.log(`[MATCHING DEBUG]   - Object format (single record)`);
+          }
+        }
+
+        if (metadataRecord && metadataRecord.metadata) {
+          question.metadata = metadataRecord.metadata;
+          this.logger.log(`[MATCHING DEBUG]   - ✅ Extracted metadata:`, JSON.stringify(question.metadata, null, 2));
+          delete question.quiz_question_metadata;
+        } else {
+          this.logger.warn(`[MATCHING DEBUG]   - ⚠️ No metadata found for this question`);
+        }
+
+        // ✅ Convert snake_case image fields to camelCase for frontend
+        // Keep BOTH formats for backward compatibility with student quiz components
+        if (question.question_image_id) {
+          question.questionImageId = question.question_image_id;
+          question.questionImageUrl = question.question_image_url;
+          question.questionImageFileSize = question.question_image_file_size;
+          question.questionImageMimeType = question.question_image_mime_type;
+          // Keep snake_case fields too (student quiz components use these)
+        }
+
+        // ✅ Build choiceImages array from quiz_choices for frontend
+        // Frontend expects: choiceImages = [{ imageId, imageUrl, fileSize, mimeType }, ...]
+        if (question.quiz_choices && Array.isArray(question.quiz_choices)) {
+          question.choiceImages = question.quiz_choices.map((choice: any) => {
+            if (choice.choice_image_id) {
+              return {
+                imageId: choice.choice_image_id,
+                imageUrl: choice.choice_image_url,
+                fileSize: choice.choice_image_file_size,
+                mimeType: choice.choice_image_mime_type,
+              };
+            }
+            return {}; // Empty object if no image
+          });
+
+          // Keep snake_case fields in choices for student quiz components
+          // (they access choice.choice_image_url directly)
+        }
+
+        return question;
+      });
+    }
+
+    // ✅ Extract quiz_settings from array to single object
+    if (quiz && quiz.quiz_settings && Array.isArray(quiz.quiz_settings)) {
+      quiz.settings = quiz.quiz_settings[0] || null;
+      delete quiz.quiz_settings;
+    }
+
+    // ✅ Rename quiz_attempts to student_attempts for frontend clarity
+    // Filter to current user's attempts if currentUserId provided (for students)
+    if (quiz && quiz.quiz_attempts) {
+      if (currentUserId) {
+        // Student view: only show their own attempts
+        quiz.student_attempts = quiz.quiz_attempts.filter(
+          (attempt: any) => attempt.student_id === currentUserId,
+        );
+      } else {
+        // Teacher/Admin view: show all attempts
+        quiz.student_attempts = quiz.quiz_attempts;
+      }
+      delete quiz.quiz_attempts;
     }
 
     return quiz;
@@ -192,8 +376,13 @@ export class QuizService {
       }
     }
 
+    // Check if this is ONLY a status change (no other fields being updated)
+    const isOnlyStatusChange =
+      updateQuizDto.status && Object.keys(updateQuizDto).length === 1;
+
     // Check if quiz is published and has active attempts
-    if (quiz.status === 'published') {
+    // BUT: Skip version creation if we're only changing status (allow status changes without duplication)
+    if (quiz.status === 'published' && !isOnlyStatusChange) {
       const { data: activeAttempts, error: attemptsError } = await supabase
         .from('quiz_attempts')
         .select('attempt_id')
@@ -240,6 +429,9 @@ export class QuizService {
         }),
         ...(updateQuizDto.visibility && {
           visibility: updateQuizDto.visibility,
+        }),
+        ...(updateQuizDto.status && {
+          status: updateQuizDto.status,
         }),
         ...(updateQuizDto.questionPoolSize !== undefined && {
           question_pool_size: updateQuizDto.questionPoolSize,
@@ -436,11 +628,13 @@ export class QuizService {
       throw new ForbiddenException('You can only delete your own quizzes');
     }
 
-    // Soft delete by setting status to archived
+    // Soft delete by setting status to archived and recording deletion metadata
     const { error } = await supabase
       .from('quizzes')
       .update({
         status: 'archived',
+        deleted_at: new Date().toISOString(),
+        deleted_by: teacherId,
         updated_at: new Date().toISOString(),
       })
       .eq('quiz_id', quizId);
@@ -471,16 +665,45 @@ export class QuizService {
       );
     }
 
+    // Calculate correct_answer from choices
+    let correctAnswer: any = null;
+    if (createQuestionDto.choices && createQuestionDto.choices.length > 0) {
+      const correctChoices = createQuestionDto.choices.filter(
+        (c) => c.isCorrect,
+      );
+      if (correctChoices.length === 1) {
+        // Single correct answer - store the text or index
+        correctAnswer = correctChoices[0].choiceText;
+      } else if (correctChoices.length > 1) {
+        // Multiple correct answers - store as array
+        correctAnswer = correctChoices.map((c) => c.choiceText);
+      }
+    }
+
     // Create question
     const questionData: any = {
       quiz_id: quizId,
       question_text: createQuestionDto.questionText,
       question_type: createQuestionDto.questionType,
+      description: createQuestionDto.description,
+      is_required: createQuestionDto.isRequired ?? false,
+      is_randomize: createQuestionDto.isRandomize ?? false,
       order_index: createQuestionDto.orderIndex,
       points: createQuestionDto.points || 1,
       allow_partial_credit: createQuestionDto.allowPartialCredit || false,
       time_limit_seconds: createQuestionDto.timeLimitSeconds,
       is_pool_question: createQuestionDto.isPoolQuestion || false,
+      correct_answer: correctAnswer, // Store correct answer in quiz_questions table
+      // Fill-in-blank sensitivity settings
+      case_sensitive: createQuestionDto.caseSensitive ?? false,
+      whitespace_sensitive: createQuestionDto.whitespaceSensitive ?? false,
+      // ============================================================================
+      // Image Support Fields (Cloudflare Images)
+      // ============================================================================
+      question_image_id: createQuestionDto.questionImageId || null,
+      question_image_url: createQuestionDto.questionImageUrl || null,
+      question_image_file_size: createQuestionDto.questionImageFileSize || null,
+      question_image_mime_type: createQuestionDto.questionImageMimeType || null,
     };
 
     // Only include source_question_bank_id if it's provided and not null
@@ -500,6 +723,45 @@ export class QuizService {
       throw new InternalServerErrorException('Failed to create question');
     }
 
+    // ✅ AUTO-CREATE: Generate True/False choices if none provided for true_false questions
+    if (
+      createQuestionDto.questionType === 'true_false' &&
+      (!createQuestionDto.choices || createQuestionDto.choices.length === 0)
+    ) {
+      this.logger.log(
+        `Auto-creating True/False choices for question ${question.question_id}`,
+      );
+
+      const trueFalseChoices = [
+        {
+          question_id: question.question_id,
+          choice_text: 'True',
+          is_correct: false, // Teacher needs to set correct answer later
+          order_index: 0,
+          metadata: null,
+        },
+        {
+          question_id: question.question_id,
+          choice_text: 'False',
+          is_correct: false,
+          order_index: 1,
+          metadata: null,
+        },
+      ];
+
+      const { error: autoChoicesError } = await supabase
+        .from('quiz_choices')
+        .insert(trueFalseChoices);
+
+      if (autoChoicesError) {
+        this.logger.error(
+          'Error auto-creating True/False choices:',
+          autoChoicesError,
+        );
+        // Don't fail the whole operation - question is still created
+      }
+    }
+
     // Create choices if provided
     if (createQuestionDto.choices && createQuestionDto.choices.length > 0) {
       const choicesToInsert = createQuestionDto.choices.map((choice) => ({
@@ -508,6 +770,13 @@ export class QuizService {
         is_correct: choice.isCorrect || false,
         order_index: choice.orderIndex,
         metadata: choice.metadata,
+        // ============================================================================
+        // Image Support Fields (Cloudflare Images)
+        // ============================================================================
+        choice_image_id: choice.choiceImageId || null,
+        choice_image_url: choice.choiceImageUrl || null,
+        choice_image_file_size: choice.choiceImageFileSize || null,
+        choice_image_mime_type: choice.choiceImageMimeType || null,
       }));
 
       const { error: choicesError } = await supabase
@@ -528,21 +797,381 @@ export class QuizService {
 
     // Create metadata if provided (for complex question types)
     if (createQuestionDto.metadata) {
+      // 🔍 DIAGNOSTIC: Log metadata being saved
+      this.logger.log(`[MATCHING DEBUG] Saving metadata for question type: ${createQuestionDto.questionType}`);
+      this.logger.log(`[MATCHING DEBUG] Metadata content:`, JSON.stringify(createQuestionDto.metadata, null, 2));
+
+      const metadataType = this.getMetadataType(createQuestionDto.questionType);
+      this.logger.log(`[MATCHING DEBUG] Metadata type: ${metadataType}`);
+
       const { error: metadataError } = await supabase
         .from('quiz_question_metadata')
         .insert({
           question_id: question.question_id,
-          metadata_type: this.getMetadataType(createQuestionDto.questionType),
+          metadata_type: metadataType,
           metadata: createQuestionDto.metadata,
         });
 
       if (metadataError) {
-        this.logger.warn('Error creating question metadata:', metadataError);
+        this.logger.error('[MATCHING DEBUG] ❌ Error creating question metadata:', metadataError);
+      } else {
+        this.logger.log(`[MATCHING DEBUG] ✅ Metadata saved successfully for question ${question.question_id}`);
       }
+    } else {
+      this.logger.warn(`[MATCHING DEBUG] ⚠️ No metadata provided for question type: ${createQuestionDto.questionType}`);
     }
+
+    // Recalculate total points for the quiz
+    await this.recalculateTotalPoints(quizId);
 
     this.logger.log(`Question added to quiz ${quizId}`);
     return question;
+  }
+
+  /**
+   * Update a question in a quiz
+   */
+  async updateQuestion(
+    quizId: string,
+    questionId: string,
+    updateQuestionDto: CreateQuizQuestionDto,
+    teacherId: string,
+  ): Promise<QuizQuestion> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // Verify ownership
+    const quiz = await this.findQuizById(quizId);
+    if (quiz.teacher_id !== teacherId) {
+      throw new ForbiddenException(
+        'You can only update questions in your own quizzes',
+      );
+    }
+
+    // 🔍 DIAGNOSTIC: Log incoming data for true/false questions
+    if (updateQuestionDto.questionType === 'true_false') {
+      this.logger.log(`[TRUE_FALSE] Update question ${questionId}:`);
+      this.logger.log(`  - Choices provided: ${!!updateQuestionDto.choices}`);
+      this.logger.log(`  - Choices length: ${updateQuestionDto.choices?.length || 0}`);
+      if (updateQuestionDto.choices && updateQuestionDto.choices.length > 0) {
+        updateQuestionDto.choices.forEach((c, i) => {
+          this.logger.log(`  - Choice ${i}: "${c.choiceText}" isCorrect=${c.isCorrect}`);
+        });
+      }
+    }
+
+    // Calculate correct_answer from choices
+    let correctAnswer: any = null;
+    if (updateQuestionDto.choices && updateQuestionDto.choices.length > 0) {
+      const correctChoices = updateQuestionDto.choices.filter(
+        (c) => c.isCorrect,
+      );
+      if (correctChoices.length === 1) {
+        // Single correct answer - store the text
+        correctAnswer = correctChoices[0].choiceText;
+      } else if (correctChoices.length > 1) {
+        // Multiple correct answers - store as array
+        correctAnswer = correctChoices.map((c) => c.choiceText);
+      }
+    }
+
+    // 🔍 DIAGNOSTIC: Log calculated correct answer
+    if (updateQuestionDto.questionType === 'true_false') {
+      this.logger.log(`  - Calculated correct_answer: ${JSON.stringify(correctAnswer)}`);
+    }
+
+    // Update question
+    const questionData: any = {
+      question_text: updateQuestionDto.questionText,
+      question_type: updateQuestionDto.questionType,
+      description: updateQuestionDto.description,
+      is_required: updateQuestionDto.isRequired ?? false,
+      is_randomize: updateQuestionDto.isRandomize ?? false,
+      order_index: updateQuestionDto.orderIndex,
+      points: updateQuestionDto.points || 1,
+      allow_partial_credit: updateQuestionDto.allowPartialCredit || false,
+      time_limit_seconds: updateQuestionDto.timeLimitSeconds,
+      is_pool_question: updateQuestionDto.isPoolQuestion || false,
+      correct_answer: correctAnswer, // Store correct answer in quiz_questions table
+      // Fill-in-blank sensitivity settings
+      case_sensitive: updateQuestionDto.caseSensitive ?? false,
+      whitespace_sensitive: updateQuestionDto.whitespaceSensitive ?? false,
+      // ============================================================================
+      // Image Support Fields (Cloudflare Images)
+      // ============================================================================
+      question_image_id: updateQuestionDto.questionImageId || null,
+      question_image_url: updateQuestionDto.questionImageUrl || null,
+      question_image_file_size: updateQuestionDto.questionImageFileSize || null,
+      question_image_mime_type: updateQuestionDto.questionImageMimeType || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    // 🔍 DIAGNOSTIC: Log orderIndex value being updated
+    this.logger.log(
+      `[ORDER_INDEX] Updating question ${questionId}: orderIndex=${updateQuestionDto.orderIndex}`,
+    );
+
+    if (updateQuestionDto.sourceQuestionBankId) {
+      questionData.source_question_bank_id =
+        updateQuestionDto.sourceQuestionBankId;
+    }
+
+    const { data: question, error: questionError } = await supabase
+      .from('quiz_questions')
+      .update(questionData)
+      .eq('question_id', questionId)
+      .select()
+      .single();
+
+    if (questionError) {
+      this.logger.error('Error updating question:', questionError);
+      throw new InternalServerErrorException('Failed to update question');
+    }
+
+    // 🔍 DIAGNOSTIC: Log the actual order_index saved to database
+    this.logger.log(
+      `[ORDER_INDEX] Question ${questionId} updated successfully. DB order_index=${question.order_index}`,
+    );
+
+    // ✅ AUTO-CREATE: Generate True/False choices if none provided for true_false questions
+    if (
+      updateQuestionDto.questionType === 'true_false' &&
+      (!updateQuestionDto.choices || updateQuestionDto.choices.length === 0)
+    ) {
+      this.logger.warn(
+        `[TRUE_FALSE] ⚠️ AUTO-CREATING True/False choices for question ${questionId} - NO CHOICES PROVIDED BY FRONTEND!`,
+      );
+      this.logger.warn(
+        `[TRUE_FALSE] ⚠️ This will RESET both choices to is_correct=false!`,
+      );
+
+      // Delete old choices first
+      const { error: deleteError } = await supabase
+        .from('quiz_choices')
+        .delete()
+        .eq('question_id', questionId);
+
+      if (deleteError) {
+        this.logger.error(
+          'Error deleting old True/False choices:',
+          deleteError,
+        );
+        throw new InternalServerErrorException(
+          'Failed to delete old True/False choices',
+        );
+      }
+
+      const trueFalseChoices = [
+        {
+          question_id: questionId,
+          choice_text: 'True',
+          is_correct: false, // Teacher needs to set correct answer
+          order_index: 0,
+          metadata: null,
+        },
+        {
+          question_id: questionId,
+          choice_text: 'False',
+          is_correct: false,
+          order_index: 1,
+          metadata: null,
+        },
+      ];
+
+      const { error: autoChoicesError } = await supabase
+        .from('quiz_choices')
+        .insert(trueFalseChoices);
+
+      if (autoChoicesError) {
+        this.logger.error(
+          'Error auto-creating True/False choices:',
+          autoChoicesError,
+        );
+        // Don't fail the whole operation
+      }
+    }
+
+    // Update choices - delete old ones and insert new ones
+    if (updateQuestionDto.choices && updateQuestionDto.choices.length > 0) {
+      // Delete old choices
+      const { error: deleteError } = await supabase
+        .from('quiz_choices')
+        .delete()
+        .eq('question_id', questionId);
+
+      if (deleteError) {
+        this.logger.error('Error deleting old choices:', deleteError);
+        throw new InternalServerErrorException(
+          'Failed to delete old choices before update',
+        );
+      }
+
+      this.logger.log(
+        `Deleted old choices for question ${questionId}, now inserting new ones`,
+      );
+
+      // Insert new choices
+      const choicesToInsert = updateQuestionDto.choices.map((choice) => ({
+        question_id: questionId,
+        choice_text: choice.choiceText,
+        is_correct: choice.isCorrect || false,
+        order_index: choice.orderIndex,
+        metadata: choice.metadata,
+        // ============================================================================
+        // Image Support Fields (Cloudflare Images)
+        // ============================================================================
+        choice_image_id: choice.choiceImageId || null,
+        choice_image_url: choice.choiceImageUrl || null,
+        choice_image_file_size: choice.choiceImageFileSize || null,
+        choice_image_mime_type: choice.choiceImageMimeType || null,
+      }));
+
+      const { error: choicesError } = await supabase
+        .from('quiz_choices')
+        .insert(choicesToInsert);
+
+      if (choicesError) {
+        this.logger.error('Error updating choices:', choicesError);
+        throw new InternalServerErrorException('Failed to update choices');
+      }
+
+      // 🔍 DIAGNOSTIC: Log successful choice insertion for true/false
+      if (updateQuestionDto.questionType === 'true_false') {
+        this.logger.log(
+          `[TRUE_FALSE] ✅ Successfully saved ${choicesToInsert.length} choices:`,
+        );
+        choicesToInsert.forEach((c, i) => {
+          this.logger.log(`  - "${c.choice_text}" is_correct=${c.is_correct}`);
+        });
+      }
+    }
+
+    // Update metadata if provided (for complex question types like fill-in-blank)
+    if (updateQuestionDto.metadata) {
+      // 🔍 DIAGNOSTIC: Log metadata being updated
+      this.logger.log(`[MATCHING DEBUG] Updating metadata for question type: ${updateQuestionDto.questionType}`);
+      this.logger.log(`[MATCHING DEBUG] Metadata content:`, JSON.stringify(updateQuestionDto.metadata, null, 2));
+
+      // Delete old metadata first
+      await supabase
+        .from('quiz_question_metadata')
+        .delete()
+        .eq('question_id', questionId);
+
+      const metadataType = this.getMetadataType(updateQuestionDto.questionType);
+      this.logger.log(`[MATCHING DEBUG] Metadata type: ${metadataType}`);
+
+      // Insert new metadata
+      const { error: metadataError } = await supabase
+        .from('quiz_question_metadata')
+        .insert({
+          question_id: questionId,
+          metadata_type: metadataType,
+          metadata: updateQuestionDto.metadata,
+        });
+
+      if (metadataError) {
+        this.logger.error('[MATCHING DEBUG] ❌ Error updating question metadata:', metadataError);
+      } else {
+        this.logger.log(`[MATCHING DEBUG] ✅ Metadata updated successfully for question ${questionId}`);
+      }
+    } else {
+      this.logger.warn(`[MATCHING DEBUG] ⚠️ No metadata provided for question type: ${updateQuestionDto.questionType}`);
+    }
+
+    // Recalculate total points for the quiz
+    await this.recalculateTotalPoints(quizId);
+
+    this.logger.log(`Question ${questionId} updated in quiz ${quizId}`);
+    return question;
+  }
+
+  /**
+   * Delete a question from a quiz
+   */
+  async deleteQuestion(
+    quizId: string,
+    questionId: string,
+    teacherId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // Verify ownership
+    const quiz = await this.findQuizById(quizId);
+    if (quiz.teacher_id !== teacherId) {
+      throw new ForbiddenException(
+        'You can only delete questions from your own quizzes',
+      );
+    }
+
+    // ============================================================================
+    // Image Cleanup: Delete images from Cloudflare before deleting from database
+    // ============================================================================
+
+    // Fetch question to check for question image
+    const { data: question } = await supabase
+      .from('quiz_questions')
+      .select('question_image_id')
+      .eq('question_id', questionId)
+      .single();
+
+    // Delete question image from Cloudflare if it exists
+    if (question?.question_image_id) {
+      this.logger.log(
+        `Deleting question image from Cloudflare: ${question.question_image_id}`,
+      );
+      await this.cloudflareImagesService.deleteImage(
+        question.question_image_id,
+      );
+    }
+
+    // Fetch all choices to check for choice images
+    const { data: choices } = await supabase
+      .from('quiz_choices')
+      .select('choice_id, choice_image_id')
+      .eq('question_id', questionId);
+
+    // Delete all choice images from Cloudflare
+    if (choices && choices.length > 0) {
+      for (const choice of choices) {
+        if (choice.choice_image_id) {
+          this.logger.log(
+            `Deleting choice image from Cloudflare: ${choice.choice_image_id}`,
+          );
+          await this.cloudflareImagesService.deleteImage(
+            choice.choice_image_id,
+          );
+        }
+      }
+    }
+
+    // ============================================================================
+    // Database Cleanup: Delete question and related data
+    // ============================================================================
+
+    // Delete choices first (cascade may not be set up)
+    await supabase.from('quiz_choices').delete().eq('question_id', questionId);
+
+    // Delete question metadata
+    await supabase
+      .from('quiz_question_metadata')
+      .delete()
+      .eq('question_id', questionId);
+
+    // Delete question
+    const { error } = await supabase
+      .from('quiz_questions')
+      .delete()
+      .eq('question_id', questionId);
+
+    if (error) {
+      this.logger.error('Error deleting question:', error);
+      throw new InternalServerErrorException('Failed to delete question');
+    }
+
+    // Recalculate total points for the quiz
+    await this.recalculateTotalPoints(quizId);
+
+    this.logger.log(`Question ${questionId} deleted from quiz ${quizId}`);
   }
 
   /**
@@ -586,7 +1215,9 @@ export class QuizService {
 
       const { error: sectionsError } = await supabase
         .from('quiz_sections')
-        .insert(sectionsToInsert);
+        .upsert(sectionsToInsert, {
+          onConflict: 'quiz_id,section_id',
+        });
 
       if (sectionsError) {
         this.logger.error('Error assigning quiz to sections:', sectionsError);
@@ -599,6 +1230,88 @@ export class QuizService {
     this.logger.log(
       `Quiz published: ${quizId} with status ${publishDto.status}`,
     );
+    return updatedQuiz;
+  }
+
+  /**
+   * Schedule a quiz for future availability
+   * ✅ STRICT VALIDATION: Start date must be in future, end date after start
+   */
+  async scheduleQuiz(
+    quizId: string,
+    scheduleData: {
+      startDate: string;
+      endDate?: string;
+      sectionIds: string[];
+      sectionSettings?: Record<string, { timeLimit?: number }>;
+    },
+    teacherId: string,
+  ): Promise<Quiz> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // 1. Verify ownership
+    const quiz = await this.findQuizById(quizId);
+    if (quiz.teacher_id !== teacherId) {
+      throw new ForbiddenException('You can only schedule your own quizzes');
+    }
+
+    // 2. ✅ VALIDATE DATES
+    const now = new Date();
+    const startDateTime = new Date(scheduleData.startDate);
+
+    // Start date must be in the future
+    if (startDateTime <= now) {
+      throw new BadRequestException(
+        'Start date must be in the future. Cannot schedule quiz for past dates.',
+      );
+    }
+
+    // If end date provided, it must be after start date
+    if (scheduleData.endDate) {
+      const endDateTime = new Date(scheduleData.endDate);
+      if (endDateTime <= startDateTime) {
+        throw new BadRequestException('End date must be after start date.');
+      }
+    }
+
+    // 3. Validate sections
+    if (!scheduleData.sectionIds || scheduleData.sectionIds.length === 0) {
+      throw new BadRequestException(
+        'At least one section must be selected to schedule the quiz.',
+      );
+    }
+
+    // 4. Update quiz status and dates
+    const { data: updatedQuiz, error } = await supabase
+      .from('quizzes')
+      .update({
+        status: 'scheduled',
+        start_date: scheduleData.startDate,
+        end_date: scheduleData.endDate || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('quiz_id', quizId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error scheduling quiz:', error);
+      throw new InternalServerErrorException('Failed to schedule quiz');
+    }
+
+    // 5. Assign to sections with optional overrides
+    await this.assignQuizToSections(
+      quizId,
+      scheduleData.sectionIds,
+      teacherId,
+      {
+        startDate: scheduleData.startDate,
+        endDate: scheduleData.endDate,
+        sectionSettings: scheduleData.sectionSettings,
+      },
+    );
+
+    this.logger.log(`Quiz scheduled: ${quizId} for ${scheduleData.startDate}`);
     return updatedQuiz;
   }
 
@@ -625,16 +1338,35 @@ export class QuizService {
       .from('quiz_settings')
       .upsert({
         quiz_id: quizId,
-        lockdown_browser: settingsDto.lockdownBrowser || false,
-        anti_screenshot: settingsDto.antiScreenshot || false,
-        disable_copy_paste: settingsDto.disableCopyPaste || false,
-        disable_right_click: settingsDto.disableRightClick || false,
-        require_fullscreen: settingsDto.requireFullscreen || false,
+        // Security features (new names)
+        secured_quiz: settingsDto.securedQuiz ?? false,
+        quiz_lockdown: settingsDto.quizLockdown ?? false,
+        anti_screenshot: settingsDto.antiScreenshot ?? false,
+        disable_copy_paste: settingsDto.disableCopyPaste ?? false,
+        disable_right_click: settingsDto.disableRightClick ?? false,
+        lockdown_ui: settingsDto.lockdownUi ?? false,
+
+        // Monitoring (existing)
         track_tab_switches: settingsDto.trackTabSwitches !== false,
         track_device_changes: settingsDto.trackDeviceChanges !== false,
         track_ip_changes: settingsDto.trackIpChanges !== false,
         tab_switch_warning_threshold:
           settingsDto.tabSwitchWarningThreshold || 3,
+
+        // Question pool
+        question_pool: settingsDto.questionPool ?? false,
+        stratified_sampling: settingsDto.stratifiedSampling ?? false,
+        total_questions: settingsDto.totalQuestions,
+        pool_size: settingsDto.poolSize,
+
+        // Behavior
+        strict_time_limit: settingsDto.strictTimeLimit ?? false,
+        auto_save: settingsDto.autoSave ?? true,
+        backtracking_control: settingsDto.backtrackingControl ?? false,
+
+        // Other
+        access_code: settingsDto.accessCode,
+        publish_mode: settingsDto.publishMode ?? 'immediate',
       })
       .select()
       .single();
@@ -672,10 +1404,10 @@ export class QuizService {
       );
     }
 
-    // Check if quiz is published
-    if (quiz.status !== 'published') {
+    // Check if quiz is published or scheduled (scheduled quizzes can be assigned to sections)
+    if (quiz.status !== 'published' && quiz.status !== 'scheduled') {
       throw new BadRequestException(
-        'Quiz must be published before assigning to sections',
+        'Quiz must be published or scheduled before assigning to sections',
       );
     }
 
@@ -940,6 +1672,10 @@ export class QuizService {
       .eq('status', status)
       .in('quiz_id', quizIds);
 
+    // ✅ FILTER OUT SOFT-DELETED QUIZZES
+    // Students should never see deleted quizzes
+    query = query.is('deleted_at', null);
+
     // Apply filters
     if (subjectId) {
       query = query.eq('subject_id', subjectId);
@@ -1184,6 +1920,173 @@ export class QuizService {
       preview: true,
       note: 'This is a preview. Student data will not be recorded.',
     };
+  }
+
+  /**
+   * Import question from question bank to quiz
+   */
+  async importQuestionFromBank(
+    quizId: string,
+    questionBankId: string,
+    orderIndex: number | undefined,
+    teacherId: string,
+  ): Promise<QuizQuestion> {
+    const supabase = this.supabaseService.getServiceClient();
+
+    // 1. Verify quiz ownership
+    const quiz = await this.findQuizById(quizId);
+    if (quiz.teacher_id !== teacherId) {
+      throw new ForbiddenException(
+        'You can only import questions to your own quizzes',
+      );
+    }
+
+    // 2. Fetch question from bank
+    const { data: bankQuestion, error: fetchError } = await supabase
+      .from('question_bank')
+      .select('*')
+      .eq('id', questionBankId)
+      .single();
+
+    if (fetchError || !bankQuestion) {
+      this.logger.error('Error fetching question from bank:', fetchError);
+      throw new NotFoundException('Question not found in question bank');
+    }
+
+    // 3. Verify teacher owns the question
+    if (bankQuestion.teacher_id !== teacherId) {
+      throw new ForbiddenException('You can only import your own questions');
+    }
+
+    // 4. Determine order index (if not provided, add to end)
+    let finalOrderIndex = orderIndex;
+    if (finalOrderIndex === undefined) {
+      const { count } = await supabase
+        .from('quiz_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('quiz_id', quizId);
+      finalOrderIndex = count || 0;
+    }
+
+    // 🔍 DIAGNOSTIC: Log what we're importing
+    this.logger.log(`[IMPORT] Importing question from bank ${questionBankId}:`);
+    this.logger.log(`  - Question: "${bankQuestion.question_text}"`);
+    this.logger.log(`  - Type: ${bankQuestion.question_type}`);
+    this.logger.log(`  - Points: ${bankQuestion.default_points}`);
+    this.logger.log(`  - Time limit: ${bankQuestion.time_limit_seconds}s`);
+    this.logger.log(`  - Has explanation: ${!!bankQuestion.explanation}`);
+    this.logger.log(`  - Correct answer: ${JSON.stringify(bankQuestion.correct_answer)}`);
+    this.logger.log(`  - Has choices: ${!!bankQuestion.choices}`);
+    if (bankQuestion.choices) {
+      this.logger.log(`  - Number of choices: ${bankQuestion.choices.length}`);
+    }
+
+    // 5. Create quiz question from bank question
+    const { data: quizQuestion, error: insertError } = await supabase
+      .from('quiz_questions')
+      .insert({
+        quiz_id: quizId,
+        question_text: bankQuestion.question_text,
+        question_type: bankQuestion.question_type,
+        description: bankQuestion.explanation || null, // ✅ Map explanation → description
+        order_index: finalOrderIndex,
+        points: bankQuestion.default_points,
+        allow_partial_credit: bankQuestion.allow_partial_credit,
+        time_limit_seconds: bankQuestion.time_limit_seconds,
+        correct_answer: bankQuestion.correct_answer, // ✅ Already copies correct answer
+        source_question_bank_id: questionBankId, // Track source!
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      this.logger.error('Error importing question:', insertError);
+      throw new InternalServerErrorException('Failed to import question');
+    }
+
+    // 6. Copy choices if they exist in JSONB format
+    if (bankQuestion.choices && Array.isArray(bankQuestion.choices)) {
+      const choicesToInsert = bankQuestion.choices.map(
+        (choice: any, index: number) => ({
+          question_id: quizQuestion.question_id,
+          choice_text: choice.text || choice.choice_text,
+          is_correct: choice.is_correct || false,
+          order_index: index,
+          metadata: choice.metadata || null,
+        }),
+      );
+
+      this.logger.log(`[IMPORT] Inserting ${choicesToInsert.length} choices:`);
+      choicesToInsert.forEach((c, i) => {
+        this.logger.log(`  - Choice ${i}: "${c.choice_text}" is_correct=${c.is_correct}`);
+      });
+
+      const { error: choicesError } = await supabase
+        .from('quiz_choices')
+        .insert(choicesToInsert);
+
+      if (choicesError) {
+        this.logger.error('[IMPORT] Error importing choices:', choicesError);
+        // Don't fail the entire import, choices can be added later
+      } else {
+        this.logger.log(`[IMPORT] ✅ Successfully imported ${choicesToInsert.length} choices`);
+      }
+    } else {
+      this.logger.warn('[IMPORT] ⚠️ No choices to import (choices field missing or not an array)');
+    }
+
+    // Recalculate total points for the quiz
+    await this.recalculateTotalPoints(quizId);
+
+    this.logger.log(
+      `Question imported from bank: ${questionBankId} → ${quizQuestion.question_id}`,
+    );
+    return quizQuestion;
+  }
+
+  /**
+   * Helper: Recalculate and update total_points for a quiz
+   */
+  private async recalculateTotalPoints(quizId: string): Promise<void> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      // Sum all points from quiz questions
+      const { data: questions, error } = await supabase
+        .from('quiz_questions')
+        .select('points')
+        .eq('quiz_id', quizId);
+
+      if (error) {
+        this.logger.error(
+          `Error fetching questions for total points calculation:`,
+          error,
+        );
+        return;
+      }
+
+      const totalPoints =
+        questions?.reduce((sum, q) => sum + (q.points || 0), 0) || 0;
+
+      // Update quiz with calculated total_points
+      const { error: updateError } = await supabase
+        .from('quizzes')
+        .update({ total_points: totalPoints })
+        .eq('quiz_id', quizId);
+
+      if (updateError) {
+        this.logger.error(
+          `Error updating total_points for quiz ${quizId}:`,
+          updateError,
+        );
+      } else {
+        this.logger.log(
+          `Total points recalculated for quiz ${quizId}: ${totalPoints}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Exception in recalculateTotalPoints:`, error);
+    }
   }
 
   /**

@@ -137,4 +137,27 @@ export class QuizAttemptsController {
     this.logger.log(`Fetching quiz attempt ${attemptId}`);
     return this.quizAttemptsService.getAttempt(attemptId, user.id);
   }
+
+  @Get(':attemptId/review')
+  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get detailed answer review for a completed quiz attempt',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Quiz attempt review retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Quiz attempt not found' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Quiz attempt not completed yet',
+  })
+  async getAttemptReview(
+    @Param('attemptId') attemptId: string,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    this.logger.log(`Fetching review for quiz attempt ${attemptId}`);
+    return this.quizAttemptsService.getAttemptReview(attemptId, user.id);
+  }
 }

@@ -12,6 +12,7 @@ import { GradingController } from './controllers/grading.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 import { SessionManagementController } from './controllers/session-management.controller';
 import { AccessControlController } from './controllers/access-control.controller';
+import { QuizImagesController } from './controllers/quiz-images.controller';
 
 // Services
 import { QuizService } from './services/quiz.service';
@@ -24,6 +25,7 @@ import { AutoGradingService } from './services/auto-grading.service';
 import { SessionManagementService } from './services/session-management.service';
 import { AccessControlService } from './services/access-control.service';
 import { QuizCacheService } from './services/quiz-cache.service';
+import { QuizAnalyticsService } from './services/quiz-analytics.service';
 
 @Module({
   imports: [
@@ -43,6 +45,7 @@ import { QuizCacheService } from './services/quiz-cache.service';
     AnalyticsController,
     SessionManagementController,
     AccessControlController,
+    QuizImagesController,
   ],
   providers: [
     QuizService,
@@ -55,6 +58,7 @@ import { QuizCacheService } from './services/quiz-cache.service';
     SessionManagementService,
     AccessControlService,
     QuizCacheService,
+    QuizAnalyticsService,
   ],
   exports: [
     QuizService,

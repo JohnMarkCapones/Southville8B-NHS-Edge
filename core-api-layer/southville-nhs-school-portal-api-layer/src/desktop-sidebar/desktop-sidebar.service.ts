@@ -83,7 +83,7 @@ export class DesktopSidebarService {
 
       for (const row of data ?? []) {
         const gl = (row as any).grade_level as string | null;
-        if (gl && counts.hasOwnProperty(gl)) counts[gl]! += 1;
+        if (gl && counts.hasOwnProperty(gl)) counts[gl] += 1;
       }
 
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -98,7 +98,7 @@ export class DesktopSidebarService {
         ],
       };
     } catch (err) {
-      this.logger.error('getStudentDistribution failed', err as any);
+      this.logger.error('getStudentDistribution failed', err);
       return {
         total: 0,
         grades: [

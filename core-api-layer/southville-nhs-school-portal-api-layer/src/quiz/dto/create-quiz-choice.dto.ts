@@ -3,6 +3,8 @@ import {
   IsOptional,
   IsBoolean,
   IsNumber,
+  IsUrl,
+  IsInt,
   MinLength,
   Min,
 } from 'class-validator';
@@ -46,4 +48,46 @@ export class CreateQuizChoiceDto {
     required: false,
   })
   metadata?: any;
+
+  // ============================================================================
+  // Image Support Fields (Cloudflare Images)
+  // ============================================================================
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    example: 'quiz-c-1f3b8bf5-b165-473c-9740-aaa4912516f8',
+    description: 'Cloudflare Images ID for choice image',
+    required: false,
+  })
+  choiceImageId?: string;
+
+  @IsOptional()
+  @IsUrl()
+  @ApiProperty({
+    example: 'https://imagedelivery.net/abc123/quiz-c-1f3b8bf5/card',
+    description: 'Full Cloudflare Images delivery URL for choice image',
+    required: false,
+  })
+  choiceImageUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @ApiProperty({
+    example: 524288,
+    description: 'File size in bytes of choice image',
+    required: false,
+    minimum: 0,
+  })
+  choiceImageFileSize?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    example: 'image/jpeg',
+    description: 'MIME type of choice image (e.g., image/jpeg, image/png)',
+    required: false,
+  })
+  choiceImageMimeType?: string;
 }
