@@ -28,66 +28,65 @@
 
 ### Domain & Access Control (5 entities)
 
-- `domains` (5 columns)
-- `domain_roles` (4 columns)
-- `domain_role_permissions` (5 columns)
-- `user_domain_roles` (4 columns)
-- `positions` (7 columns)
+- `domains` (5 columns): `id`, `type`, `name`, `created_at`, `created_by`
+- `domain_roles` (4 columns): `id`, `created_at`, `domain_id`, `name`
+- `domain_role_permissions` (5 columns): `id`, `created_at`, `domain_role_id`, `permission_id`, `allowed`
+- `user_domain_roles` (4 columns): `id`, `created_at`, `user_id`, `domain_role_id`
+- `positions` (7 columns): `id`, `role_id`, `name`, `description`, `key`, `created_at`, `updated_at`
 
 ### Academic Structure (5 entities)
 
-- `departments` (7 columns)
-- `departments_information` (9 columns)
-- `subjects` (13 columns)
-- `sections` (10 columns)
-- `section_modules` (6 columns)
+- `departments` (7 columns): `id`, `department_name`, `description`, `head_id`, `created_at`, `updated_at`, `is_active`
+- `departments_information` (9 columns): `id`, `department_id`, `office_name`, `contact_person`, `description`, `email`, `contact_number`, `created_at`, `updated_at`
+- `subjects` (13 columns): `id`, `subject_name`, `description`, `grade_level`, `department_id`, `color_hex`, `created_at`, `updated_at`, `code`, `status`, `visibility`, `grade_levels`, `is_deleted`
+- `sections` (10 columns): `id`, `name`, `grade_level`, `teacher_id`, `created_at`, `updated_at`, `room_id`, `building_id`, `floor_id`, `status`
+- `section_modules` (6 columns): `id`, `section_id`, `module_id`, `visible`, `assigned_at`, `assigned_by`
 
-### Scheduling (4 entities)
+### Scheduling (5 entities)
 
-- `schedules` (19 columns)
-- `schedule_templates` (8 columns)
-- `schedule_audit` (6 columns)
-- `schedules_audit_log` (9 columns)
-- `student_schedule` (4 columns)
+- `schedules` (19 columns): `id`, `subject_id`, `teacher_id`, `section_id`, `room_id`, `building_id`, `day_of_week`, `start_time`, `end_time`, `school_year`, `semester`, `created_at`, `updated_at`, `status`, `is_published`, `published_at`, `recurring_rule`, `version`, `grading_period`
+- `schedule_templates` (8 columns): `id`, `name`, `description`, `grade_level`, `payload`, `created_by`, `created_at`, `updated_at`
+- `schedule_audit` (6 columns): `id`, `schedule_id`, `action`, `actor_id`, `diff`, `created_at`
+- `schedules_audit_log` (9 columns): `id`, `schedule_id`, `actor_user_id`, `action`, `changed_fields`, `before`, `after`, `note`, `created_at`
+- `student_schedule` (4 columns): `id`, `schedule_id`, `student_id`, `created_at`
 
-### Quiz System (20 entities)
+### Quiz System (21 entities)
 
-- `quizzes` (26 columns)
-- `quiz_settings` (25 columns)
-- `quiz_questions` (19 columns)
-- `quiz_choices` (7 columns)
-- `quiz_sections` (4 columns)
-- `quiz_section_settings` (7 columns)
-- `quiz_attempts` (14 columns)
-- `quiz_student_answers` (14 columns)
-- `quiz_student_summary` (12 columns)
-- `quiz_participants` (15 columns)
-- `quiz_active_sessions` (15 columns)
-- `quiz_session_answers` (9 columns)
-- `quiz_access_links` (15 columns)
-- `quiz_access_logs` (10 columns)
-- `quiz_device_sessions` (11 columns)
-- `quiz_activity_logs` (9 columns)
-- `quiz_analytics` (14 columns)
-- `quiz_flags` (10 columns)
-- `quiz_question_stats` (11 columns)
-- `quiz_question_metadata` (5 columns)
-- `question_bank` (18 columns)
+- `quizzes` (26 columns): `quiz_id`, `title`, `description`, `subject_id`, `teacher_id`, `type`, `grading_type`, `time_limit`, `start_date`, `end_date`, `status`, `version`, `parent_quiz_id`, `visibility`, `question_pool_size`, `questions_to_display`, `allow_retakes`, `allow_backtracking`, `shuffle_questions`, `shuffle_choices`, `total_points`, `passing_score`, `created_at`, `updated_at`, `deleted_at`, `deleted_by`
+- `quiz_settings` (25 columns): `id`, `quiz_id`, `lockdown_browser`, `anti_screenshot`, `disable_copy_paste`, `disable_right_click`, `require_fullscreen`, `track_tab_switches`, `track_device_changes`, `track_ip_changes`, `tab_switch_warning_threshold`, `created_at`, `secured_quiz`, `quiz_lockdown`, `lockdown_ui`, `question_pool`, `stratified_sampling`, `total_questions`, `pool_size`, `strict_time_limit`, `auto_save`, `backtracking_control`, `visibility`, `access_code`, `publish_mode`
+- `quiz_questions` (23 columns): `question_id`, `quiz_id`, `question_text`, `question_type`, `order_index`, `points`, `allow_partial_credit`, `time_limit_seconds`, `is_pool_question`, `source_question_bank_id`, `created_at`, `updated_at`, `correct_answer`, `settings`, `description`, `is_required`, `is_randomize`, `case_sensitive`, `whitespace_sensitive`, `question_image_id`, `question_image_url`, `question_image_file_size`, `question_image_mime_type`
+  (4 columns): `id`, `quiz_id`, `section_id`, `assigned_at`
+- `quiz_section_settings` (7 columns): `id`, `quiz_id`, `section_id`, `start_date`, `end_date`, `time_limit_override`, `created_at`
+- `quiz_attempts` (14 columns): `attempt_id`, `quiz_id`, `student_id`, `attempt_number`, `score`, `max_possible_score`, `status`, `terminated_by_teacher`, `termination_reason`, `started_at`, `submitted_at`, `time_taken_seconds`, `questions_shown`, `created_at`
+- `quiz_student_answers` (14 columns): `answer_id`, `attempt_id`, `question_id`, `choice_id`, `choice_ids`, `answer_text`, `answer_json`, `points_awarded`, `is_correct`, `graded_by`, `graded_at`, `grader_feedback`, `time_spent_seconds`, `answered_at`
+- `quiz_student_summary` (12 columns): `id`, `student_id`, `quiz_id`, `last_attempt_id`, `attempts_count`, `highest_score`, `lowest_score`, `latest_score`, `average_score`, `status`, `passed`, `last_updated`
+- `quiz_participants` (15 columns): `id`, `session_id`, `quiz_id`, `student_id`, `status`, `progress`, `current_question_index`, `questions_answered`, `total_questions`, `start_time`, `end_time`, `flag_count`, `idle_time_seconds`, `created_at`, `updated_at`
+- `quiz_active_sessions` (15 columns): `session_id`, `quiz_id`, `student_id`, `attempt_id`, `started_at`, `last_synced_at`, `is_active`, `initial_device_fingerprint`, `initial_ip_address`, `initial_user_agent`, `last_heartbeat`, `current_device_fingerprint`, `current_ip_address`, `current_user_agent`, `terminated_reason`
+- `quiz_session_answers` (9 columns): `id`, `session_id`, `question_id`, `temporary_choice_id`, `temporary_choice_ids`, `temporary_answer_text`, `temporary_answer_json`, `last_updated`, `time_spent_seconds`
+- `quiz_access_links` (15 columns): `link_id`, `quiz_id`, `access_token`, `link_type`, `is_active`, `expires_at`, `access_code`, `max_uses`, `use_count`, `requires_auth`, `is_revoked`, `revoked_at`, `created_by`, `created_at`, `last_used_at`
+- `quiz_access_logs` (10 columns): `id`, `link_id`, `quiz_id`, `student_id`, `accessed_at`, `ip_address`, `user_agent`, `access_granted`, `denial_reason`, `metadata`
+- `quiz_device_sessions` (11 columns): `id`, `session_id`, `device_fingerprint`, `ip_address`, `user_agent`, `screen_resolution`, `browser_info`, `device_type`, `first_seen_at`, `last_seen_at`, `is_current`
+- `quiz_activity_logs` (9 columns): `id`, `participant_id`, `session_id`, `quiz_id`, `student_id`, `event_type`, `message`, `metadata`, `timestamp`
+- `quiz_analytics` (14 columns): `id`, `quiz_id`, `total_attempts`, `total_students`, `completed_attempts`, `average_score`, `highest_score`, `lowest_score`, `median_score`, `pass_rate`, `average_time_taken_seconds`, `fastest_completion_seconds`, `slowest_completion_seconds`, `last_calculated_at`
+- `quiz_flags` (10 columns): `id`, `participant_id`, `session_id`, `quiz_id`, `student_id`, `flag_type`, `message`, `severity`, `metadata`, `timestamp`
+- `quiz_question_stats` (11 columns): `id`, `question_id`, `quiz_id`, `total_attempts`, `correct_count`, `incorrect_count`, `skipped_count`, `difficulty_score`, `average_time_spent_seconds`, `discrimination_index`, `last_calculated_at`
+- `quiz_question_metadata` (5 columns): `id`, `question_id`, `metadata_type`, `metadata`, `created_at`
+- `question_bank` (23 columns): `id`, `teacher_id`, `question_text`, `question_type`, `subject_id`, `topic`, `difficulty`, `tags`, `default_points`, `choices`, `correct_answer`, `allow_partial_credit`, `time_limit_seconds`, `created_at`, `updated_at`, `explanation`, `is_public`, `is_deleted`, `question_image_id`, `question_image_url`, `question_image_file_size`, `question_image_mime_type`, `choices_image_data`
 
 ### Clubs (12 entities)
 
-- `clubs` (21 columns)
-- `club_announcements` (8 columns)
-- `club_benefits` (7 columns)
-- `club_faqs` (7 columns)
-- `club_goals` (6 columns)
-- `club_positions` (6 columns)
-- `student_club_memberships` (8 columns)
-- `club_forms` (10 columns)
-- `club_form_questions` (8 columns)
-- `club_form_question_options` (6 columns)
-- `club_form_responses` (9 columns)
-- `club_form_answers` (6 columns)
+- `clubs` (21 columns): `id`, `name`, `description`, `president_id`, `vp_id`, `secretary_id`, `advisor_id`, `domain_id`, `created_at`, `updated_at`, `co_advisor_id`, `mission_statement`, `mission_title`, `mission_description`, `email`, `championship_wins`, `benefits_title`, `benefits_description`, `club_image`, `r2_club_image_key`, `club_logo`
+- `club_announcements` (8 columns): `id`, `club_id`, `title`, `content`, `priority`, `created_by`, `created_at`, `updated_at`
+- `club_benefits` (7 columns): `id`, `club_id`, `title`, `description`, `order_index`, `created_at`, `updated_at`
+- `club_faqs` (7 columns): `id`, `club_id`, `question`, `answer`, `order_index`, `created_at`, `updated_at`
+- `club_goals` (6 columns): `id`, `club_id`, `goal_text`, `order_index`, `created_at`, `updated_at`
+- `club_positions` (6 columns): `id`, `name`, `description`, `level`, `created_at`, `updated_at`
+- `student_club_memberships` (8 columns): `id`, `student_id`, `club_id`, `position_id`, `joined_at`, `is_active`, `created_at`, `updated_at`
+- `club_forms` (10 columns): `id`, `club_id`, `created_by`, `name`, `description`, `is_active`, `auto_approve`, `form_type`, `created_at`, `updated_at`
+- `club_form_questions` (8 columns): `id`, `form_id`, `question_text`, `question_type`, `required`, `order_index`, `created_at`, `updated_at`
+- `club_form_question_options` (6 columns): `id`, `question_id`, `option_text`, `option_value`, `order_index`, `created_at`
+- `club_form_responses` (9 columns): `id`, `form_id`, `user_id`, `status`, `reviewed_by`, `reviewed_at`, `review_notes`, `created_at`, `updated_at`
+- `club_form_answers` (6 columns): `id`, `response_id`, `question_id`, `answer_text`, `answer_value`, `created_at`
 
 ### Events (7 entities)
 
