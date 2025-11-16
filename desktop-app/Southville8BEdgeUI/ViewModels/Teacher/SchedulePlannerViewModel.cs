@@ -149,6 +149,20 @@ public partial class SchedulePlannerViewModel : ViewModelBase
         return $"{start.Hours:D2}:{start.Minutes:D2} - {end.Hours:D2}:{end.Minutes:D2}";
     }
 
+    private string FormatTimeRange12Hour(string startTime, string endTime)
+    {
+        var start = ParseTime(startTime);
+        var end = ParseTime(endTime);
+        
+        var startHour = start.Hours == 0 ? 12 : (start.Hours > 12 ? start.Hours - 12 : start.Hours);
+        var endHour = end.Hours == 0 ? 12 : (end.Hours > 12 ? end.Hours - 12 : end.Hours);
+        
+        var startPeriod = start.Hours < 12 ? "AM" : "PM";
+        var endPeriod = end.Hours < 12 ? "AM" : "PM";
+        
+        return $"{startHour}:{start.Minutes:D2} {startPeriod} - {endHour}:{end.Minutes:D2} {endPeriod}";
+    }
+
     private double CalculateDuration(string startTime, string endTime)
     {
         var start = ParseTime(startTime);
@@ -313,7 +327,7 @@ public partial class SchedulePlannerViewModel : ViewModelBase
             {
                 Subject = schedule.Subject?.SubjectName ?? "N/A",
                 Grade = schedule.Section?.Name ?? "N/A",
-                Time = FormatTimeRange(schedule.StartTime, schedule.EndTime),
+                Time = FormatTimeRange12Hour(schedule.StartTime, schedule.EndTime),
                 Room = FormatRoomLocation(schedule.Room?.RoomNumber, schedule.Building?.BuildingName),
                 SubjectColor = color
             });
@@ -444,8 +458,8 @@ public partial class SchedulePlannerViewModel : ViewModelBase
 
         UpcomingClasses = new ObservableCollection<UpcomingClassViewModel>
         {
-            new() { Subject = "Mathematics", Grade = "Grade 8A", Time = "08:00 - 09:30", Room = "Room 101", SubjectColor = infoBrush },
-            new() { Subject = "Science", Grade = "Grade 8B", Time = "10:00 - 11:30", Room = "Room 205", SubjectColor = successBrush }
+            new() { Subject = "Mathematics", Grade = "Grade 8A", Time = "8:00 AM - 9:30 AM", Room = "Room 101", SubjectColor = infoBrush },
+            new() { Subject = "Science", Grade = "Grade 8B", Time = "10:00 AM - 11:30 AM", Room = "Room 205", SubjectColor = successBrush }
         };
 
         Conflicts = new ObservableCollection<ScheduleConflictViewModel>
