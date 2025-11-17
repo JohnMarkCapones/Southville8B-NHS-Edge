@@ -23,7 +23,7 @@ This policy does NOT cover third-party dependencies (see Responsible Disclosure 
 
 **Owner:** John Mark Capones, Richard Ramos Jr
 
-**Security Contact:** [security@yourdomain.example](mailto:security@southville8bnhs.com)
+**Security Contact:** [security@southville8bnhs.com](mailto:security@southville8bnhs.com)
 
 **Escalation:** Lead Maintainer → Project Steering Committee → Legal Counsel (when required)
 
