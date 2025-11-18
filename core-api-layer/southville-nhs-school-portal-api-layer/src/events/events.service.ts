@@ -29,6 +29,8 @@ import { UpdateEventFaqDto } from './dto/update-event-faq.dto';
 import { ReorderEventItemsDto } from './dto/reorder-event-items.dto';
 import { EventStatisticsDto } from './dto/event-statistics.dto';
 import { TagDto } from './dto/tag.dto';
+import { NotificationService } from '../common/services/notification.service';
+import { AlertType } from '../alerts/entities/alert.entity';
 
 @Injectable()
 export class EventsService {
@@ -40,6 +42,7 @@ export class EventsService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private notificationService: NotificationService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -247,7 +250,19 @@ export class EventsService {
       await this.invalidateEventCaches();
 
       this.logger.log(`Event created successfully: ${event.id}`);
-      return await this.findOne(event.id);
+
+      // Notify target audience about new event (global notification for now)
+      // TODO: Get specific target users based on event visibility/targeting
+      const eventData = await this.findOne(event.id);
+      await this.notificationService.notifyAll(
+        `New Event: ${eventData.title}`,
+        `${eventData.description?.substring(0, 100) || 'A new event has been created.'}...`,
+        AlertType.INFO,
+        userId,
+        { expiresInDays: 7 },
+      );
+
+      return eventData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -900,7 +915,18 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event updated successfully: ${id}`);
-      return await this.findOne(id);
+
+      // Notify target audience about event update (global notification for now)
+      const eventData = await this.findOne(id);
+      await this.notificationService.notifyAll(
+        `Event Updated: ${eventData.title}`,
+        `The event "${eventData.title}" has been updated.`,
+        AlertType.INFO,
+        userId,
+        { expiresInDays: 7 },
+      );
+
+      return eventData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -945,7 +971,8 @@ export class EventsService {
     const supabase = this.getSupabaseClient();
 
     try {
-      await this.findOne(id); // Verify event exists
+      // Get event data before soft-deleting
+      const eventData = await this.findOne(id);
 
       const { error } = await supabase
         .from('events')
@@ -965,6 +992,15 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event archived successfully: ${id}`);
+
+      // Notify target audience about event cancellation (global notification for now)
+      await this.notificationService.notifyAll(
+        `Event Cancelled: ${eventData.title}`,
+        `The event "${eventData.title}" has been cancelled.`,
+        AlertType.WARNING,
+        userId,
+        { expiresInDays: 7 },
+      );
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

@@ -12,6 +12,8 @@ import {
   SupabaseJWTPayload,
 } from './interfaces/supabase-user.interface';
 import { JwtVerificationService } from './jwt-verification.service';
+import { NotificationService } from '../common/services/notification.service';
+import { AlertType } from '../alerts/entities/alert.entity';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +24,7 @@ export class AuthService {
   constructor(
     private configService: ConfigService,
     private jwtVerificationService: JwtVerificationService,
+    private notificationService: NotificationService,
   ) {}
 
   /**
@@ -630,6 +633,9 @@ export class AuthService {
       `Password reset for user ${userId} by admin ${adminUserId}`,
     );
 
+    // 6. Notify user about password reset
+    await this.notificationService.notifyPasswordReset(userId, adminUserId);
+
     return {
       message: 'Password reset successfully',
       ...(roleName === 'admin' ? { temporaryPassword: defaultPassword } : {}),
@@ -682,6 +688,16 @@ export class AuthService {
 
     this.logger.log(`Password changed successfully for user ${userId}`);
 
+    // Notify user about password change
+    await this.notificationService.notifyUser(
+      userId,
+      'Password Changed',
+      'Your password has been changed successfully.',
+      AlertType.SUCCESS,
+      userId,
+      { expiresInDays: 1 },
+    );
+
     return { message: 'Password changed successfully' };
   }
 
@@ -720,6 +736,12 @@ export class AuthService {
 
     this.logger.log(
       `Password changed for user ${targetUserId} by admin ${adminUserId}`,
+    );
+
+    // Notify user about password change by admin
+    await this.notificationService.notifyPasswordReset(
+      targetUserId,
+      adminUserId,
     );
 
     return { message: 'Password changed successfully' };

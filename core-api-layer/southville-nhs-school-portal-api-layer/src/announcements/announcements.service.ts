@@ -17,6 +17,8 @@ import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import { Announcement } from './entities/announcement.entity';
 import { Tag } from './entities/tag.entity';
+import { NotificationService } from '../common/services/notification.service';
+import { AlertType } from '../alerts/entities/alert.entity';
 
 @Injectable()
 export class AnnouncementsService {
@@ -27,6 +29,7 @@ export class AnnouncementsService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private notificationService: NotificationService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -207,7 +210,19 @@ export class AnnouncementsService {
       await this.invalidateAnnouncementCaches();
 
       this.logger.log(`Announcement created successfully: ${announcement.id}`);
-      return await this.findOne(announcement.id);
+
+      // Notify target audience about new announcement (global notification for now)
+      // TODO: Get specific target users based on announcement targeting
+      const announcementData = await this.findOne(announcement.id);
+      await this.notificationService.notifyAll(
+        `New Announcement: ${announcementData.title}`,
+        `${announcementData.content?.substring(0, 100) || 'A new announcement has been posted.'}...`,
+        AlertType.INFO,
+        userId,
+        { expiresInDays: 7 },
+      );
+
+      return announcementData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -538,7 +553,18 @@ export class AnnouncementsService {
       await this.cacheManager.del(`announcement:${id}`);
 
       this.logger.log(`Announcement updated successfully: ${id}`);
-      return await this.findOne(id);
+
+      // Notify target audience about announcement update (global notification for now)
+      const announcementData = await this.findOne(id);
+      await this.notificationService.notifyAll(
+        `Announcement Updated: ${announcementData.title}`,
+        `The announcement "${announcementData.title}" has been updated.`,
+        AlertType.INFO,
+        userId,
+        { expiresInDays: 7 },
+      );
+
+      return announcementData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||

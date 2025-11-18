@@ -1,0 +1,2071 @@
+  <diagram name="Web App - Super Admin News DFD" id="Web-SuperAdmin-News-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-news-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-p1.0" value="1.0&lt;br&gt;News Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-p1.2" value="1.2&lt;br&gt;Display News" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-d1" value="D1&lt;br&gt;News&lt;br&gt;(news)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-d2" value="D2&lt;br&gt;Users&lt;br&gt;(users)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-news-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-news-admin" target="web-superadmin-news-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-news-p1.0" target="web-superadmin-news-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-news-p1.1" target="web-superadmin-news-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-news-api" target="web-superadmin-news-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-news-p1.1" target="web-superadmin-news-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-news-p1.2" target="web-superadmin-news-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-news-api" target="web-superadmin-news-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-news-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-news-api" target="web-superadmin-news-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-news-d1" target="web-superadmin-news-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-news-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-news-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-news-d2" target="web-superadmin-news-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Announcements DFD" id="Web-SuperAdmin-Announcements-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-announcements-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-p1.0" value="1.0&lt;br&gt;Announcements Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-p1.2" value="1.2&lt;br&gt;Display Announcements" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-d1" value="D1&lt;br&gt;Announcements&lt;br&gt;(announcements)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-d2" value="D2&lt;br&gt;Banners&lt;br&gt;(banner_notifications)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-announcements-admin" target="web-superadmin-announcements-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-announcements-p1.0" target="web-superadmin-announcements-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-announcements-p1.1" target="web-superadmin-announcements-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-announcements-api" target="web-superadmin-announcements-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-announcements-p1.1" target="web-superadmin-announcements-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-announcements-p1.2" target="web-superadmin-announcements-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-announcements-api" target="web-superadmin-announcements-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-announcements-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-announcements-api" target="web-superadmin-announcements-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-announcements-d1" target="web-superadmin-announcements-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-announcements-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-announcements-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-announcements-d2" target="web-superadmin-announcements-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Events DFD" id="Web-SuperAdmin-Events-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-events-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-p1.0" value="1.0&lt;br&gt;Events Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-p1.2" value="1.2&lt;br&gt;Display Events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-d1" value="D1&lt;br&gt;Events&lt;br&gt;(events)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-d2" value="D2&lt;br&gt;Users&lt;br&gt;(users)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-events-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-events-admin" target="web-superadmin-events-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-events-p1.0" target="web-superadmin-events-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-events-p1.1" target="web-superadmin-events-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-events-api" target="web-superadmin-events-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-events-p1.1" target="web-superadmin-events-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-events-p1.2" target="web-superadmin-events-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-events-api" target="web-superadmin-events-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-events-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-events-api" target="web-superadmin-events-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-events-d1" target="web-superadmin-events-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-events-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-events-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-events-d2" target="web-superadmin-events-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Clubs DFD" id="Web-SuperAdmin-Clubs-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-clubs-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-p1.0" value="1.0&lt;br&gt;Clubs Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-p1.2" value="1.2&lt;br&gt;Display Clubs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-d1" value="D1&lt;br&gt;Clubs&lt;br&gt;(clubs)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-d2" value="D2&lt;br&gt;Users&lt;br&gt;(users)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-clubs-admin" target="web-superadmin-clubs-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-clubs-p1.0" target="web-superadmin-clubs-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-clubs-p1.1" target="web-superadmin-clubs-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-clubs-api" target="web-superadmin-clubs-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-clubs-p1.1" target="web-superadmin-clubs-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-clubs-p1.2" target="web-superadmin-clubs-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-clubs-api" target="web-superadmin-clubs-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-clubs-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-clubs-api" target="web-superadmin-clubs-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-clubs-d1" target="web-superadmin-clubs-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-clubs-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-clubs-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-clubs-d2" target="web-superadmin-clubs-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Gallery DFD" id="Web-SuperAdmin-Gallery-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-gallery-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-p1.0" value="1.0&lt;br&gt;Gallery Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-p1.2" value="1.2&lt;br&gt;Display Gallery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-d1" value="D1&lt;br&gt;Gallery&lt;br&gt;(gallery)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-gallery-admin" target="web-superadmin-gallery-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-gallery-p1.0" target="web-superadmin-gallery-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-gallery-p1.1" target="web-superadmin-gallery-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-gallery-api" target="web-superadmin-gallery-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-gallery-p1.1" target="web-superadmin-gallery-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-gallery-p1.2" target="web-superadmin-gallery-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-gallery-api" target="web-superadmin-gallery-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-gallery-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-gallery-d1" target="web-superadmin-gallery-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-gallery-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-gallery-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Static Pages DFD" id="Web-SuperAdmin-Static-Pages-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-static-pages-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-p1.0" value="1.0&lt;br&gt;Static Pages Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-p1.2" value="1.2&lt;br&gt;Display Static Pages" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-d1" value="D1&lt;br&gt;Static Pages&lt;br&gt;(static_pages)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-static-pages-admin" target="web-superadmin-static-pages-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-static-pages-p1.0" target="web-superadmin-static-pages-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-static-pages-p1.1" target="web-superadmin-static-pages-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-static-pages-api" target="web-superadmin-static-pages-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-static-pages-p1.1" target="web-superadmin-static-pages-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-static-pages-p1.2" target="web-superadmin-static-pages-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-static-pages-api" target="web-superadmin-static-pages-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-static-pages-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-static-pages-d1" target="web-superadmin-static-pages-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-static-pages-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-static-pages-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Resources DFD" id="Web-SuperAdmin-Resources-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-resources-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-resources-p1.0" value="1.0&lt;br&gt;Resources Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-resources-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-resources-p1.2" value="1.2&lt;br&gt;Display Resources" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-resources-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-resources-d1" value="D1&lt;br&gt;Resources&lt;br&gt;(resources)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-resources-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-resources-admin" target="web-superadmin-resources-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-resources-p1.0" target="web-superadmin-resources-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-resources-p1.1" target="web-superadmin-resources-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-resources-api" target="web-superadmin-resources-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-resources-p1.1" target="web-superadmin-resources-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-resources-p1.2" target="web-superadmin-resources-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-resources-api" target="web-superadmin-resources-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-resources-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-resources-d1" target="web-superadmin-resources-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-resources-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-resources-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Subjects DFD" id="Web-SuperAdmin-Subjects-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-subjects-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-p1.0" value="1.0&lt;br&gt;Subjects Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-p1.2" value="1.2&lt;br&gt;Display Subjects" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-d1" value="D1&lt;br&gt;Subjects&lt;br&gt;(subjects)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-d2" value="D2&lt;br&gt;Teachers&lt;br&gt;(teachers)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-subjects-admin" target="web-superadmin-subjects-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-subjects-p1.0" target="web-superadmin-subjects-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-subjects-p1.1" target="web-superadmin-subjects-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-subjects-api" target="web-superadmin-subjects-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-subjects-p1.1" target="web-superadmin-subjects-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-subjects-p1.2" target="web-superadmin-subjects-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-subjects-api" target="web-superadmin-subjects-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-subjects-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-subjects-api" target="web-superadmin-subjects-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-subjects-d1" target="web-superadmin-subjects-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-subjects-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-subjects-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-subjects-d2" target="web-superadmin-subjects-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Classes DFD" id="Web-SuperAdmin-Classes-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-classes-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-p1.0" value="1.0&lt;br&gt;Classes Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-p1.2" value="1.2&lt;br&gt;Display Classes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-d1" value="D1&lt;br&gt;Classes&lt;br&gt;(classes)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-d2" value="D2&lt;br&gt;Sections&lt;br&gt;(sections)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-classes-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-classes-admin" target="web-superadmin-classes-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-classes-p1.0" target="web-superadmin-classes-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-classes-p1.1" target="web-superadmin-classes-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-classes-api" target="web-superadmin-classes-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-classes-p1.1" target="web-superadmin-classes-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-classes-p1.2" target="web-superadmin-classes-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-classes-api" target="web-superadmin-classes-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-classes-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-classes-api" target="web-superadmin-classes-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-classes-d1" target="web-superadmin-classes-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-classes-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-classes-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-classes-d2" target="web-superadmin-classes-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Learning Materials DFD" id="Web-SuperAdmin-Learning-Materials-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-learning-materials-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-p1.0" value="1.0&lt;br&gt;Learning Materials Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-p1.2" value="1.2&lt;br&gt;Display Learning Materials" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-d1" value="D1&lt;br&gt;Learning Materials&lt;br&gt;(learning_materials)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-d2" value="D2&lt;br&gt;Subjects&lt;br&gt;(subjects)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-learning-materials-admin" target="web-superadmin-learning-materials-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-learning-materials-p1.0" target="web-superadmin-learning-materials-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-learning-materials-p1.1" target="web-superadmin-learning-materials-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-learning-materials-api" target="web-superadmin-learning-materials-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-learning-materials-p1.1" target="web-superadmin-learning-materials-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-learning-materials-p1.2" target="web-superadmin-learning-materials-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-learning-materials-api" target="web-superadmin-learning-materials-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-learning-materials-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-learning-materials-api" target="web-superadmin-learning-materials-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-learning-materials-d1" target="web-superadmin-learning-materials-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-learning-materials-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-learning-materials-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-learning-materials-d2" target="web-superadmin-learning-materials-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Top Performers DFD" id="Web-SuperAdmin-Top-Performers-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-top-performers-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-p1.0" value="1.0&lt;br&gt;Top Performers Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-p1.2" value="1.2&lt;br&gt;Display Top Performers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-d1" value="D1&lt;br&gt;Students&lt;br&gt;(students)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-d2" value="D2&lt;br&gt;Grades&lt;br&gt;(grades)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-top-performers-admin" target="web-superadmin-top-performers-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-top-performers-p1.0" target="web-superadmin-top-performers-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-top-performers-p1.1" target="web-superadmin-top-performers-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-top-performers-api" target="web-superadmin-top-performers-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-top-performers-p1.1" target="web-superadmin-top-performers-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-top-performers-p1.2" target="web-superadmin-top-performers-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-top-performers-api" target="web-superadmin-top-performers-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-top-performers-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-top-performers-api" target="web-superadmin-top-performers-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-top-performers-d1" target="web-superadmin-top-performers-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-top-performers-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-top-performers-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-top-performers-d2" target="web-superadmin-top-performers-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Academic Calendar DFD" id="Web-SuperAdmin-Academic-Calendar-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-academic-calendar-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-p1.0" value="1.0&lt;br&gt;Academic Calendar Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-p1.2" value="1.2&lt;br&gt;Display Academic Calendar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-d1" value="D1&lt;br&gt;Academic Calendar&lt;br&gt;(academic_calendar)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-academic-calendar-admin" target="web-superadmin-academic-calendar-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-academic-calendar-p1.0" target="web-superadmin-academic-calendar-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-academic-calendar-p1.1" target="web-superadmin-academic-calendar-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-academic-calendar-api" target="web-superadmin-academic-calendar-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-academic-calendar-p1.1" target="web-superadmin-academic-calendar-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-academic-calendar-p1.2" target="web-superadmin-academic-calendar-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-academic-calendar-api" target="web-superadmin-academic-calendar-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-academic-calendar-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-academic-calendar-d1" target="web-superadmin-academic-calendar-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-academic-calendar-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-academic-calendar-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Schedule Management DFD" id="Web-SuperAdmin-Schedule-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-schedule-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-p1.0" value="1.0&lt;br&gt;Schedule Management Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-p1.2" value="1.2&lt;br&gt;Display Schedule Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-d1" value="D1&lt;br&gt;Schedules&lt;br&gt;(schedules)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-d2" value="D2&lt;br&gt;Subjects&lt;br&gt;(subjects)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-d3" value="D3&lt;br&gt;Teachers&lt;br&gt;(teachers)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="320" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-d4" value="D4&lt;br&gt;Sections&lt;br&gt;(sections)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="390" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-admin" target="web-superadmin-schedule-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-p1.0" target="web-superadmin-schedule-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-p1.1" target="web-superadmin-schedule-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-api" target="web-superadmin-schedule-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-p1.1" target="web-superadmin-schedule-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-p1.2" target="web-superadmin-schedule-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-api" target="web-superadmin-schedule-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-schedule-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-api" target="web-superadmin-schedule-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f1-d3" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-api" target="web-superadmin-schedule-d3" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="345" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="345" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f1-d4" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-api" target="web-superadmin-schedule-d4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="415" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="415" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-d1" target="web-superadmin-schedule-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-schedule-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-d2" target="web-superadmin-schedule-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f2-d3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-d3" target="web-superadmin-schedule-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="345" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="345" />
+              <mxPoint x="450" y="345" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-db-f2-d4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-d4" target="web-superadmin-schedule-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="415" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="415" />
+              <mxPoint x="450" y="415" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Schedule Wizard DFD" id="Web-SuperAdmin-Schedule-Wizard-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-schedule-wizard-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-p1.0" value="1.0&lt;br&gt;Schedule Wizard Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-p1.2" value="1.2&lt;br&gt;Display Schedule Wizard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-d1" value="D1&lt;br&gt;Schedules&lt;br&gt;(schedules)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-d2" value="D2&lt;br&gt;Subjects&lt;br&gt;(subjects)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-d3" value="D3&lt;br&gt;Teachers&lt;br&gt;(teachers)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="320" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-d4" value="D4&lt;br&gt;Sections&lt;br&gt;(sections)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="390" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-wizard-admin" target="web-superadmin-schedule-wizard-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-wizard-p1.0" target="web-superadmin-schedule-wizard-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-wizard-p1.1" target="web-superadmin-schedule-wizard-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-wizard-api" target="web-superadmin-schedule-wizard-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-wizard-p1.1" target="web-superadmin-schedule-wizard-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-schedule-wizard-p1.2" target="web-superadmin-schedule-wizard-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-api" target="web-superadmin-schedule-wizard-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-schedule-wizard-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-api" target="web-superadmin-schedule-wizard-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f1-d3" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-api" target="web-superadmin-schedule-wizard-d3" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="345" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="345" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f1-d4" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-api" target="web-superadmin-schedule-wizard-d4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="415" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="415" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-d1" target="web-superadmin-schedule-wizard-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-schedule-wizard-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-d2" target="web-superadmin-schedule-wizard-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f2-d3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-d3" target="web-superadmin-schedule-wizard-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="345" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="345" />
+              <mxPoint x="450" y="345" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-schedule-wizard-db-f2-d4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-schedule-wizard-d4" target="web-superadmin-schedule-wizard-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="415" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="415" />
+              <mxPoint x="450" y="415" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Timetable DFD" id="Web-SuperAdmin-Timetable-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-timetable-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-p1.0" value="1.0&lt;br&gt;Timetable Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-p1.2" value="1.2&lt;br&gt;Display Timetable" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-d1" value="D1&lt;br&gt;Schedules&lt;br&gt;(schedules)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-d2" value="D2&lt;br&gt;Sections&lt;br&gt;(sections)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-timetable-admin" target="web-superadmin-timetable-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-timetable-p1.0" target="web-superadmin-timetable-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-timetable-p1.1" target="web-superadmin-timetable-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-timetable-api" target="web-superadmin-timetable-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-timetable-p1.1" target="web-superadmin-timetable-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-timetable-p1.2" target="web-superadmin-timetable-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-timetable-api" target="web-superadmin-timetable-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-timetable-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-timetable-api" target="web-superadmin-timetable-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-timetable-d1" target="web-superadmin-timetable-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-timetable-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-timetable-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-timetable-d2" target="web-superadmin-timetable-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin Assignments DFD" id="Web-SuperAdmin-Assignments-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-assignments-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-p1.0" value="1.0&lt;br&gt;Assignments Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-p1.2" value="1.2&lt;br&gt;Display Assignments" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-d1" value="D1&lt;br&gt;Assignments&lt;br&gt;(assignments)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-d2" value="D2&lt;br&gt;Subjects&lt;br&gt;(subjects)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="250" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-assignments-admin" target="web-superadmin-assignments-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-assignments-p1.0" target="web-superadmin-assignments-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-assignments-p1.1" target="web-superadmin-assignments-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-assignments-api" target="web-superadmin-assignments-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-assignments-p1.1" target="web-superadmin-assignments-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-assignments-p1.2" target="web-superadmin-assignments-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-assignments-api" target="web-superadmin-assignments-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-assignments-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-db-f1-d2" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-assignments-api" target="web-superadmin-assignments-d2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-assignments-d1" target="web-superadmin-assignments-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-assignments-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-assignments-db-f2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-assignments-d2" target="web-superadmin-assignments-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="275" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="275" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Web App - Super Admin System Settings DFD" id="Web-SuperAdmin-System-Settings-DFD">
+    <mxGraphModel dx="1310" dy="940" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="web-superadmin-system-settings-admin" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Super Admin&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-p1.0" value="1.0&lt;br&gt;System Settings Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-p1.1" value="1.1&lt;br&gt;Load Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-p1.2" value="1.2&lt;br&gt;Display System Settings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="200" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-api" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;i&gt;Backend API&lt;/i&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="500" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-d1" value="D1&lt;br&gt;System Config&lt;br&gt;(system_config)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="680" y="180" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-f1" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-system-settings-admin" target="web-superadmin-system-settings-p1.0" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="275" as="sourcePoint" />
+            <mxPoint x="200" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-f2" value="Request" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-system-settings-p1.0" target="web-superadmin-system-settings-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="240" as="sourcePoint" />
+            <mxPoint x="260" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-f3" value="HTTP GET" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-system-settings-p1.1" target="web-superadmin-system-settings-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="290" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-f4" value="Response" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-system-settings-api" target="web-superadmin-system-settings-p1.1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="275" as="sourcePoint" />
+            <mxPoint x="320" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-f5" value="Data" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-system-settings-p1.1" target="web-superadmin-system-settings-p1.2" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="260" y="320" as="sourcePoint" />
+            <mxPoint x="260" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-f6" value="Display" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="web-superadmin-system-settings-p1.2" target="web-superadmin-system-settings-admin" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="370" as="sourcePoint" />
+            <mxPoint x="130" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+              <mxPoint x="180" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-db-f1" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="web-superadmin-system-settings-api" target="web-superadmin-system-settings-d1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="275" as="sourcePoint" />
+            <mxPoint x="680" y="205" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="650" y="275" />
+              <mxPoint x="650" y="150" />
+              <mxPoint x="650" y="205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-db-f1-label" value="Query" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=7;" vertex="1" connectable="0" parent="web-superadmin-system-settings-db-f1">
+          <mxGeometry x="-0.4993" y="1" relative="1" as="geometry">
+            <mxPoint x="32" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-db-f2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="web-superadmin-system-settings-d1" target="web-superadmin-system-settings-api" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="205" as="sourcePoint" />
+            <mxPoint x="500" y="275" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="575" y="205" />
+              <mxPoint x="575" y="150" />
+              <mxPoint x="450" y="150" />
+              <mxPoint x="450" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="web-superadmin-system-settings-db-f2-label" value="Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="web-superadmin-system-settings-db-f2">
+          <mxGeometry x="-0.0593" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>

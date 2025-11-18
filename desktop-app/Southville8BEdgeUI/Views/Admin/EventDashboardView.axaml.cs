@@ -90,8 +90,7 @@ public partial class EventDashboardView : UserControl
 
         _responsiveButtonElements.AddRange(new Control[]
         {
-            RefreshButton,
-            CreateButton
+            RefreshButton
         });
 
         _responsiveInputElements.AddRange(new Control[]

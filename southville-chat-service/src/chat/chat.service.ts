@@ -541,6 +541,37 @@ export class ChatService {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversationId);
 
+    // Notify other participants about new message
+    try {
+      // Get all participants except the sender
+      const { data: participants } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', senderId);
+
+      if (participants && participants.length > 0) {
+        const recipientIds = participants.map((p) => p.user_id);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        // Create notifications for each recipient
+        const notificationInserts = recipientIds.map((recipientId) => ({
+          type: 'info',
+          title: 'New Message',
+          message: `You have a new message in your conversation.`,
+          recipient_id: recipientId,
+          created_by: senderId,
+          expires_at: expiresAt.toISOString(),
+          is_read: false,
+        }));
+
+        await supabase.from('alerts').insert(notificationInserts);
+      }
+    } catch (error) {
+      // Don't fail message sending if notification fails
+      this.logger.warn('Failed to create notifications for new message:', error);
+    }
+
     return message as Message;
   }
 

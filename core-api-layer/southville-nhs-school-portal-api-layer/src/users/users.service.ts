@@ -32,6 +32,8 @@ import { User } from './entities/user.entity';
 import { Teacher } from './entities/teacher.entity';
 import { Admin } from './entities/admin.entity';
 import { Student } from '../students/entities/student.entity';
+import { NotificationService } from '../common/services/notification.service';
+import { AlertType } from '../alerts/entities/alert.entity';
 import csv from 'csv-parser';
 import { Parser } from 'json2csv';
 
@@ -40,7 +42,10 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   private supabase: SupabaseClient | null = null;
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private notificationService: NotificationService,
+  ) {}
 
   private getSupabaseClient(): SupabaseClient {
     if (!this.supabase) {
@@ -501,6 +506,13 @@ export class UsersService {
       if (userData.userType === UserType.ADMIN) {
         response.temporaryPassword = password;
       }
+
+      // Notify user about account creation
+      await this.notificationService.notifyAccountCreated(
+        authUser.id,
+        userData.role,
+        createdBy,
+      );
 
       return response;
     } catch (error) {
@@ -1059,6 +1071,18 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to update user');
     }
 
+    // Notify user about profile update (only if significant changes)
+    if (dto.email || dto.fullName || dto.role) {
+      await this.notificationService.notifyUser(
+        id,
+        'Profile Updated',
+        'Your profile information has been updated.',
+        AlertType.INFO,
+        undefined,
+        { expiresInDays: 7 },
+      );
+    }
+
     return user;
   }
 
@@ -1081,6 +1105,16 @@ export class UsersService {
       this.logger.error('Error removing user:', error);
       throw new InternalServerErrorException('Failed to remove user');
     }
+
+    // Notify user about account deletion (soft delete)
+    await this.notificationService.notifyUser(
+      id,
+      'Account Deactivated',
+      'Your account has been deactivated. Please contact the administrator if you believe this is an error.',
+      AlertType.WARNING,
+      undefined,
+      { expiresInDays: 30 },
+    );
   }
 
   async updateUserStatus(
@@ -1106,6 +1140,13 @@ export class UsersService {
       this.logger.error('Error updating user status:', error);
       throw new InternalServerErrorException('Failed to update user status');
     }
+
+    // Notify user about status change
+    await this.notificationService.notifyAccountStatusChanged(
+      id,
+      statusDto.status,
+      undefined,
+    );
 
     return user;
   }
@@ -1640,12 +1681,23 @@ export class UsersService {
         }
       }
 
-      return {
+      const result = {
         success: results.length,
         failed: errors.length,
         results,
         errors,
       };
+
+      // Notify admin about bulk import completion
+      await this.notificationService.notifyBulkOperationComplete(
+        createdBy,
+        'Student Import',
+        results.length,
+        errors.length,
+        createdBy,
+      );
+
+      return result;
     } catch (error) {
       this.logger.error('Error importing students from CSV:', error);
       throw new InternalServerErrorException(
@@ -1954,12 +2006,23 @@ export class UsersService {
         }
       }
 
-      return {
+      const result = {
         success: results.length,
         failed: errors.length,
         results,
         errors,
       };
+
+      // Notify admin about bulk import completion
+      await this.notificationService.notifyBulkOperationComplete(
+        createdBy,
+        'Teacher Import',
+        results.length,
+        errors.length,
+        createdBy,
+      );
+
+      return result;
     } catch (error) {
       this.logger.error('Error importing teachers from CSV:', error);
       throw new InternalServerErrorException(
