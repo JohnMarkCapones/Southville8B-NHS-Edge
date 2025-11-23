@@ -33,7 +33,8 @@ import { Teacher } from './entities/teacher.entity';
 import { Admin } from './entities/admin.entity';
 import { Student } from '../students/entities/student.entity';
 import { NotificationService } from '../common/services/notification.service';
-import { AlertType } from '../alerts/entities/alert.entity';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 import csv from 'csv-parser';
 import { Parser } from 'json2csv';
 
@@ -45,6 +46,7 @@ export class UsersService {
   constructor(
     private configService: ConfigService,
     private notificationService: NotificationService,
+    private activityMonitoring: ActivityMonitoringService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -507,6 +509,22 @@ export class UsersService {
         response.temporaryPassword = password;
       }
 
+      // Activity monitoring - notify admins about new user
+      try {
+        await this.activityMonitoring.handleUserCreated(
+          authUser.id,
+          userData.email,
+          userData.role,
+          createdBy,
+        );
+      } catch (error) {
+        this.logger.warn(
+          'Failed to handle user creation activity monitoring:',
+          error,
+        );
+        // Don't fail user creation if monitoring fails
+      }
+
       // Notify user about account creation
       await this.notificationService.notifyAccountCreated(
         authUser.id,
@@ -756,7 +774,7 @@ export class UsersService {
           id: user.id,
           email: user.email,
           fullName: user.full_name,
-          role: user.role ? { id: user.role.id, name: user.role.name } : null,
+          role: user.role?.name || null,
           status: user.status,
           createdAt: user.created_at,
           lastLogin: user.last_login || null,
@@ -927,10 +945,19 @@ export class UsersService {
     let studentData = null;
     let profileData = null;
 
-    // Check for teacher data
+    // Check for teacher data with advisory section joined
     const { data: teacher, error: teacherError } = await supabase
       .from('teachers')
-      .select('*')
+      .select(
+        `
+        *,
+        advisory_section:sections!advisory_section_id(
+          id,
+          name,
+          grade_level
+        )
+      `,
+      )
       .eq('user_id', id)
       .single();
 
@@ -945,6 +972,11 @@ export class UsersService {
       this.logger.log(
         `[findOne] Teacher data found: ${teacher.first_name} ${teacher.last_name}`,
       );
+      if (teacher.advisory_section) {
+        this.logger.log(
+          `[findOne] Advisory section: ${teacher.advisory_section.name} (${teacher.advisory_section.grade_level})`,
+        );
+      }
     }
 
     // Check for admin data
@@ -1071,13 +1103,23 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to update user');
     }
 
+    // Activity monitoring - track user update
+    try {
+      await this.activityMonitoring.handleUserUpdated(id, dto, 'system');
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle user update activity monitoring:',
+        error,
+      );
+    }
+
     // Notify user about profile update (only if significant changes)
     if (dto.email || dto.fullName || dto.role) {
       await this.notificationService.notifyUser(
         id,
         'Profile Updated',
         'Your profile information has been updated.',
-        AlertType.INFO,
+        NotificationType.INFO,
         undefined,
         { expiresInDays: 7 },
       );
@@ -1088,6 +1130,13 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     const supabase = this.getSupabaseClient();
+
+    // Get user email before deletion for activity monitoring
+    const { data: userBeforeDelete } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', id)
+      .single();
 
     // Soft delete by updating status
     const { error } = await supabase
@@ -1106,12 +1155,28 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to remove user');
     }
 
+    // Activity monitoring - notify admins about user deletion
+    try {
+      if (userBeforeDelete?.email) {
+        await this.activityMonitoring.handleUserDeleted(
+          id,
+          userBeforeDelete.email,
+          'system',
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle user deletion activity monitoring:',
+        error,
+      );
+    }
+
     // Notify user about account deletion (soft delete)
     await this.notificationService.notifyUser(
       id,
       'Account Deactivated',
       'Your account has been deactivated. Please contact the administrator if you believe this is an error.',
-      AlertType.WARNING,
+      NotificationType.WARNING,
       undefined,
       { expiresInDays: 30 },
     );
@@ -1139,6 +1204,20 @@ export class UsersService {
       }
       this.logger.error('Error updating user status:', error);
       throw new InternalServerErrorException('Failed to update user status');
+    }
+
+    // Activity monitoring - track status change
+    try {
+      await this.activityMonitoring.handleUserUpdated(
+        id,
+        { status: statusDto.status },
+        'system',
+      );
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle user status update activity monitoring:',
+        error,
+      );
     }
 
     // Notify user about status change

@@ -16,12 +16,16 @@ import { CreateStudentRankingDto } from './dto/create-student-ranking.dto';
 import * as crypto from 'crypto';
 import { UpdateStudentRankingDto } from './dto/update-student-ranking.dto';
 import { StudentRanking } from './entities/student-ranking.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 
 @Injectable()
 export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly activityMonitoring: ActivityMonitoringService,
+  ) {}
 
   /**
    * Generate password from birthday (YYYYMMDD format)
@@ -294,6 +298,22 @@ export class StudentsService {
         );
       }
 
+      // Activity monitoring - notify advisory teacher if student is assigned to a section
+      if (createStudentDto.sectionId) {
+        try {
+          const studentName = `${createStudentDto.firstName} ${createStudentDto.lastName}`;
+          await this.activityMonitoring.handleAdvisoryActivity(
+            createStudentDto.sectionId,
+            'student_added',
+            studentName,
+            'system',
+          );
+        } catch (error) {
+          this.logger.warn('Failed to handle advisory activity monitoring:', error);
+          // Don't fail student creation if monitoring fails
+        }
+      }
+
       this.logger.log(`Student created successfully: ${email}`);
 
       return {
@@ -443,6 +463,13 @@ export class StudentsService {
   ): Promise<Student> {
     const supabase = this.supabaseService.getServiceClient();
 
+    // Get current student data to detect section changes
+    const { data: currentStudent } = await supabase
+      .from('students')
+      .select('section_id, first_name, last_name')
+      .eq('id', id)
+      .single();
+
     const { data: student, error } = await supabase
       .from('students')
       .update({
@@ -468,6 +495,38 @@ export class StudentsService {
       }
       this.logger.error('Error updating student:', error);
       throw new InternalServerErrorException('Failed to update student');
+    }
+
+    // Activity monitoring - notify advisory teacher if section changed
+    if (
+      updateStudentDto.sectionId &&
+      currentStudent?.section_id !== updateStudentDto.sectionId
+    ) {
+      try {
+        const studentName = `${currentStudent?.first_name || ''} ${currentStudent?.last_name || ''}`.trim() || 'A student';
+        
+        // If student was moved from one section to another
+        if (currentStudent?.section_id) {
+          // Notify old advisory teacher (student removed)
+          await this.activityMonitoring.handleAdvisoryActivity(
+            currentStudent.section_id,
+            'student_removed',
+            studentName,
+            'system',
+          );
+        }
+
+        // Notify new advisory teacher (student added)
+        await this.activityMonitoring.handleAdvisoryActivity(
+          updateStudentDto.sectionId,
+          'student_added',
+          studentName,
+          'system',
+        );
+      } catch (error) {
+        this.logger.warn('Failed to handle advisory activity monitoring:', error);
+        // Don't fail student update if monitoring fails
+      }
     }
 
     return student;

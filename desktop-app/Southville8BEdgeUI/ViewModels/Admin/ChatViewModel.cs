@@ -406,10 +406,13 @@ public partial class ChatViewModel : ViewModelBase
         }
         
         // Mark as read
-        if (conversation.UnreadCount > 0 && !string.IsNullOrEmpty(conversation.ConversationId))
+        if (conversation.UnreadCount > 0)
         {
             conversation.UnreadCount = 0;
-            _ = _chatService?.MarkAsReadAsync(conversation.ConversationId);
+            if (!string.IsNullOrEmpty(conversation.ConversationId))
+            {
+                _ = _chatService?.MarkAsReadAsync(conversation.ConversationId);
+            }
         }
         
         ConversationNavigationRequested?.Invoke(this, new ConversationNavigationEventArgs(conversation, ConversationNavigationType.OpenChat));

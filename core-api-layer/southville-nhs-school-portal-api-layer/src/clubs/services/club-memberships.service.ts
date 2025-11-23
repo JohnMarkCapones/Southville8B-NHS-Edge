@@ -7,8 +7,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { NotificationService } from '../../common/services/notification.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 import { StudentActivitiesService } from '../../student-activities/student-activities.service';
 import { ActivityType } from '../../student-activities/entities/student-activity.entity';
+import { ActivityMonitoringService } from '../../activity-monitoring/activity-monitoring.service';
 import { CreateClubMembershipDto } from '../dto/create-club-membership.dto';
 import { UpdateClubMembershipDto } from '../dto/update-club-membership.dto';
 import { ClubMembership } from '../models/club-membership.model';
@@ -19,7 +22,9 @@ export class ClubMembershipsService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
+    private readonly notificationService: NotificationService,
     private readonly studentActivitiesService: StudentActivitiesService,
+    private readonly activityMonitoring: ActivityMonitoringService,
   ) {}
 
   /**
@@ -200,6 +205,105 @@ export class ClubMembershipsService {
       );
     }
 
+    // Notify student directly about club membership
+    try {
+      const { data: student } = await supabase
+        .from('students')
+        .select('user_id')
+        .eq('id', createDto.studentId)
+        .single();
+
+      if (student?.user_id) {
+        const clubName = data.club?.name || 'a club';
+        const positionName = data.position?.name || 'member';
+
+        await this.notificationService.notifyUser(
+          student.user_id,
+          `Welcome to ${clubName}!`,
+          `You have been added as ${positionName} to ${clubName}. Check your club dashboard for more details.`,
+          NotificationType.SUCCESS,
+          userId,
+          { expiresInDays: 30 },
+        );
+
+        this.logger.log(
+          `🎉 Notified student about membership in ${clubName} as ${positionName}`,
+        );
+      }
+    } catch (notificationError) {
+      this.logger.warn(
+        'Failed to create direct notification for student membership:',
+        notificationError,
+      );
+    }
+
+    // Activity monitoring - notify club admins about membership change
+    try {
+      const studentName = data.student
+        ? `${data.student.first_name} ${data.student.last_name}`
+        : 'A student';
+      const clubName = data.club?.name || 'a club';
+
+      // Get club admin IDs (president, vp, secretary, advisors)
+      const { data: clubData } = await supabase
+        .from('clubs')
+        .select('president_id, vp_id, secretary_id, advisor_id, co_advisor_id')
+        .eq('id', createDto.clubId)
+        .single();
+
+      const adminIds: string[] = [];
+      if (clubData?.president_id) adminIds.push(clubData.president_id);
+      if (clubData?.vp_id) adminIds.push(clubData.vp_id);
+      if (clubData?.secretary_id) adminIds.push(clubData.secretary_id);
+      if (clubData?.advisor_id) adminIds.push(clubData.advisor_id);
+      if (clubData?.co_advisor_id) adminIds.push(clubData.co_advisor_id);
+
+      // Get user IDs for admins
+      const { data: students } = await supabase
+        .from('students')
+        .select('user_id')
+        .in(
+          'id',
+          adminIds.filter((id) => id),
+        );
+
+      const { data: teachers } = await supabase
+        .from('teachers')
+        .select('user_id')
+        .in(
+          'id',
+          adminIds.filter((id) => id),
+        );
+
+      const adminUserIds: string[] = [];
+      if (students)
+        adminUserIds.push(...students.map((s) => s.user_id).filter(Boolean));
+      if (teachers)
+        adminUserIds.push(...teachers.map((t) => t.user_id).filter(Boolean));
+
+      // Get student user_id
+      const { data: student } = await supabase
+        .from('students')
+        .select('user_id')
+        .eq('id', createDto.studentId)
+        .single();
+
+      await this.activityMonitoring.handleMembershipChanged(
+        createDto.clubId,
+        clubName,
+        student?.user_id || createDto.studentId,
+        studentName,
+        'joined',
+        userId,
+        adminUserIds,
+      );
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle membership change activity monitoring:',
+        error,
+      );
+    }
+
     return this.mapDbToDto(data);
   }
 
@@ -365,6 +469,37 @@ export class ClubMembershipsService {
         this.logger.error(
           'Failed to create position change activity:',
           activityError,
+        );
+      }
+    }
+
+    // ✅ NEW: Notify student when membership is approved (reactivated from pending)
+    if (updateDto.isActive === true && !existing.isActive) {
+      try {
+        // Get student user_id
+        const { data: student } = await supabase
+          .from('students')
+          .select('user_id, first_name, last_name')
+          .eq('id', existing.studentId)
+          .single();
+
+        if (student?.user_id) {
+          await this.notificationService.notifyUser(
+            student.user_id,
+            'Club Membership Approved',
+            `Congratulations! You have been approved to join ${data.club?.name || 'the club'}.`,
+            NotificationType.SUCCESS,
+            userId,
+            { expiresInDays: 7 },
+          );
+          this.logger.log(
+            `✅ Notified student ${student.first_name} about membership approval for ${data.club?.name}`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to notify student about membership approval:',
+          error,
         );
       }
     }

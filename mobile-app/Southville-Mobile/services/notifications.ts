@@ -1,78 +1,161 @@
-import { Notification } from '@/lib/types/notification';
+import { apiRequest } from "@/lib/api-client";
+import { Notification } from "@/lib/types/notification";
 
-// Mock data matching the design
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    userId: 'user-1',
-    title: 'Class Suspension Notice !',
-    message: 'All classes for All levels are suspended today at 8:00 AM due to heavy rain.',
-    type: 'announcement',
-    read: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    userId: 'user-1',
-    title: 'Class Schedule Notice',
-    message: 'Incoming class subject English 8-00, Room 302 with sir Richard',
-    type: 'class_schedule',
-    read: false,
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: '3',
-    userId: 'user-1',
-    title: 'Class Schedule Notice',
-    message: 'Incoming class subject Mathematics 10-00, Room 205 with sir Johnson',
-    type: 'class_schedule',
-    read: false,
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    id: '4',
-    userId: 'user-1',
-    title: 'School Event Notice',
-    message: 'Incoming event that you are interested! ML Tournament 2025',
-    type: 'school_event',
-    read: false,
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    id: '5',
-    userId: 'user-1',
-    title: 'Grade Posted',
-    message: 'Your grade for Mathematics Midterm Exam has been posted. Check your grades section.',
-    type: 'grade',
-    read: true,
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
+// Backend API response types (snake_case)
+interface BackendNotification {
+  id: string;
+  user_id: string;
+  type: "info" | "warning" | "success" | "error" | "system";
+  title: string;
+  message: string;
+  category: string | null;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface NotificationsResponse {
+  data: BackendNotification[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+interface MarkReadResponse {
+  success: boolean;
+  message?: string;
+}
+
+/**
+ * Map backend notification type to mobile notification type
+ */
+function mapNotificationType(
+  backendType: string,
+  category: string | null
+): Notification["type"] {
+  // Map based on category first, then type
+  if (category) {
+    const categoryLower = category.toLowerCase();
+    if (categoryLower.includes("academic") || categoryLower.includes("grade")) {
+      return "grade";
+    }
+    if (
+      categoryLower.includes("event") ||
+      categoryLower.includes("announcement")
+    ) {
+      if (categoryLower.includes("event")) {
+        return "school_event";
+      }
+      return "announcement";
+    }
+  }
+
+  // Map based on backend type
+  switch (backendType.toLowerCase()) {
+    case "info":
+    case "system":
+      // Check message content for hints
+      return "announcement";
+    case "warning":
+      return "class_schedule";
+    case "success":
+      return "grade";
+    default:
+      return "announcement";
+  }
+}
+
+/**
+ * Convert backend notification to mobile notification format
+ */
+function mapBackendToMobile(backend: BackendNotification): Notification {
+  return {
+    id: backend.id,
+    userId: backend.user_id,
+    title: backend.title,
+    message: backend.message,
+    type: mapNotificationType(backend.type, backend.category),
+    read: backend.is_read,
+    createdAt: backend.created_at,
+  };
+}
 
 export const notificationsService = {
-  // Mock functions - ready to replace with real API calls
-  async getNotifications(): Promise<Notification[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockNotifications]), 500);
+  /**
+   * Get notifications for the current user
+   * @param params Query parameters (page, limit, type, is_read)
+   */
+  async getNotifications(params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    is_read?: boolean;
+  }): Promise<Notification[]> {
+    const searchParams = new URLSearchParams();
+
+    if (params?.page) {
+      searchParams.set("page", params.page.toString());
+    }
+    if (params?.limit) {
+      searchParams.set("limit", params.limit.toString());
+    }
+    if (params?.type) {
+      searchParams.set("type", params.type);
+    }
+    if (params?.is_read !== undefined) {
+      searchParams.set("is_read", params.is_read.toString());
+    }
+
+    // Default to page 1, limit 50 if not specified
+    if (!params?.page) searchParams.set("page", "1");
+    if (!params?.limit) searchParams.set("limit", "50");
+
+    const queryString = searchParams.toString();
+    const path = `/notifications/my${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiRequest<NotificationsResponse>(path);
+    return response.data.map(mapBackendToMobile);
+  },
+
+  /**
+   * Mark a notification as read
+   */
+  async markAsRead(id: string): Promise<void> {
+    await apiRequest<MarkReadResponse>(`/notifications/${id}/read`, {
+      method: "PATCH",
     });
   },
 
-  async markAsRead(id: string): Promise<void> {
-    const notif = mockNotifications.find(n => n.id === id);
-    if (notif) notif.read = true;
-  },
-
+  /**
+   * Mark all notifications as read
+   */
   async markAllAsRead(): Promise<void> {
-    mockNotifications.forEach(n => n.read = true);
+    await apiRequest<MarkReadResponse>("/notifications/mark-all-read", {
+      method: "POST",
+    });
   },
 
+  /**
+   * Delete a notification
+   */
   async deleteNotification(id: string): Promise<void> {
-    const index = mockNotifications.findIndex(n => n.id === id);
-    if (index > -1) mockNotifications.splice(index, 1);
+    await apiRequest<{ success: boolean }>(`/notifications/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * Get unread notification count
+   */
+  async getUnreadCount(): Promise<number> {
+    const response = await apiRequest<{ count: number }>(
+      "/notifications/unread-count"
+    );
+    return response.count;
   },
 };
-
-// TODO: Replace with real API calls when backend is ready:
-// - GET /api/v1/notifications
-// - PATCH /api/v1/notifications/:id/read
-// - DELETE /api/v1/notifications/:id

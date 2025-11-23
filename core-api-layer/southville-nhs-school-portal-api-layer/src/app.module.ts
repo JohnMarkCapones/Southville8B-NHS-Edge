@@ -20,6 +20,8 @@ import { EventsModule } from './events/events.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { GwaModule } from './gwa/gwa.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ActivityMonitoringModule } from './activity-monitoring/activity-monitoring.module';
 import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
 import { CampusFacilitiesModule } from './campus-facilities/campus-facilities.module';
 import { FaqModule } from './faq/faq.module';
@@ -34,6 +36,7 @@ import { ModulesModule } from './modules/modules.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { DesktopSidebarModule } from './desktop-sidebar/desktop-sidebar.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { DesktopTeacherDashboardModule } from './desktop-teacher-dashboard/desktop-teacher-dashboard.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TeacherFilesModule } from './teacher-files/teacher-files.module';
 import { TeacherActivityModule } from './teacher-activity/teacher-activity.module';
@@ -77,6 +80,8 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     SchedulesModule,
     GwaModule,
     AlertsModule,
+    NotificationsModule,
+    ActivityMonitoringModule,
     AcademicCalendarModule,
     CampusFacilitiesModule,
     FaqModule,
@@ -90,6 +95,7 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     DepartmentsModule,
     DesktopSidebarModule,
     AdminDashboardModule,
+    DesktopTeacherDashboardModule,
     SubjectsModule,
     TeacherFilesModule,
     TeacherActivityModule,

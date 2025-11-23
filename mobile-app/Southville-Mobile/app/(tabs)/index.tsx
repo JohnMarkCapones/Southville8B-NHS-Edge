@@ -933,7 +933,7 @@ export default function HomeScreen() {
         )}
 
         {/* Creative Quick Links Section */}
-        <View style={styles.quickLinksSection}>
+        <View>
           <Text style={[styles.quickLinksTitle, { color: colors.text }]}>
             Quick Access
           </Text>
@@ -947,14 +947,14 @@ export default function HomeScreen() {
                 delayPressIn={50}
               >
                 <View
-                  style={[
-                    styles.quickLinkIcon,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(255, 255, 255, 0.15)"
-                        : "rgba(255, 255, 255, 0.2)",
-                    },
-                  ]}
+                // style={[
+                //   styles.quickLinkIcon,
+                //   {
+                //     backgroundColor: isDark
+                //       ? "rgba(255, 255, 255, 0.15)"
+                //       : "rgba(255, 255, 255, 0.2)",
+                //   },
+                // ]}
                 >
                   <Ionicons
                     name={getQuickLinkIcon(label) as any}
@@ -1585,7 +1585,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
-    marginTop: 0,
+    marginTop: 25,
     marginHorizontal: 0,
   },
   searchContent: {
@@ -1611,10 +1611,10 @@ const styles = StyleSheet.create({
   },
   floatingIllustration: {
     position: "absolute",
-    top: -60,
+    top: -29,
     right: -50,
     width: 230,
-    height: 230,
+    height: 200,
     zIndex: 10,
   },
   illustrationImage: {
@@ -1746,10 +1746,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 2,
   },
-  // Creative Quick Links Styles
-  quickLinksSection: {
-    marginBottom: 20,
-  },
+
   quickLinksTitle: {
     fontSize: 20,
     fontWeight: "bold",
@@ -1784,6 +1781,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
+    backgroundColor: "transparent",
   },
   quickLinkText: {
     fontSize: 14,

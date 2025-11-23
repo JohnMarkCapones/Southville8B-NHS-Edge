@@ -142,6 +142,95 @@ export class AlertsController {
     return this.alertsService.findAll(queryDto);
   }
 
+  @Get('my')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get alerts for current user',
+    description:
+      'Retrieve alerts for the authenticated user (global alerts + user-specific alerts)',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter by alert type',
+    enum: ['info', 'warning', 'success', 'error', 'system'],
+  })
+  @ApiQuery({
+    name: 'includeExpired',
+    required: false,
+    description: 'Include expired alerts in results',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of items per page',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'Sort by field',
+    enum: ['created_at', 'expires_at', 'title'],
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'Sort order',
+    enum: ['ASC', 'DESC'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User alerts retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/Alert' },
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getMyAlerts(
+    @Query() queryDto: QueryAlertDto,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<{
+    data: Alert[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    // Map user.role string to UserRole enum
+    const userRole =
+      user.role === 'Admin'
+        ? UserRole.ADMIN
+        : user.role === 'Teacher'
+          ? UserRole.TEACHER
+          : user.role === 'Student'
+            ? UserRole.STUDENT
+            : UserRole.STUDENT; // Default fallback
+
+    return this.alertsService.findAll(queryDto, user.id, userRole);
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get a specific alert by ID',

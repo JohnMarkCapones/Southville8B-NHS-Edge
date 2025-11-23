@@ -212,6 +212,14 @@ public partial class CreateStudentViewModel : ViewModelBase
                     expiration: TimeSpan.FromSeconds(5)
                 );
                 
+                // Log activity
+                await LogActivityAsync(
+                    "student_registered",
+                    $"Registered new student {FirstName} {LastName} (LRN: {LrnId})",
+                    "student",
+                    response.User?.Id
+                );
+                
                 // Reset form for next student
                 ResetForm();
             }
@@ -269,5 +277,44 @@ public partial class CreateStudentViewModel : ViewModelBase
         // Clear messages
         ErrorMessage = string.Empty;
         SuccessMessage = string.Empty;
+    }
+
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            // Get current user ID
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+            
+            // Map action types to icons and colors
+            var (icon, color) = actionType switch
+            {
+                "student_registered" => ("UserPlus", "purple"),
+                _ => ("Info", "gray")
+            };
+            
+            // Create activity data
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = actionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "create_student" }
+            };
+            
+            // POST to API
+            await _apiClient.PostAsync("desktop-admin-dashboard/activities", activityData);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the main operation
+            System.Diagnostics.Debug.WriteLine($"Error logging activity: {ex.Message}");
+        }
     }
 }

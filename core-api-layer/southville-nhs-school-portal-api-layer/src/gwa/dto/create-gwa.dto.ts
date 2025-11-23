@@ -18,6 +18,24 @@ export class CreateGwaDto {
   student_id: string;
 
   @ApiProperty({
+    description: 'Academic year ID',
+    example: '6f47753f-2c0f-4978-804c-e76f18abcf0b',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  academic_year_id?: string;
+
+  @ApiProperty({
+    description: 'Academic period ID',
+    example: 'c67a8ade-52e5-4c62-bd3b-5e39bd1a4e31',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  academic_period_id?: string;
+
+  @ApiProperty({
     description: 'General Weighted Average (50-100)',
     example: 87.5,
     minimum: 50,

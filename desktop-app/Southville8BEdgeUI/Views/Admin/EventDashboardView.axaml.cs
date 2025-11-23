@@ -451,6 +451,7 @@ public class MockApiClient : IApiClient
     public Task<UserProfile?> GetUserProfileAsync(string userId) => Task.FromResult<UserProfile?>(null);
     public Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken) => Task.FromResult<UserProfile?>(null);
     public Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync() => Task.FromResult<AdminDashboardMetrics?>(null);
+    public Task<List<AdminActivity>?> GetAdminActivitiesAsync(int limit = 10) => Task.FromResult<List<AdminActivity>?>(null);
     public Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25) => Task.FromResult<UserListResponse?>(null);
     public Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto) => Task.FromResult<CreateUserResponse?>(null);
     public Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto) => Task.FromResult<CreateUserResponse?>(null);
@@ -509,14 +510,25 @@ public class MockApiClient : IApiClient
 
     // Alerts API (stubs for design-time)
     public Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50) => Task.FromResult<AlertListResponse?>(new AlertListResponse { Data = new List<AlertDto>() });
+    public Task<AlertListResponse?> GetMyAlertsAsync(int page = 1, int limit = 50) => Task.FromResult<AlertListResponse?>(new AlertListResponse { Data = new List<AlertDto>() });
     public Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto) => Task.FromResult<AlertDto?>(new AlertDto { Id = Guid.NewGuid().ToString(), Type = dto.Type, Title = dto.Title, Message = dto.Message, ExpiresAt = DateTimeOffset.Now.AddDays(1), CreatedAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now });
     public Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto) => Task.FromResult<AlertDto?>(null);
     public Task<bool> DeleteAlertAsync(string id) => Task.FromResult(true);
+    public Task<bool> MarkAlertAsReadAsync(string alertId) => Task.FromResult(true);
+    public Task<bool> MarkAllAlertsAsReadAsync() => Task.FromResult(true);
+    
+    // Notifications API (stubs for design-time)
+    public Task<NotificationListResponse?> GetMyNotificationsAsync(int page = 1, int limit = 50) => Task.FromResult<NotificationListResponse?>(new NotificationListResponse { Data = new List<NotificationDto>() });
+    public Task<bool> MarkNotificationAsReadAsync(string notificationId) => Task.FromResult(true);
+    public Task<bool> MarkAllNotificationsAsReadAsync() => Task.FromResult(true);
+    public Task<bool> DeleteNotificationAsync(string notificationId) => Task.FromResult(true);
+    public Task<int> GetUnreadNotificationCountAsync() => Task.FromResult(0);
     
     // Teacher-specific API methods (stubs for design-time)
     public Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId) => Task.FromResult<TeacherSidebarMetrics?>(null);
     public Task<List<ScheduleDto>?> GetTeacherTodaySchedulesAsync(string teacherId) => Task.FromResult<List<ScheduleDto>?>(null);
     public Task<List<TeacherActivityDto>?> GetTeacherRecentActivitiesAsync(string teacherId) => Task.FromResult<List<TeacherActivityDto>?>(null);
+    public Task<List<TeacherActivityDto>?> GetMyTeacherActivitiesAsync(int limit = 10) => Task.FromResult<List<TeacherActivityDto>?>(null);
     
     // GWA Management Methods (stubs for design-time)
     public Task<StudentGwaListResponse?> GetAdvisoryStudentsWithGwaAsync(string gradingPeriod, string schoolYear) => Task.FromResult<StudentGwaListResponse?>(null);
@@ -552,6 +564,15 @@ public class MockApiClient : IApiClient
     public Task<SubjectDto?> GetSubjectAsync(string subjectId) => Task.FromResult<SubjectDto?>(null);
     public Task<SectionDto?> GetSectionAsync(string sectionId) => Task.FromResult<SectionDto?>(null);
     public Task<AcademicYearDto?> GetActiveAcademicYearAsync() => Task.FromResult<AcademicYearDto?>(null);
+    public Task<AcademicDashboardOverviewDto?> GetAcademicDashboardOverviewAsync() => Task.FromResult<AcademicDashboardOverviewDto?>(
+        new AcademicDashboardOverviewDto
+        {
+            ActiveYear = new AcademicYearDto { YearName = "2024-2025", IsActive = true },
+            CurrentPeriod = new AcademicPeriodDto { PeriodName = "First Quarter", PeriodOrder = 1, AcademicYearId = Guid.NewGuid().ToString() },
+            TotalYears = 1,
+            UpcomingYears = 0,
+            ArchivedYears = 0
+        });
     public Task<StudentDistributionDto?> GetStudentDistributionAsync() => Task.FromResult<StudentDistributionDto?>(new StudentDistributionDto
     {
         Total = 0,

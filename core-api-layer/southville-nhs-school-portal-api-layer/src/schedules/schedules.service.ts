@@ -20,6 +20,9 @@ import { BulkCreateSchedulesDto } from './dto/bulk-create-schedules.dto';
 import { AssignStudentsDto } from './dto/assign-students.dto';
 import { ConflictCheckDto } from './dto/conflict-check.dto';
 import { SearchSchedulesDto } from './dto/search-schedules.dto';
+import { NotificationService } from '../common/services/notification.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 
 @Injectable()
 export class SchedulesService {
@@ -32,6 +35,8 @@ export class SchedulesService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private notificationService: NotificationService,
+    private activityMonitoring: ActivityMonitoringService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -107,6 +112,82 @@ export class SchedulesService {
       await this.invalidateRelatedCaches(dto);
 
       this.logger.log(`Schedule created successfully: ${data.id}`);
+
+      // Notify affected users (teacher and students in section)
+      try {
+        const userIds: string[] = [];
+        
+        // Get teacher user_id
+        if (dto.teacherId) {
+          const { data: teacher } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .eq('id', dto.teacherId)
+            .single();
+          if (teacher?.user_id) {
+            userIds.push(teacher.user_id);
+          }
+        }
+
+        // Get all students in the section
+        if (dto.sectionId) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('section_id', dto.sectionId);
+          if (students) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter((id) => id);
+            userIds.push(...studentUserIds);
+          }
+        }
+
+        // Activity monitoring - notify affected users
+        if (userIds.length > 0) {
+          try {
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('subject_name')
+              .eq('id', dto.subjectId)
+              .single();
+            const subjectName = subject?.subject_name || 'a subject';
+            const scheduleDetails = `${subjectName} - ${dto.dayOfWeek} ${dto.startTime}-${dto.endTime}`;
+            
+            await this.activityMonitoring.handleScheduleCreated(
+              data.id,
+              scheduleDetails,
+              userIds,
+              'system',
+            );
+          } catch (error) {
+            this.logger.warn('Failed to handle schedule creation activity monitoring:', error);
+          }
+        }
+
+        if (userIds.length > 0) {
+          // Get subject name for notification
+          const { data: subject } = await supabase
+            .from('subjects')
+            .select('subject_name')
+            .eq('id', dto.subjectId)
+            .single();
+
+          const subjectName = subject?.subject_name || 'a subject';
+          await this.notificationService.notifyUsers(
+            userIds,
+            'New Class Schedule',
+            `A new schedule has been created for ${subjectName}.`,
+            NotificationType.INFO,
+            undefined,
+            { expiresInDays: 7 },
+          );
+        }
+      } catch (error) {
+        // Don't fail schedule creation if notification fails
+        this.logger.warn('Failed to create notifications for schedule:', error);
+      }
+
       return data;
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -488,6 +569,71 @@ export class SchedulesService {
       // Invalidate cache
       await this.cacheManager.del(cacheKey);
 
+      // Notify affected users about schedule update
+      try {
+        const schedule = await this.findOne(id);
+        const userIds: string[] = [];
+
+        // Get teacher user_id
+        if (schedule.teacherId) {
+          const { data: teacher } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .eq('id', schedule.teacherId)
+            .single();
+          if (teacher?.user_id) {
+            userIds.push(teacher.user_id);
+          }
+        }
+
+        // Get all students in the section
+        if (schedule.sectionId) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('section_id', schedule.sectionId);
+          if (students) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter((id) => id);
+            userIds.push(...studentUserIds);
+          }
+        }
+
+          // Activity monitoring - notify affected users
+          if (userIds.length > 0) {
+            try {
+              const schedule = await this.findOne(id);
+              const subjectName = (schedule as any).subject?.subject_name || 'a subject';
+              const scheduleDetails = `${subjectName} - ${data.day_of_week} ${data.start_time}-${data.end_time}`;
+              
+              await this.activityMonitoring.handleScheduleUpdated(
+                id,
+                scheduleDetails,
+                userIds,
+                updateData,
+                'system',
+              );
+            } catch (error) {
+              this.logger.warn('Failed to handle schedule update activity monitoring:', error);
+            }
+          }
+
+          if (userIds.length > 0) {
+            const subjectName = (schedule as any).subject?.subject_name || 'a subject';
+            await this.notificationService.notifyUsers(
+              userIds,
+              'Schedule Updated',
+              `The schedule for ${subjectName} has been updated.`,
+              NotificationType.INFO,
+              undefined,
+              { expiresInDays: 7 },
+            );
+          }
+      } catch (error) {
+        this.logger.warn('Failed to create notifications for schedule update:', error);
+      }
+
       return data;
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -527,6 +673,70 @@ export class SchedulesService {
 
       // Invalidate cache
       await this.cacheManager.del(`schedule:${id}`);
+
+      // Notify affected users about schedule deletion
+      try {
+        if (before) {
+          const userIds: string[] = [];
+
+          // Get teacher user_id
+          if (before.teacherId) {
+            const { data: teacher } = await supabase
+              .from('teachers')
+              .select('user_id')
+              .eq('id', before.teacherId)
+              .single();
+            if (teacher?.user_id) {
+              userIds.push(teacher.user_id);
+            }
+          }
+
+          // Get all students in the section
+          if (before.sectionId) {
+            const { data: students } = await supabase
+              .from('students')
+              .select('user_id')
+              .eq('section_id', before.sectionId);
+            if (students) {
+              const studentUserIds = students
+                .map((s) => s.user_id)
+                .filter((id) => id);
+              userIds.push(...studentUserIds);
+            }
+          }
+
+          // Activity monitoring - notify affected users
+          if (userIds.length > 0) {
+            try {
+              const subjectName = (before as any).subject?.subject_name || 'a subject';
+              const scheduleDetails = `${subjectName} - ${before.dayOfWeek} ${before.startTime}-${before.endTime}`;
+              
+              await this.activityMonitoring.handleScheduleDeleted(
+                id,
+                scheduleDetails,
+                userIds,
+                'system',
+              );
+            } catch (error) {
+              this.logger.warn('Failed to handle schedule deletion activity monitoring:', error);
+            }
+          }
+
+          if (userIds.length > 0) {
+            const subjectName = (before as any).subject?.subject_name || 'a subject';
+            await this.notificationService.notifyUsers(
+              userIds,
+              'Schedule Cancelled',
+              `The schedule for ${subjectName} has been cancelled.`,
+              NotificationType.WARNING,
+              undefined,
+              { expiresInDays: 7 },
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to create notifications for schedule deletion:', error);
+      }
 
       this.logger.log(`Schedule deleted successfully: ${id}`);
     } catch (error) {

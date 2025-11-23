@@ -30,6 +30,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _newPassword = "";
     [ObservableProperty] private string _confirmPassword = "";
     [ObservableProperty] private bool _isChangingPassword = false;
+    [ObservableProperty] private string _changePasswordButtonText = "Change Password";
 
     public SettingsViewModel()
     {
@@ -81,6 +82,7 @@ public partial class SettingsViewModel : ViewModelBase
         try
         {
             IsChangingPassword = true;
+            ChangePasswordButtonText = "Changing...";
 
             var response = await _apiClient.ChangePasswordAsync(CurrentPassword, NewPassword);
 
@@ -104,6 +106,7 @@ public partial class SettingsViewModel : ViewModelBase
         finally
         {
             IsChangingPassword = false;
+            ChangePasswordButtonText = "Change Password";
         }
     }
 }

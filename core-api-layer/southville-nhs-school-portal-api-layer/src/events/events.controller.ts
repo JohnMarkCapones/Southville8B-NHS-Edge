@@ -23,6 +23,7 @@ import {
   ApiConsumes,
 } from '@nestjs/swagger';
 import { EventsService } from './events.service';
+import { EventRemindersService } from './event-reminders.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventAdditionalInfoDto } from './dto/create-event.dto';
@@ -60,6 +61,7 @@ export class EventsController {
 
   constructor(
     private readonly eventsService: EventsService,
+    private readonly eventRemindersService: EventRemindersService,
     private readonly r2StorageService: R2StorageService,
     private readonly cloudflareImagesService: CloudflareImagesService,
   ) {}
@@ -932,5 +934,50 @@ export class EventsController {
     @Body() dto: ReorderEventItemsDto,
   ): Promise<void> {
     return this.eventsService.reorderItems(eventId, entityType, dto);
+  }
+
+  // Event reminders endpoints
+  @Post('reminders/daily')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Send daily event reminders',
+    description:
+      'Sends reminders for events happening tomorrow. This should be called daily via a scheduled task or cron job.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Daily reminders sent successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async sendDailyReminders(): Promise<{ message: string }> {
+    await this.eventRemindersService.sendDailyEventReminders();
+    return { message: 'Daily event reminders sent successfully' };
+  }
+
+  @Post('reminders/hourly')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Send hourly event reminders',
+    description:
+      'Sends reminders for events starting in approximately 1 hour. This should be called hourly via a scheduled task.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Hourly reminders sent successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async sendHourlyReminders(): Promise<{ message: string }> {
+    await this.eventRemindersService.sendHourlyEventReminders();
+    return { message: 'Hourly event reminders sent successfully' };
   }
 }

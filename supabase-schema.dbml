@@ -155,6 +155,8 @@ Table student_schedule {
 Table students_gwa {
   id uuid [pk, default: `gen_random_uuid()`]
   student_id uuid
+  academic_year_id uuid
+  academic_period_id uuid
   gwa decimal [note: "Range: 50.00 to "]
   grading_period array [note: "Allowed values: 'Q1'::character varying, 'Q2'::character varying, 'Q3'::character varying, 'Q4'::character varying"]
   school_year varchar
@@ -1552,6 +1554,8 @@ Ref: students.user_id > users.id
 Ref: students.section_id > sections.id
 Ref: students_gwa.student_id > students.id
 Ref: students_gwa.recorded_by > teachers.id
+Ref: students_gwa.academic_year_id > academic_years.id
+Ref: students_gwa.academic_period_id > academic_periods.id
 Ref: subjects.department_id > departments.id
 Ref: teacher_file_downloads.user_id > users.id
 Ref: teacher_files.folder_id > teacher_folders.id

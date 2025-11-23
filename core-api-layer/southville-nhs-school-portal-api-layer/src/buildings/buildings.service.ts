@@ -12,7 +12,7 @@ import { CreateBuildingDto } from './dto/create-building.dto';
 import { UpdateBuildingDto } from './dto/update-building.dto';
 import { Building } from './entities/building.entity';
 import { NotificationService } from '../common/services/notification.service';
-import { AlertType } from '../alerts/entities/alert.entity';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class BuildingsService {
@@ -80,7 +80,7 @@ export class BuildingsService {
       await this.notificationService.notifyAll(
         'New Building Created',
         `A new building "${building.building_name}" (${building.code}) has been created.`,
-        AlertType.INFO,
+        NotificationType.INFO,
         undefined,
         { expiresInDays: 7 },
       );
@@ -309,7 +309,7 @@ export class BuildingsService {
     await this.notificationService.notifyAll(
       'Building Updated',
       `Building "${building.building_name}" (${building.code}) has been updated.`,
-      AlertType.INFO,
+      NotificationType.INFO,
       undefined,
       { expiresInDays: 7 },
     );
@@ -343,7 +343,7 @@ export class BuildingsService {
     await this.notificationService.notifyAll(
       'Building Deleted',
       `A building has been deleted.`,
-      AlertType.WARNING,
+      NotificationType.WARNING,
       undefined,
       { expiresInDays: 7 },
     );

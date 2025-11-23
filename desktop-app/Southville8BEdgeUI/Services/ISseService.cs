@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Southville8BEdgeUI.Models.Api;
 
@@ -12,5 +13,6 @@ public interface ISseService
     event EventHandler<SidebarMetrics>? MetricsUpdated;
     event EventHandler<AdminDashboardMetrics>? DashboardMetricsUpdated;
     event EventHandler<TeacherSidebarMetrics>? TeacherMetricsUpdated;
+    event EventHandler<IReadOnlyList<AdminActivity>>? AdminActivitiesUpdated;
     event EventHandler<string>? ConnectionStatusChanged;
 }

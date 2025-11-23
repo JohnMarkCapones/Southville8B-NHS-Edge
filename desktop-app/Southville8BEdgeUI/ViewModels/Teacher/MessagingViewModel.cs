@@ -47,7 +47,7 @@ public partial class MessagingViewModel : ViewModelBase
                 LastMessageTime = "15 min",
                 IsOnline = true,
                 UnreadCount = 0,
-                IsSelected = false,
+                IsSelected = true,  // Select first conversation
                 Messages = new ObservableCollection<MessageViewModel>
                 {
                     new MessageViewModel
@@ -461,11 +461,14 @@ public partial class MessagingViewModel : ViewModelBase
             }
             
             // Mark as read
-            if (conversation.UnreadCount > 0 && !string.IsNullOrEmpty(conversation.ConversationId))
+            if (conversation.UnreadCount > 0)
             {
                 System.Diagnostics.Debug.WriteLine($"[MessagingViewModel] Marking conversation as read: {conversation.ConversationId}");
                 conversation.UnreadCount = 0;
-                _ = _chatService?.MarkAsReadAsync(conversation.ConversationId);
+                if (!string.IsNullOrEmpty(conversation.ConversationId))
+                {
+                    _ = _chatService?.MarkAsReadAsync(conversation.ConversationId);
+                }
             }
             
             // Ensure all property changes are notified

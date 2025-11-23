@@ -7,6 +7,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { NotificationService } from '../../common/services/notification.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 import { SubmitFormResponseDto } from '../dto/submit-form-response.dto';
 import { ReviewFormResponseDto } from '../dto/review-form-response.dto';
 
@@ -14,7 +16,10 @@ import { ReviewFormResponseDto } from '../dto/review-form-response.dto';
 export class ClubFormResponsesService {
   private readonly logger = new Logger(ClubFormResponsesService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   /**
    * Submits a form response
@@ -178,6 +183,80 @@ export class ClubFormResponsesService {
       this.logger.log(
         `Submitted response to form ${formId} by user ${userId} (Status: ${response.status})`,
       );
+
+      // Notify student about successful form submission
+      try {
+        const formName = completeResponse.form?.name || 'club form';
+        const { data: clubData } = await supabase
+          .from('clubs')
+          .select('name')
+          .eq('id', clubId)
+          .single();
+
+        await this.notificationService.notifyUser(
+          userId,
+          'Application Submitted',
+          `Your application for "${formName}" to ${clubData?.name || 'the club'} has been submitted successfully. ${response.status === 'approved' ? 'You have been automatically approved!' : 'Please wait for review.'}`,
+          response.status === 'approved'
+            ? NotificationType.SUCCESS
+            : NotificationType.INFO,
+          userId,
+          { expiresInDays: 14 },
+        );
+        this.logger.log(`✅ Sent confirmation notification to user ${userId}`);
+      } catch (confirmError) {
+        this.logger.warn(
+          'Failed to create confirmation notification:',
+          confirmError,
+        );
+      }
+
+      // Notify club advisors about form submission (if not auto-approved)
+      try {
+        if (!form.auto_approve && response.status === 'pending') {
+          const { data: clubData } = await supabase
+            .from('clubs')
+            .select('advisor_id, co_advisor_id, name')
+            .eq('id', clubId)
+            .single();
+
+          if (clubData) {
+            const advisorIds: string[] = [];
+            if (clubData.advisor_id) advisorIds.push(clubData.advisor_id);
+            if (clubData.co_advisor_id) advisorIds.push(clubData.co_advisor_id);
+
+            if (advisorIds.length > 0) {
+              const { data: teachers } = await supabase
+                .from('teachers')
+                .select('user_id')
+                .in('id', advisorIds);
+
+              if (teachers) {
+                const teacherUserIds = teachers
+                  .map((t) => t.user_id)
+                  .filter((id) => id);
+                if (teacherUserIds.length > 0) {
+                  const formName = completeResponse.form?.name || 'club form';
+                  await this.notificationService.notifyUsers(
+                    teacherUserIds,
+                    'New Form Submission',
+                    `A new submission for "${formName}" in "${clubData.name}" requires your review.`,
+                    NotificationType.INFO,
+                    userId,
+                    { expiresInDays: 7 },
+                  );
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to create notifications for form submission:',
+          error,
+        );
+      }
+
       return completeResponse;
     } catch (error) {
       if (
@@ -406,6 +485,34 @@ export class ClubFormResponsesService {
       this.logger.log(
         `Reviewed response ${responseId}: ${reviewDto.status} by user ${userId}`,
       );
+
+      // Notify student about approval/rejection
+      try {
+        if (data?.user_id) {
+          const formName = data.form?.name || 'club form';
+          const clubName = data.form?.club?.name || 'the club';
+          const statusText =
+            reviewDto.status === 'approved' ? 'approved' : 'rejected';
+          const message =
+            reviewDto.status === 'approved'
+              ? `Your application for "${formName}" in "${clubName}" has been approved!`
+              : `Your application for "${formName}" in "${clubName}" has been rejected.`;
+
+          await this.notificationService.notifyApprovalStatus(
+            data.user_id,
+            'Club Application',
+            statusText,
+            message,
+            userId,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to create notification for form review:',
+          error,
+        );
+      }
+
       return data;
     } catch (error) {
       if (

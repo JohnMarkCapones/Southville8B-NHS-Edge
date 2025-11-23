@@ -75,6 +75,9 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _currentClassRoom = string.Empty;
     public bool HasMultipleTodayClasses => TodayClasses.Count > 1;
 
+    // Recent Activities for Activity Log sidebar
+    [ObservableProperty] private ObservableCollection<ActivityLogItemViewModel> _recentActivities = new();
+
     private DispatcherTimer? _todayRotationTimer;
 
     [ObservableProperty] private GridLength _leftColumnWidth = new(260);
@@ -86,6 +89,7 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
     private SidebarMetrics? _lastValidMetrics;
     private SidebarMetrics? _pendingMetrics;
     private DispatcherTimer? _metricsApplyTimer;
+    private const int RecentActivitiesDisplayCount = 3;
 
     public bool ShowLeftSidebarToggle => !IsLeftSidebarVisible;
     public bool ShowRightSidebarToggle => !IsRightSidebarVisible;
@@ -171,7 +175,7 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
         {
             _userId = user.Id;
             UserEmail = user.Email ?? "user@southville.edu.ph";
-            UserRole = FormatRoleName(user.Role?.Name);
+            UserRole = FormatRoleName(user.Role);
             UserInitials = GetInitialsFromEmail(user.Email);
             
             // Fetch full profile asynchronously
@@ -200,6 +204,9 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
 
         // Load active academic year
         _ = LoadActiveAcademicYearAsync();
+        
+        // Load recent activities for sidebar
+        _ = LoadRecentActivitiesAsync();
 
         // Realtime clock for date/time display
         _clock?.Stop();
@@ -217,6 +224,7 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
     {
         // Subscribe to SSE events
         _sseService.MetricsUpdated += OnMetricsUpdated;
+        _sseService.AdminActivitiesUpdated += OnAdminActivitiesUpdated;
         _sseService.ConnectionStatusChanged += OnConnectionStatusChanged;
 
         // Start SSE connection
@@ -249,6 +257,16 @@ public partial class AdminShellViewModel : ViewModelBase, IDisposable
         _metricsApplyTimer.Tick += ApplyPendingMetrics;
         _metricsApplyTimer.Stop();
         _metricsApplyTimer.Start();
+    }
+
+    private void OnAdminActivitiesUpdated(object? sender, IReadOnlyList<AdminActivity> activities)
+    {
+        if (activities == null)
+        {
+            return;
+        }
+
+        UpdateRecentActivities(activities);
     }
 
     private void ApplyPendingMetrics(object? sender, EventArgs e)
@@ -686,7 +704,8 @@ await LoadSidebarEventsAsync();
     private void NavigateToAlerts()
     {
         var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
-        CurrentContent = new AlertsViewModel(apiClient);
+        var toastService = ServiceLocator.Services.GetRequiredService<IToastService>();
+        CurrentContent = new AlertsViewModel(apiClient, toastService);
         CurrentPage = "Alerts";
         CloseUserDropdown();
     }
@@ -750,7 +769,7 @@ await LoadSidebarEventsAsync();
         CloseUserDropdown(); 
     }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(); CurrentPage = "Notifications"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(_apiClient); CurrentPage = "Notifications"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToHelpGuide() { CurrentContent = new HelpGuideViewModel(); CurrentPage = "Help Guide"; CloseUserDropdown(); }
 
     [RelayCommand]
@@ -1057,9 +1076,143 @@ await LoadSidebarEventsAsync();
         }
     }
 
+    private async Task LoadRecentActivitiesAsync()
+    {
+        try
+        {
+            var activities = await _apiClient.GetAdminActivitiesAsync(limit: RecentActivitiesDisplayCount);
+            if (activities != null)
+            {
+                UpdateRecentActivities(activities);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading recent activities: {ex.Message}");
+        }
+    }
+
+    private void UpdateRecentActivities(IEnumerable<AdminActivity> activities)
+    {
+        var snapshot = activities
+            .Where(activity => activity != null)
+            .Take(RecentActivitiesDisplayCount)
+            .Select(CreateActivityViewModel)
+            .ToList();
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            RecentActivities.Clear();
+            foreach (var vm in snapshot)
+            {
+                RecentActivities.Add(vm);
+            }
+        });
+    }
+
+    private ActivityLogItemViewModel CreateActivityViewModel(AdminActivity activity)
+    {
+        var user = string.IsNullOrWhiteSpace(activity.UserName) ? "System" : activity.UserName;
+        var createdAtUtc = ParseDateToUtc(activity.CreatedAt);
+
+        return new ActivityLogItemViewModel
+        {
+            UserName = user,
+            UserInitials = BuildInitials(user),
+            Description = activity.Description,
+            Timestamp = FormatRelativeTime(createdAtUtc),
+        };
+    }
+
+    private static DateTime ParseDateToUtc(string? timestamp)
+    {
+        if (string.IsNullOrWhiteSpace(timestamp))
+        {
+            return DateTime.UtcNow;
+        }
+
+        if (DateTime.TryParse(timestamp, out var parsed))
+        {
+            if (parsed.Kind == DateTimeKind.Local)
+            {
+                return parsed.ToUniversalTime();
+            }
+
+            if (parsed.Kind == DateTimeKind.Utc)
+            {
+                return parsed;
+            }
+
+            return DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+        }
+
+        return DateTime.UtcNow;
+    }
+
+    private static string FormatRelativeTime(DateTime createdAtUtc)
+    {
+        var diff = DateTime.UtcNow - createdAtUtc;
+
+        if (diff.TotalMinutes < 1)
+        {
+            return "just now";
+        }
+
+        if (diff.TotalMinutes < 60)
+        {
+            return $"{(int)Math.Floor(diff.TotalMinutes)}mins ago";
+        }
+
+        if (diff.TotalHours < 24)
+        {
+            return $"{(int)Math.Floor(diff.TotalHours)}hrs ago";
+        }
+
+        return $"{(int)Math.Floor(diff.TotalDays)}d ago";
+    }
+
+    private static string BuildInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "U";
+        }
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            return "U";
+        }
+        if (parts.Length >= 2)
+        {
+            return $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[1][0])}";
+        }
+
+        var first = parts[0];
+        if (first.Length >= 2)
+        {
+            return first.Substring(0, 2).ToUpperInvariant();
+        }
+
+        return first[0].ToString().ToUpperInvariant();
+    }
+
     public void Dispose()
     {
         _clock?.Stop();
         _metricsApplyTimer?.Stop();
+        _sseService.MetricsUpdated -= OnMetricsUpdated;
+        _sseService.AdminActivitiesUpdated -= OnAdminActivitiesUpdated;
+        _sseService.ConnectionStatusChanged -= OnConnectionStatusChanged;
+        _ = _sseService.StopAsync();
     }
+}
+
+// Activity Log Item for Sidebar
+public partial class ActivityLogItemViewModel : ViewModelBase
+{
+    [ObservableProperty] private string _userName = "";
+    [ObservableProperty] private string _userInitials = "";
+    [ObservableProperty] private string _description = "";
+    [ObservableProperty] private string _timestamp = "";
 }

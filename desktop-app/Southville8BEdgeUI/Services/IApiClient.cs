@@ -21,6 +21,7 @@ public interface IApiClient
     Task<UserProfile?> GetUserProfileAsync(string userId);
     Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken);
     Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync();
+    Task<List<AdminActivity>?> GetAdminActivitiesAsync(int limit = 10);
     
     // User Management Methods
     Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25);
@@ -98,14 +99,25 @@ public interface IApiClient
 
     // Alerts API
     Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50);
+    Task<AlertListResponse?> GetMyAlertsAsync(int page = 1, int limit = 50);
     Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto);
     Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto);
     Task<bool> DeleteAlertAsync(string id);
+    Task<bool> MarkAlertAsReadAsync(string alertId);
+    Task<bool> MarkAllAlertsAsReadAsync();
+
+    // Notifications API
+    Task<NotificationListResponse?> GetMyNotificationsAsync(int page = 1, int limit = 50);
+    Task<bool> MarkNotificationAsReadAsync(string notificationId);
+    Task<bool> MarkAllNotificationsAsReadAsync();
+    Task<bool> DeleteNotificationAsync(string notificationId);
+    Task<int> GetUnreadNotificationCountAsync();
 
     // Teacher-specific API methods
     Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId);
     Task<List<ScheduleDto>?> GetTeacherTodaySchedulesAsync(string teacherId);
     Task<List<TeacherActivityDto>?> GetTeacherRecentActivitiesAsync(string teacherId);
+    Task<List<TeacherActivityDto>?> GetMyTeacherActivitiesAsync(int limit = 10);
     
     // GWA Management Methods
     Task<StudentGwaListResponse?> GetAdvisoryStudentsWithGwaAsync(string gradingPeriod, string schoolYear);
@@ -161,4 +173,5 @@ public interface IApiClient
     
     // Academic Year Management Methods
     Task<AcademicYearDto?> GetActiveAcademicYearAsync();
+    Task<AcademicDashboardOverviewDto?> GetAcademicDashboardOverviewAsync();
 }

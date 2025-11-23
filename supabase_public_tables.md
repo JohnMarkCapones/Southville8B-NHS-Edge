@@ -195,6 +195,8 @@ created_at timestamp [default: `now()`]
 Table students_gwa {
 id uuid [pk, default: `gen_random_uuid()`]
 student_id uuid
+academic_year_id uuid
+academic_period_id uuid
 gwa decimal [note: "Range: 50.00 to "]
 grading_period array [note: "Allowed values: 'Q1'::character varying, 'Q2'::character varying, 'Q3'::character varying, 'Q4'::character varying"]
 school_year varchar

@@ -48,6 +48,12 @@ public class CreateGwaDto
     [JsonPropertyName("student_id")]
     public string StudentId { get; set; } = string.Empty;
 
+    [JsonPropertyName("academic_year_id")]
+    public string? AcademicYearId { get; set; }
+
+    [JsonPropertyName("academic_period_id")]
+    public string? AcademicPeriodId { get; set; }
+
     [JsonPropertyName("gwa")]
     public decimal Gwa { get; set; }
 

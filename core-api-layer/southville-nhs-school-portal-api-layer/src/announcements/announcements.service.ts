@@ -18,7 +18,10 @@ import { UpdateTagDto } from './dto/update-tag.dto';
 import { Announcement } from './entities/announcement.entity';
 import { Tag } from './entities/tag.entity';
 import { NotificationService } from '../common/services/notification.service';
-import { AlertType } from '../alerts/entities/alert.entity';
+import {
+  NotificationType,
+  NotificationCategory,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class AnnouncementsService {
@@ -211,16 +214,34 @@ export class AnnouncementsService {
 
       this.logger.log(`Announcement created successfully: ${announcement.id}`);
 
-      // Notify target audience about new announcement (global notification for now)
-      // TODO: Get specific target users based on announcement targeting
+      // Notify target audience about new announcement
       const announcementData = await this.findOne(announcement.id);
-      await this.notificationService.notifyAll(
-        `New Announcement: ${announcementData.title}`,
-        `${announcementData.content?.substring(0, 100) || 'A new announcement has been posted.'}...`,
-        AlertType.INFO,
-        userId,
-        { expiresInDays: 7 },
-      );
+
+      // Get target users based on roleIds and sectionIds
+      if (
+        (dto.targetRoleIds && dto.targetRoleIds.length > 0) ||
+        (dto.sectionIds && dto.sectionIds.length > 0)
+      ) {
+        await this.notificationService.notifyUsersByRolesAndSections(
+          dto.targetRoleIds || [],
+          dto.sectionIds || [],
+          `New Announcement: ${announcementData.title}`,
+          `${announcementData.content?.substring(0, 100) || 'A new announcement has been posted.'}...`,
+          NotificationType.INFO,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for announcement: ${announcementData.title} (roles: ${dto.targetRoleIds?.length || 0}, sections: ${dto.sectionIds?.length || 0})`,
+        );
+      } else {
+        this.logger.warn(
+          `No target roles or sections specified for announcement: ${announcementData.title}`,
+        );
+      }
 
       return announcementData;
     } catch (error) {
@@ -554,17 +575,35 @@ export class AnnouncementsService {
 
       this.logger.log(`Announcement updated successfully: ${id}`);
 
-      // Notify target audience about announcement update (global notification for now)
-      const announcementData = await this.findOne(id);
-      await this.notificationService.notifyAll(
-        `Announcement Updated: ${announcementData.title}`,
-        `The announcement "${announcementData.title}" has been updated.`,
-        AlertType.INFO,
-        userId,
-        { expiresInDays: 7 },
-      );
+      // Notify target audience about announcement update
+      try {
+        const announcementData = await this.findOne(id);
+        const targetUserIds = await this.getTargetUsersForAnnouncement(id);
 
-      return announcementData;
+        if (targetUserIds.length > 0) {
+          await this.notificationService.notifyUsers(
+            targetUserIds,
+            `Announcement Updated: ${announcementData.title}`,
+            `The announcement "${announcementData.title}" has been updated.`,
+            NotificationType.INFO,
+            userId,
+            {
+              category: NotificationCategory.EVENT_ANNOUNCEMENT,
+              expiresInDays: 7,
+            },
+          );
+          this.logger.log(
+            `📢 Notified ${targetUserIds.length} users about announcement update: ${announcementData.title}`,
+          );
+        }
+      } catch (notificationError) {
+        this.logger.warn(
+          'Failed to create notifications for announcement update:',
+          notificationError,
+        );
+      }
+
+      return await this.findOne(id);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -921,6 +960,95 @@ export class AnnouncementsService {
       this.logger.debug('Invalidating announcement caches');
     } catch (error) {
       this.logger.warn('Error invalidating announcement caches:', error);
+    }
+  }
+
+  /**
+   * Get target user IDs for an announcement based on targetRoleIds and sectionIds
+   */
+  private async getTargetUsersForAnnouncement(
+    announcementId: string,
+  ): Promise<string[]> {
+    try {
+      const supabase = this.getSupabaseClient();
+      const roleIds: string[] = [];
+      const sectionIds: string[] = [];
+
+      // Get target roles
+      const { data: targetRoles } = await supabase
+        .from('announcement_targets')
+        .select('role_id')
+        .eq('announcement_id', announcementId);
+
+      if (targetRoles) {
+        roleIds.push(...targetRoles.map((tr) => tr.role_id).filter(Boolean));
+      }
+
+      // Get target sections
+      const { data: targetSections } = await supabase
+        .from('announcement_sections')
+        .select('section_id')
+        .eq('announcement_id', announcementId);
+
+      if (targetSections) {
+        sectionIds.push(
+          ...targetSections.map((ts) => ts.section_id).filter(Boolean),
+        );
+      }
+
+      // If no targeting, return empty array
+      if (roleIds.length === 0 && sectionIds.length === 0) {
+        this.logger.warn(
+          `No target roles or sections found for announcement: ${announcementId}`,
+        );
+        return [];
+      }
+
+      // Use NotificationService helper to get users
+      const userIds = new Set<string>();
+
+      // Get users by roles
+      if (roleIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id')
+          .in('role_id', roleIds)
+          .eq('status', 'active');
+
+        if (users) {
+          users.forEach((u) => userIds.add(u.id));
+        }
+      }
+
+      // Get users by sections (students only)
+      if (sectionIds.length > 0) {
+        const { data: students } = await supabase
+          .from('students')
+          .select('user_id')
+          .in('section_id', sectionIds);
+
+        if (students) {
+          const studentUserIds = students.map((s) => s.user_id).filter(Boolean);
+
+          // Verify these users are active
+          if (studentUserIds.length > 0) {
+            const { data: activeUsers } = await supabase
+              .from('users')
+              .select('id')
+              .in('id', studentUserIds)
+              .eq('status', 'active');
+
+            if (activeUsers) {
+              activeUsers.forEach((u) => userIds.add(u.id));
+            }
+          }
+        }
+      }
+
+      return Array.from(userIds);
+    } catch (error) {
+      this.logger.error('Error in getTargetUsersForAnnouncement:', error);
+      return [];
     }
   }
 }

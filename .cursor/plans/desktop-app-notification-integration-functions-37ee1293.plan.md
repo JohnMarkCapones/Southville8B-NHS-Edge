@@ -1,161 +1,158 @@
-<!-- 37ee1293-3641-4f67-85bb-664961550bb8 8bba30e0-1c09-4a91-8eec-9495b58cb05a -->
-# Desktop App Notification Integration Functions
+<!-- 37ee1293-3641-4f67-85bb-664961550bb8 57263661-d620-41fd-b8e2-edcf232adfae -->
+# Student Notifications Frontend Implementation Plan
 
-Based on the navigation items in `AdminShellView.axaml` and `TeacherShellView.axaml`, here are all functions that need notification integration:
+## Overview
 
-## ADMIN PORTAL NOTIFICATIONS
+Integrate the backend notification system into the frontend-nextjs student interface. Replace mock data with real API calls and create a comprehensive notification system that displays all student notifications based on the implemented activity monitoring.
 
-### 1. User Management (`NavigateToUserManagementCommand`)
+## Implementation Steps
 
-**Functions needing notifications:**
+### 1. Create Notifications API Endpoint
 
-- `CreateStudentAsync()` - Notify student when account is created
-- `CreateTeacherAsync()` - Notify teacher when account is created  
-- `CreateAdminAsync()` - Notify admin when account is created
-- `UpdateUserStatusAsync()` - Notify user when status changes (active/inactive)
-- `UpdateUserAsync()` - Notify user when profile is updated (if significant changes)
-- `DeleteUserAsync()` - Notify user before deletion (if soft delete)
-- `ResetPasswordAsync()` - Notify user when password is reset
-- `AdminChangePasswordAsync()` - Notify user when admin changes their password
-- `ImportStudentsCsvAsync()` - Notify admin when bulk import completes (success/failure summary)
-- `ImportTeachersCsvAsync()` - Notify admin when bulk import completes (success/failure summary)
+**File:** `frontend-nextjs/lib/api/endpoints/notifications.ts`
 
-### 2. Building Management (`NavigateToBuildingManagementCommand`)
+- Create API functions for:
+- `getMyNotifications(params?)` - Fetch student's notifications with pagination
+- `markNotificationAsRead(id)` - Mark single notification as read
+- `markAllNotificationsAsRead()` - Mark all as read
+- `deleteNotification(id)` - Delete a notification
+- `getUnreadNotificationCount()` - Get unread count
+- Use `apiClient` from `lib/api/client.ts`
+- Follow the pattern from `announcements.ts` endpoint file
+- Define TypeScript interfaces matching backend response (snake_case)
 
-**Functions needing notifications:**
+### 2. Create Notification Types
 
-- `CreateBuildingAsync()` - Notify relevant admins when building is created
-- `UpdateBuildingAsync()` - Notify relevant admins when building is updated
-- `DeleteBuildingAsync()` - Notify relevant admins when building is deleted
-- Room creation/update/delete operations - Notify affected teachers/students when room assignments change
+**File:** `frontend-nextjs/lib/api/types/notifications.ts`
 
-### 3. Class Schedules (`NavigateToClassSchedulesCommand`)
+- Define `Notification` interface matching backend response
+- Define `NotificationListResponse` interface
+- Define query parameter types for filtering
+- Map backend types to frontend types (snake_case → camelCase if needed)
 
-**Functions needing notifications:**
+### 3. Create Notifications Hook
 
-- `CreateScheduleAsync()` - Notify teacher and students when schedule is created
-- `UpdateScheduleAsync()` - Notify teacher and students when schedule is updated (time/room changes)
-- `DeleteScheduleAsync()` - Notify teacher and students when schedule is deleted
-- `BulkCreateSchedulesAsync()` - Notify affected users when bulk schedules are created
-- `AssignStudentsToScheduleAsync()` - Notify students when assigned to a class
-- `RemoveStudentsFromScheduleAsync()` - Notify students when removed from a class
-- Schedule conflict detection - Notify admin/teacher when conflicts are detected
+**File:** `frontend-nextjs/hooks/useNotifications.ts`
 
-### 4. Events Dashboard (`NavigateToEventsDashboardCommand`)
+- Create `useNotifications` hook similar to mobile app pattern
+- Manage state: notifications, loading, error, unreadCount
+- Implement functions: markAsRead, markAllAsRead, deleteNotification, refresh
+- Auto-fetch on mount
+- Handle pagination if needed
 
-**Functions needing notifications:**
+### 4. Update Notification System Component
 
-- Event creation - Notify target audience when event is created
-- Event update - Notify target audience when event details change
-- Event deletion/cancellation - Notify target audience when event is cancelled
-- Event approval/rejection - Notify event creator when event is approved/rejected
-- Event status changes - Notify relevant users when event status changes (draft → published)
+**File:** `frontend-nextjs/components/header/notification-system.tsx`
 
-### 5. Alerts (`NavigateToAlertsCommand`)
+- Replace mock data with `useNotifications` hook
+- Update notification type mapping to match backend types
+- Add proper error handling and loading states
+- Integrate with real API calls
+- Maintain existing UI/UX design
 
-**Functions needing notifications:**
+### 5. Integrate into Student Header
 
-- Alert creation - Notify target users when alert is created
-- Alert update - Notify target users when alert is updated
-- Alert deletion - Notify target users when alert is removed
-- Alert expiration - Notify admin when alert is about to expire
+**File:** `frontend-nextjs/components/student/student-header.tsx`
 
-### 7. Chat (`NavigateToChatCommand`)
+- Replace mock notifications with real data from `useNotifications` hook
+- Update notification click handlers to use real API calls
+- Add unread count badge from hook
+- Maintain existing UI design
 
-**Functions needing notifications:**
+### 6. Create Student Notifications Page (Optional)
 
-- New message received - Notify recipient when message is sent (already covered in previous analysis)
+**File:** `frontend-nextjs/app/student/notifications/page.tsx`
 
----
+- Create dedicated notifications page for students
+- Display all notifications with filtering by category
+- Show unread/read status
+- Allow bulk actions (mark all read, delete all)
+- Add pagination for large notification lists
+- Use same design patterns as other student pages
 
-## TEACHER PORTAL NOTIFICATIONS
+### 7. Add Notification Badge to Student Layout
 
-### 1. Schedule Planner (`NavigateToSchedulePlannerCommand`)
+**File:** `frontend-nextjs/components/student/student-layout.tsx`
 
-**Functions needing notifications:**
+- Add notification count indicator in header/sidebar
+- Show unread count from `useNotifications` hook
+- Link to notifications page
 
-- `CreateScheduleAsync()` - Notify students when teacher creates schedule
-- `UpdateScheduleAsync()` - Notify students when schedule is updated
-- `DeleteScheduleAsync()` - Notify students when schedule is deleted
-- Schedule conflict detection - Notify teacher when conflicts are detected
-- Schedule template save/load - Notify teacher when template operations complete
+### 8. Update API Endpoints Index
 
-### 2. Grade Entry (`NavigateToGradeEntryCommand`)
+**File:** `frontend-nextjs/lib/api/endpoints/index.ts`
 
-**Functions needing notifications:**
+- Export all notification functions
+- Export notification types
 
-- `CreateGwaEntryAsync()` - Notify student/parent when grade is entered
-- `UpdateGwaEntryAsync()` - Notify student/parent when grade is updated
-- `DeleteGwaEntryAsync()` - Notify student/parent when grade is deleted
-- Bulk grade entry - Notify students/parents when bulk grades are entered
-- Grade submission - Notify admin when grades are submitted for review
-- Grade approval/rejection - Notify teacher when grades are approved/rejected by admin
+## Technical Details
 
-### 3. My Announcements (`NavigateToMyAnnouncementsCommand`)
+### API Endpoints to Use
 
-**Functions needing notifications:**
+- `GET /notifications/my?page=1&limit=50` - Fetch notifications
+- `PATCH /notifications/{id}/read` - Mark as read
+- `POST /notifications/mark-all-read` - Mark all as read
+- `DELETE /notifications/{id}` - Delete notification
+- `GET /notifications/unread-count` - Get unread count
 
-- Announcement creation - Notify target users when announcement is created
-- Announcement update - Notify target users when announcement is updated
-- Announcement deletion - Notify target users when announcement is deleted
-- Announcement approval/rejection - Notify teacher when announcement is approved/rejected
-- Announcement status changes - Notify teacher when announcement status changes
+### Notification Type Mapping
 
-### 4. Messaging (`NavigateToMessagingCommand`)
+Backend types: `'info' | 'warning' | 'success' | 'error' | 'system'`
+Frontend display: Map to appropriate UI colors and icons
 
-**Functions needing notifications:**
+### Notification Categories
 
-- New message received - Notify recipient when message is sent (already covered in previous analysis)
+- `ACADEMIC` - Quiz, schedule, grades
+- `COMMUNICATION` - Club applications, news articles
+- `EVENT_ANNOUNCEMENT` - Events and announcements
+- `USER_ACCOUNT` - Account management
 
----
+### Priority Implementation Order
 
-## NOTIFICATION TYPES BY CATEGORY
+1. API endpoint and types (foundation)
+2. Hook (data layer)
+3. Update existing components (quick win)
+4. Optional notifications page (enhancement)
 
-### **User Account Notifications**
+## Files to Create/Modify
 
-- Account created
-- Account status changed
-- Password reset
-- Profile updated
-- Account deleted
+### New Files
 
-### **Academic Notifications**
+- `frontend-nextjs/lib/api/endpoints/notifications.ts`
+- `frontend-nextjs/lib/api/types/notifications.ts`
+- `frontend-nextjs/hooks/useNotifications.ts`
+- `frontend-nextjs/app/student/notifications/page.tsx` (optional)
 
-- Schedule created/updated/deleted
-- Grade entered/updated
-- Module published/updated
-- Assignment created
+### Files to Modify
 
-### **Event & Announcement Notifications**
+- `frontend-nextjs/components/header/notification-system.tsx`
+- `frontend-nextjs/components/student/student-header.tsx`
+- `frontend-nextjs/lib/api/endpoints/index.ts`
+- `frontend-nextjs/components/student/student-layout.tsx` (optional)
 
-- Event created/updated/cancelled
-- Announcement created/updated/deleted
-- Event/Announcement approved/rejected
+## Testing Checklist
 
-### **System Notifications**
+- [ ] Notifications fetch correctly from API
+- [ ] Unread count displays accurately
+- [ ] Mark as read works
+- [ ] Mark all as read works
+- [ ] Delete notification works
+- [ ] Error handling works (API failures)
+- [ ] Loading states display correctly
+- [ ] Empty state shows when no notifications
+- [ ] Notification types display with correct colors/icons
+- [ ] Categories filter correctly (if implemented)
 
-- Bulk operations completed
-- Conflicts detected
-- Access granted/revoked
-- System alerts
+### To-dos
 
-### **Communication Notifications**
-
-- New message received
-- Chat conversation created
-
----
-
-## INTEGRATION POINTS
-
-1. **Backend API Layer** - Add notification creation after successful operations
-2. **Chat Service** - Add notification creation when messages are sent
-3. **Desktop App** - Poll or use real-time updates to fetch notifications
-4. **Notification View** - Display notifications in `NotificationsView.axaml` for both Admin and Teacher
-
-## NOTES
-
-- Dashboard views typically don't need notifications (they display stats, not trigger actions)
-- Notifications should be role-aware (Admin notifications vs Teacher notifications vs Student notifications)
-- Some notifications may need to be batched (e.g., bulk operations)
-- Consider notification preferences per user (opt-in/opt-out for certain types)
+- [ ] Replace notifyAll() in events.service.ts with user-specific notifications based on event visibility/targeting
+- [ ] Replace notifyAll() in announcements.service.ts with user-specific notifications using targetRoleIds and sectionIds
+- [ ] Add helper methods to NotificationService for notifying users by role/section
+- [ ] Create ActivityMonitoringService with handlers for all user actions (create/update/delete)
+- [ ] Create ActivityMonitoringModule and register it in app.module.ts
+- [ ] Add activity monitoring hooks to users.service.ts (create/update/delete)
+- [ ] Add activity monitoring hooks to schedules.service.ts
+- [ ] Add activity monitoring hooks to quiz.service.ts and quiz-attempts.service.ts
+- [ ] Add activity monitoring hooks to clubs.service.ts and club-memberships.service.ts
+- [ ] Add activity monitoring hooks to news-approval.service.ts
+- [ ] Add activity monitoring hooks to gwa.service.ts

@@ -1,18 +1,31 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Text, ActivityIndicator, RefreshControl } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 
-import { ReusableHeader } from '@/components/ui/reusable-header';
-import { LoadingOverlay } from '@/components/ui/loading-overlay';
-import { Colors } from '@/constants/theme';
-import { useTheme } from '@/contexts/theme-context';
-import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
-import { useAnnouncements } from '@/hooks/use-announcements';
-import { formatAnnouncementContent } from '@/utils/html-utils';
-import { useNetworkRefetch } from '@/hooks/use-network-refetch';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { ReusableHeader } from "@/components/ui/reusable-header";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { Colors } from "@/constants/theme";
+import { useTheme } from "@/contexts/theme-context";
+import { useAuthErrorHandler } from "@/hooks/use-auth-error-handler";
+import { useAnnouncements } from "@/hooks/use-announcements";
+import { formatAnnouncementContent } from "@/utils/html-utils";
+import { useNetworkRefetch } from "@/hooks/use-network-refetch";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 // Separate component for announcement card to properly use hooks
 function AnnouncementCard({
@@ -50,71 +63,103 @@ function AnnouncementCard({
   });
 
   return (
-    <Animated.View style={{ position: 'relative' }}>
+    <Animated.View style={{ position: "relative" }}>
       <TouchableOpacity
         style={[
           styles.announcementCard,
-          { 
-            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+          {
+            backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+            borderColor: isDark
+              ? "rgba(255, 255, 255, 0.2)"
+              : "rgba(0, 0, 0, 0.1)",
             borderWidth: 1,
             borderLeftColor: announcementType.color,
           },
         ]}
         onPress={() => onExpand(announcement.id)}
-        activeOpacity={0.8}>
-        
+        activeOpacity={0.8}
+      >
         <View style={styles.announcementCardHeader}>
-          <View style={[styles.announcementIconContainer, { 
-            backgroundColor: isDark ? 'rgba(74, 144, 226, 0.2)' : 'rgba(74, 144, 226, 0.1)' 
-          }]}>
-            <Ionicons 
-              name={announcementType.icon as any} 
-              size={20} 
-              color={announcementType.color} 
+          <View
+            style={[
+              styles.announcementIconContainer,
+              {
+                backgroundColor: isDark
+                  ? "rgba(74, 144, 226, 0.2)"
+                  : "rgba(74, 144, 226, 0.1)",
+              },
+            ]}
+          >
+            <Ionicons
+              name={announcementType.icon as any}
+              size={20}
+              color={announcementType.color}
             />
           </View>
           <View style={styles.announcementHeaderContent}>
-            <Text style={[styles.announcementTitle, { color: colors.text }]}>{announcement.title}</Text>
+            <Text style={[styles.announcementTitle, { color: colors.text }]}>
+              {announcement.title}
+            </Text>
             <View style={styles.announcementMeta}>
-              <View style={[
-                styles.priorityBadge,
-                { backgroundColor: announcementType.color }
-              ]}>
+              <View
+                style={[
+                  styles.priorityBadge,
+                  { backgroundColor: announcementType.color },
+                ]}
+              >
                 <Text style={styles.priorityText}>{announcement.priority}</Text>
               </View>
-              <Text style={[styles.announcementCategory, { color: colors.icon }]}>{announcement.category}</Text>
+              <Text
+                style={[styles.announcementCategory, { color: colors.icon }]}
+              >
+                {announcement.category}
+              </Text>
             </View>
           </View>
-          <Ionicons 
-            name={isExpanded ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color={colors.icon} 
+          <Ionicons
+            name={isExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={colors.icon}
           />
         </View>
 
         <View style={styles.announcementContent}>
-          <Text style={[styles.announcementDescription, { color: colors.text }]}>
+          <Text
+            style={[styles.announcementDescription, { color: colors.text }]}
+          >
             {formatAnnouncementContent(announcement.description)}
           </Text>
-          <Text style={[styles.announcementPosted, { color: colors.icon }]}>{announcement.posted}</Text>
+          <Text style={[styles.announcementPosted, { color: colors.icon }]}>
+            {announcement.posted}
+          </Text>
         </View>
 
         {isExpanded && (
-          <View style={[styles.expandedContent, { 
-            borderTopColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0' 
-          }]}>
+          <View
+            style={[
+              styles.expandedContent,
+              {
+                borderTopColor: isDark ? "rgba(255, 255, 255, 0.2)" : "#E0E0E0",
+              },
+            ]}
+          >
             <View style={styles.expandedRow}>
               <Ionicons name="time-outline" size={16} color={colors.icon} />
-              <Text style={[styles.expandedText, { color: colors.icon }]}>{announcement.posted}</Text>
+              <Text style={[styles.expandedText, { color: colors.icon }]}>
+                {announcement.posted}
+              </Text>
             </View>
             <View style={styles.expandedRow}>
               <Ionicons name="folder-outline" size={16} color={colors.icon} />
-              <Text style={[styles.expandedText, { color: colors.icon }]}>{announcement.category}</Text>
+              <Text style={[styles.expandedText, { color: colors.icon }]}>
+                {announcement.category}
+              </Text>
             </View>
             <View style={styles.expandedRow}>
               <Ionicons name="flag-outline" size={16} color={colors.icon} />
-              <Text style={[styles.expandedText, { color: colors.icon }]}>Priority: {announcement.priority}</Text>
+              <Text style={[styles.expandedText, { color: colors.icon }]}>
+                Priority: {announcement.priority}
+              </Text>
             </View>
           </View>
         )}
@@ -128,7 +173,7 @@ function AnnouncementCard({
               borderRadius: 16,
               borderWidth: 3,
               borderColor: colors.tint,
-              pointerEvents: 'none',
+              pointerEvents: "none",
             },
             highlightOverlayStyle,
           ]}
@@ -140,25 +185,33 @@ function AnnouncementCard({
 
 export default function AnnouncementsScreen() {
   const { isDark } = useTheme();
-  const colors = Colors[isDark ? 'dark' : 'light'];
+  const colors = Colors[isDark ? "dark" : "light"];
   const { query: searchQuery } = useLocalSearchParams<{ query?: string }>();
   const scrollViewRef = useRef<ScrollView>(null);
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [highlightedAnnouncementId, setHighlightedAnnouncementId] = useState<string | null>(null);
+  const [highlightedAnnouncementId, setHighlightedAnnouncementId] = useState<
+    string | null
+  >(null);
   const highlightOpacity = useSharedValue(1);
-  const previousSearchQueryRef = useRef<string>('');
+  const previousSearchQueryRef = useRef<string>("");
 
   // Fetch current user data to get section information
   const { user, loading: userLoading } = useCurrentUser();
   // Try multiple paths for section ID (API returns section_id directly or sections object)
-  const currentUserSectionId = user?.student?.section_id || 
-                               user?.student?.sections?.id || 
-                               user?.student?.section?.id || 
-                               null;
+  const currentUserSectionId =
+    user?.student?.section_id ||
+    user?.student?.sections?.id ||
+    user?.student?.section?.id ||
+    null;
 
   // Fetch announcements from API
-  const { announcements, loading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useAnnouncements({
+  const {
+    announcements,
+    loading: announcementsLoading,
+    error: announcementsError,
+    refetch: refetchAnnouncements,
+  } = useAnnouncements({
     page: 1,
     limit: 20, // Show more announcements in the dedicated screen
     includeExpired: false,
@@ -173,7 +226,7 @@ export default function AnnouncementsScreen() {
     try {
       await refetchAnnouncements();
     } catch (error) {
-      console.error('Error refreshing announcements:', error);
+      console.error("Error refreshing announcements:", error);
     } finally {
       setRefreshing(false);
     }
@@ -181,15 +234,17 @@ export default function AnnouncementsScreen() {
 
   // Auto-redirect to login on authentication errors
   useEffect(() => {
-    console.log('[ANNOUNCEMENTS][AUTO-REDIRECT] Checking for auth errors', {
-      hasError: !!announcementsError
+    console.log("[ANNOUNCEMENTS][AUTO-REDIRECT] Checking for auth errors", {
+      hasError: !!announcementsError,
     });
-    
+
     // Check for authentication error using centralized handler
     if (announcementsError) {
       const wasRedirected = handleAuthError(announcementsError);
       if (wasRedirected) {
-        console.log('[ANNOUNCEMENTS][AUTO-REDIRECT] Auth error handled - redirecting to login');
+        console.log(
+          "[ANNOUNCEMENTS][AUTO-REDIRECT] Auth error handled - redirecting to login"
+        );
       }
     }
   }, [announcementsError, handleAuthError]);
@@ -199,13 +254,14 @@ export default function AnnouncementsScreen() {
 
   // Function to handle search highlight and scroll
   const handleSearchHighlight = useCallback(() => {
-    const currentQuery = typeof searchQuery === 'string' ? searchQuery.trim() : '';
-    
+    const currentQuery =
+      typeof searchQuery === "string" ? searchQuery.trim() : "";
+
     // Reset highlight when query is cleared
     if (!currentQuery) {
       setHighlightedAnnouncementId(null);
       highlightOpacity.value = 1;
-      previousSearchQueryRef.current = '';
+      previousSearchQueryRef.current = "";
       return;
     }
 
@@ -215,8 +271,10 @@ export default function AnnouncementsScreen() {
 
     // Always process - allow re-trigger every time (especially when navigating back)
     // Update ref after processing to prevent duplicate triggers in same render cycle
-    const shouldProcess = currentQuery !== previousSearchQueryRef.current || !highlightedAnnouncementId;
-    
+    const shouldProcess =
+      currentQuery !== previousSearchQueryRef.current ||
+      !highlightedAnnouncementId;
+
     if (!shouldProcess) {
       return;
     }
@@ -233,14 +291,14 @@ export default function AnnouncementsScreen() {
       // Set highlighted announcement
       setHighlightedAnnouncementId(matchingAnnouncementId);
       highlightOpacity.value = 1;
-      
+
       // Reset and start fade timer after 4 seconds (between 3-5 seconds as requested)
       const fadeTimer = setTimeout(() => {
         highlightOpacity.value = withTiming(0, {
           duration: 1500, // 1.5 seconds fade
           easing: Easing.out(Easing.ease),
         });
-        
+
         // Clear highlight after animation completes
         setTimeout(() => {
           setHighlightedAnnouncementId(null);
@@ -252,9 +310,11 @@ export default function AnnouncementsScreen() {
       // Estimate: header section (~200px) + creative header (~150px) + section header (~60px) + previous announcements
       const estimatedCardHeight = 200; // Approximate height per announcement card including margin
       const headerOffset = 350; // Creative header + section header
-      const announcementIndex = allAnnouncementsForSearch.findIndex(a => a.id === matchingAnnouncementId);
-      const scrollY = headerOffset + (announcementIndex * estimatedCardHeight);
-      
+      const announcementIndex = allAnnouncementsForSearch.findIndex(
+        (a) => a.id === matchingAnnouncementId
+      );
+      const scrollY = headerOffset + announcementIndex * estimatedCardHeight;
+
       // Small delay to ensure announcements are rendered
       const scrollTimer = setTimeout(() => {
         scrollViewRef.current?.scrollTo({
@@ -272,20 +332,27 @@ export default function AnnouncementsScreen() {
     return () => {
       clearTimeout(initTimer);
     };
-  }, [searchQuery, matchingAnnouncementId, allAnnouncementsForSearch, announcementsLoading, highlightOpacity, highlightedAnnouncementId]);
+  }, [
+    searchQuery,
+    matchingAnnouncementId,
+    allAnnouncementsForSearch,
+    announcementsLoading,
+    highlightOpacity,
+    highlightedAnnouncementId,
+  ]);
 
   // Reset search query ref when screen is focused (so it re-triggers every time)
   useFocusEffect(
     useCallback(() => {
       // Always reset ref when screen comes into focus to force re-trigger
-      previousSearchQueryRef.current = '';
-      
+      previousSearchQueryRef.current = "";
+
       // Handle search highlight when screen is focused
       handleSearchHighlight();
-      
+
       return () => {
         // Reset ref when screen loses focus to allow re-trigger on next focus
-        previousSearchQueryRef.current = '';
+        previousSearchQueryRef.current = "";
       };
     }, [handleSearchHighlight])
   );
@@ -293,21 +360,31 @@ export default function AnnouncementsScreen() {
   // Also handle when search query changes (for same-screen updates)
   useEffect(() => {
     // Reset ref when query changes to force re-trigger
-    previousSearchQueryRef.current = '';
+    previousSearchQueryRef.current = "";
     handleSearchHighlight();
   }, [searchQuery, matchingAnnouncementId, handleSearchHighlight]);
 
   // Helper function to get announcement type and styling
   const getAnnouncementType = (title: string) => {
-    const urgentKeywords = ['urgent', 'emergency', 'immediate', 'asap'];
-    const academicKeywords = ['exam', 'grade', 'scholarship', 'library', 'study'];
-    
-    if (urgentKeywords.some(keyword => title.toLowerCase().includes(keyword))) {
-      return { type: 'urgent', color: '#FF6B6B', icon: 'warning-outline' };
-    } else if (academicKeywords.some(keyword => title.toLowerCase().includes(keyword))) {
-      return { type: 'academic', color: '#4ECDC4', icon: 'school-outline' };
+    const urgentKeywords = ["urgent", "emergency", "immediate", "asap"];
+    const academicKeywords = [
+      "exam",
+      "grade",
+      "scholarship",
+      "library",
+      "study",
+    ];
+
+    if (
+      urgentKeywords.some((keyword) => title.toLowerCase().includes(keyword))
+    ) {
+      return { type: "urgent", color: "#FF6B6B", icon: "warning-outline" };
+    } else if (
+      academicKeywords.some((keyword) => title.toLowerCase().includes(keyword))
+    ) {
+      return { type: "academic", color: "#4ECDC4", icon: "school-outline" };
     } else {
-      return { type: 'general', color: '#45B7D1', icon: 'megaphone-outline' };
+      return { type: "general", color: "#45B7D1", icon: "megaphone-outline" };
     }
   };
 
@@ -316,52 +393,49 @@ export default function AnnouncementsScreen() {
   };
 
   // Transform API announcements data to match UI expectations
-  const transformedAnnouncements = useMemo(
-    () => {
-      const transformed = announcements.map(announcement => {
-        const date = new Date(announcement.createdAt);
-        // Format date and time properly using toLocaleString
-        const formattedDate = date.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        });
-        
-        return {
-          id: announcement.id,
-          title: announcement.title,
-          description: announcement.content,
-          posted: formattedDate,
-          priority: (announcement as any).priority || 'medium',
-          category: (announcement as any).category || 'General',
-          sections: announcement.sections || [], // Array of section objects from API
-        };
+  const transformedAnnouncements = useMemo(() => {
+    const transformed = announcements.map((announcement) => {
+      const date = new Date(announcement.createdAt);
+      // Format date and time properly using toLocaleString
+      const formattedDate = date.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
       });
 
-      // Debug logging (only if user data is loaded)
-      if (!userLoading && user) {
-        console.log('[ANNOUNCEMENTS] User Section ID:', currentUserSectionId);
-        console.log('[ANNOUNCEMENTS] User student data:', {
-          section_id: user?.student?.section_id,
-          sections_id: user?.student?.sections?.id,
-          section_id_from_obj: user?.student?.section?.id,
-        });
-      }
-      console.log('[ANNOUNCEMENTS] Total announcements:', transformed.length);
-      transformed.forEach((ann, idx) => {
-        console.log(`[ANNOUNCEMENTS] Announcement ${idx + 1} (${ann.title}):`, {
-          id: ann.id,
-          sections: ann.sections,
-          sectionsCount: ann.sections?.length || 0,
-        });
-      });
+      return {
+        id: announcement.id,
+        title: announcement.title,
+        description: announcement.content,
+        posted: formattedDate,
+        priority: (announcement as any).priority || "medium",
+        category: (announcement as any).category || "General",
+        sections: announcement.sections || [], // Array of section objects from API
+      };
+    });
 
-      return transformed;
-    },
-    [announcements, currentUserSectionId, user, userLoading]
-  );
+    // Debug logging (only if user data is loaded)
+    if (!userLoading && user) {
+      console.log("[ANNOUNCEMENTS] User Section ID:", currentUserSectionId);
+      console.log("[ANNOUNCEMENTS] User student data:", {
+        section_id: user?.student?.section_id,
+        sections_id: user?.student?.sections?.id,
+        section_id_from_obj: user?.student?.section?.id,
+      });
+    }
+    console.log("[ANNOUNCEMENTS] Total announcements:", transformed.length);
+    transformed.forEach((ann, idx) => {
+      console.log(`[ANNOUNCEMENTS] Announcement ${idx + 1} (${ann.title}):`, {
+        id: ann.id,
+        sections: ann.sections,
+        sectionsCount: ann.sections?.length || 0,
+      });
+    });
+
+    return transformed;
+  }, [announcements, currentUserSectionId, user, userLoading]);
 
   // Separate announcements into general and section-specific
   // Only run separation after user data is loaded
@@ -371,33 +445,43 @@ export default function AnnouncementsScreen() {
 
     // If user is still loading, return empty arrays to avoid false negatives
     if (userLoading) {
-      console.log('[ANNOUNCEMENTS] User data still loading, skipping separation');
+      console.log(
+        "[ANNOUNCEMENTS] User data still loading, skipping separation"
+      );
       return { generalAnnouncements: [], sectionAnnouncements: [] };
     }
 
     transformedAnnouncements.forEach((announcement) => {
       // Check if announcement has sections assigned
-      const hasSections = announcement.sections && 
-                         Array.isArray(announcement.sections) && 
-                         announcement.sections.length > 0;
-      
+      const hasSections =
+        announcement.sections &&
+        Array.isArray(announcement.sections) &&
+        announcement.sections.length > 0;
+
       if (hasSections) {
         // Check if this announcement targets the user's section
         const targetsUserSection = announcement.sections.some((s: any) => {
           // Handle both section ID and section object
-          const sectionId = typeof s === 'string' ? s : s?.id;
+          const sectionId = typeof s === "string" ? s : s?.id;
           return sectionId === currentUserSectionId;
         });
 
         if (targetsUserSection && currentUserSectionId) {
           section.push(announcement);
-          console.log(`[ANNOUNCEMENTS] Added to section: ${announcement.title}`);
+          console.log(
+            `[ANNOUNCEMENTS] Added to section: ${announcement.title}`
+          );
         } else {
           // Announcement has sections but not for current user - don't show in general
-          console.log(`[ANNOUNCEMENTS] Skipped (has sections but not for user): ${announcement.title}`, {
-            announcementSectionIds: announcement.sections.map((s: any) => typeof s === 'string' ? s : s?.id),
-            userSectionId: currentUserSectionId,
-          });
+          console.log(
+            `[ANNOUNCEMENTS] Skipped (has sections but not for user): ${announcement.title}`,
+            {
+              announcementSectionIds: announcement.sections.map((s: any) =>
+                typeof s === "string" ? s : s?.id
+              ),
+              userSectionId: currentUserSectionId,
+            }
+          );
         }
       } else {
         // No sections assigned = general announcement
@@ -406,7 +490,7 @@ export default function AnnouncementsScreen() {
       }
     });
 
-    console.log('[ANNOUNCEMENTS] Separation results:', {
+    console.log("[ANNOUNCEMENTS] Separation results:", {
       generalCount: general.length,
       sectionCount: section.length,
       userSectionId: currentUserSectionId,
@@ -423,43 +507,25 @@ export default function AnnouncementsScreen() {
 
   // Find matching announcement based on search query (for highlighting, but don't filter)
   const matchingAnnouncementId = useMemo(() => {
-    if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.trim() === '') {
+    if (
+      !searchQuery ||
+      typeof searchQuery !== "string" ||
+      searchQuery.trim() === ""
+    ) {
       return null;
     }
-    
+
     const query = searchQuery.toLowerCase().trim();
-    const match = allAnnouncementsForSearch.find(announcement => {
+    const match = allAnnouncementsForSearch.find((announcement) => {
       const titleMatch = announcement.title.toLowerCase().includes(query);
-      const contentMatch = announcement.description.toLowerCase().includes(query);
+      const contentMatch = announcement.description
+        .toLowerCase()
+        .includes(query);
       return titleMatch || contentMatch;
     });
-    
+
     return match?.id || null;
   }, [allAnnouncementsForSearch, searchQuery]);
-
-  const reminders = useMemo(
-    () => [
-      {
-        id: 'r1',
-        text: 'Always bring your community ID when entering the campus.',
-        icon: 'card-outline',
-        color: '#FFA726',
-      },
-      {
-        id: 'r2',
-        text: 'Grades for the midterm period will be released on Friday at 5 PM.',
-        icon: 'school-outline',
-        color: '#66BB6A',
-      },
-      {
-        id: 'r3',
-        text: 'Check your Southville email for scholarship renewal documents.',
-        icon: 'mail-outline',
-        color: '#42A5F5',
-      },
-    ],
-    [],
-  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -477,21 +543,35 @@ export default function AnnouncementsScreen() {
             tintColor={colors.tint}
             progressBackgroundColor={colors.background}
           />
-        }>
-        
+        }
+      >
         {/* Creative Header */}
-        <View style={[styles.creativeHeader, { 
-          backgroundColor: isDark ? 'rgba(102, 126, 234, 0.8)' : '#667eea',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-          borderWidth: isDark ? 1 : 0
-        }]}>
-          <View style={[styles.headerIllustration, { 
-            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)' 
-          }]}>
+        <View
+          style={[
+            styles.creativeHeader,
+            {
+              backgroundColor: isDark ? "rgba(102, 126, 234, 0.8)" : "#667eea",
+              borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "transparent",
+              borderWidth: isDark ? 1 : 0,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.headerIllustration,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255, 255, 255, 0.15)"
+                  : "rgba(255, 255, 255, 0.2)",
+              },
+            ]}
+          >
             <Ionicons name="megaphone-outline" size={40} color="#FFFFFF" />
           </View>
           <Text style={styles.headerTitle}>Stay Updated</Text>
-          <Text style={styles.headerSubtitle}>Never miss important announcements</Text>
+          <Text style={styles.headerSubtitle}>
+            Never miss important announcements
+          </Text>
         </View>
 
         {/* Section-Specific Announcements */}
@@ -500,15 +580,17 @@ export default function AnnouncementsScreen() {
             <View style={styles.sectionHeader}>
               <Ionicons name="people-outline" size={24} color={colors.tint} />
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                My Section Announcements ({user?.student?.section?.name || 'Section'})
+                My Section Announcements (
+                {user?.student?.section?.name || "Section"})
               </Text>
             </View>
-            
+
             {sectionAnnouncements.map((announcement) => {
               const announcementType = getAnnouncementType(announcement.title);
               const isExpanded = expandedCardId === announcement.id;
-              const isHighlighted = highlightedAnnouncementId === announcement.id;
-              
+              const isHighlighted =
+                highlightedAnnouncementId === announcement.id;
+
               return (
                 <AnnouncementCard
                   key={announcement.id}
@@ -530,72 +612,67 @@ export default function AnnouncementsScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="newspaper-outline" size={24} color={colors.tint} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>General Announcements</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              General Announcements
+            </Text>
           </View>
-          
+
           {announcementsLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.tint} />
-              <Text style={[styles.loadingText, { color: colors.icon }]}>Loading announcements...</Text>
+              <Text style={[styles.loadingText, { color: colors.icon }]}>
+                Loading announcements...
+              </Text>
             </View>
           ) : announcementsError ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
-              <Text style={[styles.errorText, { color: '#FF6B6B' }]}>Failed to load announcements</Text>
-              <Text style={[styles.errorSubtext, { color: colors.icon }]}>Please check your connection and try again</Text>
+              <Text style={[styles.errorText, { color: "#FF6B6B" }]}>
+                Failed to load announcements
+              </Text>
+              <Text style={[styles.errorSubtext, { color: colors.icon }]}>
+                Please check your connection and try again
+              </Text>
             </View>
           ) : generalAnnouncements.length > 0 ? (
             generalAnnouncements.map((announcement) => {
-            const announcementType = getAnnouncementType(announcement.title);
-            const isExpanded = expandedCardId === announcement.id;
-            const isHighlighted = highlightedAnnouncementId === announcement.id;
-            
-            return (
-              <AnnouncementCard
-                key={announcement.id}
-                announcement={announcement}
-                announcementType={announcementType}
-                isExpanded={isExpanded}
-                isHighlighted={isHighlighted}
-                highlightOpacity={highlightOpacity}
-                colors={colors}
-                isDark={isDark}
-                onExpand={handleCardExpand}
-              />
-            );
-          })
+              const announcementType = getAnnouncementType(announcement.title);
+              const isExpanded = expandedCardId === announcement.id;
+              const isHighlighted =
+                highlightedAnnouncementId === announcement.id;
+
+              return (
+                <AnnouncementCard
+                  key={announcement.id}
+                  announcement={announcement}
+                  announcementType={announcementType}
+                  isExpanded={isExpanded}
+                  isHighlighted={isHighlighted}
+                  highlightOpacity={highlightOpacity}
+                  colors={colors}
+                  isDark={isDark}
+                  onExpand={handleCardExpand}
+                />
+              );
+            })
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="megaphone-outline" size={60} color={colors.icon} />
-              <Text style={[styles.emptyTitle, { color: colors.icon }]}>No Announcements</Text>
-              <Text style={[styles.emptyText, { color: colors.icon }]}>Check back later for updates</Text>
+              <Ionicons
+                name="megaphone-outline"
+                size={60}
+                color={colors.icon}
+              />
+              <Text style={[styles.emptyTitle, { color: colors.icon }]}>
+                No Announcements
+              </Text>
+              <Text style={[styles.emptyText, { color: colors.icon }]}>
+                Check back later for updates
+              </Text>
             </View>
           )}
         </View>
-
-        {/* Reminders Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="alarm-outline" size={24} color={colors.tint} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Important Reminders</Text>
-          </View>
-          
-          {reminders.map((reminder) => (
-            <View key={reminder.id} style={[styles.reminderCard, { 
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-              borderWidth: 1
-            }]}>
-              <View style={[styles.reminderIconContainer, { backgroundColor: reminder.color }]}>
-                <Ionicons name={reminder.icon as any} size={20} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.reminderText, { color: colors.text }]}>{reminder.text}</Text>
-            </View>
-          ))}
-        </View>
-
       </ScrollView>
-      
+
       {/* Loading Overlay */}
       <LoadingOverlay visible={announcementsLoading} variant="heart" />
     </View>
@@ -615,60 +692,60 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 24,
   },
-  
+
   // Creative Header
   creativeHeader: {
     borderRadius: 20,
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 8,
-    position: 'relative',
-    overflow: 'hidden',
+    position: "relative",
+    overflow: "hidden",
   },
   headerIllustration: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
-    position: 'relative',
+    position: "relative",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   headerSubtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.9)",
+    textAlign: "center",
     lineHeight: 22,
   },
-  
+
   // Section Styles
   section: {
     gap: 16,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
-  
+
   // Announcement Cards
   announcementCard: {
     borderRadius: 16,
     padding: 16,
     borderLeftWidth: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -676,8 +753,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   announcementCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
     marginBottom: 12,
   },
@@ -685,8 +762,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   announcementHeaderContent: {
     flex: 1,
@@ -694,12 +771,12 @@ const styles = StyleSheet.create({
   },
   announcementTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     lineHeight: 22,
   },
   announcementMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   priorityBadge: {
@@ -709,13 +786,13 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
   },
   announcementCategory: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   announcementContent: {
     gap: 8,
@@ -726,9 +803,9 @@ const styles = StyleSheet.create({
   },
   announcementPosted: {
     fontSize: 12,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
-  
+
   // Expanded Content
   expandedContent: {
     marginTop: 12,
@@ -737,84 +814,60 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   expandedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   expandedText: {
     fontSize: 13,
   },
-  
+
   // Reminder Cards
-  reminderCard: {
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 8,
-  },
-  reminderIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reminderText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  
+  // Removed unused reminder styles
+
   // Empty State
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
     gap: 16,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   emptyText: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubtext: {
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
     opacity: 0.7,
   },
-  
+
   // Loading and Error States
   loadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   errorContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
     gap: 16,
   },
   errorText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
   errorSubtext: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -15,7 +15,10 @@ public class UserDto
     public string FullName { get; set; } = string.Empty;
 
     [JsonPropertyName("role")]
-    public RoleDto? Role { get; set; }
+    public string? Role { get; set; }
+
+    [JsonPropertyName("userType")]
+    public string? UserType { get; set; }
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;

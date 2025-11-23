@@ -111,7 +111,7 @@ namespace Southville8BEdgeUI.ViewModels
                 Id = userId ?? string.Empty,
                 Email = userEmail ?? string.Empty,
                 FullName = userEmail ?? string.Empty,
-                Role = new Models.Api.RoleDto { Name = userRole }
+                Role = userRole
             };
 
             switch (userRole?.ToLowerInvariant())

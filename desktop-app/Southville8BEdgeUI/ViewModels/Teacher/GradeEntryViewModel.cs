@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Avalonia; // For Application.Current
 using Avalonia.Media; // For IBrush
 using Avalonia.Styling; // Theme variant
@@ -48,6 +49,14 @@ public partial class GradeEntryViewModel : ViewModelBase
     [ObservableProperty] private string _sectionName = "";
     [ObservableProperty] private string _gradeLevel = "";
     [ObservableProperty] private ObservableCollection<StudentGradeViewModel> _studentGrades = new();
+    [ObservableProperty] private string _currentAcademicYear = string.Empty;
+    private string _currentAcademicYearId = string.Empty;
+    private string _currentAcademicPeriodId = string.Empty;
+    [ObservableProperty] private string _currentGradingPeriod = string.Empty;
+    [ObservableProperty] private string _currentGradingPeriodLabel = string.Empty;
+    [ObservableProperty] private string _currentTermLabel = "Determining active term...";
+    [ObservableProperty] private bool _isCurrentTermEditable;
+    [ObservableProperty] private string _termRestrictionMessage = "Grades are locked until the active academic year is determined.";
 
     public string DebugInfo => $"StudentGrades: Count={StudentGrades.Count}, HashCode={StudentGrades.GetHashCode()}";
     [ObservableProperty] private bool _hasUnsavedChanges;
@@ -129,6 +138,7 @@ public partial class GradeEntryViewModel : ViewModelBase
         {
             if (e.PropertyName == nameof(SelectedGradingPeriod) || e.PropertyName == nameof(SelectedSchoolYear))
             {
+                UpdateTermEditingState();
                 if (!string.IsNullOrEmpty(SelectedGradingPeriod) && !string.IsNullOrEmpty(SelectedSchoolYear))
                 {
                     System.Diagnostics.Debug.WriteLine($"PropertyChanged: {e.PropertyName} changed to {(e.PropertyName == nameof(SelectedGradingPeriod) ? SelectedGradingPeriod : SelectedSchoolYear)}");
@@ -139,6 +149,167 @@ public partial class GradeEntryViewModel : ViewModelBase
 
         // Load initial data
         _ = LoadStudentsAsync();
+        _ = LoadAcademicContextAsync();
+        UpdateTermEditingState();
+    }
+
+    private async Task LoadAcademicContextAsync()
+    {
+        try
+        {
+            var overview = await _apiClient.GetAcademicDashboardOverviewAsync();
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (overview?.ActiveYear != null)
+                {
+                    _currentAcademicYearId = overview.ActiveYear.Id;
+                    var displayName = overview.ActiveYear.GetDisplayName();
+                    if (!string.IsNullOrWhiteSpace(displayName))
+                    {
+                        CurrentAcademicYear = displayName;
+                        EnsureOptionExists(SchoolYears, displayName);
+                        SelectedSchoolYear = displayName;
+                    }
+                }
+
+                if (overview?.CurrentPeriod != null)
+                {
+                    _currentAcademicPeriodId = overview.CurrentPeriod.Id;
+                }
+
+                var periodCode = NormalizePeriodCode(overview?.CurrentPeriod);
+                if (!string.IsNullOrWhiteSpace(periodCode))
+                {
+                    CurrentGradingPeriod = periodCode;
+                    EnsureOptionExists(GradingPeriods, periodCode);
+                    SelectedGradingPeriod = periodCode;
+                }
+                else
+                {
+                    CurrentGradingPeriod = string.Empty;
+                }
+
+                CurrentGradingPeriodLabel = ResolvePeriodLabel(overview?.CurrentPeriod, periodCode);
+                CurrentTermLabel = BuildCurrentTermLabel();
+                UpdateTermEditingState();
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadAcademicContextAsync: ERROR - {ex.Message}");
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (string.IsNullOrWhiteSpace(CurrentTermLabel))
+                {
+                    CurrentTermLabel = "Active term unavailable";
+                }
+                TermRestrictionMessage = "Unable to determine the active academic year. Grades are read-only until it is configured.";
+                UpdateTermEditingState();
+            });
+        }
+    }
+
+    private static void EnsureOptionExists(ObservableCollection<string> collection, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (!collection.Any(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase)))
+        {
+            collection.Insert(0, value);
+        }
+    }
+
+    private static string? NormalizePeriodCode(AcademicPeriodDto? period)
+    {
+        if (period == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(period.PeriodName))
+        {
+            var name = period.PeriodName.Trim().ToLowerInvariant();
+            if (name.Contains("first") || name.Contains("1") || name.Contains("q1")) return "Q1";
+            if (name.Contains("second") || name.Contains("2") || name.Contains("q2")) return "Q2";
+            if (name.Contains("third") || name.Contains("3") || name.Contains("q3")) return "Q3";
+            if (name.Contains("fourth") || name.Contains("4") || name.Contains("q4")) return "Q4";
+        }
+
+        if (period.PeriodOrder.HasValue && period.PeriodOrder.Value >= 1 && period.PeriodOrder.Value <= 4)
+        {
+            return $"Q{period.PeriodOrder.Value}";
+        }
+
+        return null;
+    }
+
+    private static string ResolvePeriodLabel(AcademicPeriodDto? period, string? fallbackCode)
+    {
+        if (!string.IsNullOrWhiteSpace(period?.PeriodName))
+        {
+            return period!.PeriodName!;
+        }
+
+        return string.IsNullOrWhiteSpace(fallbackCode) ? string.Empty : fallbackCode;
+    }
+
+    private string BuildCurrentTermLabel()
+    {
+        var periodLabel = string.IsNullOrWhiteSpace(CurrentGradingPeriodLabel)
+            ? CurrentGradingPeriod
+            : CurrentGradingPeriodLabel;
+
+        if (string.IsNullOrWhiteSpace(CurrentAcademicYear) && string.IsNullOrWhiteSpace(periodLabel))
+        {
+            return "Active term unavailable";
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentAcademicYear))
+        {
+            return periodLabel;
+        }
+
+        if (string.IsNullOrWhiteSpace(periodLabel))
+        {
+            return CurrentAcademicYear;
+        }
+
+        return $"{CurrentAcademicYear} • {periodLabel}";
+    }
+
+    private void UpdateTermEditingState()
+    {
+        var hasContext = !string.IsNullOrWhiteSpace(CurrentAcademicYear) && !string.IsNullOrWhiteSpace(CurrentGradingPeriod);
+        var matchesYear = hasContext && string.Equals(SelectedSchoolYear, CurrentAcademicYear, StringComparison.OrdinalIgnoreCase);
+        var matchesPeriod = hasContext && string.Equals(SelectedGradingPeriod, CurrentGradingPeriod, StringComparison.OrdinalIgnoreCase);
+        IsCurrentTermEditable = hasContext && matchesYear && matchesPeriod;
+
+        if (!hasContext)
+        {
+            TermRestrictionMessage = "Active academic year or grading period is not configured. Grades are read-only until an administrator sets them.";
+        }
+        else if (!IsCurrentTermEditable)
+        {
+            var label = string.IsNullOrWhiteSpace(CurrentGradingPeriodLabel) ? CurrentGradingPeriod : CurrentGradingPeriodLabel;
+            TermRestrictionMessage = $"Grades can only be entered for {CurrentAcademicYear} • {label}.";
+        }
+        else
+        {
+            TermRestrictionMessage = string.Empty;
+        }
+
+        if (StudentGrades != null)
+        {
+            foreach (var sg in StudentGrades)
+            {
+                sg.IsTermEditable = IsCurrentTermEditable;
+            }
+        }
+
+        SaveAllGradesCommand.NotifyCanExecuteChanged();
     }
 
     private void HookStudentGradesCollection()
@@ -159,6 +330,7 @@ public partial class GradeEntryViewModel : ViewModelBase
                 MarkDirty();
             };
             sg.GradeColor = GradeColorProvider.GetFor((double)(sg.Gwa ?? 0));
+            sg.IsTermEditable = IsCurrentTermEditable;
         }
         
         StudentGrades.CollectionChanged += (_, args) =>
@@ -168,6 +340,7 @@ public partial class GradeEntryViewModel : ViewModelBase
                 foreach (var item in args.NewItems.OfType<StudentGradeViewModel>())
                 {
                     item.GradeColor = GradeColorProvider.GetFor((double)(item.Gwa ?? 0));
+                    item.IsTermEditable = IsCurrentTermEditable;
                     item.PropertyChanged += (_, ev) =>
                     {
                         if (ev.PropertyName == nameof(StudentGradeViewModel.Gwa))
@@ -183,11 +356,15 @@ public partial class GradeEntryViewModel : ViewModelBase
 
     private void MarkDirty()
     {
+        if (IsLoading || !IsCurrentTermEditable)
+        {
+            return;
+        }
         HasUnsavedChanges = true;
         SaveAllGradesCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanSaveAllGrades() => HasUnsavedChanges && StudentGrades != null && StudentGrades.Count > 0;
+    private bool CanSaveAllGrades() => IsCurrentTermEditable && HasUnsavedChanges && StudentGrades != null && StudentGrades.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanSaveAllGrades))]
     private async Task SaveAllGrades()
@@ -195,6 +372,12 @@ public partial class GradeEntryViewModel : ViewModelBase
         if (StudentGrades == null || StudentGrades.Count == 0)
         {
             System.Diagnostics.Debug.WriteLine("SaveAllGrades: No students to save");
+            return;
+        }
+
+        if (!IsCurrentTermEditable)
+        {
+            System.Diagnostics.Debug.WriteLine("SaveAllGrades: Term is locked, skipping save");
             return;
         }
 
@@ -216,6 +399,8 @@ public partial class GradeEntryViewModel : ViewModelBase
                     var createDto = new CreateGwaDto
                     {
                         StudentId = student.StudentId,
+                        AcademicYearId = _currentAcademicYearId,
+                        AcademicPeriodId = _currentAcademicPeriodId,
                         Gwa = student.Gwa ?? 0,
                         GradingPeriod = SelectedGradingPeriod,
                         SchoolYear = SelectedSchoolYear,
@@ -250,6 +435,7 @@ public partial class GradeEntryViewModel : ViewModelBase
 
             HasUnsavedChanges = false;
             SaveAllGradesCommand.NotifyCanExecuteChanged();
+            _toastService.Success("All changes saved successfully", "Success");
         }
         catch (Exception ex)
         {
@@ -258,6 +444,47 @@ public partial class GradeEntryViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            // Get current user ID
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+            
+            // Map action types to icons and colors
+            var (icon, color) = actionType switch
+            {
+                "grade_created" => ("CheckmarkCircle", "green"),
+                "grade_updated" => ("Edit", "blue"),
+                "grade_deleted" => ("Delete", "red"),
+                _ => ("Info", "gray")
+            };
+            
+            // Create activity data
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = actionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "grade_entry", grading_period = SelectedGradingPeriod, school_year = SelectedSchoolYear }
+            };
+            
+            // POST to teacher activity API
+            await _apiClient.PostAsync("teacher-activity/activities", activityData);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the main operation
+            System.Diagnostics.Debug.WriteLine($"Error logging teacher activity: {ex.Message}");
         }
     }
 
@@ -317,7 +544,9 @@ public partial class GradeEntryViewModel : ViewModelBase
                             Remarks = student.Remarks ?? "",
                             // HonorStatus will be automatically calculated when Gwa is set
                             GwaId = student.GwaId ?? "",
-                            IsDirty = false
+                            IsDirty = false,
+                            AcademicYearId = _currentAcademicYearId,
+                            AcademicPeriodId = _currentAcademicPeriodId
                         };
                         
                         // Recalculate honor status from GWA (in case it was set differently in database)
@@ -337,6 +566,8 @@ public partial class GradeEntryViewModel : ViewModelBase
                             }
                         };
 
+                        studentGrade.IsTermEditable = IsCurrentTermEditable;
+
                         if (StudentGrades != null)
                         {
                             StudentGrades.Add(studentGrade);
@@ -345,6 +576,9 @@ public partial class GradeEntryViewModel : ViewModelBase
                     
                     // Force property change notification
                     OnPropertyChanged(nameof(StudentGrades));
+                    HasUnsavedChanges = false;
+                    SaveAllGradesCommand.NotifyCanExecuteChanged();
+                    UpdateTermEditingState();
                 }, DispatcherPriority.Normal); // Explicitly set priority
                 
                 System.Diagnostics.Debug.WriteLine($"LoadStudentsAsync: After UI update - StudentGrades.Count = {StudentGrades.Count}");
@@ -359,6 +593,9 @@ public partial class GradeEntryViewModel : ViewModelBase
                     StudentGrades.Clear();
                     SectionName = "";
                     GradeLevel = "";
+                    HasUnsavedChanges = false;
+                    SaveAllGradesCommand.NotifyCanExecuteChanged();
+                    UpdateTermEditingState();
                 }, DispatcherPriority.Normal);
             }
         }
@@ -433,6 +670,16 @@ public partial class StudentGradeViewModel : ViewModelBase
     [ObservableProperty] private string _honorStatus = "None";
     [ObservableProperty] private bool _isDirty; // tracks if edited
     [ObservableProperty] private IBrush _gradeColor = Brushes.Transparent; // Themed grade color
+    [ObservableProperty] private bool _isTermEditable = false;
+
+    // New properties for UI binding and validation
+    [ObservableProperty] private string _gwaInput = "";
+    [ObservableProperty] private string _gwaErrorMessage = "";
+    [ObservableProperty] private bool _isEditing = false; // Controls read-only state
+    private bool _isUpdatingFromInput = false;
+
+    [ObservableProperty] private string _academicYearId = "";
+    [ObservableProperty] private string _academicPeriodId = "";
 
     public StudentGradeViewModel(IApiClient apiClient, IToastService toastService, string gradingPeriod, string schoolYear)
     {
@@ -442,13 +689,81 @@ public partial class StudentGradeViewModel : ViewModelBase
         _schoolYear = schoolYear;
     }
 
+    partial void OnIsTermEditableChanged(bool value)
+    {
+        if (!value && IsEditing)
+        {
+            IsEditing = false;
+        }
+    }
+
     partial void OnGwaChanged(decimal? value)
     {
+        // Sync Input if it's different (to avoid loops)
+        if (!_isUpdatingFromInput)
+        {
+            if (value.HasValue)
+            {
+                var formatted = value.Value.ToString("0.00");
+                if (GwaInput != formatted && GwaInput != value.Value.ToString())
+                {
+                    GwaInput = formatted;
+                }
+            }
+            else
+            {
+                // Only clear input if it's not already empty (to avoid unnecessary updates)
+                if (!string.IsNullOrEmpty(GwaInput))
+                {
+                    GwaInput = "";
+                }
+            }
+        }
+
         // Update grade color
         GradeColor = GradeColorProvider.GetFor((double)(value ?? 0));
         
         // Automatically calculate honor status based on GWA
         HonorStatus = CalculateHonorStatus(value);
+    }
+
+    partial void OnGwaInputChanged(string value)
+    {
+        GwaErrorMessage = "";
+        _isUpdatingFromInput = true;
+        
+        try
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                Gwa = null;
+                return;
+            }
+
+            if (decimal.TryParse(value, out var result))
+            {
+                if (result < 50 || result > 100)
+                {
+                    GwaErrorMessage = "Grade must be 50-100";
+                    // We set Gwa to null so it's not considered a valid grade for saving/honor status
+                    // But the input remains for the user to fix
+                    Gwa = null; 
+                }
+                else
+                {
+                    Gwa = result;
+                }
+            }
+            else
+            {
+                GwaErrorMessage = "Invalid number";
+                Gwa = null;
+            }
+        }
+        finally
+        {
+            _isUpdatingFromInput = false;
+        }
     }
 
     /// <summary>
@@ -471,6 +786,11 @@ public partial class StudentGradeViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveGrade()
     {
+        if (!IsTermEditable)
+        {
+            System.Diagnostics.Debug.WriteLine($"SaveGrade blocked for {StudentName} - term is locked.");
+            return;
+        }
         System.Diagnostics.Debug.WriteLine($"=== SaveGrade() called for {StudentName} ===");
         System.Diagnostics.Debug.WriteLine($"StudentId: {StudentId}");
         System.Diagnostics.Debug.WriteLine($"Gwa: {Gwa}");
@@ -500,6 +820,8 @@ public partial class StudentGradeViewModel : ViewModelBase
                 var createDto = new CreateGwaDto
                 {
                     StudentId = StudentId,
+                    AcademicYearId = AcademicYearId,
+                    AcademicPeriodId = AcademicPeriodId,
                     Gwa = Gwa.Value,
                     GradingPeriod = _gradingPeriod,
                     SchoolYear = _schoolYear,
@@ -514,7 +836,18 @@ public partial class StudentGradeViewModel : ViewModelBase
                 {
                     GwaId = result.GwaId ?? "";
                     IsDirty = false;
+                    IsEditing = false; // Exit edit mode on save
                     System.Diagnostics.Debug.WriteLine($"✅ Successfully created GWA entry for {StudentName}. New GwaId: {GwaId}");
+                    
+                    _toastService.Success($"Grade created for {StudentName}", "Success");
+
+                    // Log activity
+                    await LogActivityAsync(
+                        "grade_created",
+                        $"Entered final GWA for {StudentName} ({Gwa:F2})",
+                        "grade",
+                        GwaId
+                    );
                 }
                 else
                 {
@@ -539,7 +872,18 @@ public partial class StudentGradeViewModel : ViewModelBase
                 if (result != null)
                 {
                     IsDirty = false;
+                    IsEditing = false; // Exit edit mode on save
                     System.Diagnostics.Debug.WriteLine($"✅ Successfully updated GWA entry for {StudentName}");
+                    
+                    _toastService.Success($"Grade updated for {StudentName}", "Success");
+
+                    // Log activity
+                    await LogActivityAsync(
+                        "grade_updated",
+                        $"Updated GWA for {StudentName} to {Gwa:F2}",
+                        "grade",
+                        GwaId
+                    );
                 }
                 else
                 {
@@ -559,6 +903,11 @@ public partial class StudentGradeViewModel : ViewModelBase
     [RelayCommand]
     private async Task DeleteGrade()
     {
+        if (!IsTermEditable)
+        {
+            System.Diagnostics.Debug.WriteLine($"DeleteGrade blocked for {StudentName} - term is locked.");
+            return;
+        }
         try
         {
             if (string.IsNullOrEmpty(GwaId))
@@ -567,6 +916,9 @@ public partial class StudentGradeViewModel : ViewModelBase
                 return;
             }
 
+            var deletedGwaId = GwaId;
+            var deletedGwa = Gwa;
+            
             // Note: DeleteGwaAsync method doesn't exist in IApiClient yet
             // For now, we'll just clear the local data
             // TODO: Implement actual delete API call when endpoint is available
@@ -578,6 +930,14 @@ public partial class StudentGradeViewModel : ViewModelBase
             IsDirty = false;
             
             System.Diagnostics.Debug.WriteLine($"Cleared GWA entry for {StudentName}");
+            
+            // Log activity
+            await LogActivityAsync(
+                "grade_deleted",
+                $"Deleted GWA entry for {StudentName} ({deletedGwa:F2})",
+                "grade",
+                deletedGwaId
+            );
         }
         catch (Exception ex)
         {
@@ -585,5 +945,67 @@ public partial class StudentGradeViewModel : ViewModelBase
         }
     }
 
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            // Get current user ID
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+            
+            // Map action types to icons and colors
+            var (icon, color) = actionType switch
+            {
+                "grade_created" => ("CheckmarkCircle", "green"),
+                "grade_updated" => ("Edit", "blue"),
+                "grade_deleted" => ("Delete", "red"),
+                _ => ("Info", "gray")
+            };
+            
+            // Create activity data
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = actionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "grade_entry", student_name = StudentName, grading_period = _gradingPeriod, school_year = _schoolYear }
+            };
+            
+            // POST to teacher activity API
+            await _apiClient.PostAsync("teacher-activity/activities", activityData);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the main operation
+            System.Diagnostics.Debug.WriteLine($"Error logging teacher activity: {ex.Message}");
+        }
+    }
+
     [RelayCommand] private void EditNotes() { }
+
+    [RelayCommand]
+    private void EditGrade()
+    {
+        if (!IsTermEditable)
+        {
+            System.Diagnostics.Debug.WriteLine($"EditGrade blocked for {StudentName} - term is locked.");
+            return;
+        }
+        IsEditing = true;
+    }
+
+    [RelayCommand]
+    private void CancelEdit()
+    {
+        // Revert changes if needed, for now just exit edit mode
+        // Ideally we should revert to original values, but for simplicity:
+        IsEditing = false;
+        // If Gwa was changed, it stays changed in UI until refreshed or manually reverted
+        // A full revert implementation would require storing original values
+    }
 }

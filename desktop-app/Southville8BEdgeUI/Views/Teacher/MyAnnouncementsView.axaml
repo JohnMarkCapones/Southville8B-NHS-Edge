@@ -323,8 +323,21 @@
                                 <TextBox Text="{Binding NewAnnouncementTitle}" Watermark="Enter announcement title..."/>
                             </StackPanel>
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Target Class" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <ComboBox SelectedItem="{Binding NewAnnouncementClass}" ItemsSource="{Binding AvailableClasses}" HorizontalAlignment="Stretch"/>
+                                <TextBlock Text="Target Sections" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding SelectedSectionsDisplay}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Background="{DynamicResource CardBackgroundBrush}" MaxHeight="150">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding AvailableClassesWithSelection}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="8,4" Background="Transparent" Cursor="Hand">
+                                                        <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
                             </StackPanel>
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Priority" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>

@@ -1,8 +1,9 @@
 import { Module, Global } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MemoryCacheService } from './services/memory-cache.service';
 import { CloudflareImagesService } from './services/cloudflare-images.service';
 import { NotificationService } from './services/notification.service';
-import { AlertsModule } from '../alerts/alerts.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 /**
  * Common module for shared validators and utilities
@@ -14,7 +15,7 @@ import { AlertsModule } from '../alerts/alerts.module';
  */
 @Global()
 @Module({
-  imports: [AlertsModule],
+  imports: [ConfigModule, NotificationsModule],
   providers: [MemoryCacheService, CloudflareImagesService, NotificationService],
   exports: [MemoryCacheService, CloudflareImagesService, NotificationService],
 })

@@ -7,6 +7,12 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { NewsAccessService } from './news-access.service';
+import { NotificationService } from '../../common/services/notification.service';
+import {
+  NotificationType,
+  NotificationCategory,
+} from '../../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../../activity-monitoring/activity-monitoring.service';
 import { ApproveNewsDto, RejectNewsDto } from '../dto';
 import { NewsApproval } from '../entities';
 import { StudentActivitiesService } from '../../student-activities/student-activities.service';
@@ -24,6 +30,8 @@ export class NewsApprovalService {
     private readonly supabaseService: SupabaseService,
     private readonly newsAccessService: NewsAccessService,
     private readonly studentActivitiesService: StudentActivitiesService,
+    private readonly notificationService: NotificationService,
+    private readonly activityMonitoring: ActivityMonitoringService,
   ) {}
 
   /**
@@ -80,6 +88,66 @@ export class NewsApprovalService {
     this.logger.log(
       `Article ${newsId} submitted for approval by user ${userId}`,
     );
+
+    // Notify advisors about article submission
+    try {
+      // Get article title
+      const { data: articleData } = await supabase
+        .from('news')
+        .select('title')
+        .eq('id', newsId)
+        .single();
+
+      // Get all advisors (teachers with Adviser or Co-Adviser position)
+      // Get journalism domain first
+      const journalismDomainId =
+        await this.newsAccessService['getJournalismDomainId']();
+      if (journalismDomainId) {
+        // Get users with Adviser or Co-Adviser position in journalism domain
+        const { data: domainRoles } = await supabase
+          .from('user_domain_roles')
+          .select(
+            `
+            user_id,
+            domain_roles!inner(
+              domain_id,
+              name
+            )
+          `,
+          )
+          .eq('domain_id', journalismDomainId)
+          .eq('domain_roles.name', 'Adviser')
+          .or('domain_roles.name.eq.Co-Adviser');
+
+        if (domainRoles) {
+          const advisorUserIds = domainRoles
+            .map((role) => role.user_id)
+            .filter((id) => id);
+
+          if (advisorUserIds.length > 0 && articleData) {
+            await this.notificationService.notifyUsers(
+              advisorUserIds,
+              '📝 Article Submitted for Review',
+              `Student submitted article "${articleData.title}" for your approval. Please review and approve/reject.`,
+              NotificationType.INFO,
+              userId,
+              {
+                category: NotificationCategory.COMMUNICATION,
+                expiresInDays: 7,
+              },
+            );
+            this.logger.log(
+              `👩‍🏫 Notified ${advisorUserIds.length} advisors about article submission: ${articleData.title}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notifications for article submission:',
+        error,
+      );
+    }
   }
 
   /**
@@ -158,6 +226,75 @@ export class NewsApprovalService {
     }
 
     this.logger.log(`Article ${newsId} approved by ${approverId}`);
+
+    // Activity monitoring - notify author about approval
+    try {
+      if (article.author_id) {
+        await this.activityMonitoring.handleNewsApproved(
+          newsId,
+          article.title,
+          approverId,
+          article.author_id,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle news approval activity monitoring:',
+        error,
+      );
+    }
+
+    // Notify author about approval
+    try {
+      if (article.author_id) {
+        await this.notificationService.notifyApprovalStatus(
+          article.author_id,
+          'News Article',
+          'approved',
+          `Your article "${article.title}" has been approved and is ready to publish!`,
+          approverId,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notification for article approval:',
+        error,
+      );
+    }
+
+    // ✅ NEW: Notify all students about published news
+    try {
+      // Get all student user IDs
+      const { data: students } = await supabase
+        .from('students')
+        .select('user_id');
+
+      if (students && students.length > 0) {
+        const studentUserIds = students.map((s) => s.user_id).filter(Boolean);
+
+        if (studentUserIds.length > 0) {
+          await this.notificationService.notifyUsers(
+            studentUserIds,
+            'New Article Published',
+            `New article published: "${article.title}"`,
+            NotificationType.INFO,
+            approverId,
+            {
+              category: NotificationCategory.COMMUNICATION,
+              expiresInDays: 7,
+            },
+          );
+          this.logger.log(
+            `📰 Notified ${studentUserIds.length} students about published article: ${article.title}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to notify students about published news:',
+        error,
+      );
+    }
 
     // Get approver info for activity
     const { data: approverData } = await supabase
@@ -285,6 +422,42 @@ export class NewsApprovalService {
 
     this.logger.log(`Article ${newsId} rejected by ${approverId}`);
 
+    // Activity monitoring - notify author about rejection
+    try {
+      if (article.author_id) {
+        await this.activityMonitoring.handleNewsRejected(
+          newsId,
+          article.title,
+          approverId,
+          article.author_id,
+          rejectDto.remarks,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle news rejection activity monitoring:',
+        error,
+      );
+    }
+
+    // Notify author about rejection
+    try {
+      if (article.author_id) {
+        await this.notificationService.notifyApprovalStatus(
+          article.author_id,
+          'News Article',
+          'rejected',
+          `Your article "${article.title}" has been rejected. Please review the feedback and revise.`,
+          approverId,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notification for article rejection:',
+        error,
+      );
+    }
+
     // Get approver info for activity
     const { data: approverData } = await supabase
       .from('users')
@@ -402,6 +575,43 @@ export class NewsApprovalService {
     }
 
     this.logger.log(`Article ${newsId} published by ${publisherId}`);
+
+    // Notify author and global audience about publication
+    try {
+      const { data: articleData } = await supabase
+        .from('news')
+        .select('title, author_id')
+        .eq('id', newsId)
+        .single();
+
+      if (articleData) {
+        // Notify author
+        if (articleData.author_id) {
+          await this.notificationService.notifyUser(
+            articleData.author_id,
+            'Article Published',
+            `Your article "${articleData.title}" has been published!`,
+            NotificationType.SUCCESS,
+            publisherId,
+            { expiresInDays: 7 },
+          );
+        }
+
+        // Global notification for new article
+        await this.notificationService.notifyAll(
+          `New Article Published: ${articleData.title}`,
+          `A new article "${articleData.title}" has been published.`,
+          NotificationType.INFO,
+          publisherId,
+          { expiresInDays: 7 },
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notifications for article publication:',
+        error,
+      );
+    }
   }
 
   /**

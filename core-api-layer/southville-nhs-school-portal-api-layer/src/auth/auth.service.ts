@@ -13,7 +13,7 @@ import {
 } from './interfaces/supabase-user.interface';
 import { JwtVerificationService } from './jwt-verification.service';
 import { NotificationService } from '../common/services/notification.service';
-import { AlertType } from '../alerts/entities/alert.entity';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class AuthService {
@@ -693,7 +693,7 @@ export class AuthService {
       userId,
       'Password Changed',
       'Your password has been changed successfully.',
-      AlertType.SUCCESS,
+      NotificationType.SUCCESS,
       userId,
       { expiresInDays: 1 },
     );

@@ -1,5 +1,10 @@
-import { apiRequest, setAuthToken } from '@/lib/api-client';
-import { clearTokens, loadTokens, saveTokens, type StoredTokens } from '@/lib/storage/token-storage';
+import { apiRequest } from "@/lib/api-client";
+import { type StoredTokens } from "@/lib/storage/token-storage";
+import {
+  persistTokens,
+  restoreTokensFromStorage,
+  clearStoredTokens,
+} from "@/lib/auth/token-manager";
 
 export type LoginRequest = {
   email: string;
@@ -24,7 +29,7 @@ export type LoginResponse = {
 
 function pickFirstToken(tokens: (string | undefined | null)[]): string | null {
   for (const token of tokens) {
-    if (typeof token === 'string' && token.length > 0) {
+    if (typeof token === "string" && token.length > 0) {
       return token;
     }
   }
@@ -40,7 +45,7 @@ function ensureTokens(response: LoginResponse): StoredTokens {
   ]);
 
   if (!accessToken) {
-    throw new Error('Login response did not include an access token.');
+    throw new Error("Login response did not include an access token.");
   }
 
   const refreshToken = pickFirstToken([
@@ -52,14 +57,9 @@ function ensureTokens(response: LoginResponse): StoredTokens {
   return refreshToken ? { accessToken, refreshToken } : { accessToken };
 }
 
-async function persistTokens(tokens: StoredTokens): Promise<void> {
-  await saveTokens(tokens);
-  setAuthToken(tokens.accessToken);
-}
-
 export async function login(request: LoginRequest): Promise<LoginResponse> {
-  const response = await apiRequest<LoginResponse>('/auth/login', {
-    method: 'POST',
+  const response = await apiRequest<LoginResponse>("/auth/login", {
+    method: "POST",
     body: request,
   });
 
@@ -70,20 +70,11 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 }
 
 export async function restoreAuthSession(): Promise<StoredTokens | null> {
-  const tokens = await loadTokens();
-
-  if (!tokens) {
-    setAuthToken(null);
-    return null;
-  }
-
-  setAuthToken(tokens.accessToken);
-  return tokens;
+  return restoreTokensFromStorage();
 }
 
 export async function clearAuthSession(): Promise<void> {
-  await clearTokens();
-  setAuthToken(null);
+  await clearStoredTokens();
 }
 
 export type ChangePasswordRequest = {
@@ -99,13 +90,10 @@ export async function changePassword(
   request: ChangePasswordRequest
 ): Promise<ChangePasswordResponse> {
   // Ensure auth header is set from persisted session
-  const tokens = await loadTokens();
-  if (tokens?.accessToken) {
-    setAuthToken(tokens.accessToken);
-  }
+  await restoreTokensFromStorage();
 
-  return await apiRequest<ChangePasswordResponse>('/auth/change-password', {
-    method: 'POST',
+  return await apiRequest<ChangePasswordResponse>("/auth/change-password", {
+    method: "POST",
     body: {
       currentPassword: request.currentPassword,
       newPassword: request.newPassword,
