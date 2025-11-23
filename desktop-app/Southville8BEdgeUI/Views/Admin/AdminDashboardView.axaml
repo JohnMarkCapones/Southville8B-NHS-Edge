@@ -383,13 +383,6 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Admin Metrics" Classes="section-header"/>
-              <Button Grid.Column="1" x:Name="ReportsButton" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
-                      Command="{Binding ViewDetailedReportsCommand}">
-                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                  <ic:FluentIcon Icon="Document" IconSize="Size20"/>
-                  <TextBlock Text="Detailed Reports"/>
-                </StackPanel>
-              </Button>
             </Grid>
             <ItemsControl ItemsSource="{Binding AdminMetrics}">
               <ItemsControl.ItemTemplate>
@@ -500,20 +493,6 @@
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <ic:FluentIcon Icon="Chat" IconSize="Size20"/>
                   <TextBlock Text="Chat"/>
-                </StackPanel>
-              </Button>
-              <Button Grid.Column="1" Grid.Row="1" x:Name="LibraryButton" Classes="quick-action" Background="{DynamicResource PinkBrush}"
-                      Command="{Binding NavigateToELibraryCommand}" Margin="8,8,8,0">
-                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                  <ic:FluentIcon Icon="Book" IconSize="Size20"/>
-                  <TextBlock Text="Library"/>
-                </StackPanel>
-              </Button>
-              <Button Grid.Column="2" Grid.Row="1" x:Name="ReportsActionButton" Classes="quick-action" Background="{DynamicResource GrayButtonBrush}"
-                      Command="{Binding ViewDetailedReportsCommand}" Margin="8,8,0,0">
-                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                  <ic:FluentIcon Icon="Document" IconSize="Size20"/>
-                  <TextBlock Text="Reports"/>
                 </StackPanel>
               </Button>
             </Grid>

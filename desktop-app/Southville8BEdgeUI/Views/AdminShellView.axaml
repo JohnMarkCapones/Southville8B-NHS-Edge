@@ -317,12 +317,6 @@
                       <TextBlock Text="Events Dashboard" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Button>
-                  <Button Classes="nav-item" Command="{Binding NavigateToELibraryCommand}" Classes.active="{Binding IsELibraryActive}">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                      <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
-                      <TextBlock Text="E-Library Management" VerticalAlignment="Center"/>
-                    </StackPanel>
-                  </Button>
 
                   <TextBlock Text="COMMUNICATION" Classes="section-header"/>
                   <Button Classes="nav-item" Command="{Binding NavigateToAlertsCommand}" Classes.active="{Binding IsAlertsActive}">

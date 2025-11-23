@@ -308,27 +308,69 @@ export class DesktopSidebarService {
         .from('schedules')
         .select('*', { count: 'exact', head: true })
         .eq('teacher_id', teacher.id)
-        .eq('status', 'Active');
+        .eq('status', 'published');
 
       this.logger.debug(`[SSE] Total classes count: ${totalClasses}`);
 
-      // Step 3: Fetch unique students count from teacher's schedules using teacher.id
-      const { data: studentSchedules } = await this.supabase
-        .from('student_schedule')
-        .select('student_id')
-        .in(
-          'schedule_id',
-          await this.supabase
-            .from('schedules')
-            .select('id')
-            .eq('teacher_id', teacher.id)
-            .eq('status', 'Active')
-            .then((result) => result.data?.map((s) => s.id) || []),
-        );
+      // Step 3: Fetch unique students count from teacher's schedules
+      // Students are linked via sections, not student_schedule table
+      // Get unique section IDs from teacher's schedules, then count students in those sections
+      const { data: teacherSchedules, error: schedulesError } = await this.supabase
+        .from('schedules')
+        .select('section_id')
+        .eq('teacher_id', teacher.id)
+        .eq('status', 'published')
+        .not('section_id', 'is', null);
 
-      const uniqueStudents = new Set(
-        studentSchedules?.map((s) => s.student_id) || [],
-      ).size;
+      if (schedulesError) {
+        this.logger.error(
+          `[SSE] Error fetching teacher schedules: ${JSON.stringify(schedulesError)}`,
+        );
+      }
+
+      const sectionIds = teacherSchedules
+        ?.map((s) => s.section_id)
+        .filter((id) => id != null) || [];
+      
+      const uniqueSectionIds = [...new Set(sectionIds)];
+
+      this.logger.debug(
+        `[SSE] Found ${teacherSchedules?.length || 0} schedules with ${uniqueSectionIds.length} unique sections for teacher ${teacher.id} (user_id: ${userId})`,
+      );
+
+      let uniqueStudents = 0;
+      if (uniqueSectionIds.length > 0) {
+        // Count students in those sections
+        const {
+          data: studentsData,
+          error: studentsError,
+        } = await this.supabase
+          .from('students')
+          .select('id')
+          .in('section_id', uniqueSectionIds)
+          .is('deleted_at', null); // Only count active (non-deleted) students
+
+        if (studentsError) {
+          this.logger.error(
+            `[SSE] Error fetching students from sections: ${JSON.stringify(studentsError)}`,
+          );
+        }
+
+        if (studentsData && studentsData.length > 0) {
+          uniqueStudents = studentsData.length;
+          this.logger.debug(
+            `[SSE] Students query - unique sections: ${uniqueSectionIds.length}, students found: ${studentsData.length}, uniqueStudents: ${uniqueStudents}`,
+          );
+        } else {
+          this.logger.debug(
+            `[SSE] No students found in ${uniqueSectionIds.length} sections`,
+          );
+        }
+      } else {
+        this.logger.debug(
+          `[SSE] No schedules with sections found for teacher ${teacher.id}, students count will be 0`,
+        );
+      }
 
       // Step 4: Fetch teacher's announcements count using userId (not author_id)
       const { count: totalAnnouncements } = await this.supabase
