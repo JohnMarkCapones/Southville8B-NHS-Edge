@@ -760,9 +760,11 @@ await LoadSidebarEventsAsync();
     [RelayCommand] 
     private void NavigateToProfile() 
     { 
+        if (string.IsNullOrEmpty(_userId)) return;
+
         var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
         var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
-        var vm = new ProfileViewModel(apiClient, toastService);
+        var vm = new ProfileViewModel(apiClient, toastService, _userId);
         vm.NavigateTo = innerVm => CurrentContent = innerVm;
         CurrentContent = vm; 
         CurrentPage = "Profile"; 

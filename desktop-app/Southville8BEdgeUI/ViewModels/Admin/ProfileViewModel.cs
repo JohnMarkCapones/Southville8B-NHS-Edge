@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Threading.Tasks;
 using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
@@ -9,30 +11,31 @@ public partial class ProfileViewModel : ViewModelBase
 {
     private readonly IApiClient _apiClient;
     private readonly IToastService _toastService;
+    private readonly string _userId;
 
     [ObservableProperty]
-    private string _fullName = "John Mark Capones";
+    private string _fullName = string.Empty;
 
     [ObservableProperty]
-    private string _email = "john.capones@southville.edu.ph";
+    private string _email = string.Empty;
 
     [ObservableProperty]
-    private string _phone = "+63 912 345 6789";
+    private string _phone = string.Empty;
 
     [ObservableProperty]
-    private string _position = "Administrator";
+    private string _position = string.Empty;
 
     [ObservableProperty]
-    private string _department = "IT Department";
+    private string _department = string.Empty;
 
     [ObservableProperty]
-    private DateTime _joinDate = new DateTime(2020, 8, 15);
+    private DateTime _joinDate = DateTime.Now;
 
     [ObservableProperty]
-    private string _employeeId = "ADM-2020-001";
+    private string _employeeId = string.Empty;
 
     [ObservableProperty]
-    private string _address = "123 Main Street, Southville City";
+    private string _address = string.Empty;
 
     [ObservableProperty]
     private bool _isEditing = false;
@@ -44,12 +47,50 @@ public partial class ProfileViewModel : ViewModelBase
         // For design-time support
         _apiClient = null!;
         _toastService = null!;
+        _userId = string.Empty;
     }
 
-    public ProfileViewModel(IApiClient apiClient, IToastService toastService)
+    public ProfileViewModel(IApiClient apiClient, IToastService toastService, string userId)
     {
         _apiClient = apiClient;
         _toastService = toastService;
+        _userId = userId;
+        
+        _ = LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        try
+        {
+            var profile = await _apiClient.GetUserProfileAsync(_userId);
+            if (profile != null)
+            {
+                FullName = profile.FullName ?? string.Empty;
+                Email = profile.Email ?? string.Empty;
+                EmployeeId = profile.Id; // Using ID as EmployeeID for now
+                
+                if (profile.Role != null)
+                {
+                    Position = profile.Role.Name;
+                }
+
+                // If there's specific profile data, map it here
+                // Note: The API response structure might need to be checked for Phone/Address
+                // For now, we'll leave them empty or map if available in ProfileData
+                
+                if (profile.Profile != null)
+                {
+                     Address = profile.Profile.Address ?? string.Empty;
+                     Phone = profile.Profile.PhoneNumber ?? string.Empty;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading profile: {ex.Message}");
+            _toastService.Error("Error loading profile");
+        }
     }
 
     [RelayCommand]
@@ -59,17 +100,39 @@ public partial class ProfileViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SaveProfile()
+    private async Task SaveProfile()
     {
-        // TODO: Implement save logic
-        IsEditing = false;
+        try
+        {
+            var dto = new UpdateUserDto
+            {
+                FullName = FullName,
+                Email = Email
+            };
+
+            var success = await _apiClient.UpdateUserAsync(_userId, dto);
+            if (success)
+            {
+                _toastService.Success("Profile updated successfully");
+                IsEditing = false;
+            }
+            else
+            {
+                _toastService.Error("Failed to update profile");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error saving profile: {ex.Message}");
+            _toastService.Error("Error saving profile");
+        }
     }
 
     [RelayCommand]
-    private void CancelEdit()
+    private async Task CancelEdit()
     {
-        // TODO: Reset to original values
         IsEditing = false;
+        await LoadProfileAsync();
     }
 
     [RelayCommand]
@@ -87,6 +150,6 @@ public partial class ProfileViewModel : ViewModelBase
     [RelayCommand]
     private void UploadPhoto()
     {
-        // TODO: Implement photo upload logic
+        _toastService.Info("Photo upload not implemented yet");
     }
 }

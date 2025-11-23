@@ -65,14 +65,11 @@ public partial class AdminDashboardView : UserControl
         _responsiveButtonElements.AddRange(new Control[]
         {
             RefreshButton,
-            ReportsButton,
             ViewAllAlertsButton,
             RoomsButton,
             EventsButton,
             UsersButton,
             ChatButton,
-            LibraryButton,
-            ReportsActionButton,
             ViewAllEventsButton
         });
 

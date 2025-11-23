@@ -116,6 +116,12 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private readonly bool _enableRotation;
     private readonly bool _enableTimeUpdater;
     private DispatcherTimer? _clock;
+    
+    // SSE metrics debouncing and validation (similar to AdminShellViewModel)
+    private TeacherSidebarMetrics? _lastValidMetrics;
+    private TeacherSidebarMetrics? _pendingMetrics;
+    private DispatcherTimer? _metricsApplyTimer;
+    [ObservableProperty] private string _connectionStatus = "Disconnected";
 
     // Services
     private readonly ISseService _sseService;
@@ -548,19 +554,85 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private void OnTeacherMetricsUpdated(object? sender, TeacherSidebarMetrics metrics)
     {
         System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] SSE metrics updated - Classes: {metrics.TotalClasses}, Announcements: {metrics.TotalAnnouncements}, Students: {metrics.TotalStudents}, Messages: {metrics.UnreadMessages}");
-        Dispatcher.UIThread.Post(() =>
+        
+        // Guard: ignore suspicious updates that would reset valid data to zero
+        // Only apply this guard if we already have valid metrics (don't block the first update)
+        if (_lastValidMetrics != null && !string.Equals(ConnectionStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
         {
-            // Update all 4 metrics from SSE for real-time updates
-            TotalClasses = metrics.TotalClasses;
-            TotalAnnouncements = metrics.TotalAnnouncements;
-            TotalStudents = metrics.TotalStudents;
-            UnreadMessages = metrics.UnreadMessages;
-            System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] KPI values after SSE update - TotalAnnouncements: {TotalAnnouncements}");
-        });
+            // If we have valid students count (> 0) and new update shows 0, ignore it (likely query error)
+            if (_lastValidMetrics.TotalStudents.HasValue && 
+                _lastValidMetrics.TotalStudents.Value > 0 &&
+                metrics.TotalStudents.HasValue && 
+                metrics.TotalStudents.Value == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] Ignoring suspicious update - Students would reset from {_lastValidMetrics.TotalStudents.Value} to 0 (likely query error)");
+                // Don't return - still update other metrics, just preserve students count
+                // Create a copy with preserved students count
+                metrics = new TeacherSidebarMetrics
+                {
+                    TotalClasses = metrics.TotalClasses,
+                    TotalAnnouncements = metrics.TotalAnnouncements,
+                    TotalStudents = _lastValidMetrics.TotalStudents, // Preserve existing value
+                    UnreadMessages = metrics.UnreadMessages,
+                    LastUpdated = metrics.LastUpdated
+                };
+            }
+            
+            // Ignore all-zero snapshots (likely heartbeat/placeholder)
+            bool looksEmpty = (!metrics.TotalClasses.HasValue || metrics.TotalClasses.Value == 0) &&
+                             (!metrics.TotalAnnouncements.HasValue || metrics.TotalAnnouncements.Value == 0) &&
+                             (!metrics.TotalStudents.HasValue || metrics.TotalStudents.Value == 0) &&
+                             (!metrics.UnreadMessages.HasValue || metrics.UnreadMessages.Value == 0);
+            
+            if (looksEmpty)
+            {
+                System.Diagnostics.Debug.WriteLine("[TeacherShellViewModel] Ignoring all-zero snapshot (likely heartbeat)");
+                return;
+            }
+        }
+
+        // Debounce/coalesce: keep only latest metrics within a short window
+        _pendingMetrics = metrics;
+        _metricsApplyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _metricsApplyTimer.Tick -= ApplyPendingMetrics;
+        _metricsApplyTimer.Tick += ApplyPendingMetrics;
+        _metricsApplyTimer.Stop();
+        _metricsApplyTimer.Start();
+    }
+
+    private void ApplyPendingMetrics(object? sender, EventArgs e)
+    {
+        _metricsApplyTimer?.Stop();
+        var snapshot = _pendingMetrics;
+        _pendingMetrics = null;
+        if (snapshot == null) return;
+
+        _lastValidMetrics = snapshot;
+        Dispatcher.UIThread.Post(() => UpdateMetrics(snapshot));
+    }
+
+    public void UpdateMetrics(TeacherSidebarMetrics metrics)
+    {
+        // Update metrics from SSE only if they are present (not null)
+        // Only update if the value is actually provided (HasValue check)
+        if (metrics.TotalClasses.HasValue)
+            TotalClasses = metrics.TotalClasses.Value;
+
+        if (metrics.TotalAnnouncements.HasValue)
+            TotalAnnouncements = metrics.TotalAnnouncements.Value;
+
+        if (metrics.TotalStudents.HasValue)
+            TotalStudents = metrics.TotalStudents.Value;
+
+        if (metrics.UnreadMessages.HasValue)
+            UnreadMessages = metrics.UnreadMessages.Value;
+
+        System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] KPI values after SSE update - Classes: {TotalClasses}, Announcements: {TotalAnnouncements}, Students: {TotalStudents}, Messages: {UnreadMessages}");
     }
 
     private void OnConnectionStatusChanged(object? sender, string status)
     {
+        Dispatcher.UIThread.Post(() => ConnectionStatus = status);
     }
 
     private async Task LoadTeacherKpisAsync()
@@ -832,6 +904,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         {
             _todayClassRotationTimer?.Stop();
             _currentTodayClassIndex = 0;
+            HasCurrentClass = false;
             CurrentTodayClass = null;
             CurrentClassSubject = string.Empty;
             CurrentClassGrade = string.Empty;
@@ -843,11 +916,13 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             return;
         }
         var current = TodayClasses[_currentTodayClassIndex];
+        // Ensure CurrentTodayClass is set before HasCurrentClass to avoid binding errors
+        CurrentTodayClass = current;
+        HasCurrentClass = true;
         CurrentClassSubject = current.Subject;
         CurrentClassGrade = current.Grade;
         CurrentClassTime = current.Time;
         CurrentClassRoom = current.Room;
-        CurrentTodayClass = current;
 
         if (TodayClasses.Count > 1)
         {
@@ -1231,6 +1306,8 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToMessaging()
     {
+        if (string.IsNullOrEmpty(_userId)) return;
+
         var chatService = ServiceLocator.Services.GetRequiredService<Services.IChatService>();
         var vm = new MessagingViewModel(chatService, _userId);
         vm.NavigateTo = inner => CurrentContent = inner;
@@ -1317,6 +1394,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             // Stop timers
             _todayClassRotationTimer?.Stop();
             _clock?.Stop();
+            _metricsApplyTimer?.Stop();
         }
     }
 }
