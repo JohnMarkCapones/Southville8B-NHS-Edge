@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useTranslation } from "@/lib/i18n"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import StudentLayout from "@/components/student/student-layout"
 import { Notes } from "@/components/productivity/notes"
 import { TodoList } from "@/components/productivity/todo-list"
@@ -14,7 +15,8 @@ import { AnnouncementModal, type AnnouncementData } from "@/components/student/a
 import { useUser } from "@/hooks/useUser"
 import { useMySchedule } from "@/hooks/useSchedules"
 import { useEvents } from "@/hooks/useEvents"
-import { EventStatus } from "@/lib/api/types/events"
+import { EventStatus, EventVisibility } from "@/lib/api/types/events"
+import { newsApi } from "@/lib/api/endpoints/news"
 import { useStudentActivities } from "@/hooks/useStudentActivities"
 import {
   PointsCounter,
@@ -33,6 +35,8 @@ import {
   type MyBadgesResponse,
   type LeaderboardResponse,
 } from "@/lib/api/endpoints/gamification"
+import { getLoginStreak } from "@/lib/api/endpoints/users"
+import { useNotifications } from "@/hooks/useNotifications"
 import {
   BookOpen,
   CalendarIcon,
@@ -52,6 +56,7 @@ import {
   Users,
   BookOpenCheck,
   AlertCircle,
+  X,
   Sparkles,
   StickyNote,
   CheckSquare,
@@ -59,6 +64,9 @@ import {
   BarChart3,
   Zap,
   Star,
+  Newspaper,
+  Calendar,
+  ArrowRight,
 } from "lucide-react"
 
 // Separate component for live clock to prevent parent re-renders
@@ -102,6 +110,10 @@ export default function StudentDashboard() {
   const [badgesData, setBadgesData] = useState<MyBadgesResponse | null>(null)
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardResponse | null>(null)
   const [isLoadingGamification, setIsLoadingGamification] = useState(true)
+  
+  // Login streak state
+  const [loginStreak, setLoginStreak] = useState<number | null>(null)
+  const [isLoadingStreak, setIsLoadingStreak] = useState(true)
 
   // Fetch current user data
   const { data: user, isLoading, isError} = useUser()
@@ -113,9 +125,31 @@ export default function StudentDashboard() {
   const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
   const { data: eventsResponse, isLoading: isLoadingEvents } = useEvents({
     status: EventStatus.PUBLISHED,
+    visibility: EventVisibility.PUBLIC,
     startDate: today,
-    limit: 10,
+    limit: 5,
   })
+
+  // Fetch recent news
+  const [newsData, setNewsData] = useState<any[]>([])
+  const [isLoadingNews, setIsLoadingNews] = useState(true)
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      setIsLoadingNews(true)
+      try {
+        const response = await newsApi.getNews({ limit: 5, sortBy: 'newest' })
+        const publishedNews = response.data.filter((article) => article.status === 'Published')
+        setNewsData(publishedNews.slice(0, 5))
+      } catch (error) {
+        console.error('Error fetching news:', error)
+        setNewsData([])
+      } finally {
+        setIsLoadingNews(false)
+      }
+    }
+    fetchNews()
+  }, [])
 
   // Fetch student activities
   const { data: activitiesResponse, isLoading: isLoadingActivities } = useStudentActivities({
@@ -144,6 +178,24 @@ export default function StudentDashboard() {
     }
 
     fetchGamificationData()
+  }, [])
+
+  // Fetch login streak
+  useEffect(() => {
+    const fetchLoginStreakData = async () => {
+      setIsLoadingStreak(true)
+      try {
+        const response = await getLoginStreak()
+        setLoginStreak(response.streak)
+      } catch (error) {
+        console.error('Error fetching login streak:', error)
+        setLoginStreak(0) // Default to 0 on error
+      } finally {
+        setIsLoadingStreak(false)
+      }
+    }
+
+    fetchLoginStreakData()
   }, [])
 
   const sampleAnnouncements: AnnouncementData[] = [
@@ -455,12 +507,36 @@ export default function StudentDashboard() {
     },
   ]
 
-  const notifications = [
-    { title: "New assignment in Mathematics", time: "5 min ago", type: "assignment", urgent: true },
-    { title: "Science lab session tomorrow", time: "1 hour ago", type: "reminder", urgent: false },
-    { title: "Parent-teacher meeting scheduled", time: "2 hours ago", type: "meeting", urgent: true },
-    { title: "Library book due in 3 days", time: "1 day ago", type: "reminder", urgent: false },
-  ]
+  // Use real notifications from API
+  const {
+    notifications: apiNotifications,
+    loading: notificationsLoading,
+    unreadCount,
+  } = useNotifications()
+
+  // Format notifications for display
+  const formatNotificationTime = (date: Date) => {
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return "Just now"
+    if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`
+    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`
+    return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`
+  }
+
+  // Map API notifications to display format
+  const notifications = apiNotifications.map((n) => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    time: formatNotificationTime(n.timestamp),
+    urgent: n.priority === "high" || n.type === "warning" || n.type === "error",
+    read: n.read,
+  }))
 
   const weeklyGoals = [
     { title: "Complete all assignments", progress: 80, target: 100, icon: Target },
@@ -658,9 +734,9 @@ export default function StudentDashboard() {
 
         {/* Enhanced Stats Grid - Gamification */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-          {/* Points Card */}
+          {/* Points Card - Column 1 (green) */}
           <Card
-            className="bg-gradient-to-br from-yellow-500 to-amber-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-green-500 to-green-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("points")}
             onMouseLeave={() => setHoveredCard(null)}
             onClick={() => router.push("/student/ranking")}
@@ -669,24 +745,24 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-yellow-100 text-xs sm:text-sm">Total Points</p>
+                  <p className="text-green-100 text-xs sm:text-sm">Total Points</p>
                   <p className="text-2xl sm:text-3xl font-bold">
                     {isLoadingGamification ? "..." : formatPoints(gamificationProfile?.points.total || 0)}
                   </p>
-                  <p className="text-xs text-yellow-200 mt-1">
+                  <p className="text-xs text-green-200 mt-1">
                     Rank #{gamificationProfile?.ranks.global || "-"}
                   </p>
                 </div>
                 <Zap
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-yellow-200 transition-transform duration-300 ${hoveredCard === "points" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-green-200 transition-transform duration-300 ${hoveredCard === "points" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Level Card */}
+          {/* Level Card - Column 2 (orange) */}
           <Card
-            className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-orange-500 to-orange-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("level")}
             onMouseLeave={() => setHoveredCard(null)}
             onClick={() => router.push("/student/achievements")}
@@ -695,24 +771,24 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-xs sm:text-sm">Level</p>
+                  <p className="text-orange-100 text-xs sm:text-sm">Level</p>
                   <p className="text-2xl sm:text-3xl font-bold">
                     {isLoadingGamification ? "..." : gamificationProfile?.level.current || 1}
                   </p>
-                  <p className="text-xs text-purple-200 mt-1">
+                  <p className="text-xs text-orange-200 mt-1">
                     {gamificationProfile ? getLevelTitle(gamificationProfile.level.current) : "Novice"}
                   </p>
                 </div>
                 <Trophy
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-purple-200 transition-transform duration-300 ${hoveredCard === "level" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-orange-200 transition-transform duration-300 ${hoveredCard === "level" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Streak Card */}
+          {/* Streak Card - Column 3 (blue) */}
           <Card
-            className="bg-gradient-to-br from-orange-500 to-red-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-blue-500 to-blue-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("streak")}
             onMouseLeave={() => setHoveredCard(null)}
           >
@@ -720,24 +796,24 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-100 text-xs sm:text-sm">Activity Streak</p>
+                  <p className="text-blue-100 text-xs sm:text-sm">Activity Streak</p>
                   <p className="text-2xl sm:text-3xl font-bold">
-                    {isLoadingGamification ? "..." : gamificationProfile?.streak.current || 0} days
+                    {isLoadingStreak ? "..." : loginStreak !== null ? loginStreak : (isLoadingGamification ? "..." : gamificationProfile?.streak.current || 0)} days
                   </p>
-                  <p className="text-xs text-orange-200 mt-1">
+                  <p className="text-xs text-blue-200 mt-1">
                     Best: {gamificationProfile?.streak.longest || 0} days
                   </p>
                 </div>
                 <Flame
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-orange-200 transition-transform duration-300 ${hoveredCard === "streak" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-blue-200 transition-transform duration-300 ${hoveredCard === "streak" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Badges Card */}
+          {/* Badges Card - Column 4 (purple) */}
           <Card
-            className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-purple-500 to-purple-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("badges")}
             onMouseLeave={() => setHoveredCard(null)}
             onClick={() => router.push("/student/achievements")}
@@ -746,23 +822,24 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 text-xs sm:text-sm">Badges Earned</p>
+                  <p className="text-purple-100 text-xs sm:text-sm">Badges Earned</p>
                   <p className="text-2xl sm:text-3xl font-bold">
-                    {isLoadingGamification ? "..." : gamificationProfile?.badges.total || 0}
+                    {badgesData ? badgesData.earned.length : (isLoadingGamification ? "..." : 0)}
                   </p>
-                  <p className="text-xs text-blue-200 mt-1">
+                  <p className="text-xs text-purple-200 mt-1">
                     {badgesData ? `${badgesData.earned.length}/${badgesData.earned.length + badgesData.unearned.length} collected` : "Loading..."}
                   </p>
                 </div>
                 <Star
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-blue-200 transition-transform duration-300 ${hoveredCard === "badges" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-purple-200 transition-transform duration-300 ${hoveredCard === "badges" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
           </Card>
 
+          {/* Notifications - Column 1 (green) */}
           <Card
-            className="bg-gradient-to-br from-orange-500 to-red-500 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-green-500 to-green-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("notifications")}
             onMouseLeave={() => setHoveredCard(null)}
             onClick={() => setShowNotifications(!showNotifications)}
@@ -771,19 +848,20 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-100 text-xs sm:text-sm">Notifications</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{notifications.filter((n) => n.urgent).length}</p>
-                  <p className="text-xs text-orange-200 mt-1">Urgent items</p>
+                  <p className="text-green-100 text-xs sm:text-sm">Notifications</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{unreadCount || 0}</p>
+                  <p className="text-xs text-green-200 mt-1">{unreadCount === 1 ? "Unread item" : "Unread items"}</p>
                 </div>
                 <Bell
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-orange-200 transition-transform duration-300 ${hoveredCard === "notifications" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-green-200 transition-transform duration-300 ${hoveredCard === "notifications" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
           </Card>
 
+          {/* Current GWA - Column 2 (orange) */}
           <Card
-            className="bg-gradient-to-br from-blue-500 to-blue-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-orange-500 to-orange-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("gwa")}
             onMouseLeave={() => setHoveredCard(null)}
           >
@@ -791,21 +869,22 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 text-xs sm:text-sm">Current GWA</p>
+                  <p className="text-orange-100 text-xs sm:text-sm">Current GWA</p>
                   <p className="text-2xl sm:text-3xl font-bold">{studentData.gwa}</p>
-                  <p className="text-xs text-blue-200 mt-1">
+                  <p className="text-xs text-orange-200 mt-1">
                     Rank #{studentData.rank} of {studentData.totalStudents}
                   </p>
                 </div>
                 <TrendingUp
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-blue-200 transition-transform duration-300 ${hoveredCard === "gwa" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-orange-200 transition-transform duration-300 ${hoveredCard === "gwa" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
           </Card>
 
+          {/* Active Subjects - Column 3 (blue) */}
           <Card
-            className="bg-gradient-to-br from-purple-500 to-purple-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-blue-500 to-blue-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("subjects")}
             onMouseLeave={() => setHoveredCard(null)}
           >
@@ -813,12 +892,12 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-xs sm:text-sm">Active Subjects</p>
+                  <p className="text-blue-100 text-xs sm:text-sm">Active Subjects</p>
                   <p className="text-2xl sm:text-3xl font-bold">8</p>
-                  <p className="text-xs text-purple-200 mt-1">All on track</p>
+                  <p className="text-xs text-blue-200 mt-1">All on track</p>
                 </div>
                 <BookOpen
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-purple-200 transition-transform duration-300 ${hoveredCard === "subjects" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-blue-200 transition-transform duration-300 ${hoveredCard === "subjects" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
@@ -826,34 +905,84 @@ export default function StudentDashboard() {
         </div>
 
         {showNotifications && (
-          <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20 animate-in slide-in-from-top duration-300">
+          <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 animate-in slide-in-from-top duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center text-orange-700 dark:text-orange-300">
-                <Bell className="w-5 h-5 mr-2" />
-                Recent Notifications
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center text-green-700 dark:text-green-300">
+                  <Bell className="w-5 h-5 mr-2" />
+                  Recent Notifications
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowNotifications(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {notifications.map((notification, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-lg border-l-4 ${
-                      notification.urgent
-                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                        : "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground">{notification.time}</p>
+              {notificationsLoading ? (
+                <div className="p-8 text-center text-slate-500">
+                  <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p>Loading notifications...</p>
+                </div>
+              ) : notifications.length > 0 ? (
+                <div className="space-y-3">
+                  {notifications.slice(0, 5).map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow ${
+                        notification.urgent
+                          ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                          : notification.read
+                          ? "border-green-300 bg-green-50/50 dark:bg-green-900/10"
+                          : "border-green-500 bg-green-50 dark:bg-green-900/20"
+                      }`}
+                      onClick={() => {
+                        if (notification.id && !notification.read) {
+                          // Mark as read - you might want to add markAsRead from useNotifications
+                        }
+                        setShowNotifications(false)
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{notification.title}</p>
+                          {notification.message && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
+                        </div>
+                        {notification.urgent && <AlertCircle className="w-4 h-4 text-red-500 ml-2 flex-shrink-0" />}
+                        {!notification.read && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full ml-2 flex-shrink-0"></div>
+                        )}
                       </div>
-                      {notification.urgent && <AlertCircle className="w-4 h-4 text-red-500" />}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {notifications.length > 5 && (
+                    <div className="text-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push("/student/notifications")}
+                        className="text-green-600 dark:text-green-400"
+                      >
+                        View all {notifications.length} notifications
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-500">
+                  <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No notifications</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1245,6 +1374,7 @@ export default function StudentDashboard() {
 
           {/* Right Column */}
           <div className="space-y-6">
+            {/* Quick Tools Section */}
             <Card className="hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-indigo-700 dark:text-indigo-300 text-base sm:text-lg">
@@ -1255,36 +1385,172 @@ export default function StudentDashboard() {
                   Fast access to productivity features
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {enhancedProductivityTools.map((tool) => (
+              <CardContent>
+                <div className="grid grid-cols-2 gap-2">
                   <Button
-                    key={tool.id}
-                    onClick={() => setActiveProductivityTool(activeProductivityTool === tool.id ? null : tool.id)}
+                    onClick={() => router.push("/student/notes")}
                     variant="outline"
                     size="sm"
-                    className={`w-full justify-start bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border-indigo-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 transition-all duration-200 touch-manipulation min-h-[44px] ${
-                      activeProductivityTool === tool.id
-                        ? "bg-indigo-100 dark:bg-indigo-900/50 border-indigo-300 dark:border-indigo-600"
-                        : ""
-                    }`}
+                    className="h-auto py-3 flex flex-col items-center justify-center bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border-indigo-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 transition-all duration-200"
                   >
-                    <tool.icon className="w-4 h-4 mr-3 flex-shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">{tool.title}</div>
-                      <div className="text-xs text-muted-foreground">{tool.stats}</div>
-                    </div>
+                    <StickyNote className="w-5 h-5 mb-1 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-medium">Notes</span>
                   </Button>
-                ))}
-
-                <div className="mt-4 p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Coffee className="w-4 h-4 text-green-600" />
-                    <p className="text-xs text-green-700 dark:text-green-300">
-                      <strong>Daily Challenge:</strong> Use each productivity tool for 10 minutes today to build
-                      effective study habits!
-                    </p>
-                  </div>
+                  <Button
+                    onClick={() => router.push("/student/todo")}
+                    variant="outline"
+                    size="sm"
+                    className="h-auto py-3 flex flex-col items-center justify-center bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border-indigo-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 transition-all duration-200"
+                  >
+                    <CheckSquare className="w-5 h-5 mb-1 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-medium">Todo List</span>
+                  </Button>
+                  <Button
+                    onClick={() => router.push("/student/goals")}
+                    variant="outline"
+                    size="sm"
+                    className="h-auto py-3 flex flex-col items-center justify-center bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border-indigo-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 transition-all duration-200"
+                  >
+                    <Target className="w-5 h-5 mb-1 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-medium">Goals</span>
+                  </Button>
+                  <Button
+                    onClick={() => router.push("/student/pomodoro")}
+                    variant="outline"
+                    size="sm"
+                    className="h-auto py-3 flex flex-col items-center justify-center bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border-indigo-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 transition-all duration-200"
+                  >
+                    <Timer className="w-5 h-5 mb-1 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-medium">Pomodoro</span>
+                  </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* News Section */}
+            <Card className="hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-blue-700 dark:text-blue-300 text-base sm:text-lg">
+                    <Newspaper className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    School News
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push("/student/news")}
+                    className="h-8 px-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                  >
+                    View All
+                    <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+                <CardDescription className="text-blue-600/70 dark:text-blue-400/70 text-sm">
+                  Latest updates and announcements
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isLoadingNews ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-16 bg-blue-100 dark:bg-blue-900/30 rounded-lg"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : newsData.length > 0 ? (
+                  newsData.map((article) => (
+                    <div
+                      key={article.id}
+                      onClick={() => router.push(`/student/news/${article.slug}`)}
+                      className="p-3 bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border border-blue-200 dark:border-slate-600 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md"
+                    >
+                      <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 line-clamp-2 mb-1">
+                        {article.title}
+                      </h4>
+                      <p className="text-xs text-muted-foreground dark:text-slate-400 line-clamp-1">
+                        {article.description || article.excerpt}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-blue-600 dark:text-blue-400">
+                          {article.publishedDate ? new Date(article.publishedDate).toLocaleDateString() : 'Recent'}
+                        </span>
+                        {article.category && (
+                          <Badge variant="secondary" className="text-xs">
+                            {article.category.name}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <Newspaper className="w-8 h-8 mx-auto mb-2 text-blue-300 dark:text-blue-700" />
+                    <p className="text-sm text-muted-foreground dark:text-slate-400">No news available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Events Section */}
+            <Card className="hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-emerald-700 dark:text-emerald-300 text-base sm:text-lg">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    Upcoming Events
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push("/student/events")}
+                    className="h-8 px-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                  >
+                    View All
+                    <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+                <CardDescription className="text-emerald-600/70 dark:text-emerald-400/70 text-sm">
+                  Don't miss out on school activities
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isLoadingEvents ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : eventsResponse?.data && eventsResponse.data.length > 0 ? (
+                  eventsResponse.data.slice(0, 5).map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => router.push(`/student/events/${event.slug || event.id}`)}
+                      className="p-3 bg-white/70 dark:bg-slate-800/70 hover:bg-white/90 dark:hover:bg-slate-700/90 border border-emerald-200 dark:border-slate-600 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md"
+                    >
+                      <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 line-clamp-2 mb-1">
+                        {event.title}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-slate-400">
+                        <CalendarIcon className="w-3 h-3" />
+                        <span>{event.date ? new Date(event.date).toLocaleDateString() : 'TBA'}</span>
+                        {event.location && (
+                          <>
+                            <span>•</span>
+                            <span>{event.location}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <Calendar className="w-8 h-8 mx-auto mb-2 text-emerald-300 dark:text-emerald-700" />
+                    <p className="text-sm text-muted-foreground dark:text-slate-400">No upcoming events</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

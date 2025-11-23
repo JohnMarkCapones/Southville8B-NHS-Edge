@@ -359,3 +359,19 @@ export async function updateUserData(
 ): Promise<User> {
   return apiClient.patch<User>(`/users/${userId}`, data);
 }
+
+/**
+ * Get current user login streak count
+ * Returns the number of consecutive days the user has logged in
+ *
+ * @returns Promise with streak count
+ *
+ * @example
+ * ```typescript
+ * const { streak } = await getLoginStreak();
+ * console.log(`Current streak: ${streak} days`);
+ * ```
+ */
+export async function getLoginStreak(): Promise<{ streak: number }> {
+  return apiClient.get<{ streak: number }>('/users/me/streak');
+}

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Calendar, Search, Edit, Eye, Clock, MapPin, Filter, Trash2, BookOpen, Loader2 } from "lucide-react"
+import { Users, Calendar, Search, Edit, Eye, Clock, MapPin, Filter, BookOpen, Loader2 } from "lucide-react"
 import { useTeacherClubs } from "@/hooks"
 
 export default function ClubsPage() {
@@ -146,14 +146,6 @@ export default function ClubsPage() {
                     title="Edit Club"
                   >
                     <Edit className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                    title="Delete Club"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                   </Button>
                 </div>
               </div>

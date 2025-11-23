@@ -54,18 +54,18 @@ export default function StudentAchievementsPage() {
 
   return (
     <StudentLayout>
-      <div className="flex-1 p-6 space-y-8 bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+      <div className="flex-1 p-6 space-y-8 bg-gradient-to-br from-purple-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         {/* Header Section */}
         <div className="text-center space-y-4">
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full shadow-lg">
+            <div className="p-4 bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-full shadow-lg">
               <Trophy className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-800 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-800 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
             Achievements & Badges
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
             Collect badges by completing activities, earning points, and reaching milestones
           </p>
         </div>
@@ -124,43 +124,43 @@ export default function StudentAchievementsPage() {
         {/* Category Stats */}
         {badgesData && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 text-center">
                 <div className="text-3xl mb-2">🎓</div>
-                <p className="text-sm text-muted-foreground">Academic</p>
-                <p className="text-xl font-bold">{badgesData.categories.academic}</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">Academic</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{badgesData.categories.academic}</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 text-center">
                 <div className="text-3xl mb-2">🎯</div>
-                <p className="text-sm text-muted-foreground">Participation</p>
-                <p className="text-xl font-bold">{badgesData.categories.participation}</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">Participation</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{badgesData.categories.participation}</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 text-center">
                 <div className="text-3xl mb-2">🔥</div>
-                <p className="text-sm text-muted-foreground">Streak</p>
-                <p className="text-xl font-bold">{badgesData.categories.streak}</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">Streak</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{badgesData.categories.streak}</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 text-center">
                 <div className="text-3xl mb-2">🤝</div>
-                <p className="text-sm text-muted-foreground">Social</p>
-                <p className="text-xl font-bold">{badgesData.categories.social}</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">Social</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{badgesData.categories.social}</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 text-center">
                 <div className="text-3xl mb-2">⭐</div>
-                <p className="text-sm text-muted-foreground">Special</p>
-                <p className="text-xl font-bold">{badgesData.categories.special}</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">Special</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{badgesData.categories.special}</p>
               </CardContent>
             </Card>
           </div>
@@ -169,16 +169,16 @@ export default function StudentAchievementsPage() {
         {/* Loading State */}
         {isLoading && (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
-            <span className="ml-2 text-muted-foreground">Loading badges...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-purple-600 dark:text-purple-400" />
+            <span className="ml-2 text-muted-foreground dark:text-slate-400">Loading badges...</span>
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
             <CardContent className="p-6 text-center">
-              <p className="text-red-600">{error}</p>
+              <p className="text-red-600 dark:text-red-400">{error}</p>
             </CardContent>
           </Card>
         )}
@@ -194,24 +194,24 @@ export default function StudentAchievementsPage() {
 
         {/* Empty State */}
         {!isLoading && !error && badgesData && badgesData.earned.length === 0 && badgesData.unearned.length === 0 && (
-          <Card>
+          <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             <CardContent className="py-12 text-center">
-              <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium text-muted-foreground">No badges available</p>
-              <p className="text-sm text-muted-foreground">Start completing activities to earn badges</p>
+              <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-slate-600" />
+              <p className="text-lg font-medium text-muted-foreground dark:text-slate-300">No badges available</p>
+              <p className="text-sm text-muted-foreground dark:text-slate-400">Start completing activities to earn badges</p>
             </CardContent>
           </Card>
         )}
 
         {/* Motivational Message */}
         {!isLoading && !error && badgesData && stats.earned > 0 && (
-          <Card className="bg-gradient-to-br from-purple-100 to-indigo-100 border-purple-200">
+          <Card className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 border-purple-200 dark:border-purple-800">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-purple-700">
+              <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                 <Star className="h-5 w-5" />
                 Keep Going!
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-slate-600 dark:text-slate-300">
                 {stats.percentage >= 75
                   ? "Amazing progress! You're a badge collecting master! 🏆"
                   : stats.percentage >= 50

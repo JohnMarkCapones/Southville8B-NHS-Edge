@@ -329,7 +329,7 @@ export default function PublisherDashboard() {
                 <div className="text-center py-12">
                   <FileText className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
                   <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">No articles found</h3>
-                  <p className="text-slate-500 dark:text-slate-400 mb-6">
+                  <p className="text-slate-500 dark:text-slate-400 mb-6 text-center">
                     {searchQuery || statusFilter !== "all" || categoryFilter !== "all"
                       ? "Try adjusting your filters"
                       : "Start writing your first article"}

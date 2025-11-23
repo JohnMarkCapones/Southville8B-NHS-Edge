@@ -647,26 +647,8 @@ export default function QuizPage() {
                 </div>
               </div>
 
-              {/* Backend status indicator + Refresh button */}
+              {/* Refresh button */}
               <div className="flex items-center gap-2">
-                {loadingBackend && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/20 rounded-lg backdrop-blur-sm border border-white/30">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-xs hidden sm:inline">Loading...</span>
-                  </div>
-                )}
-                {backendError && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/20 rounded-lg backdrop-blur-sm border border-white/30">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-xs hidden sm:inline">Demo Mode</span>
-                  </div>
-                )}
-                {!loadingBackend && !backendError && backendQuizzes.length > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 rounded-lg backdrop-blur-sm border border-white/30">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="text-xs hidden sm:inline">Live Data</span>
-                  </div>
-                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -770,25 +752,13 @@ export default function QuizPage() {
                         {loadingBackend && (
                           <Badge className="bg-blue-500 text-white px-3 py-1 text-xs">
                             <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                            Loading from backend...
-                          </Badge>
-                        )}
-                        {!loadingBackend && !backendError && backendQuizzes.length > 0 && (
-                          <Badge className="bg-emerald-500 text-white px-3 py-1 text-xs">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            {backendQuizzes.length} real quiz{backendQuizzes.length !== 1 ? 'es' : ''} loaded
+                            Loading...
                           </Badge>
                         )}
                         {!loadingBackend && backendQuizzes.length === 0 && !backendError && (
                           <Badge className="bg-amber-500 text-white px-3 py-1 text-xs">
                             <AlertCircle className="w-3 h-3 mr-1" />
                             No published quizzes yet
-                          </Badge>
-                        )}
-                        {backendError && (
-                          <Badge className="bg-gray-500 text-white px-3 py-1 text-xs">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            Showing demo quizzes
                           </Badge>
                         )}
                         {!loadingBackend && (
@@ -876,17 +846,6 @@ export default function QuizPage() {
                                         </>
                                       )}
                                     </Badge>
-                                    {/* ✅ ADD: Show if quiz is from backend (real) or demo (mock) */}
-                                    {quiz.isFromBackend && (
-                                      <Badge className="bg-emerald-500 text-white px-2 py-1 text-xs font-semibold">
-                                        REAL
-                                      </Badge>
-                                    )}
-                                    {quiz.isDemo && (
-                                      <Badge className="bg-gray-400 text-white px-2 py-1 text-xs font-semibold">
-                                        DEMO
-                                      </Badge>
-                                    )}
                                     <Badge
                                       className={`${getDifficultyColor(quiz.difficulty)} px-2 py-1 text-xs font-semibold`}
                                     >
@@ -913,27 +872,6 @@ export default function QuizPage() {
                                     {quiz.maxScore} pts
                                   </span>
                                 </div>
-                              </div>
-
-                              {/* Center Section - Time Info */}
-                              <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-2 sm:gap-2 px-2 sm:px-4 w-full sm:w-auto">
-                                <div className="flex sm:flex-col items-center gap-2 sm:gap-1">
-                                  <div
-                                    className={`text-lg sm:text-xl lg:text-2xl font-bold ${
-                                      isExpired
-                                        ? "text-red-600 dark:text-red-400"
-                                        : isStartingSoon
-                                          ? "text-blue-600 dark:text-blue-400"
-                                          : "text-green-600 dark:text-green-400"
-                                    }`}
-                                  >
-                                    {isExpired ? "EXPIRED" : timeRemaining}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground text-center">
-                                    {isExpired ? "" : isStartingSoon ? "Starts in" : "Time left"}
-                                  </div>
-                                </div>
-                                <div className="text-xs text-muted-foreground">Duration: {quiz.duration} min</div>
                               </div>
 
                               {/* Right Section - Action Button */}

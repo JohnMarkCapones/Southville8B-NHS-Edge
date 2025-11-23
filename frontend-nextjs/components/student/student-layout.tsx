@@ -25,6 +25,11 @@ import { BotChat } from "@/components/chat/bot-chat"
 import { useQuery } from '@tanstack/react-query'
 import { getCurrentUser } from '@/lib/api/endpoints'
 import type { UserProfileResponse } from '@/lib/api/types'
+import { getEvents } from '@/lib/api/endpoints/events'
+import { newsApi } from '@/lib/api/endpoints/news'
+import { EventStatus, EventVisibility } from '@/lib/api/types/events'
+import { getMyGwa } from '@/lib/api/endpoints/gwa'
+import { academicYearsApi } from '@/lib/api/endpoints/academic-years'
 import {
   BookOpen,
   CalendarIcon,
@@ -171,6 +176,7 @@ const StudentProfile = ({
   gradeLevel,
   section,
   gwa,
+  isLoadingGwa,
   notifications,
   achievements
 }: {
@@ -180,7 +186,8 @@ const StudentProfile = ({
   studentId: string;
   gradeLevel: string;
   section: string;
-  gwa: number;
+  gwa: number | null;
+  isLoadingGwa: boolean;
   notifications: number;
   achievements: number;
 }) => {
@@ -259,7 +266,9 @@ const StudentProfile = ({
           <div className="flex items-center justify-between mt-4 gap-2">
             <div className="flex items-center space-x-1 bg-gradient-to-r from-amber-100/80 to-yellow-100/80 dark:from-amber-900/30 dark:to-yellow-900/30 px-3 py-2 rounded-xl border border-amber-200/50 dark:border-amber-700/50">
               <Star className="w-4 h-4 text-amber-500 fill-current" />
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400">GWA {gwa}</span>
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                GWA {gwa !== null ? gwa.toFixed(1) : isLoadingGwa ? '...' : 'N/A'}
+              </span>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -600,6 +609,43 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
     refetchOnReconnect: true,
   })
 
+  // Fetch events count (only published and upcoming events)
+  const { data: eventsData } = useQuery({
+    queryKey: ['events', 'count'],
+    queryFn: async () => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const response = await getEvents({
+        status: EventStatus.PUBLISHED,
+        visibility: EventVisibility.PUBLIC,
+        limit: 1000, // Get all to count
+      })
+      // Filter for upcoming events only
+      const upcomingEvents = response.data.filter((event) => {
+        const eventDate = new Date(event.date)
+        return eventDate >= today
+      })
+      return upcomingEvents.length
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  })
+
+  // Fetch news count (only published news)
+  const { data: newsCount } = useQuery({
+    queryKey: ['news', 'count'],
+    queryFn: async () => {
+      const response = await newsApi.getNews({ limit: 1000, sortBy: 'newest' })
+      // Filter for published news only
+      const publishedNews = response.data.filter((article) => article.status === 'Published')
+      return publishedNews.length
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  })
+
   // Extract student data with fallbacks
   const studentName = user?.student
     ? `${user.student.first_name} ${user.student.middle_name ? user.student.middle_name + ' ' : ''}${user.student.last_name}`.trim()
@@ -608,10 +654,116 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
   const studentId = user?.student?.student_id || 'N/A'
   const gradeLevel = user?.student?.grade_level ? `Grade ${user.student.grade_level}` : 'N/A'
   const section = user?.student?.sections?.name || 'N/A'
-  const gwa = 94.5 // TODO: Get from actual GWA data when available
+  const studentAvatar = user?.profile?.avatar || '/student-avatar.png'
+
+  // Fetch current academic period
+  const { data: currentPeriod } = useQuery({
+    queryKey: ['current-period'],
+    queryFn: () => academicYearsApi.getCurrentPeriod(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  })
+
+  // Map period name to grading period (Q1, Q2, Q3, Q4)
+  const getGradingPeriodFromPeriodName = (periodName: string | null | undefined): string | undefined => {
+    if (!periodName) return undefined
+    const name = periodName.toLowerCase()
+    if (name.includes('q1') || name.includes('first quarter') || name.includes('1st quarter')) return 'Q1'
+    if (name.includes('q2') || name.includes('second quarter') || name.includes('2nd quarter')) return 'Q2'
+    if (name.includes('q3') || name.includes('third quarter') || name.includes('3rd quarter')) return 'Q3'
+    if (name.includes('q4') || name.includes('fourth quarter') || name.includes('4th quarter')) return 'Q4'
+    // Try to extract Q + number pattern
+    const match = name.match(/q(\d)/)
+    if (match && match[1] >= '1' && match[1] <= '4') {
+      return `Q${match[1]}`
+    }
+    return undefined
+  }
+
+  // Get active academic year for school year filter
+  const { data: activeYear } = useQuery({
+    queryKey: ['active-year'],
+    queryFn: () => academicYearsApi.getActive(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  })
+
+  // Fetch GWA for current quarter
+  const gradingPeriod = getGradingPeriodFromPeriodName(currentPeriod?.period_name)
+  const schoolYear = activeYear?.year_name
+
+  // Fetch all GWA records if we have school year, then filter client-side
+  const { data: gwaRecords, isLoading: isLoadingGwa, error: gwaError } = useQuery({
+    queryKey: ['my-gwa', gradingPeriod, schoolYear],
+    queryFn: async () => {
+      // Try to fetch with filters first
+      if (gradingPeriod && schoolYear) {
+        try {
+          const records = await getMyGwa(gradingPeriod, schoolYear)
+          if (records && records.length > 0) {
+            return records
+          }
+        } catch (err) {
+          console.warn('Failed to fetch GWA with filters, trying without:', err)
+        }
+      }
+      
+      // Fallback: fetch all records and filter client-side
+      const allRecords = await getMyGwa()
+      if (!allRecords || allRecords.length === 0) {
+        return []
+      }
+
+      // Filter for current quarter if we have it
+      if (gradingPeriod && schoolYear) {
+        return allRecords.filter(
+          (record) =>
+            record.grading_period === gradingPeriod &&
+            record.school_year === schoolYear
+        )
+      }
+
+      // If no filters, return most recent record
+      return allRecords.sort((a, b) => {
+        if (a.school_year !== b.school_year) {
+          return b.school_year?.localeCompare(a.school_year || '') || 0
+        }
+        const periodOrder = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 }
+        const aOrder = periodOrder[a.grading_period as keyof typeof periodOrder] || 0
+        const bOrder = periodOrder[b.grading_period as keyof typeof periodOrder] || 0
+        return bOrder - aOrder
+      })
+    },
+    enabled: !!schoolYear || true, // Fetch if we have school year, or try anyway
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  })
+
+  // Get GWA for current quarter (first record if available)
+  const currentGwa = gwaRecords && gwaRecords.length > 0 ? gwaRecords[0].gwa : null
+  const gwa = isLoadingGwa ? null : (currentGwa ?? null)
+
+  // Debug logging
+  useEffect(() => {
+    if (gwaError) {
+      console.error('Error fetching GWA:', gwaError)
+    }
+    if (currentPeriod) {
+      console.log('Current period:', currentPeriod.period_name, '-> Grading period:', gradingPeriod)
+    }
+    if (activeYear) {
+      console.log('Active year:', activeYear.year_name)
+    }
+    if (gwaRecords) {
+      console.log('GWA records:', gwaRecords)
+    }
+  }, [currentPeriod, gradingPeriod, activeYear, gwaRecords, gwaError])
+
   const notifications = 3 // TODO: Get from actual notifications when available
   const achievements = 12 // TODO: Get from actual achievements when available
-  const studentAvatar = user?.profile?.avatar || '/student-avatar.png'
 
 
   useEffect(() => {
@@ -663,8 +815,18 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
         { icon: Users, label: t('student.myClubs'), href: "/student/clubs" },
         { icon: FileCheck, label: t('student.myApplications'), href: "/student/clubs/applications" },
         { icon: Search, label: t('student.discoverClubs'), href: "/student/clubs/discover" },
-        { icon: Calendar, label: t('student.schoolEvents'), href: "/student/events", badge: "2" },
-        { icon: Newspaper, label: t('student.schoolNews'), href: "/student/news", badge: "5" },
+        { 
+          icon: Calendar, 
+          label: t('student.schoolEvents'), 
+          href: "/student/events", 
+          badge: eventsData !== undefined ? eventsData.toString() : "0"
+        },
+        { 
+          icon: Newspaper, 
+          label: t('student.schoolNews'), 
+          href: "/student/news", 
+          badge: newsCount !== undefined ? newsCount.toString() : "0"
+        },
       ],
     },
     {
@@ -694,7 +856,7 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
         { icon: User, label: t('student.profile'), href: "/student/profile" },
       ],
     },
-  ] as const, [t])
+  ] as const, [t, eventsData, newsCount])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-violet-50 dark:from-slate-900 dark:to-slate-800 flex flex-col">
@@ -719,6 +881,7 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
               gradeLevel={gradeLevel}
               section={section}
               gwa={gwa}
+              isLoadingGwa={isLoadingGwa}
               notifications={notifications}
               achievements={achievements}
             />
@@ -813,6 +976,7 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
                 gradeLevel={gradeLevel}
                 section={section}
                 gwa={gwa}
+                isLoadingGwa={isLoadingGwa}
                 notifications={notifications}
                 achievements={achievements}
               />

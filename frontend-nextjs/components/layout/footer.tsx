@@ -24,7 +24,6 @@ import {
   ChevronUp,
   Send,
   Smartphone,
-  Apple,
   Play,
   Bug,
 } from "lucide-react"
@@ -98,15 +97,6 @@ export function Footer() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Link 
-                href="/guess/mobile-app" 
-                className="w-full sm:w-auto inline-flex items-center justify-center bg-black text-white hover:bg-gray-800 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"
-                aria-label="Download from App Store"
-              >
-                <Apple className="w-5 h-5 mr-2" />
-                App Store
-              </Link>
-
               <Link 
                 href="/guess/mobile-app" 
                 className="w-full sm:w-auto inline-flex items-center justify-center bg-white/10 backdrop-blur-sm text-white border border-white/30 hover:bg-white/20 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"

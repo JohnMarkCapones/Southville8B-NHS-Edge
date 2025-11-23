@@ -17,16 +17,12 @@ import {
 import StudentLayout from "@/components/student/student-layout"
 import {
   Download,
-  Star,
-  Award,
   Users,
   ArrowLeft,
   Eye,
   Heart,
   Bookmark,
   Trophy,
-  Target,
-  Zap,
   GraduationCap,
   Loader2,
   AlertCircle,
@@ -400,8 +396,39 @@ export default function SubjectMaterialsPage() {
                     className="group hover:-translate-y-2 transition-all duration-500 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-2xl hover:shadow-blue-500/10 overflow-hidden"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    <div className={`relative bg-gradient-to-br ${getFileVisuals(module.mime_type).bg} p-8 h-48 flex items-center justify-center`}>
-                      {getFileVisuals(module.mime_type).icon}
+                    <div className={`relative bg-gradient-to-br ${getFileVisuals(module.mime_type).bg} h-48 overflow-hidden`}>
+                      {/* Show image preview if file is an image */}
+                      {getFileType(module.mime_type) === 'image' && module.file_url ? (
+                        <>
+                          <img
+                            src={module.file_url}
+                            alt={module.title || 'Module preview'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              const target = e.currentTarget
+                              target.style.display = 'none'
+                              const parent = target.parentElement
+                              if (parent) {
+                                const fallback = parent.querySelector('.image-fallback')
+                                if (fallback) {
+                                  (fallback as HTMLElement).style.display = 'flex'
+                                }
+                              }
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                        </>
+                      ) : (
+                        /* Show icon for non-image files */
+                        <div className="p-8 h-full flex items-center justify-center">
+                          {getFileVisuals(module.mime_type).icon}
+                        </div>
+                      )}
+                      {/* Fallback icon (hidden by default, shown if image fails) */}
+                      <div className="image-fallback absolute inset-0 p-8 flex items-center justify-center" style={{ display: getFileType(module.mime_type) === 'image' && module.file_url ? 'none' : 'flex' }}>
+                        {getFileVisuals(module.mime_type).icon}
+                      </div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                       <div className="absolute top-4 left-4">
                         <Badge className={`${getFileVisuals(module.mime_type).badgeClass} border-0`}>
@@ -412,14 +439,14 @@ export default function SubjectMaterialsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-primary hover:bg-white/20 backdrop-blur-sm"
+                          className="text-white hover:bg-white/20 backdrop-blur-sm"
                           onClick={() => toggleBookmark(module.id)}
                         >
                           <Bookmark className={`${bookmarkedItems.includes(module.id) ? "fill-current" : ""} w-4 h-4`} />
                         </Button>
                       </div>
                       <div className="absolute bottom-4 left-4 right-4">
-                        <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 text-sm font-medium">
+                        <div className="flex items-center justify-between text-white text-sm font-medium drop-shadow-lg">
                           <span>{formatFileSize(module.file_size_bytes)}</span>
                           <span>{formatDate(module.created_at)}</span>
                         </div>
@@ -436,17 +463,6 @@ export default function SubjectMaterialsPage() {
                     </CardHeader>
 
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                        <div className="flex items-center gap-1">
-                          <Download className="w-4 h-4" />
-                          <span>{fallback(module.downloadStats?.totalDownloads?.toString(), '0')} downloads</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
-                          <span>{fallback(module.uploader?.full_name, 'Unknown')}</span>
-                        </div>
-                      </div>
-
                       {module.sections && module.sections.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {module.sections.slice(0, 2).map((section) => (
@@ -473,9 +489,9 @@ export default function SubjectMaterialsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-transparent"
+                          className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-transparent relative z-10"
                           onClick={() => handleDownloadClick({ id: module.id, title: module.title })}
-                          disabled={downloading === module.id || !module.file_url}
+                          disabled={downloading === module.id || (!module.file_url && !module.r2_file_key)}
                         >
                           {downloading === module.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -490,43 +506,6 @@ export default function SubjectMaterialsPage() {
               </div>
             )}
           </div>
-
-          <Card className="mt-8 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 border-0 shadow-xl">
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <div className="p-3 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl">
-                  <Award className="w-8 h-8 text-white" />
-                </div>
-                <CardTitle className="text-2xl font-bold">Learning Achievements</CardTitle>
-              </div>
-              <CardDescription className="text-lg">Track your progress and celebrate your success!</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-6 bg-white/50 dark:bg-slate-800/50 rounded-xl">
-                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">Quick Learner</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm">Completed 5 modules this week</p>
-                </div>
-                <div className="text-center p-6 bg-white/50 dark:bg-slate-800/50 rounded-xl">
-                  <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Target className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">Goal Achiever</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm">Reached 75% completion rate</p>
-                </div>
-                <div className="text-center p-6 bg-white/50 dark:bg-slate-800/50 rounded-xl">
-                  <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Star className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">Top Performer</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm">Scored 95% average on quizzes</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <AlertDialog open={downloadConfirmOpen} onOpenChange={setDownloadConfirmOpen}>

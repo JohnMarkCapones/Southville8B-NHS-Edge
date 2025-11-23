@@ -24,10 +24,10 @@ import {
   MessageCircle,
   BookOpen,
   Zap,
-  Activity,
   Sparkles,
   FileText,
   Loader2,
+  Eye,
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUser, useStudentClubs } from "@/hooks"
@@ -316,8 +316,8 @@ export default function ClubsPage() {
                               size="sm"
                               className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
                             >
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Schedule
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Club
                             </Button>
                           </Link>
                           <Link href={`/student/clubs/${generateSlug(club.name)}`}>
@@ -330,17 +330,6 @@ export default function ClubsPage() {
                               Members
                             </Button>
                           </Link>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <Button size="sm" variant="ghost" className="hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                            Chat
-                          </Button>
-                          <Button size="sm" variant="ghost" className="hover:bg-green-50 dark:hover:bg-green-900/20">
-                            <Activity className="w-4 h-4 mr-2" />
-                            Activity
-                          </Button>
                         </div>
                       </CardContent>
                     </Card>

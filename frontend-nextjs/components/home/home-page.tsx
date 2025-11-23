@@ -586,7 +586,7 @@ export default function HomePage() {
             </Badge>
             
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-              Experience Our <span className="gradient-text">Advanced LMS Platform</span>
+              Experience Our <span className="gradient-text">Advanced AI LMS Platform</span>
             </h2>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
@@ -594,7 +594,7 @@ export default function HomePage() {
               Our comprehensive platform provides everything students and educators need to succeed.
             </p>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-white" />
@@ -617,6 +617,14 @@ export default function HomePage() {
                 </div>
                 <h3 className="font-semibold mb-2">Progress Tracking</h3>
                 <p className="text-sm text-muted-foreground">Real-time analytics and performance insights</p>
+              </div>
+
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">AI Assistant</h3>
+                <p className="text-sm text-muted-foreground">Intelligent support and personalized learning guidance</p>
               </div>
             </div>
 

@@ -65,10 +65,10 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
       className={cn(
         "relative overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1",
         place === 1
-          ? "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50"
+          ? "border-yellow-300 dark:border-yellow-600 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/30 dark:to-amber-900/30"
           : place === 2
-            ? "border-gray-300 bg-gradient-to-br from-gray-50 to-slate-50"
-            : "border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50",
+            ? "border-gray-300 dark:border-gray-600 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-800/50 dark:to-slate-800/50"
+            : "border-amber-300 dark:border-amber-600 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30",
       )}
     >
       <div className={cn("h-2 w-full bg-gradient-to-r", gradient)} />
@@ -76,18 +76,18 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
         <div className="flex items-center gap-4">
           <div className={cn("rounded-full p-3 text-white bg-gradient-to-br", gradient)}>{medal}</div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm text-muted-foreground">#{place}</div>
-            <div className="font-bold text-lg truncate">{entry.student.name}</div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground dark:text-slate-400">#{place}</div>
+            <div className="font-bold text-lg truncate text-slate-900 dark:text-slate-100">{entry.student.name}</div>
+            <div className="text-sm text-muted-foreground dark:text-slate-400">
               {entry.student.gradeLevel && `Grade ${entry.student.gradeLevel}`}
               {entry.student.section && ` • Section ${entry.student.section}`}
             </div>
           </div>
           <div className="text-right">
-            <div className="font-extrabold text-2xl text-emerald-600">
+            <div className="font-extrabold text-2xl text-emerald-600 dark:text-emerald-400">
               {formatPoints(entry.stats.totalPoints)}
             </div>
-            <div className="text-xs text-muted-foreground">Level {entry.stats.level}</div>
+            <div className="text-xs text-muted-foreground dark:text-slate-400">Level {entry.stats.level}</div>
           </div>
         </div>
 
@@ -205,18 +205,18 @@ export default function StudentRankingPage() {
 
   return (
     <StudentLayout>
-      <div className="flex-1 p-6 space-y-8 bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
+      <div className="flex-1 p-6 space-y-8 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         {/* Header Section */}
         <div className="text-center space-y-4">
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full shadow-lg">
+            <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 rounded-full shadow-lg">
               <Trophy className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-400 dark:to-emerald-500 bg-clip-text text-transparent">
             Student Rankings
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
             Discover top performers and track academic excellence across all grade levels
           </p>
         </div>
@@ -273,13 +273,13 @@ export default function StudentRankingPage() {
         </div>
 
         {/* Filters */}
-        <Card className="shadow-lg border-emerald-200">
+        <Card className="shadow-lg border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-800">
           <CardHeader>
-            <CardTitle className="flex items-center text-emerald-700">
+            <CardTitle className="flex items-center text-emerald-700 dark:text-emerald-300">
               <Filter className="w-5 h-5 mr-2" />
               Filters
             </CardTitle>
-            <CardDescription>Filter rankings by scope</CardDescription>
+            <CardDescription className="text-slate-600 dark:text-slate-400">Filter rankings by scope</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -292,7 +292,7 @@ export default function StudentRankingPage() {
                   setPage(1)
                 }}
               >
-                <SelectTrigger className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400">
+                <SelectTrigger className="border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400 dark:focus:ring-emerald-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
                   <SelectValue placeholder="Scope" />
                 </SelectTrigger>
                 <SelectContent>
@@ -311,7 +311,7 @@ export default function StudentRankingPage() {
                     setPage(1)
                   }}
                 >
-                  <SelectTrigger className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400">
+                  <SelectTrigger className="border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400 dark:focus:ring-emerald-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
                     <SelectValue placeholder="Select Grade" />
                   </SelectTrigger>
                   <SelectContent>
@@ -331,7 +331,7 @@ export default function StudentRankingPage() {
                     setPage(1)
                   }}
                 >
-                  <SelectTrigger className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400">
+                  <SelectTrigger className="border-emerald-200 dark:border-emerald-800 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400 dark:focus:ring-emerald-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
                     <SelectValue placeholder="Select Section" />
                   </SelectTrigger>
                   <SelectContent>
@@ -347,7 +347,7 @@ export default function StudentRankingPage() {
             <div className="flex justify-between items-center mt-4">
               <div className="flex gap-2">
                 {leaderboardData && (
-                  <Badge variant="outline" className="border-emerald-200 text-emerald-700">
+                  <Badge variant="outline" className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
                     {leaderboardData.pagination.total} students
                   </Badge>
                 )}
@@ -358,7 +358,7 @@ export default function StudentRankingPage() {
                 onClick={exportCsv}
                 variant="outline"
                 disabled={!leaderboardData || leaderboardData.entries.length === 0}
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 bg-transparent"
+                className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 bg-transparent"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
@@ -370,16 +370,16 @@ export default function StudentRankingPage() {
         {/* Loading State */}
         {isLoading && (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-            <span className="ml-2 text-muted-foreground">Loading rankings...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400" />
+            <span className="ml-2 text-muted-foreground dark:text-slate-400">Loading rankings...</span>
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
             <CardContent className="p-6 text-center">
-              <p className="text-red-600">{error}</p>
+              <p className="text-red-600 dark:text-red-400">{error}</p>
             </CardContent>
           </Card>
         )}
@@ -387,7 +387,7 @@ export default function StudentRankingPage() {
         {/* Top 3 Podium */}
         {!isLoading && !error && topThree.length >= 3 && (
           <section>
-            <h2 className="text-2xl font-bold text-center mb-6 text-emerald-800">🏆 Top Performers</h2>
+            <h2 className="text-2xl font-bold text-center mb-6 text-emerald-800 dark:text-emerald-400">🏆 Top Performers</h2>
             <div className="grid gap-6 md:grid-cols-3 items-end">
               {/* Second place */}
               <div className="md:translate-y-4">
@@ -421,11 +421,11 @@ export default function StudentRankingPage() {
 
         {/* Empty State */}
         {!isLoading && !error && leaderboardData && leaderboardData.entries.length === 0 && (
-          <Card>
+          <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             <CardContent className="py-12 text-center">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium text-muted-foreground">No rankings available</p>
-              <p className="text-sm text-muted-foreground">Check back later for updated rankings</p>
+              <Users className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-slate-600" />
+              <p className="text-lg font-medium text-muted-foreground dark:text-slate-300">No rankings available</p>
+              <p className="text-sm text-muted-foreground dark:text-slate-400">Check back later for updated rankings</p>
             </CardContent>
           </Card>
         )}

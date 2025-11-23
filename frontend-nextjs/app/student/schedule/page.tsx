@@ -381,84 +381,259 @@ export default function SchedulePage() {
 
   const weekDates = getDaysOfWeek(currentWeek)
 
-  const downloadScheduleAsPDF = () => {
-    // Create a new window for printing
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) return
+  const downloadScheduleAsPDF = async () => {
+    if (schedules.length === 0) return
 
-    const scheduleHTML = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Class Schedule</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .schedule-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .schedule-table th, .schedule-table td { border: 1px solid #ddd; padding: 12px; text-align: center; }
-            .schedule-table th { background-color: #f8f9fa; font-weight: bold; }
-            .subject-cell { font-weight: bold; }
-            .teacher-cell { font-size: 0.9em; color: #666; }
-            .room-cell { font-size: 0.8em; color: #888; }
-            .break-cell { background-color: #f0f0f0; color: #666; }
-            @media print { body { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Class Schedule</h1>
-            <h2>My Schedule</h2>
-            <p>Week of ${weekDates[0].toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
-          </div>
-          <table class="schedule-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                  ${weekDays.map((day) => `<th>${day}</th>`).join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${timeSlots
-                .map(
-                  (time) => `
-                <tr>
-                  <td><strong>${time}</strong></td>
-                  ${weekDays
-                    .map((day) => {
-                      const classData = (scheduleData as any)[day]?.[time]
-                      if (!classData) {
-                        return "<td></td>"
-                      }
-                      return `
-                      <td>
-                        <div class="subject-cell">${classData.subject}</div>
-                        <div class="teacher-cell">${classData.teacher || ''}</div>
-                        <div class="room-cell">${classData.room || ''}</div>
-                      </td>
-                    `
-                    })
-                    .join("")}
-                </tr>
-              `,
-                )
-                .join("")}
-            </tbody>
-          </table>
-          <div style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9em;">
-            Generated on ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-          </div>
-        </body>
-      </html>
-    `
+    try {
+      // Dynamically import jsPDF
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      })
 
-    printWindow.document.write(scheduleHTML)
-    printWindow.document.close()
+      // Helper to convert hex to RGB
+      const hexToRgb = (hex?: string) => {
+        if (!hex) return null
+        const m = hex.replace('#', '')
+        const value = m.length === 3
+          ? m.split('').map((c) => c + c).join('')
+          : m
+        const intVal = parseInt(value, 16)
+        const r = (intVal >> 16) & 255
+        const g = (intVal >> 8) & 255
+        const b = intVal & 255
+        return { r, g, b }
+      }
 
-    // Wait for content to load then print
-    setTimeout(() => {
-      printWindow.print()
-      printWindow.close()
-    }, 500)
+      // Helper to get readable text color
+      const getTextColor = (bg?: string) => {
+        const rgb = hexToRgb(bg)
+        if (!rgb) return { r: 0, g: 0, b: 0 } // black
+        const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255
+        return luminance > 0.5 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 }
+      }
+
+      let yPos = 10
+
+      // Header with pastel background
+      doc.setFillColor(230, 240, 250) // pastel blue
+      doc.rect(0, 0, 297, 18, 'F')
+      
+      doc.setTextColor(60, 70, 85) // soft dark gray
+      doc.setFontSize(22)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Class Schedule', 148, yPos, { align: 'center' })
+      yPos += 7
+
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'normal')
+      doc.text('My Weekly Academic Schedule', 148, yPos, { align: 'center' })
+      yPos += 5
+
+      doc.setFontSize(10)
+      doc.setTextColor(100, 110, 125) // softer gray
+      doc.text(
+        `Week of ${weekDates[0].toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} - ${weekDates[4].toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
+        148,
+        yPos,
+        { align: 'center' }
+      )
+      yPos += 10
+
+      // Reset text color
+      doc.setTextColor(0, 0, 0)
+
+      // Table setup - full page width
+      const pageWidth = 297
+      const margin = 5
+      const timeColWidth = 25
+      const availableWidth = pageWidth - (margin * 2) - timeColWidth
+      const colWidth = availableWidth / 5 // 5 days
+      const startX = margin
+      const rowHeight = 12 // bigger rows
+      const headerY = yPos
+
+      // Table header - pastel colors
+      doc.setFillColor(220, 230, 240) // pastel blue-gray
+      doc.rect(startX, headerY, timeColWidth, rowHeight, 'F')
+      doc.setDrawColor(180, 190, 200) // soft border
+      doc.setLineWidth(0.3)
+      doc.rect(startX, headerY, timeColWidth, rowHeight, 'S')
+      
+      doc.setTextColor(60, 70, 85)
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Time', startX + timeColWidth / 2, headerY + 7, { align: 'center' })
+
+      // Day headers with pastel colors
+      const dayColors = [
+        { r: 220, g: 235, b: 250 },   // pastel blue
+        { r: 235, g: 225, b: 250 },   // pastel purple
+        { r: 245, g: 230, b: 250 },   // pastel pink
+        { r: 250, g: 235, b: 240 },   // pastel rose
+        { r: 245, g: 240, b: 250 },   // pastel lavender
+      ]
+
+      const dayTextColors = [
+        { r: 80, g: 100, b: 140 },    // soft blue-gray
+        { r: 100, g: 80, b: 130 },    // soft purple-gray
+        { r: 130, g: 90, b: 140 },    // soft pink-gray
+        { r: 140, g: 90, b: 110 },    // soft rose-gray
+        { r: 120, g: 100, b: 140 },   // soft lavender-gray
+      ]
+
+      weekDays.forEach((day, idx) => {
+        const x = startX + timeColWidth + colWidth * idx
+        const bgColor = dayColors[idx]
+        const textColor = dayTextColors[idx]
+        doc.setFillColor(bgColor.r, bgColor.g, bgColor.b)
+        doc.rect(x, headerY, colWidth, rowHeight, 'F')
+        doc.setDrawColor(180, 190, 200)
+        doc.rect(x, headerY, colWidth, rowHeight, 'S')
+        doc.setTextColor(textColor.r, textColor.g, textColor.b)
+        doc.text(day, x + colWidth / 2, headerY + 7, { align: 'center' })
+      })
+
+      yPos += rowHeight
+      doc.setTextColor(0, 0, 0)
+
+      // Table rows with pastel styling
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setDrawColor(200, 210, 220) // soft border
+      doc.setLineWidth(0.2)
+
+      timeSlots.forEach((time, timeIdx) => {
+        if (yPos > 175) {
+          // New page if needed
+          doc.addPage()
+          yPos = 10
+          
+          // Redraw header on new page
+          doc.setFillColor(230, 240, 250)
+          doc.rect(0, 0, 297, 18, 'F')
+          doc.setTextColor(60, 70, 85)
+          doc.setFontSize(18)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Class Schedule (continued)', 148, 10, { align: 'center' })
+          doc.setTextColor(0, 0, 0)
+          yPos = 25
+        }
+
+        // Time column with pastel background
+        const isEvenRow = timeIdx % 2 === 0
+        if (isEvenRow) {
+          doc.setFillColor(245, 248, 250) // very light pastel gray
+          doc.rect(startX, yPos, timeColWidth, rowHeight, 'F')
+        }
+        doc.setDrawColor(200, 210, 220)
+        doc.rect(startX, yPos, timeColWidth, rowHeight, 'S')
+        
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.setTextColor(70, 80, 95) // soft dark gray
+        doc.text(time, startX + timeColWidth / 2, yPos + 7, { align: 'center' })
+
+        // Day columns
+        weekDays.forEach((day, idx) => {
+          const x = startX + timeColWidth + colWidth * idx
+          const classData = (scheduleData as any)[day]?.[time]
+          
+          // Cell background - pastel
+          if (isEvenRow && !classData) {
+            doc.setFillColor(250, 252, 255) // very light pastel
+            doc.rect(x, yPos, colWidth, rowHeight, 'F')
+          }
+          
+          doc.setDrawColor(200, 210, 220)
+          doc.rect(x, yPos, colWidth, rowHeight, 'S')
+          
+          if (classData) {
+            // Use pastel version of subject color
+            const bgRgb = hexToRgb(classData.colorHex)
+            let pastelRgb = { r: 240, g: 245, b: 250 } // default pastel blue
+            
+            if (bgRgb) {
+              // Convert to pastel by mixing with white (70% white, 30% original)
+              pastelRgb = {
+                r: Math.round(255 * 0.7 + bgRgb.r * 0.3),
+                g: Math.round(255 * 0.7 + bgRgb.g * 0.3),
+                b: Math.round(255 * 0.7 + bgRgb.b * 0.3)
+              }
+            }
+            
+            doc.setFillColor(pastelRgb.r, pastelRgb.g, pastelRgb.b)
+            doc.rect(x + 0.3, yPos + 0.3, colWidth - 0.6, rowHeight - 0.6, 'F')
+            
+            // Text color - dark gray for readability on pastel
+            doc.setTextColor(60, 70, 85)
+            
+            // Subject name - bigger font
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(9)
+            const subjectLines = doc.splitTextToSize(classData.subject || 'Class', colWidth - 4)
+            doc.text(subjectLines[0], x + 2, yPos + 4)
+            
+            // Teacher name
+            if (classData.teacher) {
+              doc.setFont('helvetica', 'normal')
+              doc.setFontSize(8)
+              const teacherLines = doc.splitTextToSize(classData.teacher, colWidth - 4)
+              doc.text(teacherLines[0], x + 2, yPos + 6.5)
+            }
+            
+            // Room
+            if (classData.room) {
+              doc.setFontSize(7.5)
+              doc.setTextColor(100, 110, 125) // softer gray
+              const roomLines = doc.splitTextToSize(classData.room, colWidth - 4)
+              doc.text(roomLines[0], x + 2, yPos + 9)
+            }
+            
+            // Reset text color
+            doc.setTextColor(0, 0, 0)
+          }
+        })
+
+        yPos += rowHeight
+      })
+
+      // Footer with pastel styling
+      const pageCount = doc.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        
+        // Footer line - pastel
+        doc.setDrawColor(220, 225, 230)
+        doc.setLineWidth(0.3)
+        doc.line(margin, 195, pageWidth - margin, 195)
+        
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(120, 130, 140) // soft gray
+        doc.text(
+          `Generated on ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`,
+          148,
+          200,
+          { align: 'center' }
+        )
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          148,
+          203,
+          { align: 'center' }
+        )
+      }
+
+      // Download the PDF
+      const fileName = `schedule-${new Date().toISOString().split('T')[0]}.pdf`
+      doc.save(fileName)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Failed to generate PDF. Please try again.')
+    }
   }
 
   // Show loading state

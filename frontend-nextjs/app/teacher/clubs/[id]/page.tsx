@@ -1804,29 +1804,6 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 dark:border dark:border-blue-800">
-                      <CardContent className="p-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                            <Users className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 dark:text-white">Manage Members</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Add, edit, or remove club members
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => setActiveSection("members")}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            Open
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-
                     <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 dark:border dark:border-purple-800">
                       <CardContent className="p-6">
                         <div className="flex items-center space-x-4">
@@ -3473,14 +3450,14 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                           ))}
 
                         {formResponses.filter((r) => r.status === "pending").length === 0 && (
-                          <div className="text-center py-12">
+                          <div className="flex flex-col items-center justify-center py-12">
                             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                               <CheckCircle className="w-8 h-8 text-gray-400" />
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
                               No Pending Applications
                             </h3>
-                            <p className="text-gray-600 dark:text-gray-400">All applications have been reviewed.</p>
+                            <p className="text-gray-600 dark:text-gray-400 text-center">All applications have been reviewed.</p>
                           </div>
                         )}
                       </div>

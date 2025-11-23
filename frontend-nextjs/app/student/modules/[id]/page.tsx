@@ -47,7 +47,7 @@ export default function ModuleViewerPage() {
   const [error, setError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
-  const [fileType, setFileType] = useState<'pdf' | 'pptx' | null>(null)
+  const [fileType, setFileType] = useState<'pdf' | 'pptx' | 'word' | null>(null)
   const [pptxDownloadUrl, setPptxDownloadUrl] = useState<string | null>(null)
   const [slideUrls, setSlideUrls] = useState<string[]>([])
   const [currentSlide, setCurrentSlide] = useState(1)
@@ -71,54 +71,94 @@ export default function ModuleViewerPage() {
         // Determine file type and get appropriate URLs
         const fileName = data.r2_file_key || data.file_url || ''
         const fileExtension = fileName.split('.').pop()?.toLowerCase()
+        const mimeType = data.mime_type?.toLowerCase() || ''
         
         console.log('[ModuleViewer] File extension detected:', fileExtension)
+        console.log('[ModuleViewer] MIME type:', mimeType)
         console.log('[ModuleViewer] R2 file key:', data.r2_file_key)
         console.log('[ModuleViewer] File URL:', data.file_url)
         
-            if (fileExtension === 'pptx') {
-              setFileType('pptx')
-              console.log('[ModuleViewer] Detected PPTX file, converting to slideshow...')
-              
-              try {
-                const downloadData = await getModuleDownloadUrl(moduleId)
-                console.log('[ModuleViewer] PPTX Download response:', downloadData)
-            
-            if (downloadData.slideUrls && downloadData.slideUrls.length > 0) {
-              // Store slide URLs for slideshow viewer
-              setSlideUrls(downloadData.slideUrls)
-              console.log('[ModuleViewer] ✅ PPTX slide URLs obtained:', downloadData.slideUrls.length, 'slides')
-            } else if (downloadData.downloadUrl) {
-              // Fallback to download URL if no slide URLs
-              setPptxDownloadUrl(downloadData.downloadUrl)
-              console.log('[ModuleViewer] ✅ PPTX download URL obtained (fallback):', downloadData.downloadUrl)
-            } else {
-              console.log('[ModuleViewer] ❌ No slide URLs or download URL received for PPTX')
+        // Check for Word/DOC files
+        const isWordFile = fileExtension === 'doc' || fileExtension === 'docx' || 
+          mimeType.includes('word') || mimeType.includes('msword') ||
+          mimeType.includes('officedocument.wordprocessingml')
+        
+        if (fileExtension === 'pptx' || mimeType.includes('presentation')) {
+          setFileType('pptx')
+          console.log('[ModuleViewer] Detected PPTX file, converting to slideshow...')
+          
+          try {
+            const downloadData = await getModuleDownloadUrl(moduleId)
+            console.log('[ModuleViewer] PPTX Download response:', downloadData)
+        
+        if (downloadData.slideUrls && downloadData.slideUrls.length > 0) {
+          // Store slide URLs for slideshow viewer
+          setSlideUrls(downloadData.slideUrls)
+          console.log('[ModuleViewer] ✅ PPTX slide URLs obtained:', downloadData.slideUrls.length, 'slides')
+        } else if (downloadData.downloadUrl) {
+          // Fallback to download URL if no slide URLs
+          setPptxDownloadUrl(downloadData.downloadUrl)
+          console.log('[ModuleViewer] ✅ PPTX download URL obtained (fallback):', downloadData.downloadUrl)
+        } else {
+          console.log('[ModuleViewer] ❌ No slide URLs or download URL received for PPTX')
+        }
+      } catch (downloadErr) {
+        console.error('[ModuleViewer] ❌ Failed to get PPTX download URL:', downloadErr)
+        setError('Failed to get PPTX download link. Please try again.')
+      }
+        } else if (isWordFile) {
+          // Handle Word/DOC files - download only, no preview
+          setFileType('word')
+          console.log('[ModuleViewer] Detected Word/DOC file - download only')
+          
+          // Get download URL for Word files
+          try {
+            const downloadData = await getModuleDownloadUrl(moduleId)
+            if (downloadData.downloadUrl) {
+              setPptxDownloadUrl(downloadData.downloadUrl) // Reuse this state for download URL
+              console.log('[ModuleViewer] ✅ Word file download URL obtained:', downloadData.downloadUrl)
             }
           } catch (downloadErr) {
-            console.error('[ModuleViewer] ❌ Failed to get PPTX download URL:', downloadErr)
-            setError('Failed to get PPTX download link. Please try again.')
+            console.error('[ModuleViewer] ❌ Failed to get Word file download URL:', downloadErr)
           }
         } else {
-          // Default to PDF handling
-          setFileType('pdf')
+          // Default to PDF handling (only for actual PDF files)
+          const isPdfFile = fileExtension === 'pdf' || mimeType.includes('pdf')
           
-          if (!data.file_url && data.r2_file_key) {
+          if (isPdfFile) {
+            setFileType('pdf')
+            
+            if (!data.file_url && data.r2_file_key) {
+              try {
+                console.log('[ModuleViewer] Getting download URL for R2 file key:', data.r2_file_key)
+                const downloadData = await getModuleDownloadUrl(moduleId)
+                console.log('[ModuleViewer] Download response:', downloadData)
+                setPdfUrl(downloadData.downloadUrl || null)
+                console.log('[ModuleViewer] ✅ Download URL obtained:', downloadData.downloadUrl)
+              } catch (downloadErr) {
+                console.error('[ModuleViewer] ❌ Failed to get download URL:', downloadErr)
+                // Keep pdfUrl as null, will show "PDF Not Available"
+              }
+            } else if (data.file_url) {
+              console.log('[ModuleViewer] Using direct file URL:', data.file_url)
+              setPdfUrl(data.file_url)
+            } else {
+              console.log('[ModuleViewer] ❌ No file URL or R2 file key available')
+            }
+          } else {
+            // Unknown file type - treat as download-only
+            setFileType('word') // Reuse word type for download-only message
+            console.log('[ModuleViewer] Unknown file type, treating as download-only')
+            
             try {
-              console.log('[ModuleViewer] Getting download URL for R2 file key:', data.r2_file_key)
               const downloadData = await getModuleDownloadUrl(moduleId)
-              console.log('[ModuleViewer] Download response:', downloadData)
-              setPdfUrl(downloadData.downloadUrl || null)
-              console.log('[ModuleViewer] ✅ Download URL obtained:', downloadData.downloadUrl)
+              if (downloadData.downloadUrl) {
+                setPptxDownloadUrl(downloadData.downloadUrl)
+                console.log('[ModuleViewer] ✅ Download URL obtained for unknown file type')
+              }
             } catch (downloadErr) {
               console.error('[ModuleViewer] ❌ Failed to get download URL:', downloadErr)
-              // Keep pdfUrl as null, will show "PDF Not Available"
             }
-          } else if (data.file_url) {
-            console.log('[ModuleViewer] Using direct file URL:', data.file_url)
-            setPdfUrl(data.file_url)
-          } else {
-            console.log('[ModuleViewer] ❌ No file URL or R2 file key available')
           }
         }
       } catch (err) {
@@ -140,7 +180,7 @@ export default function ModuleViewerPage() {
       setDownloading(true)
       console.log('[ModuleViewer] Downloading module:', module.id)
       
-      // Use PPTX download URL if available, otherwise get download URL
+      // Use stored download URL if available (for PPTX/Word), otherwise get download URL
       let downloadUrl = pptxDownloadUrl
       
       if (!downloadUrl) {
@@ -406,17 +446,17 @@ export default function ModuleViewerPage() {
             <div className="mt-4 sm:mt-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs sm:text-sm font-medium">
-                    {fileType === 'pptx' ? 'File Status' : 'Reading Progress'}
+                    {fileType === 'pptx' || fileType === 'word' ? 'File Status' : 'Reading Progress'}
                   </span>
                   <span className="text-xs sm:text-sm font-bold">
-                    {fileType === 'pptx' 
+                    {fileType === 'pptx' || fileType === 'word'
                       ? 'Download Only'
                       : `Page ${currentPage} of ${totalPages || parsedTotalPages}`
                     }
                   </span>
                 </div>
               <div className="relative">
-                {fileType === 'pptx' ? (
+                {fileType === 'pptx' || fileType === 'word' ? (
                   <div className="h-2 sm:h-3 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center">
                     <span className="text-xs font-medium text-orange-700 dark:text-orange-300">
                       Preview not available
@@ -549,7 +589,9 @@ export default function ModuleViewerPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base sm:text-lg">
-                      {fileType === 'pptx' ? 'PowerPoint File' : 'PDF Viewer'}
+                      {fileType === 'pptx' ? 'PowerPoint File' : 
+                       fileType === 'word' ? 'Word Document' : 
+                       'PDF Viewer'}
                     </CardTitle>
                   </div>
                 </CardHeader>
@@ -588,6 +630,47 @@ export default function ModuleViewerPage() {
                                 <>
                                   <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                                   <span className="hidden sm:inline">Download PowerPoint</span>
+                                  <span className="sm:hidden">Download</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : fileType === 'word' ? (
+                    <div className="relative bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden min-h-[300px] sm:min-h-[400px] lg:min-h-[600px] flex items-center justify-center">
+                      <div className="text-center space-y-4 sm:space-y-6 max-w-md px-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto">
+                          <FileText className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-blue-500" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2 sm:mb-3">
+                            Word Document Preview Not Available
+                          </h3>
+                          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mb-2">
+                            We can't preview Word documents in the browser.
+                          </p>
+                          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-500 mb-4 sm:mb-6">
+                            Please download the file to view it in Microsoft Word or another compatible application.
+                          </p>
+                          <div className="flex gap-2 sm:gap-4 justify-center">
+                            <Button
+                              size="sm"
+                              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg text-sm sm:text-base"
+                              onClick={handleDownload}
+                              disabled={downloading}
+                            >
+                              {downloading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                                  <span className="hidden sm:inline">Downloading...</span>
+                                  <span className="sm:hidden">Downloading</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                                  <span className="hidden sm:inline">Download Document</span>
                                   <span className="sm:hidden">Download</span>
                                 </>
                               )}

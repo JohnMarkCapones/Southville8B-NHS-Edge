@@ -661,64 +661,6 @@ export default function NewsPreviewPage() {
                     {article.approvalStatus.replace("_", " ")}
                   </Badge>
                 </div>
-
-                <Separator />
-
-                {/* Review Comments */}
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Review Comments ({reviewComments.length})</p>
-                  {isLoadingComments ? (
-                    <div className="space-y-2">
-                      {Array.from({ length: 2 }).map((_, idx) => (
-                        <div key={idx} className="border rounded-lg p-3 space-y-2 bg-muted/30 animate-pulse">
-                          <div className="flex items-center justify-between">
-                            <div className="h-4 w-24 bg-gray-300 rounded"></div>
-                            <div className="h-3 w-32 bg-gray-300 rounded"></div>
-                          </div>
-                          <div className="h-3 w-full bg-gray-300 rounded"></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : reviewComments.length > 0 ? (
-                    reviewComments.map((review) => (
-                      <div key={review.id} className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">{review.author}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(review.timestamp).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{review.comment}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No comments yet</p>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Add Comment */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Add Feedback</label>
-                  <Textarea
-                    placeholder="Add your comments or feedback..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                  />
-                  <Button onClick={handleAddComment} size="sm" className="w-full gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Add Comment
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 
