@@ -24,128 +24,97 @@ import {
   MessageCircle,
   BookOpen,
   Zap,
-  Activity,
   Sparkles,
   FileText,
+  Loader2,
+  Eye,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useUser, useStudentClubs } from "@/hooks"
+import { useQuery } from "@tanstack/react-query"
+import { getClubs } from "@/lib/api/endpoints/clubs"
 
 export default function ClubsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
-  const [showEmptyState, setShowEmptyState] = useState(false)
+  const [page, setPage] = useState(1)
+  const [activeTab, setActiveTab] = useState("my-clubs")
+  const limit = 50
+  const { data: user } = useUser()
+  const studentId = user?.student?.id
+  const { data: myClubsResp } = useStudentClubs(studentId)
+
+  // Fetch all clubs using the newer API
+  const { data: availableResp = [], isLoading: loadingClubs } = useQuery({
+    queryKey: ['clubs', 'all'],
+    queryFn: () => getClubs({ limit: 100 }),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters first
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .trim()
   }
 
-  const myClubs = [
-    {
-      id: 1,
-      name: "Math Club",
-      role: "Member",
-      members: 42,
-      nextMeeting: "Tomorrow 3:00 PM",
-      location: "Room 301",
-      description: "Competitive mathematics and problem solving",
-      achievements: ["Municipal Champions 2024", "Regional Qualifiers"],
+  const myClubs = useMemo(() => {
+    const memberships = myClubsResp || []
+    return memberships.map((m, idx) => ({
+      id: m.club.id,
+      name: m.club.name,
+      role: m.position?.name || 'Member',
+      members: m.club.member_count ?? 0,
+      nextMeeting: "",
+      location: "",
+      description: m.club.description || "",
+      achievements: [],
       color: "bg-blue-500",
-      joined: "2024-01-15",
-      engagement: 85,
-      upcomingEvents: 3,
-      category: "Academic",
-      advisor: "Ms. Rodriguez",
-      meetingFrequency: "Weekly",
-      socialLinks: { facebook: "#", instagram: "#" },
-    },
-    {
-      id: 2,
-      name: "Science Club",
-      role: "Vice President",
-      members: 38,
-      nextMeeting: "Friday 2:30 PM",
-      location: "Science Lab",
-      description: "Hands-on experiments and science fair preparation",
-      achievements: ["Science Fair Winners", "Innovation Award"],
-      color: "bg-green-500",
-      joined: "2024-01-10",
-      engagement: 92,
-      upcomingEvents: 2,
-      category: "Academic",
-      advisor: "Mr. Santos",
-      meetingFrequency: "Bi-weekly",
-      socialLinks: { facebook: "#", instagram: "#" },
-    },
-  ]
+      joined: m.joined_at || "",
+      engagement: 0,
+      upcomingEvents: 0,
+      category: m.club.category || "",
+      advisor: "",
+      meetingFrequency: "",
+      socialLinks: {},
+    }))
+  }, [myClubsResp])
+  
 
-  const availableClubs = [
-    {
-      id: 3,
-      name: "Drama Club",
-      members: 25,
-      nextMeeting: "Monday 4:00 PM",
-      location: "Auditorium",
-      description: "Theater performances and creative expression",
+  const availableClubs = useMemo(() => {
+    const list = availableResp || []
+    return list.map((c, idx) => ({
+      id: c.id,
+      name: c.name,
+      members: 0, // Can be populated if membership count is available
+      nextMeeting: "",
+      location: "",
+      description: c.description || "",
       color: "bg-purple-500",
-      advisor: "Ms. Torres",
-      category: "Arts",
-      difficulty: "Beginner Friendly",
-      timeCommitment: "3-4 hours/week",
-      highlights: ["Annual School Play", "Drama Competitions"],
-    },
-    {
-      id: 4,
-      name: "Art Club",
-      members: 30,
-      nextMeeting: "Wednesday 3:30 PM",
-      location: "Art Room",
-      description: "Visual arts, painting, and creative projects",
-      color: "bg-pink-500",
-      advisor: "Mr. Dela Cruz",
-      category: "Arts",
+      advisor: c.advisor?.full_name || "",
+      category: c.domain?.name || "",
       difficulty: "All Levels",
-      timeCommitment: "2-3 hours/week",
-      highlights: ["Art Exhibitions", "Community Murals"],
-    },
-    {
-      id: 5,
-      name: "Debate Society",
-      members: 20,
-      nextMeeting: "Thursday 3:00 PM",
-      location: "Room 205",
-      description: "Public speaking and competitive debating",
-      color: "bg-orange-500",
-      advisor: "Mrs. Gonzales",
-      category: "Academic",
-      difficulty: "Intermediate",
-      timeCommitment: "4-5 hours/week",
-      highlights: ["Inter-school Debates", "Public Speaking Workshops"],
-    },
-    {
-      id: 6,
-      name: "Environmental Club",
-      members: 35,
-      nextMeeting: "Tuesday 3:30 PM",
-      location: "Garden Area",
-      description: "Environmental awareness and sustainability projects",
-      color: "bg-emerald-500",
-      advisor: "Ms. Reyes",
-      category: "Service",
-      difficulty: "Beginner Friendly",
-      timeCommitment: "2-3 hours/week",
-      highlights: ["Tree Planting", "Recycling Programs"],
-    },
-  ]
+      timeCommitment: "",
+      highlights: [],
+    }))
+  }, [availableResp])
 
-  const clubStats = {
-    totalClubs: availableClubs.length + 2,
-    activeMembers: 190,
-    upcomingEvents: 8,
-    achievements: 15,
-  }
+  const clubStats = useMemo(() => {
+    // Calculate total achievements across all clubs
+    const totalAchievements = myClubs.reduce((sum, club) => sum + (club.achievements?.length || 0), 0)
+
+    // Calculate upcoming events
+    const totalUpcomingEvents = myClubs.reduce((sum, club) => sum + (club.upcomingEvents || 0), 0)
+
+    return {
+      totalClubs: availableClubs.length,
+      myClubs: myClubs.length,
+      upcomingEvents: totalUpcomingEvents,
+      achievements: totalAchievements,
+    }
+  }, [availableClubs.length, myClubs])
 
   const categories = ["all", "Academic", "Arts", "Service", "Sports", "Technology"]
 
@@ -170,11 +139,17 @@ export default function ClubsPage() {
             interests!
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+            <Button
+              onClick={() => setActiveTab("discover")}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+            >
               <Sparkles className="w-4 h-4 mr-2" />
               Discover Clubs
             </Button>
-            <Button variant="outline">
+            <Button
+              onClick={() => setActiveTab("discover")}
+              variant="outline"
+            >
               <MessageCircle className="w-4 h-4 mr-2" />
               Get Recommendations
             </Button>
@@ -201,12 +176,12 @@ export default function ClubsPage() {
                   <div className="text-sm text-white/80">Total Clubs</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold">{clubStats.activeMembers}</div>
-                  <div className="text-sm text-white/80">Active Members</div>
+                  <div className="text-2xl font-bold">{clubStats.myClubs}</div>
+                  <div className="text-sm text-white/80">My Clubs</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold">{clubStats.upcomingEvents}</div>
-                  <div className="text-sm text-white/80">Events This Month</div>
+                  <div className="text-sm text-white/80">Upcoming Events</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold">{clubStats.achievements}</div>
@@ -217,7 +192,7 @@ export default function ClubsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="my-clubs" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
             <TabsTrigger value="my-clubs" className="flex items-center gap-2">
               <Heart className="w-4 h-4" />
@@ -234,14 +209,9 @@ export default function ClubsPage() {
           </TabsList>
 
           <TabsContent value="my-clubs" className="space-y-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
-                  What it looks like with no active clubs:
-                </h3>
-                <EmptyClubsState />
-              </div>
-
+            {myClubs.length === 0 ? (
+              <EmptyClubsState />
+            ) : (
               <div>
                 <h2 className="text-2xl font-semibold flex items-center mb-6">
                   <Heart className="w-6 h-6 mr-2 text-red-500" />
@@ -346,8 +316,8 @@ export default function ClubsPage() {
                               size="sm"
                               className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
                             >
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Schedule
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Club
                             </Button>
                           </Link>
                           <Link href={`/student/clubs/${generateSlug(club.name)}`}>
@@ -361,23 +331,12 @@ export default function ClubsPage() {
                             </Button>
                           </Link>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <Button size="sm" variant="ghost" className="hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                            Chat
-                          </Button>
-                          <Button size="sm" variant="ghost" className="hover:bg-green-50 dark:hover:bg-green-900/20">
-                            <Activity className="w-4 h-4 mr-2" />
-                            Activity
-                          </Button>
-                        </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="applications" className="space-y-6">
@@ -421,8 +380,14 @@ export default function ClubsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredClubs.map((club) => (
+            {loadingClubs ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-500" />
+                <p className="text-gray-600 dark:text-gray-400">Loading clubs...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredClubs.map((club) => (
                 <Card
                   key={club.id}
                   className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50/30 dark:from-gray-800 dark:to-gray-900/30 overflow-hidden"
@@ -513,9 +478,10 @@ export default function ClubsPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+              </div>
+            )}
 
-            {filteredClubs.length === 0 && (
+            {!loadingClubs && filteredClubs.length === 0 && (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                   <Search className="w-8 h-8 text-gray-400" />

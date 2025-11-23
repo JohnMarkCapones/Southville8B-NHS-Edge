@@ -138,11 +138,15 @@
 			<Border Classes="card">
 				<StackPanel>
 					<TextBlock Text="Upload CSV" Classes="section-title"/>
-					<TextBlock Text="Select a properly formatted CSV file (.csv)." Classes="label"/>
+					<TextBlock Text="Select a properly formatted CSV file (.csv). The system will automatically detect if it contains student or teacher data." Classes="label"/>
+					<TextBlock Text="{Binding DetectedImportType, StringFormat='Detected Type: {0}'}" 
+					   FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" 
+					   Margin="0,8,0,0" IsVisible="{Binding HasFile}"/>
 
 					<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0" VerticalAlignment="Center">
 						<StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0" VerticalAlignment="Center">
 							<Button Content="Browse File" Classes="secondary" Command="{Binding BrowseFileCommand}" VerticalAlignment="Center"/>
+							<Button Content="Load Sample" Classes="secondary" Command="{Binding LoadSampleCommand}" VerticalAlignment="Center"/>
 							<Button Content="Clear" Classes="secondary" Command="{Binding ClearFileCommand}" IsVisible="{Binding HasFile}" VerticalAlignment="Center"/>
 						</StackPanel>
 						<TextBlock Grid.Column="1" Text="{Binding SelectedFileName}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
@@ -154,53 +158,51 @@
 				</StackPanel>
 			</Border>
 
-			<!-- Mapping Section -->
-			<Border Classes="card">
+			<!-- File Summary Section -->
+			<Border Classes="card" IsVisible="{Binding HasFile}">
 				<StackPanel>
-					<TextBlock Text="Field Mapping" Classes="section-title"/>
-					<TextBlock Text="Match CSV columns to user fields" Classes="label"/>
-
+					<TextBlock Text="File Summary" Classes="section-title"/>
+					<TextBlock Text="{Binding SummaryText}" FontSize="12" Margin="0,0,0,12"
+					   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+					
 					<Grid ColumnDefinitions="*,*,*" Margin="0,8,0,0">
-						<StackPanel Margin="0,0,24,0">
-							<TextBlock Text="Full Name Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding FullNameColumn}" VerticalAlignment="Center"/>
-							<TextBlock Text="Username Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding UsernameColumn}" VerticalAlignment="Center"/>
-							<TextBlock Text="Email Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding EmailColumn}" VerticalAlignment="Center"/>
+						<StackPanel HorizontalAlignment="Center">
+							<TextBlock Text="{Binding TotalRows}" FontSize="20" FontWeight="Bold" 
+							   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+							<TextBlock Text="Total Rows" FontSize="11" 
+							   Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
 						</StackPanel>
-
-						<StackPanel Margin="0,0,24,0" Grid.Column="1">
-							<TextBlock Text="Role Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding RoleColumn}" VerticalAlignment="Center"/>
-							<TextBlock Text="Status Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding StatusColumn}" VerticalAlignment="Center"/>
-							<TextBlock Text="Grade Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding GradeColumn}" VerticalAlignment="Center"/>
+						<StackPanel HorizontalAlignment="Center" Grid.Column="1">
+							<TextBlock Text="{Binding ValidRows}" FontSize="20" FontWeight="Bold" 
+							   Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center"/>
+							<TextBlock Text="Valid Rows" FontSize="11" 
+							   Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
 						</StackPanel>
-
-						<StackPanel Grid.Column="2">
-							<TextBlock Text="Phone Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding PhoneColumn}" VerticalAlignment="Center"/>
-							<TextBlock Text="Password Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding PasswordColumn}" VerticalAlignment="Center"/>
-							<TextBlock Text="Require Reset Column" Classes="label"/>
-							<ComboBox ItemsSource="{Binding CsvColumns}" SelectedItem="{Binding RequireResetColumn}" VerticalAlignment="Center"/>
+						<StackPanel HorizontalAlignment="Center" Grid.Column="2">
+							<TextBlock Text="{Binding InvalidRows}" FontSize="20" FontWeight="Bold" 
+							   Foreground="{DynamicResource DangerBrush}" HorizontalAlignment="Center"/>
+							<TextBlock Text="Invalid Rows" FontSize="11" 
+							   Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
 						</StackPanel>
 					</Grid>
 				</StackPanel>
 			</Border>
 
 			<!-- Preview Section -->
-			<Border Classes="card">
+			<Border Classes="card" IsVisible="{Binding HasFile}">
 				<StackPanel>
 					<TextBlock Text="Preview (first 10 rows)" Classes="section-title"/>
 					<ScrollViewer MaxHeight="300" VerticalAlignment="Stretch">
-						<ItemsControl ItemsSource="{Binding PreviewRows}">
+						<ItemsControl ItemsSource="{Binding ParsedStudents}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
 									<Border Classes="sample-preview">
-										<TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/>
+										<StackPanel>
+											<TextBlock Text="{Binding full_name}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+											<TextBlock Text="{Binding lrn_id}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+											<TextBlock Text="{Binding grade_level}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+											<TextBlock Text="{Binding guardian_name}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+										</StackPanel>
 									</Border>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
@@ -209,13 +211,11 @@
 				</StackPanel>
 			</Border>
 
-			<!-- Summary & Actions -->
+			<!-- Import Actions -->
 			<Border Classes="card">
 				<StackPanel>
-					<TextBlock Text="Summary" Classes="section-title"/>
-					<TextBlock Text="{Binding SummaryText}" FontSize="12" Margin="0,0,0,12"
-					   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-
+					<TextBlock Text="Import Actions" Classes="section-title"/>
+					
 					<Grid ColumnDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Center">
 						<Button Content="Start Import" Classes="primary" Command="{Binding ImportCommand}"
 							IsEnabled="{Binding CanImport}" VerticalAlignment="Center"/>
@@ -223,8 +223,22 @@
 							Margin="16,0,0,0" VerticalAlignment="Center"/>
 					</Grid>
 
+					<!-- Progress Indicator -->
+					<StackPanel IsVisible="{Binding IsImporting}" Margin="0,16,0,0">
+						<TextBlock Text="{Binding ProgressText}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
+						   VerticalAlignment="Center" TextWrapping="Wrap"/>
+						<Grid Margin="0,8,0,0">
+							<ProgressBar Value="{Binding ImportProgress}" Maximum="100" Height="8" 
+							   Background="{DynamicResource BorderBrush}" Foreground="{DynamicResource AccentBrush}"/>
+							<TextBlock Text="{Binding ImportProgress, StringFormat='{}{0}%'}" 
+							   HorizontalAlignment="Center" VerticalAlignment="Center" 
+							   FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+						</Grid>
+					</StackPanel>
+
+					<!-- Import Results -->
 					<TextBlock Text="{Binding ImportStatusMessage}" FontSize="12" Foreground="{DynamicResource InfoBrush}"
-					   Margin="0,16,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+					   Margin="0,16,0,0" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding HasImportCompleted}"/>
 				</StackPanel>
 			</Border>
 		</StackPanel>

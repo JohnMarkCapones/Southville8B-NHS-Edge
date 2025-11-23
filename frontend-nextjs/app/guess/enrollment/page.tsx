@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import { JsonLd } from "@/components/seo/jsonld"
 import Link from "next/link"
 
+export const dynamic = "force-static"
+export const revalidate = 604800 // 7 days
+
 export const metadata: Metadata = {
   title: "Enrollment Process | Southville 8B NHS",
   description: "How to enroll at Southville 8B National High School — step-by-step enrollment process and requirements.",

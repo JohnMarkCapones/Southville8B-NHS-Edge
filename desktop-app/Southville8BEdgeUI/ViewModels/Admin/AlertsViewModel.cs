@@ -6,12 +6,26 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
+using Southville8BEdgeUI.Models.Api;
+using Southville8BEdgeUI.Services;
+using System.Threading.Tasks;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class AlertsViewModel : ViewModelBase
 {
+    private readonly IApiClient? _apiClient;
+    private readonly IToastService? _toastService;
     [ObservableProperty] private ObservableCollection<AlertItemViewModel> _alerts = new();
+    [ObservableProperty] private bool _isSaving;
+    [ObservableProperty] private string _errorMessage = string.Empty;
+
+    public bool IsNotSaving => !IsSaving;
+
+    partial void OnIsSavingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotSaving));
+    }
 
     // Form fields
     [ObservableProperty] private string _newType = "Weather";
@@ -30,7 +44,7 @@ public partial class AlertsViewModel : ViewModelBase
     [ObservableProperty] private TimeSpan? _newExpiresTime = new(23, 59, 0);
 
     // Reference lists
-    public string[] AlertTypes { get; } = new[] { "Weather", "Class Suspension", "Emergency", "System", "Announcement" };
+    public string[] AlertTypes { get; } = new[] { "Weather", "Class Suspension", "Emergency" };
     public string[] Priorities { get; } = new[] { "High", "Medium", "Low" };
     public string[] TargetScopes { get; } = new[] { "Whole School", "Grade Level", "Section" };
 
@@ -38,10 +52,19 @@ public partial class AlertsViewModel : ViewModelBase
     public int ActiveCount => Alerts.Count(a => a.IsActive);
     public IEnumerable<AlertItemViewModel> ActiveAlerts => Alerts.Where(a => a.IsActive).OrderByDescending(a => a.Priority).ThenBy(a => a.ExpiresAt);
 
-    public AlertsViewModel()
-    {
-        InitializeMockAlerts();
+    public AlertsViewModel() 
+    { 
+        InitializeMockAlerts(); 
         UpdateComputed();
+        // Subscribe to collection changes for computed properties
+        Alerts.CollectionChanged += (s, e) => UpdateComputed();
+    }
+
+    public AlertsViewModel(IApiClient apiClient, IToastService toastService)
+    {
+        _apiClient = apiClient;
+        _toastService = toastService;
+        _ = LoadAlertsAsync();
     }
 
     private void InitializeMockAlerts()
@@ -92,6 +115,41 @@ public partial class AlertsViewModel : ViewModelBase
         Alerts.Add(a3);
     }
 
+    private async Task LoadAlertsAsync()
+    {
+        if (_apiClient == null)
+        {
+            InitializeMockAlerts();
+            UpdateComputed();
+            return;
+        }
+
+        var resp = await _apiClient.GetAlertsAsync(page: 1, limit: 100);
+        Alerts.Clear();
+        if (resp?.Data != null)
+        {
+            foreach (var a in resp.Data)
+            {
+                Alerts.Add(new AlertItemViewModel
+                {
+                    Id = a.Id,
+                    Type = MapType(a.Type),
+                    Title = a.Title,
+                    Message = a.Message,
+                    CreatedAt = a.CreatedAt.LocalDateTime,
+                    ExpiresAt = a.ExpiresAt.LocalDateTime,
+                    Priority = "Medium",
+                    TargetAudience = a.RecipientId == null ? "all_school" : "user",
+                    Parent = this
+                });
+            }
+        }
+        UpdateComputed();
+    }
+
+    private static string MapType(string type)
+        => type switch { "warning" => "Weather", "error" => "Emergency", "system" => "System", _ => "Announcement" };
+
     private static string ToTargetAudience(string scope, string grade, string section)
     {
         return scope switch
@@ -118,50 +176,134 @@ public partial class AlertsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CreateAlert()
+    private async Task CreateAlert()
     {
+        // reset UI state
+        ErrorMessage = string.Empty;
         var expiresDate = NewExpiresDate?.Date ?? DateTimeOffset.Now.Date;
         var expiresTime = NewExpiresTime ?? new TimeSpan(23, 59, 0);
         var expiresAt = expiresDate.Add(expiresTime);
 
-        var alert = new AlertItemViewModel
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            Type = string.IsNullOrWhiteSpace(NewType) ? "Announcement" : NewType.Trim(),
-            Title = NewTitle?.Trim() ?? "",
-            Message = NewMessage?.Trim() ?? "",
-            ExtraLink = NewExtraLink?.Trim() ?? "",
-            CreatedAt = DateTime.Now,
-            ExpiresAt = expiresAt,
-            Priority = string.IsNullOrWhiteSpace(NewPriority) ? "Low" : NewPriority.Trim(),
-            TargetAudience = ToTargetAudience(NewTargetScope, NewGradeLevel, NewSection),
-            Parent = this
-        };
+        var title = NewTitle?.Trim() ?? "";
+        var message = NewMessage?.Trim() ?? "";
 
         // Basic validation
-        if (string.IsNullOrWhiteSpace(alert.Title) || string.IsNullOrWhiteSpace(alert.Message))
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
             return;
 
-        Alerts.Insert(0, alert);
-        UpdateComputed();
-        ClearForm();
-        // TODO: Persist to Supabase/MySQL via a repository/service
+        if (_apiClient == null)
+        {
+            // For unit tests - add mock alert directly
+            var targetAudience = NewTargetScope switch
+            {
+                "Grade Level" => $"grade_{NewGradeLevel?.ToLower().Replace(" ", "")}",
+                "Section" => $"section_{NewSection?.ToLower().Replace("-", "")}",
+                _ => "whole_school"
+            };
+
+            var mockAlert = new AlertItemViewModel
+            {
+                Id = Guid.NewGuid().ToString(),
+                Type = NewType.ToLower(),
+                Title = title,
+                Message = message,
+                TargetAudience = targetAudience,
+                CreatedAt = DateTime.Now,
+                ExpiresAt = expiresAt
+            };
+            
+            Alerts.Insert(0, mockAlert);
+            ClearForm();
+            UpdateComputed();
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var dto = new CreateAlertDto
+            {
+                Type = MapCreateType(NewType),
+                Title = title,
+                Message = message,
+                RecipientId = NewTargetScope == "Whole School" ? null : (string.IsNullOrWhiteSpace(NewSection) ? null : NewSection)
+            };
+
+            var created = await _apiClient.CreateAlertAsync(dto);
+            if (created != null)
+            {
+                await LoadAlertsAsync();
+                
+                // Log activity
+                await LogActivityAsync(
+                    "alert_created",
+                    $"Created alert: {title} ({NewType})",
+                    "alert",
+                    created.Id
+                );
+                
+                _toastService?.Success($"Alert '{title}' published successfully", "Alert Published");
+                ClearForm();
+                UpdateComputed();
+            }
+            else
+            {
+                ErrorMessage = "Failed to publish alert. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
+    private static string MapCreateType(string uiType)
+        => uiType switch { "Weather" => "warning", "Emergency" => "error", "System" => "system", _ => "info" };
+
     [RelayCommand]
-    private void DeleteAlert(AlertItemViewModel alert)
+    private async Task DeleteAlert(AlertItemViewModel alert)
     {
+        if (_apiClient != null)
+        {
+            await _apiClient.DeleteAlertAsync(alert.Id);
+            
+            // Log activity
+            await LogActivityAsync(
+                "alert_deleted",
+                $"Deleted alert: {alert.Title}",
+                "alert",
+                alert.Id
+            );
+            
+            _toastService?.Success($"Alert deleted", "Success");
+        }
         Alerts.Remove(alert);
         UpdateComputed();
-        // TODO: Delete from database
     }
 
     [RelayCommand]
-    private void ExpireAlert(AlertItemViewModel alert)
+    private async Task ExpireAlert(AlertItemViewModel alert)
     {
         alert.ExpiresAt = DateTime.Now;
+        if (_apiClient != null)
+        {
+            await _apiClient.UpdateAlertAsync(alert.Id, new UpdateAlertDto { ExpiresAt = DateTimeOffset.Now });
+            
+            // Log activity
+            await LogActivityAsync(
+                "alert_expired",
+                $"Expired alert: {alert.Title}",
+                "alert",
+                alert.Id
+            );
+            
+            _toastService?.Success($"Alert expired", "Success");
+        }
         UpdateComputed();
-        // TODO: Update database
     }
 
     [RelayCommand]
@@ -171,7 +313,6 @@ public partial class AlertsViewModel : ViewModelBase
         foreach (var a in expired)
             Alerts.Remove(a);
         UpdateComputed();
-        // TODO: Batch-delete in database
     }
 
     [RelayCommand]
@@ -191,9 +332,54 @@ public partial class AlertsViewModel : ViewModelBase
 
     // Optional: call this from a timer to auto-refresh Active/Expired UI if desired
     [RelayCommand]
-    private void RefreshComputed()
+    private async Task RefreshComputed()
     {
         UpdateComputed();
+        if (_apiClient != null) await LoadAlertsAsync();
+    }
+
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            if (_apiClient == null)
+                return;
+                
+            // Get current user ID
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+            
+            // Map action types to icons and colors
+            var (icon, color) = actionType switch
+            {
+                "alert_created" => ("Alert", "orange"),
+                "alert_deleted" => ("Delete", "red"),
+                "alert_expired" => ("Clock", "gray"),
+                _ => ("Info", "gray")
+            };
+            
+            // Create activity data
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = actionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "alerts" }
+            };
+            
+            // POST to API
+            await _apiClient.PostAsync("desktop-admin-dashboard/activities", activityData);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the main operation
+            System.Diagnostics.Debug.WriteLine($"Error logging activity: {ex.Message}");
+        }
     }
 }
 

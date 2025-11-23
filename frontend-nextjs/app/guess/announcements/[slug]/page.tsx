@@ -1,12 +1,47 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getAnnouncementBySlug } from "@/lib/announcements-data"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { absoluteUrl } from "@/lib/seo"
 import AnnouncementDetailClient from "./client-page"
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const announcement = getAnnouncementBySlug(params.slug)
+// Map backend announcement to frontend format
+function mapAnnouncementToFrontend(item: any) {
+  const excerpt = item.content.replace(/<[^>]*>/g, '').substring(0, 200) + '...'
+  
+  return {
+    id: item.id,
+    title: item.title,
+    excerpt,
+    content: item.content,
+    category: item.type as 'urgent' | 'academic' | 'event' | 'general',
+    date: item.createdAt,
+    author: { name: item.user?.full_name || 'Unknown' },
+    source: 'Southville 8B NHS',
+    sticky: false,
+    slug: item.id,
+    tags: item.tags?.map((tag: any) => tag.name) || [],
+    attachments: [], // Backend doesn't have attachments yet
+  }
+}
+
+async function getAnnouncementById(id: string) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004'
+  const res = await fetch(`${apiUrl}/api/v1/announcements/${id}`, {
+    next: { revalidate: 3600 },
+  })
+  
+  if (!res.ok) {
+    return null
+  }
+  
+  const data = await res.json()
+  return mapAnnouncementToFrontend(data)
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const announcement = await getAnnouncementById(slug)
+  
   if (!announcement) {
     return {
       title: "Announcement Not Found | Southville 8B NHS",
@@ -43,10 +78,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-// Server component: no client-only UI or icon config here
-
-export default function AnnouncementDetailPage({ params }: { params: { slug: string } }) {
-  const announcement = getAnnouncementBySlug(params.slug)
+export default async function AnnouncementDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const announcement = await getAnnouncementById(slug)
+  
   if (!announcement) {
     notFound()
   }
@@ -60,7 +95,11 @@ export default function AnnouncementDetailPage({ params }: { params: { slug: str
           { name: announcement.title, url: absoluteUrl(`/guess/announcements/${announcement.slug}`) },
         ])}
       />
-      <AnnouncementDetailClient params={params} />
+      <AnnouncementDetailClient announcement={announcement} />
     </>
   )
 }
+
+// Enable ISR for announcement details
+export const dynamic = "force-dynamic"
+export const revalidate = 3600 // revalidate hourly

@@ -16,12 +16,97 @@ import {
   ChevronUp,
   GraduationCap,
   Zap,
+  Loader2,
 } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { getMySchedule } from "@/lib/api/endpoints"
+import type { Schedule } from "@/lib/api/types"
+import { DayOfWeek } from "@/lib/api/types"
+
+// Helper function to convert DayOfWeek enum to day number (0=Sunday, 1=Monday, etc.)
+const dayOfWeekToNumber = (day: DayOfWeek | string): number => {
+  // Handle both enum values and string values from API
+  const dayStr = typeof day === 'string' ? day : day.toString();
+  
+  switch (dayStr) {
+    case 'Sunday':
+    case DayOfWeek.SUNDAY:
+      return 0;
+    case 'Monday':
+    case DayOfWeek.MONDAY:
+      return 1;
+    case 'Tuesday':
+    case DayOfWeek.TUESDAY:
+      return 2;
+    case 'Wednesday':
+    case DayOfWeek.WEDNESDAY:
+      return 3;
+    case 'Thursday':
+    case DayOfWeek.THURSDAY:
+      return 4;
+    case 'Friday':
+    case DayOfWeek.FRIDAY:
+      return 5;
+    case 'Saturday':
+    case DayOfWeek.SATURDAY:
+      return 6;
+    default:
+      return 0;
+  }
+}
+
+// Helper function to convert hex color to Tailwind gradient class
+const hexToGradientClass = (hex?: string): string => {
+  // Default color palette if no hex provided
+  const defaultColors = [
+    "bg-gradient-to-br from-blue-500 to-blue-600",
+    "bg-gradient-to-br from-green-500 to-green-600",
+    "bg-gradient-to-br from-purple-500 to-purple-600",
+    "bg-gradient-to-br from-orange-500 to-orange-600",
+    "bg-gradient-to-br from-red-500 to-red-600",
+    "bg-gradient-to-br from-yellow-500 to-yellow-600",
+    "bg-gradient-to-br from-pink-500 to-pink-600",
+    "bg-gradient-to-br from-teal-500 to-teal-600",
+  ]
+
+  if (!hex) return defaultColors[Math.floor(Math.random() * defaultColors.length)]
+
+  // For now, return default color - could enhance to convert hex to closest Tailwind color
+  return defaultColors[Math.floor(Math.random() * defaultColors.length)]
+}
+
+// Helper function to format time from "HH:MM:SS" to "H:MM AM/PM"
+const formatTime = (time: string): string => {
+  const [hour, minute] = time.split(':').map(Number)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const hour12 = hour % 12 || 12
+  return `${hour12}:${minute.toString().padStart(2, '0')} ${period}`
+}
+
+// Helper function to get short day name
+const getDayShortName = (day: DayOfWeek): string => {
+  const mapping: Record<DayOfWeek, string> = {
+    [DayOfWeek.MONDAY]: 'Mon',
+    [DayOfWeek.TUESDAY]: 'Tue',
+    [DayOfWeek.WEDNESDAY]: 'Wed',
+    [DayOfWeek.THURSDAY]: 'Thu',
+    [DayOfWeek.FRIDAY]: 'Fri',
+    [DayOfWeek.SATURDAY]: 'Sat',
+    [DayOfWeek.SUNDAY]: 'Sun',
+  }
+  return mapping[day]
+}
 
 export default function SubjectsPage() {
   const [showAllSubjects, setShowAllSubjects] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Fetch schedules from API
+  const { data: schedules, isLoading, isError } = useQuery({
+    queryKey: ['my-schedules'],
+    queryFn: getMySchedule,
+  })
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -31,120 +116,88 @@ export default function SubjectsPage() {
     return () => clearInterval(timer)
   }, [])
 
-  const subjects = [
-    {
-      id: 1,
-      name: "Mathematics",
-      teacher: "Ms. Garcia",
-      schedule: "Mon, Wed, Fri - 5:30 AM",
-      scheduleTime: { days: [1, 3, 5], hour: 5, minute: 30 }, // Mon=1, Wed=3, Fri=5
-      progress: 78,
-      grade: 96,
-      assignments: 12,
-      nextClass: "Tomorrow 5:30 AM",
-      color: "bg-gradient-to-br from-blue-500 to-blue-600",
-      description: "Advanced algebra and geometry concepts",
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "Science",
-      teacher: "Mr. Santos",
-      schedule: "Tue, Thu - 9:30 AM",
-      scheduleTime: { days: [2, 4], hour: 9, minute: 30 }, // Tue=2, Thu=4
-      progress: 85,
-      grade: 94,
-      assignments: 8,
-      nextClass: "Today 9:30 AM",
-      color: "bg-gradient-to-br from-green-500 to-green-600",
-      description: "Physics and chemistry fundamentals",
-      status: "upcoming",
-    },
-    {
-      id: 3,
-      name: "English",
-      teacher: "Mrs. Cruz",
-      schedule: "Mon, Wed, Fri - 11:00 AM",
-      scheduleTime: { days: [1, 3, 5], hour: 11, minute: 0 },
-      progress: 72,
-      grade: 92,
-      assignments: 15,
-      nextClass: "Tomorrow 11:00 AM",
-      color: "bg-gradient-to-br from-purple-500 to-purple-600",
-      description: "Literature analysis and creative writing",
-      status: "active",
-    },
-    {
-      id: 4,
-      name: "Filipino",
-      teacher: "Ms. Reyes",
-      schedule: "Tue, Thu - 1:00 PM",
-      scheduleTime: { days: [2, 4], hour: 13, minute: 0 },
-      progress: 90,
-      grade: 95,
-      assignments: 10,
-      nextClass: "Today 1:00 PM",
-      color: "bg-gradient-to-br from-orange-500 to-orange-600",
-      description: "Filipino literature and language studies",
-      status: "upcoming",
-    },
-    {
-      id: 5,
-      name: "TLE (Technology and Livelihood Education)",
-      teacher: "Mr. Dela Cruz",
-      schedule: "Mon, Wed - 2:00 PM",
-      scheduleTime: { days: [1, 3], hour: 14, minute: 0 },
-      progress: 88,
-      grade: 93,
-      assignments: 6,
-      nextClass: "Tomorrow 2:00 PM",
-      color: "bg-gradient-to-br from-red-500 to-red-600",
-      description: "Practical skills and entrepreneurship",
-      status: "active",
-    },
-    {
-      id: 6,
-      name: "Araling Panlipunan",
-      teacher: "Mrs. Mendoza",
-      schedule: "Tue, Fri - 10:00 AM",
-      scheduleTime: { days: [2, 5], hour: 10, minute: 0 },
-      progress: 82,
-      grade: 91,
-      assignments: 9,
-      nextClass: "Friday 10:00 AM",
-      color: "bg-gradient-to-br from-yellow-500 to-yellow-600",
-      description: "Philippine history and social studies",
-      status: "active",
-    },
-    {
-      id: 7,
-      name: "ESP (Edukasyon sa Pagpapakatao)",
-      teacher: "Ms. Torres",
-      schedule: "Thu - 3:00 PM",
-      scheduleTime: { days: [4], hour: 15, minute: 0 },
-      progress: 95,
-      grade: 98,
-      assignments: 4,
-      nextClass: "Thursday 3:00 PM",
-      color: "bg-gradient-to-br from-pink-500 to-pink-600",
-      description: "Values education and character development",
-      status: "completed",
-    },
-    {
-      id: 8,
-      name: "MAPEH (Music, Arts, Physical Education, Health)",
-      teacher: "Mr. Villanueva",
-      schedule: "Mon, Wed, Fri - 3:30 PM",
-      scheduleTime: { days: [1, 3, 5], hour: 15, minute: 30 },
-      progress: 87,
-      grade: 94,
-      assignments: 7,
-      nextClass: "Tomorrow 3:30 PM",
-      color: "bg-gradient-to-br from-teal-500 to-teal-600",
-      description: "Creative arts, physical fitness, and health education",
-      status: "active",
-    },
-  ]
+  // Group schedules by subject and transform data
+  const subjects = schedules ? Object.values(
+    schedules.reduce((acc: Record<string, any>, schedule: Schedule) => {
+      const subjectId = schedule.subjectId
+
+      if (!acc[subjectId]) {
+        // Create new subject entry
+        const teacher = schedule.teacher
+          ? `${schedule.teacher.firstName || ''} ${schedule.teacher.lastName || ''}`.trim() || 'N/A'
+          : 'N/A'
+
+        acc[subjectId] = {
+          id: subjectId,
+          name: schedule.subject?.subjectName || 'Unknown Subject',
+          teacher,
+          schedules: [schedule],
+          scheduleTimes: [{
+            day: dayOfWeekToNumber(schedule.dayOfWeek),
+            dayName: schedule.dayOfWeek,
+            hour: parseInt(schedule.startTime.split(':')[0]),
+            minute: parseInt(schedule.startTime.split(':')[1]),
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+          }],
+          color: hexToGradientClass(schedule.subject?.color_hex),
+          description: schedule.subject?.description || 'No description available',
+          progress: 0, // Placeholder - would need separate API
+          grade: null, // Placeholder - would need GWA/grades API
+          assignments: 0, // Placeholder - would need assignments API
+          status: 'active',
+        }
+      } else {
+        // Add schedule time to existing subject
+        acc[subjectId].schedules.push(schedule)
+        acc[subjectId].scheduleTimes.push({
+          day: dayOfWeekToNumber(schedule.dayOfWeek),
+          dayName: schedule.dayOfWeek,
+          hour: parseInt(schedule.startTime.split(':')[0]),
+          minute: parseInt(schedule.startTime.split(':')[1]),
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+        })
+      }
+
+      return acc
+    }, {})
+  ).map((subject: any) => {
+    // Sort schedule times by day
+    subject.scheduleTimes.sort((a: any, b: any) => a.day - b.day)
+
+    // Format schedule text (e.g., "Mon, Wed, Fri - 9:00 AM")
+    const uniqueTimes = subject.scheduleTimes.reduce((acc: any[], curr: any) => {
+      const existing = acc.find(t => t.startTime === curr.startTime)
+      if (existing) {
+        existing.days.push(curr.day)
+        existing.dayNames.push(curr.dayName)
+      } else {
+        acc.push({
+          startTime: curr.startTime,
+          days: [curr.day],
+          dayNames: [curr.dayName],
+        })
+      }
+      return acc
+    }, [])
+
+    subject.schedule = uniqueTimes.map((time: any) => {
+      const dayStr = time.dayNames.map((d: DayOfWeek) => getDayShortName(d)).join(', ')
+      return `${dayStr} - ${formatTime(time.startTime)}`
+    }).join(' | ')
+
+    // For current subject detection, keep all schedule times
+    subject.scheduleTime = {
+      times: subject.scheduleTimes.map((t: any) => ({
+        days: [t.day],
+        hour: t.hour,
+        minute: t.minute,
+      }))
+    }
+
+    return subject
+  }) : []
 
   const isCurrentSubject = (subject: any) => {
     const now = currentTime
@@ -153,21 +206,118 @@ export default function SubjectsPage() {
     const currentMinute = now.getMinutes()
     const currentTimeInMinutes = currentHour * 60 + currentMinute
 
-    // Check if today is a scheduled day for this subject
-    if (!subject.scheduleTime.days.includes(currentDay)) return false
+    // Check all schedule times for this subject
+    if (!subject.scheduleTime?.times) return false
 
-    // Check if current time is within class period (assuming 1-hour classes)
-    const classStartInMinutes = subject.scheduleTime.hour * 60 + subject.scheduleTime.minute
-    const classEndInMinutes = classStartInMinutes + 60 // 1-hour class duration
+    return subject.scheduleTime.times.some((scheduleTime: any) => {
+      // Check if today is a scheduled day for this time slot
+      if (!scheduleTime.days.includes(currentDay)) return false
 
-    return currentTimeInMinutes >= classStartInMinutes && currentTimeInMinutes <= classEndInMinutes
+      // Check if current time is within class period (assuming 1-hour classes)
+      const classStartInMinutes = scheduleTime.hour * 60 + scheduleTime.minute
+      const classEndInMinutes = classStartInMinutes + 60 // 1-hour class duration
+
+      return currentTimeInMinutes >= classStartInMinutes && currentTimeInMinutes <= classEndInMinutes
+    })
   }
 
   const displayedSubjects = showAllSubjects ? subjects : subjects.slice(0, 4)
 
-  const overallGrade = Math.round(subjects.reduce((sum, subject) => sum + subject.grade, 0) / subjects.length)
-  const overallProgress = Math.round(subjects.reduce((sum, subject) => sum + subject.progress, 0) / subjects.length)
-  const totalAssignments = subjects.reduce((sum, subject) => sum + subject.assignments, 0)
+  // Show loading state
+  if (isLoading) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-800">
+            <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
+            <div className="relative p-8 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <GraduationCap className="w-8 h-8" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold">My Subjects</h1>
+                  <p className="text-blue-100 dark:text-blue-200 text-lg">
+                    Track your academic progress and access materials
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center p-20">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+              <p className="text-slate-600 dark:text-slate-400">Loading your subjects...</p>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Show error state
+  if (isError) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-800">
+            <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
+            <div className="relative p-8 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <GraduationCap className="w-8 h-8" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold">My Subjects</h1>
+                  <p className="text-blue-100 dark:text-blue-200 text-lg">
+                    Track your academic progress and access materials
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center p-20">
+            <div className="text-center">
+              <p className="text-red-600 dark:text-red-400 text-lg mb-4">Failed to load your subjects</p>
+              <p className="text-slate-600 dark:text-slate-400">Please try refreshing the page</p>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Show empty state
+  if (!subjects || subjects.length === 0) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-800">
+            <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
+            <div className="relative p-8 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <GraduationCap className="w-8 h-8" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold">My Subjects</h1>
+                  <p className="text-blue-100 dark:text-blue-200 text-lg">
+                    Track your academic progress and access materials
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center p-20">
+            <div className="text-center">
+              <p className="text-slate-600 dark:text-slate-400 text-lg">No subjects found</p>
+              <p className="text-slate-500 dark:text-slate-500 mt-2">Your schedule will appear here once it's available</p>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
 
   return (
     <StudentLayout>
@@ -244,12 +394,14 @@ export default function SubjectsPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <Badge
-                          variant="outline"
-                          className="text-base font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md px-2 py-1"
-                        >
-                          {subject.grade}
-                        </Badge>
+                        {subject.grade !== null && (
+                          <Badge
+                            variant="outline"
+                            className="text-base font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md px-2 py-1"
+                          >
+                            {subject.grade}
+                          </Badge>
+                        )}
                         <Badge
                           variant={
                             subject.status === "upcoming"
@@ -289,33 +441,22 @@ export default function SubjectsPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          isCurrent
-                            ? "bg-yellow-100 dark:bg-yellow-950/50 border border-yellow-300 dark:border-yellow-700"
-                            : "bg-slate-50 dark:bg-slate-700/50"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 min-w-0">
-                          <Clock
-                            className={`w-4 h-4 flex-shrink-0 ${isCurrent ? "text-yellow-600" : "text-blue-500"}`}
-                          />
-                          <span className="text-slate-600 dark:text-slate-400 text-sm">Schedule</span>
-                        </div>
-                        <span className="font-medium text-slate-800 dark:text-slate-200 text-sm text-right">
-                          {subject.schedule}
-                        </span>
+                    <div
+                      className={`flex items-center justify-between p-3 rounded-lg ${
+                        isCurrent
+                          ? "bg-yellow-100 dark:bg-yellow-950/50 border border-yellow-300 dark:border-yellow-700"
+                          : "bg-slate-50 dark:bg-slate-700/50"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <Clock
+                          className={`w-4 h-4 flex-shrink-0 ${isCurrent ? "text-yellow-600" : "text-blue-500"}`}
+                        />
+                        <span className="text-slate-600 dark:text-slate-400 text-sm">Schedule</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                        <div className="flex items-center space-x-2 min-w-0">
-                          <Calendar className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-slate-600 dark:text-slate-400 text-sm">Next</span>
-                        </div>
-                        <span className="font-medium text-slate-800 dark:text-slate-200 text-sm text-right">
-                          {subject.nextClass}
-                        </span>
-                      </div>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 text-sm text-right">
+                        {subject.schedule}
+                      </span>
                     </div>
 
                     <div className="flex space-x-2 pt-2">

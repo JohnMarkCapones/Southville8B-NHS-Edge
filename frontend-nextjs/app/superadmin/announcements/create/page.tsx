@@ -15,9 +15,11 @@ import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   Bell,
   Calendar,
+  Clock,
   Eye,
   Mail,
   MessageSquare,
@@ -33,6 +35,17 @@ import {
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useCreateAnnouncement } from "@/hooks/useAnnouncements"
+import { AnnouncementVisibility } from "@/lib/api/types/announcements"
+import { useRoles } from "@/hooks/useRoles"
+import {
+  validateExpirationDate,
+  getVisibilityDuration,
+  getMinimumExpirationDate,
+  getMaximumExpirationDate,
+  getSuggestedExpirationDate,
+  type DateValidationResult,
+} from "@/lib/utils/announcement-date-validation"
 
 // Quick templates for common announcement types
 const ANNOUNCEMENT_TEMPLATES = [
@@ -110,6 +123,8 @@ const ANNOUNCEMENT_TEMPLATES = [
 export default function CreateAnnouncementPage() {
   const { toast } = useToast()
   const router = useRouter()
+  const createMutation = useCreateAnnouncement()
+  const { data: roles, isLoading: rolesLoading } = useRoles()
 
   // Form state
   const [title, setTitle] = useState("")
@@ -137,6 +152,9 @@ export default function CreateAnnouncementPage() {
   const [scheduledDate, setScheduledDate] = useState("")
   const [expirationDate, setExpirationDate] = useState("")
   const [status, setStatus] = useState<"draft" | "scheduled" | "published">("draft")
+
+  // Date validation state
+  const [dateValidation, setDateValidation] = useState<DateValidationResult>({ isValid: true })
 
   // UI state
   const [showPreview, setShowPreview] = useState(false)
@@ -175,22 +193,41 @@ export default function CreateAnnouncementPage() {
       return
     }
 
-    if (!excerpt.trim()) {
-      toast({
-        title: "Excerpt Required",
-        description: "Please add a brief excerpt for the announcement.",
-        variant: "destructive",
-      })
-      return
+    // Validate expiration date
+    if (expirationDate) {
+      const validation = validateExpirationDate(expirationDate, scheduledDate)
+      if (!validation.isValid) {
+        toast({
+          title: "Invalid Expiration Date",
+          description: validation.error || "Please check the expiration date.",
+          variant: "destructive",
+        })
+        return
+      }
     }
 
-    const targetAudience = []
-    if (targetStudents) targetAudience.push("students")
-    if (targetTeachers) targetAudience.push("teachers")
-    if (targetParents) targetAudience.push("parents")
-    if (targetStaff) targetAudience.push("staff")
+    // Build target role IDs array from fetched roles
+    const targetRoleIds: string[] = []
+    if (roles) {
+      if (targetStudents) {
+        const studentRole = roles.find(r => r.name === 'Student')
+        if (studentRole) targetRoleIds.push(studentRole.id)
+      }
+      if (targetTeachers) {
+        const teacherRole = roles.find(r => r.name === 'Teacher')
+        if (teacherRole) targetRoleIds.push(teacherRole.id)
+      }
+      if (targetParents) {
+        const parentRole = roles.find(r => r.name === 'Parent')
+        if (parentRole) targetRoleIds.push(parentRole.id)
+      }
+      if (targetStaff) {
+        const staffRole = roles.find(r => r.name === 'Staff')
+        if (staffRole) targetRoleIds.push(staffRole.id)
+      }
+    }
 
-    if (targetAudience.length === 0) {
+    if (targetRoleIds.length === 0) {
       toast({
         title: "Target Audience Required",
         description: "Please select at least one target audience.",
@@ -201,48 +238,46 @@ export default function CreateAnnouncementPage() {
 
     setIsSaving(true)
 
-    // TODO: Backend integration - Save announcement to database
-    const announcementData = {
-      title,
-      content,
-      excerpt,
-      category,
-      priority,
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      source: source || "Administration",
-      targetAudience,
-      notifications: {
-        email: sendEmail,
-        sms: sendSMS,
-        push: sendPush,
-      },
-      isPinned,
-      trackReads,
-      scheduledDate: scheduledDate || null,
-      expirationDate: expirationDate || null,
-      status: publishNow ? "published" : status,
-      createdAt: new Date().toISOString(),
+    try {
+      // Transform form data to match backend API schema
+      const announcementData = {
+        title: title.trim(),
+        content: content.trim(),
+        type: category, // Use category as type (urgent, academic, event, general)
+        visibility: AnnouncementVisibility.PUBLIC, // Default to public, can make this configurable
+        targetRoleIds,
+        expiresAt: expirationDate || undefined,
+        tagIds: tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .map(() => undefined) // TODO: Implement tag selection instead of free text
+          .filter((t): t is string => !!t), // Filter out undefined values
+      }
+
+      // Debug: Log what we're sending
+      console.log("📤 Sending announcement data:", JSON.stringify(announcementData, null, 2))
+
+      // Create announcement via API
+      const result = await createMutation.mutateAsync(announcementData)
+
+      toast({
+        title: "Announcement Created!",
+        description: `Your announcement "${result.title}" has been created successfully.`,
+      })
+
+      // Navigate to announcements list
+      router.push("/superadmin/announcements")
+    } catch (error: any) {
+      console.error("Failed to create announcement:", error)
+      toast({
+        title: "Failed to Create Announcement",
+        description: error?.message || "An error occurred while creating the announcement. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
     }
-
-    console.log("[v0] Announcement data to save:", announcementData)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    setIsSaving(false)
-
-    toast({
-      title: publishNow ? "Announcement Published!" : "Announcement Saved!",
-      description: publishNow
-        ? `Your announcement has been published and notifications are being sent.`
-        : `Your announcement has been saved as ${status}.`,
-    })
-
-    // TODO: Navigate to announcements list or edit page
-    router.push("/superadmin/announcements")
   }
 
   const getPriorityColor = (p: string) => {
@@ -391,16 +426,77 @@ export default function CreateAnnouncementPage() {
                     <p className="text-sm text-gray-500 dark:text-gray-400">Leave empty to publish immediately</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="expiration">Expiration Date & Time</Label>
+                    <Label htmlFor="expiration">Expiration Date & Time (Optional)</Label>
                     <Input
                       id="expiration"
                       type="datetime-local"
                       value={expirationDate}
-                      onChange={(e) => setExpirationDate(e.target.value)}
+                      min={getMinimumExpirationDate()}
+                      max={getMaximumExpirationDate()}
+                      onChange={(e) => {
+                        setExpirationDate(e.target.value)
+                        // Real-time validation
+                        const validation = validateExpirationDate(e.target.value, scheduledDate)
+                        setDateValidation(validation)
+                      }}
+                      className={
+                        dateValidation.severity === 'error'
+                          ? 'border-red-500 focus:border-red-500'
+                          : dateValidation.severity === 'warning'
+                            ? 'border-yellow-500 focus:border-yellow-500'
+                            : ''
+                      }
                     />
+
+                    {/* Validation Messages */}
+                    {dateValidation.error && (
+                      <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md dark:bg-red-900/20 dark:border-red-800">
+                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-red-600 dark:text-red-400">{dateValidation.error}</p>
+                      </div>
+                    )}
+
+                    {dateValidation.warning && !dateValidation.error && (
+                      <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md dark:bg-yellow-900/20 dark:border-yellow-800">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400">{dateValidation.warning}</p>
+                      </div>
+                    )}
+
+                    {/* Duration Preview */}
+                    {expirationDate && !dateValidation.error && (
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md dark:bg-blue-900/20 dark:border-blue-800">
+                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                          {getVisibilityDuration(expirationDate, scheduledDate)}
+                        </p>
+                      </div>
+                    )}
+
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Announcement will be hidden after this date
+                      {!expirationDate
+                        ? 'Leave empty for no expiration (announcement will be visible indefinitely)'
+                        : 'Announcement will be hidden after this date'}
                     </p>
+
+                    {/* Quick Actions */}
+                    {!expirationDate && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const suggested = getSuggestedExpirationDate()
+                          setExpirationDate(suggested)
+                          const validation = validateExpirationDate(suggested)
+                          setDateValidation(validation)
+                        }}
+                        className="w-full"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Set to 30 days from now
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

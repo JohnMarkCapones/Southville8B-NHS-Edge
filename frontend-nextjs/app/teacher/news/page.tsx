@@ -3,6 +3,8 @@ import { useState, useEffect } from "react"
 import type React from "react"
 
 import { useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import { newsApi } from "@/lib/api/endpoints/news"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -489,9 +491,25 @@ const mockActivityFeed = [
 export default function TeacherNewsPage() {
   const { toast } = useToast()
   const router = useRouter()
-  const [articles, setArticles] = useState(mockNewsArticles)
+
+  // Fetch real articles from API
+  const { data: articlesData, isLoading: isLoadingArticles, refetch: refetchArticles } = useQuery({
+    queryKey: ['news', 'teacher', 'all'],
+    queryFn: () => newsApi.getAllNews({ limit: 100 }), // Fetch up to 100 articles
+    staleTime: 30000, // Cache for 30 seconds
+    refetchInterval: 60000, // Refetch every minute
+  })
+
+  const [articles, setArticles] = useState<any[]>([])
   const [activityFeed] = useState(mockActivityFeed)
   const [contributors, setContributors] = useState(mockStudentContributors)
+
+  // Update local articles state when API data changes
+  useEffect(() => {
+    if (articlesData?.data) {
+      setArticles(articlesData.data)
+    }
+  }, [articlesData])
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -515,8 +533,10 @@ export default function TeacherNewsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
+  const [publishWarningDialogOpen, setPublishWarningDialogOpen] = useState(false)
   const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false)
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null)
+  const [selectedArticleForPublish, setSelectedArticleForPublish] = useState<any | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string>("")
 
   const [contextMenu, setContextMenu] = useState<{
@@ -553,16 +573,20 @@ export default function TeacherNewsPage() {
       const matchesStatus = statusFilter === "all" || article.status.toLowerCase() === statusFilter
       const matchesAuthorType = authorTypeFilter === "all" || article.authorType === authorTypeFilter
 
-      // Tab-based filtering
+      // Tab-based filtering using review_status
       let matchesTab = true
       if (activeTab === "pending") {
-        matchesTab = article.status === "Pending Review"
+        // Pending tab: show articles with review_status 'pending' or 'in_review'
+        matchesTab = article.reviewStatus === "pending" || article.reviewStatus === "in_review" || article.status === "Pending Review"
       } else if (activeTab === "published") {
+        // Published tab: show articles with status 'Published'
         matchesTab = article.status === "Published"
       } else if (activeTab === "revision") {
-        matchesTab = article.status === "Needs Revision"
+        // Revision tab: show articles with review_status 'needs_revision'
+        matchesTab = article.reviewStatus === "needs_revision" || article.status === "Needs Revision"
       } else if (activeTab === "approved") {
-        matchesTab = article.status === "Approved"
+        // Approved tab: show articles with review_status 'approved'
+        matchesTab = article.reviewStatus === "approved" || article.status === "Approved"
       }
 
       return matchesSearch && matchesCategory && matchesStatus && matchesAuthorType && matchesTab
@@ -576,14 +600,23 @@ export default function TeacherNewsPage() {
   const endIndex = startIndex + itemsPerPage
   const paginatedArticles = filteredArticles.slice(startIndex, endIndex)
 
+  // Fetch real news statistics from API
+  const { data: apiStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['news', 'stats'],
+    queryFn: () => newsApi.getNewsStats(true), // true = get all stats (for reviewing all articles)
+    staleTime: 30000, // Cache for 30 seconds
+    refetchInterval: 60000, // Refetch every minute
+  })
+
+  // Fallback to mock stats for display while loading or if error
   const stats = {
-    total: articles.length,
-    published: articles.filter((a) => a.status === "Published").length,
-    pending: articles.filter((a) => a.status === "Pending Review").length,
-    needsRevision: articles.filter((a) => a.status === "Needs Revision").length,
-    approved: articles.filter((a) => a.status === "Approved").length,
+    total: apiStats?.total || articles.length,
+    published: apiStats?.published || articles.filter((a) => a.status === "Published").length,
+    pending: apiStats?.pendingReview || articles.filter((a) => a.status === "Pending Review" || a.reviewStatus === "pending" || a.reviewStatus === "in_review").length,
+    needsRevision: apiStats?.needsRevision || articles.filter((a) => a.status === "Needs Revision" || a.reviewStatus === "needs_revision").length,
+    approved: apiStats?.approved || articles.filter((a) => a.status === "Approved" || a.reviewStatus === "approved").length,
     totalViews: articles.reduce((sum, a) => sum + a.views, 0),
-    studentSubmissions: articles.filter((a) => a.authorType === "student").length,
+    studentSubmissions: apiStats?.studentSubmissions || articles.filter((a) => a.authorType === "student").length,
   }
 
   const topContributors = articles
@@ -597,7 +630,7 @@ export default function TeacherNewsPage() {
         acc.push({
           name: article.author,
           avatar: article.authorAvatar,
-          grade: article.studentGrade,
+          grade: article.studentGrade || "Student", // Fallback if grade not available
           count: 1,
           published: article.status === "Published" ? 1 : 0,
         })
@@ -811,8 +844,22 @@ export default function TeacherNewsPage() {
   }
 
   const handlePublishNow = (articleId: string) => {
+    // Find the article to check its review_status
+    const article = articles.find(a => a.id === articleId)
+
+    if (!article) return
+
     setSelectedArticleId(articleId)
-    setPublishDialogOpen(true)
+    setSelectedArticleForPublish(article)
+
+    // Check if article has pending review_status
+    if (article.reviewStatus === 'pending' || article.reviewStatus === 'in_review') {
+      // Show warning dialog that publishing will auto-approve
+      setPublishWarningDialogOpen(true)
+    } else {
+      // Show normal publish confirmation
+      setPublishDialogOpen(true)
+    }
   }
 
   const handleUnpublish = (articleId: string) => {
@@ -861,13 +908,31 @@ export default function TeacherNewsPage() {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedArticleId) {
-      setArticles((prev) => prev.filter((a) => a.id !== selectedArticleId))
-      toast({
-        title: "Article Deleted",
-        description: "The article has been successfully deleted.",
-      })
+      try {
+        // Call API to soft delete the article (sets deleted_at and deleted_by)
+        await newsApi.deleteNews(selectedArticleId)
+
+        // Remove from local state
+        setArticles((prev) => prev.filter((a) => a.id !== selectedArticleId))
+
+        // Refetch articles to get updated data
+        refetchArticles()
+
+        toast({
+          title: "Article Deleted",
+          description: "The article has been successfully deleted.",
+        })
+      } catch (error: any) {
+        console.error('Error deleting article:', error)
+        const errorMessage = error?.message || "Failed to delete article. Please try again."
+        toast({
+          title: "Cannot Delete Article",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     }
     setDeleteDialogOpen(false)
     setSelectedArticleId(null)
@@ -886,34 +951,78 @@ export default function TeacherNewsPage() {
     setSelectedStatus("")
   }
 
-  const confirmPublish = () => {
-    if (selectedArticleId) {
+  const confirmPublish = async (forceApprove: boolean = false) => {
+    if (!selectedArticleId) return
+
+    try {
+      await newsApi.publishNews(selectedArticleId, forceApprove)
+
+      // Update local state
       setArticles((prev) =>
         prev.map((a) =>
           a.id === selectedArticleId
-            ? { ...a, status: "Published", publishedDate: new Date().toISOString().split("T")[0] }
+            ? { ...a, status: "Published", publishedDate: new Date().toISOString().split("T")[0], reviewStatus: 'approved' }
             : a,
         ),
       )
+
       toast({
         title: "Article Published",
-        description: "The article has been published successfully.",
+        description: forceApprove
+          ? "The article has been approved and published successfully."
+          : "The article has been published successfully.",
       })
+
+      // Refresh articles from API
+      await refetchArticles()
+    } catch (error) {
+      console.error('Error publishing article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to publish article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setPublishDialogOpen(false)
+      setPublishWarningDialogOpen(false)
+      setSelectedArticleId(null)
+      setSelectedArticleForPublish(null)
     }
-    setPublishDialogOpen(false)
-    setSelectedArticleId(null)
   }
 
-  const confirmUnpublish = () => {
-    if (selectedArticleId) {
-      setArticles((prev) => prev.map((a) => (a.id === selectedArticleId ? { ...a, status: "Draft" } : a)))
+  const confirmUnpublish = async () => {
+    if (!selectedArticleId) return
+
+    try {
+      await newsApi.unpublishNews(selectedArticleId)
+
+      // Update local state
+      setArticles((prev) =>
+        prev.map((a) =>
+          a.id === selectedArticleId
+            ? { ...a, status: "Draft" }
+            : a
+        )
+      )
+
       toast({
         title: "Article Unpublished",
         description: "The article has been unpublished and moved to drafts.",
       })
+
+      // Refresh articles from API
+      await refetchArticles()
+    } catch (error) {
+      console.error('Error unpublishing article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to unpublish article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUnpublishDialogOpen(false)
+      setSelectedArticleId(null)
     }
-    setUnpublishDialogOpen(false)
-    setSelectedArticleId(null)
   }
 
   const handleContextMenu = (e: React.MouseEvent, article: any) => {
@@ -1252,48 +1361,87 @@ export default function TeacherNewsPage() {
         <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-500 to-orange-600" />
           <CardContent className="relative p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-yellow-100">Pending Review</p>
-                <p className="text-3xl font-bold">{stats.pending}</p>
-                <p className="text-xs text-yellow-100">Awaiting approval</p>
+            {isLoadingStats ? (
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="h-4 w-24 bg-white/30 rounded animate-pulse" />
+                  <div className="h-8 w-16 bg-white/30 rounded animate-pulse" />
+                  <div className="h-3 w-28 bg-white/30 rounded animate-pulse" />
+                </div>
+                <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                  <Clock className="h-8 w-8" />
+                </div>
               </div>
-              <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
-                <Clock className="h-8 w-8" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-yellow-100">Pending Review</p>
+                  <p className="text-3xl font-bold">{stats.pending}</p>
+                  <p className="text-xs text-yellow-100">Awaiting approval</p>
+                </div>
+                <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                  <Clock className="h-8 w-8" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600" />
           <CardContent className="relative p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-green-100">Published</p>
-                <p className="text-3xl font-bold">{stats.published}</p>
-                <p className="text-xs text-green-100">Live articles</p>
+            {isLoadingStats ? (
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="h-4 w-20 bg-white/30 rounded animate-pulse" />
+                  <div className="h-8 w-16 bg-white/30 rounded animate-pulse" />
+                  <div className="h-3 w-24 bg-white/30 rounded animate-pulse" />
+                </div>
+                <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                  <CheckCircle className="h-8 w-8" />
+                </div>
               </div>
-              <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
-                <CheckCircle className="h-8 w-8" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-green-100">Published</p>
+                  <p className="text-3xl font-bold">{stats.published}</p>
+                  <p className="text-xs text-green-100">Live articles</p>
+                </div>
+                <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                  <CheckCircle className="h-8 w-8" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-600" />
           <CardContent className="relative p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-orange-100">Needs Revision</p>
-                <p className="text-3xl font-bold">{stats.needsRevision}</p>
-                <p className="text-xs text-orange-100">Requires changes</p>
+            {isLoadingStats ? (
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="h-4 w-28 bg-white/30 rounded animate-pulse" />
+                  <div className="h-8 w-16 bg-white/30 rounded animate-pulse" />
+                  <div className="h-3 w-32 bg-white/30 rounded animate-pulse" />
+                </div>
+                <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                  <AlertTriangle className="h-8 w-8" />
+                </div>
               </div>
-              <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
-                <AlertTriangle className="h-8 w-8" />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-orange-100">Needs Revision</p>
+                  <p className="text-3xl font-bold">{stats.needsRevision}</p>
+                  <p className="text-xs text-orange-100">Requires changes</p>
+                </div>
+                <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                  <AlertTriangle className="h-8 w-8" />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1475,19 +1623,53 @@ export default function TeacherNewsPage() {
                             </TableHead>
                             <TableHead className="font-semibold">Article</TableHead>
                             <TableHead className="font-semibold">Author</TableHead>
-                            <TableHead className="font-semibold">Category</TableHead>
                             <TableHead className="font-semibold">Status</TableHead>
+                            <TableHead className="font-semibold">Review Status</TableHead>
                             <TableHead className="font-semibold">Date</TableHead>
                             {activeTab === "pending" && <TableHead className="font-semibold">Actions</TableHead>}
+                            {activeTab === "approved" && <TableHead className="font-semibold">Actions</TableHead>}
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {paginatedArticles.map((article) => (
+                          {isLoadingArticles ? (
+                            // Loading skeleton
+                            Array.from({ length: 5 }).map((_, idx) => (
+                              <TableRow key={`loading-${idx}`}>
+                                <TableCell><div className="h-4 w-4 bg-gray-200 rounded animate-pulse" /></TableCell>
+                                <TableCell>
+                                  <div className="space-y-2">
+                                    <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+                                    <div className="h-3 w-64 bg-gray-200 rounded animate-pulse" />
+                                  </div>
+                                </TableCell>
+                                <TableCell><div className="h-8 w-24 bg-gray-200 rounded-full animate-pulse" /></TableCell>
+                                <TableCell><div className="h-6 w-24 bg-gray-200 rounded animate-pulse" /></TableCell>
+                                <TableCell><div className="h-6 w-24 bg-gray-200 rounded animate-pulse" /></TableCell>
+                                <TableCell><div className="h-4 w-20 bg-gray-200 rounded animate-pulse" /></TableCell>
+                                {activeTab === "pending" && <TableCell><div className="h-8 w-32 bg-gray-200 rounded animate-pulse" /></TableCell>}
+                                {activeTab === "approved" && <TableCell><div className="h-8 w-32 bg-gray-200 rounded animate-pulse" /></TableCell>}
+                                <TableCell><div className="h-8 w-8 bg-gray-200 rounded animate-pulse" /></TableCell>
+                              </TableRow>
+                            ))
+                          ) : paginatedArticles.length === 0 ? (
+                            // Empty state
+                            <TableRow>
+                              <TableCell colSpan={(activeTab === "pending" || activeTab === "approved") ? 8 : 7} className="text-center py-12">
+                                <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                                  <FileText className="w-12 h-12 opacity-50" />
+                                  <p className="text-lg font-medium">No articles found</p>
+                                  <p className="text-sm">Try adjusting your filters or create a new article</p>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            paginatedArticles.map((article) => (
                             <TableRow
                               key={article.id}
                               className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors cursor-pointer"
                               onContextMenu={(e) => handleContextMenu(e, article)}
+                              onClick={() => handlePreview(article)}
                             >
                               <TableCell onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
@@ -1520,8 +1702,39 @@ export default function TeacherNewsPage() {
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell>{getCategoryBadge(article.category)}</TableCell>
                               <TableCell>{getStatusBadge(article.status, article.id)}</TableCell>
+                              <TableCell>
+                                {article.reviewStatus === 'pending' && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-300">
+                                    Pending
+                                  </Badge>
+                                )}
+                                {article.reviewStatus === 'in_review' && (
+                                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300">
+                                    In Review
+                                  </Badge>
+                                )}
+                                {article.reviewStatus === 'approved' && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
+                                    Approved
+                                  </Badge>
+                                )}
+                                {article.reviewStatus === 'rejected' && (
+                                  <Badge variant="secondary" className="bg-red-100 text-red-700 border-red-300">
+                                    Rejected
+                                  </Badge>
+                                )}
+                                {article.reviewStatus === 'needs_revision' && (
+                                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-300">
+                                    Needs Revision
+                                  </Badge>
+                                )}
+                                {!article.reviewStatus && (
+                                  <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+                                    N/A
+                                  </Badge>
+                                )}
+                              </TableCell>
                               <TableCell>
                                 <div className="text-sm">
                                   {article.publishedDate ? (
@@ -1563,6 +1776,29 @@ export default function TeacherNewsPage() {
                                       className="hover:bg-red-50 hover:text-red-700 hover:border-red-300"
                                     >
                                       <ThumbsDown className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
+                              {activeTab === "approved" && (
+                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleApproveArticle(article)}
+                                      className="hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                                    >
+                                      <ThumbsUp className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => handlePublishNow(article.id)}
+                                      className="bg-green-500 hover:bg-green-600 text-white"
+                                    >
+                                      <Send className="w-4 h-4 mr-2" />
+                                      Publish
                                     </Button>
                                   </div>
                                 </TableCell>
@@ -1635,19 +1871,24 @@ export default function TeacherNewsPage() {
                                       <Copy className="w-4 h-4 mr-2" />
                                       Duplicate
                                     </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-600 focus:text-red-600"
-                                      onClick={() => handleDeleteClick(article.id)}
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
+                                    {article.status === "Draft" && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-red-600 focus:text-red-600"
+                                          onClick={() => handleDeleteClick(article.id)}
+                                        >
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
                             </TableRow>
-                          ))}
+                          ))
+                          )}
                         </TableBody>
                       </Table>
                     </div>
@@ -2077,23 +2318,6 @@ export default function TeacherNewsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Database Notice */}
-          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2">
-                  <Database className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm">Database Ready</h3>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                    Connect your database to enable real-time student submissions and moderation workflow.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -2241,8 +2465,42 @@ export default function TeacherNewsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmPublish} className="bg-green-500 hover:bg-green-600">
+            <AlertDialogAction onClick={() => confirmPublish(false)} className="bg-green-500 hover:bg-green-600">
               Publish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Publish Warning Dialog for Pending Review Status */}
+      <AlertDialog open={publishWarningDialogOpen} onOpenChange={setPublishWarningDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Publish Pending Article
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p className="font-semibold text-foreground">
+                  This article has a <span className="text-amber-600 font-bold">Pending Review</span> status.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Publishing this article will automatically <span className="font-semibold">approve</span> it and make it immediately visible to all readers.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to proceed?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmPublish(true)}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Approve & Publish
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2648,19 +2906,23 @@ export default function TeacherNewsPage() {
                 <span>Add Comment</span>
               </button>
 
-              <div className="h-px bg-border my-1" />
+              {contextMenu.article.status === "Draft" && (
+                <>
+                  <div className="h-px bg-border my-1" />
 
-              {/* Delete Article */}
-              <button
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 transition-colors text-left"
-                onClick={() => {
-                  handleDeleteClick(contextMenu.article.id)
-                  closeContextMenu()
-                }}
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Article</span>
-              </button>
+                  {/* Delete Article - Only for Draft articles */}
+                  <button
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 transition-colors text-left"
+                    onClick={() => {
+                      handleDeleteClick(contextMenu.article.id)
+                      closeContextMenu()
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Article</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </>

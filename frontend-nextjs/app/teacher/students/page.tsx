@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,9 +27,13 @@ import {
   User,
 } from "lucide-react"
 
+import { useUser, useTeacherAdvisory, useTeacherSchedules, useClassRoster } from "@/hooks"
+import { getStudentGwaHistory } from "@/lib/api/endpoints/gwa"
+
 // Define a type for Student to improve type safety
 type Student = {
   id: string
+  uuid?: string
   name: string
   email: string
   phone: string
@@ -49,6 +54,7 @@ type Student = {
   recentActivity: { action: string; date: string; type: string }[]
 }
 
+// NOTE: Replaced static data source with API-backed data below.
 const studentsData: Student[] = [
   {
     id: "STU001",
@@ -809,6 +815,28 @@ export default function StudentsPage() {
   const [sortField, setSortField] = useState<"name" | "gwa" | "attendance" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
+  // Fetch teacher context
+  const { data: user } = useUser()
+  const teacherId = user?.teacher?.user_id ?? user?.id
+
+  // Fetch teacher advisory sections and schedules
+  const { data: advisory } = useTeacherAdvisory(teacherId)
+  const { data: schedules } = useTeacherSchedules(teacherId)
+
+  // Selected class (optional). If none, show advisory combined roster
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | undefined>(undefined)
+  const selectedSchedule = useMemo(() => schedules?.find(s => s.id === selectedScheduleId), [schedules, selectedScheduleId])
+  const sectionIdForRoster = selectedSchedule?.section_id
+
+  // Server-side roster (schedule preferred, fallback to section). Includes pagination + search bridge
+  const { data: roster } = useClassRoster({
+    scheduleId: selectedScheduleId,
+    sectionId: sectionIdForRoster,
+    page: currentPage,
+    limit: studentsPerPage,
+    search: searchTerm || undefined,
+  })
+
   const handleSort = (field: "name" | "gwa" | "attendance") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -818,31 +846,122 @@ export default function StudentsPage() {
     }
   }
 
-  const filteredStudents = studentsData
-    .filter(
-      (student) =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (student.club && student.club.toLowerCase().includes(searchTerm.toLowerCase())),
-    )
-    .sort((a, b) => {
-      if (!sortField) return 0
+  // Merge data source: when a class is selected use roster students; otherwise derive from advisory
+  const advisoryStudents = useMemo(() => {
+    const list = (advisory ?? []).flatMap(sec => (sec.students ?? []).map(s => ({
+      id: s.student_id,
+      uuid: s.id,
+      name: `${s.first_name} ${s.last_name}`,
+      email: "",
+      phone: "",
+      grade: sec.grade_level ?? "",
+      section: sec.name,
+      gwa: 0,
+      attendance: 0,
+      avatar: undefined,
+      club: null,
+      address: "",
+      guardian: "",
+      guardianPhone: "",
+      favoriteSubject: "",
+      hobbies: [],
+      achievements: [],
+      personality: "",
+      subjects: [],
+      recentActivity: [],
+    } as Student)))
+    return list
+  }, [advisory])
 
-      let aValue = a[sortField]
-      let bValue = b[sortField]
+  const apiStudents: Student[] = useMemo(() => {
+    if (selectedScheduleId) {
+      const list = (roster?.students ?? []).map(s => ({
+        id: s.student_id,
+        uuid: s.id,
+        name: `${s.first_name} ${s.last_name}`,
+        email: "",
+        phone: "",
+        grade: selectedSchedule?.period ?? "",
+        section: sectionIdForRoster ? String(sectionIdForRoster) : "",
+        gwa: 0,
+        attendance: 0,
+        avatar: undefined,
+        club: null,
+        address: "",
+        guardian: "",
+        guardianPhone: "",
+        favoriteSubject: "",
+        hobbies: [],
+        achievements: [],
+        personality: "",
+        subjects: [],
+        recentActivity: [],
+      } as Student))
+      return list
+    }
+    return advisoryStudents
+  }, [selectedScheduleId, roster, selectedSchedule?.period, sectionIdForRoster, advisoryStudents])
 
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase()
-        bValue = (bValue as string).toLowerCase()
+  const filteredStudents = useMemo(() => {
+    return apiStudents
+      .filter(
+        (student) =>
+          (student?.name ?? '').toLowerCase().includes((searchTerm ?? '').toLowerCase()) ||
+          (student?.id ?? '').toLowerCase().includes((searchTerm ?? '').toLowerCase()) ||
+          (student?.section ?? '').toLowerCase().includes((searchTerm ?? '').toLowerCase()) ||
+          ((student?.club ?? '').toLowerCase().includes((searchTerm ?? '').toLowerCase())),
+      )
+      .sort((a, b) => {
+        if (!sortField) return 0
+
+        let aValue = a[sortField]
+        let bValue = b[sortField]
+
+        if (typeof aValue === "string") {
+          aValue = aValue.toLowerCase()
+          bValue = (bValue as string).toLowerCase()
+        }
+
+        if (sortDirection === "asc") {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+        }
+      })
+  }, [apiStudents, searchTerm, sortField, sortDirection])
+
+  // Query GWA per student in current page
+  const pageSlice = useMemo(() => {
+    const startIndex = (currentPage - 1) * studentsPerPage
+    return filteredStudents.slice(startIndex, startIndex + studentsPerPage)
+  }, [filteredStudents, currentPage, studentsPerPage])
+
+  const gwaQueries = useQueries({
+    queries: pageSlice.map((s) => ({
+      queryKey: ['gwa','student', s.uuid],
+      enabled: Boolean(s.uuid),
+      staleTime: 2 * 60 * 1000,
+      queryFn: async () => {
+        const history = await getStudentGwaHistory(s.uuid as string)
+        if (!history || history.length === 0) return null
+        const sorted = [...history].sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
+        return sorted[0]?.gwa ?? null
       }
+    }))
+  })
 
-      if (sortDirection === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
-      }
-    })
+  // Dedicated GWA for the selected student (not limited to current page slice)
+  const { data: selectedGwa } = useQuery({
+    queryKey: ['gwa','student','selected', selectedStudent?.uuid],
+    enabled: Boolean(selectedStudent?.uuid),
+    staleTime: 2 * 60 * 1000,
+    queryFn: async () => {
+      const history = await getStudentGwaHistory(selectedStudent!.uuid as string)
+      if (!history || history.length === 0) return null
+      const sorted = [...history].sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
+      return sorted[0]?.gwa ?? null
+    }
+  })
 
   const totalPages = Math.ceil(filteredStudents.length / studentsPerPage)
   const startIndex = (currentPage - 1) * studentsPerPage
@@ -858,15 +977,7 @@ export default function StudentsPage() {
             </h1>
             <p className="text-slate-600 dark:text-slate-400 mt-1">Manage and view student information</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
-          </div>
+          {/* Add Student button removed */}
         </div>
 
         <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
@@ -882,26 +993,28 @@ export default function StudentsPage() {
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-                <Select defaultValue="all">
+                {/* Class selector sourced from schedules */}
+                <Select value={selectedScheduleId ?? "all"} onValueChange={(v) => setSelectedScheduleId(v === 'all' ? undefined : v)}>
                   <SelectTrigger className="w-full sm:w-36 h-11 border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Grade" />
+                    <SelectValue placeholder="Class" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Grades</SelectItem>
-                    <SelectItem value="Grade 8">Grade 8</SelectItem>
-                    <SelectItem value="Grade 9">Grade 9</SelectItem>
-                    <SelectItem value="Grade 10">Grade 10</SelectItem>
+                    <SelectItem value="all">All Classes (Advisory)</SelectItem>
+                    {(schedules ?? []).map(cls => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.subject ?? 'Class'} {cls.period ? `• ${cls.period}` : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {/* Placeholder for future section filter if needed */}
                 <Select defaultValue="all">
                   <SelectTrigger className="w-full sm:w-36 h-11 border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Section" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sections</SelectItem>
-                    <SelectItem value="Einstein">Einstein</SelectItem>
-                    <SelectItem value="Newton">Newton</SelectItem>
-                    <SelectItem value="Darwin">Darwin</SelectItem>
+                    {/* Dynamic sections could be populated here if needed */}
                   </SelectContent>
                 </Select>
               </div>
@@ -948,15 +1061,7 @@ export default function StudentsPage() {
                               <ArrowUpDown className="w-3 h-3" />
                             </button>
                           </th>
-                          <th className="text-center p-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            <button
-                              onClick={() => handleSort("attendance")}
-                              className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 mx-auto"
-                            >
-                              Attendance
-                              <ArrowUpDown className="w-3 h-3" />
-                            </button>
-                          </th>
+                          {/* Attendance column removed */}
                           <th className="text-center p-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
                             Club
                           </th>
@@ -989,31 +1094,23 @@ export default function StudentsPage() {
                               <div className="text-xs text-slate-600 dark:text-slate-400">{student.section}</div>
                             </td>
                             <td className="p-3 text-center">
-                              <div
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                  student.gwa >= 90
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                    : student.gwa >= 80
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                }`}
-                              >
-                                {student.gwa}%
-                              </div>
+                              {(() => {
+                                const idx = ((currentPage - 1) * studentsPerPage) + (paginatedStudents.findIndex(s => s.id === student.id))
+                                const gwa = gwaQueries[idx - ((currentPage - 1) * studentsPerPage)]?.data ?? null
+                                const value = typeof gwa === 'number' ? gwa : student.gwa
+                                const cls = value >= 90
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                  : value >= 80
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                return (
+                                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${cls}`}>
+                                    {value}%
+                                  </div>
+                                )
+                              })()}
                             </td>
-                            <td className="p-3 text-center">
-                              <div
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                  student.attendance >= 95
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                    : student.attendance >= 85
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                }`}
-                              >
-                                {student.attendance}%
-                              </div>
-                            </td>
+                            {/* Attendance cell removed */}
                             <td className="p-3 text-center">
                               {student.club ? (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
@@ -1078,9 +1175,14 @@ export default function StudentsPage() {
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                              GWA: {student.gwa}%
+                              {(() => {
+                                const idx = ((currentPage - 1) * studentsPerPage) + (paginatedStudents.findIndex(s => s.id === student.id))
+                                const gwa = gwaQueries[idx - ((currentPage - 1) * studentsPerPage)]?.data ?? null
+                                const value = typeof gwa === 'number' ? gwa : student.gwa
+                                return <>GWA: {value}%</>
+                              })()}
                             </div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400">Att: {student.attendance}%</div>
+                            {/* Attendance removed from mobile list */}
                           </div>
                         </div>
                       </CardContent>
@@ -1229,21 +1331,14 @@ export default function StudentsPage() {
                     <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30">
                       <CardContent className="p-4 text-center">
                         <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {selectedStudent.gwa}%
+                          {(typeof selectedGwa === 'number' ? selectedGwa : selectedStudent.gwa)}%
                         </div>
                         <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                           General Weighted Average
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30">
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          {selectedStudent.attendance}%
-                        </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">Attendance Rate</div>
-                      </CardContent>
-                    </Card>
+                    {/* Attendance summary card removed */}
                   </div>
 
                   <Card className="border-0 bg-white/50 dark:bg-slate-800/50">

@@ -24,12 +24,13 @@ import {
   ChevronUp,
   Send,
   Smartphone,
-  Apple,
   Play,
+  Bug,
 } from "lucide-react"
 
 export function Footer() {
-  const currentYear = new Date().getFullYear()
+  // Use hardcoded year or calculate client-side to avoid hydration mismatch
+  const currentYear = typeof window !== 'undefined' ? new Date().getFullYear() : 2025
 
   const [accordionState, setAccordionState] = useState({
     quickLinks: false,
@@ -70,7 +71,7 @@ export function Footer() {
   ]
 
   return (
-    <footer className="bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 text-white relative overflow-hidden">
+    <footer role="contentinfo" className="bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 text-white relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 animate-pulse" />
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
 
@@ -96,25 +97,13 @@ export function Footer() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Link href="/guess/mobile-app" className="w-full sm:w-auto">
-                <AnimatedButton
-                  size="lg"
-                  className="w-full sm:w-auto bg-black text-white hover:bg-gray-800 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"
-                >
-                  <Apple className="w-5 h-5 mr-2" />
-                  App Store
-                </AnimatedButton>
-              </Link>
-
-              <Link href="/guess/mobile-app" className="w-full sm:w-auto">
-                <AnimatedButton
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto bg-white/10 backdrop-blur-sm text-white border-white/30 hover:bg-white/20 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Google Play
-                </AnimatedButton>
+              <Link 
+                href="/guess/mobile-app" 
+                className="w-full sm:w-auto inline-flex items-center justify-center bg-white/10 backdrop-blur-sm text-white border border-white/30 hover:bg-white/20 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"
+                aria-label="Download from Google Play"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                Google Play
               </Link>
             </div>
           </div>
@@ -182,6 +171,7 @@ export function Footer() {
               className="w-full flex items-center justify-between text-left md:cursor-default md:pointer-events-none group"
               aria-expanded={accordionState.quickLinks}
               aria-controls="quicklinks-content"
+              aria-label="Toggle Quick Links section"
             >
               <h4 className="text-base xs:text-lg sm:text-xl font-semibold flex items-center">
                 <BookOpen className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 mr-2 text-school-gold transition-transform duration-300 group-hover:scale-110" />
@@ -224,6 +214,7 @@ export function Footer() {
               className="w-full flex items-center justify-between text-left md:cursor-default md:pointer-events-none group"
               aria-expanded={accordionState.resources}
               aria-controls="resources-content"
+              aria-label="Toggle Resources section"
             >
               <h4 className="text-base xs:text-lg sm:text-xl font-semibold flex items-center">
                 <Users className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 mr-2 text-school-gold transition-transform duration-300 group-hover:scale-110" />
@@ -267,6 +258,7 @@ export function Footer() {
                 className="w-full flex items-center justify-between text-left md:cursor-default md:pointer-events-none group"
                 aria-expanded={accordionState.achievements}
                 aria-controls="achievements-content"
+                aria-label="Toggle Our Achievements section"
               >
                 <h4 className="text-base xs:text-lg sm:text-xl font-semibold flex items-center">
                   <Trophy className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 mr-2 text-school-gold transition-transform duration-300 group-hover:scale-110" />
@@ -323,6 +315,7 @@ export function Footer() {
                   variant="gradient"
                   size="sm"
                   className="w-full text-xs xs:text-sm sm:text-base py-2.5 xs:py-3 sm:py-3.5 bg-gradient-to-r from-school-gold to-vibrant-orange hover:from-vibrant-orange hover:to-school-gold transition-all duration-300 hover:scale-105"
+                  aria-label="Subscribe to newsletter"
                 >
                   <Send className="w-3 h-3 xs:w-4 xs:h-4 mr-2" />
                   Subscribe
@@ -342,15 +335,17 @@ export function Footer() {
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start space-x-3 xs:space-x-4 sm:space-x-6 text-xs xs:text-sm">
                 {[
-                  { href: "/privacy", label: "Privacy Policy" },
-                  { href: "/terms", label: "Terms of Service" },
-                  { href: "/accessibility", label: "Accessibility" },
+                  { href: "/guess/privacy", label: "Privacy Policy" },
+                  { href: "/guess/terms", label: "Terms of Service" },
+                  { href: "/guess/accessibility", label: "Accessibility" },
+                  { href: "/guess/bug-report", label: "Report a Bug", icon: Bug },
                 ].map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
-                    className="text-gray-300 hover:text-school-gold transition-all duration-300 touch-manipulation py-1 hover:scale-105"
+                    className="text-gray-300 hover:text-school-gold transition-all duration-300 touch-manipulation py-1 hover:scale-105 flex items-center gap-1"
                   >
+                    {'icon' in link && link.icon && <link.icon className="w-3 h-3" />}
                     {link.label}
                   </Link>
                 ))}

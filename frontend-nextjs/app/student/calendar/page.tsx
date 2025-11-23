@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useAcademicCalendar } from "@/hooks/useAcademicCalendar"
+import { getCalendarCategory } from "@/lib/api/endpoints/events"
 import {
   ChevronLeft,
   ChevronRight,
@@ -31,6 +33,7 @@ import {
   Eye,
   Zap,
   Target,
+  Loader2,
 } from "lucide-react"
 
 interface CalendarEvent {
@@ -306,13 +309,51 @@ const mockEvents: CalendarEvent[] = [
 ]
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  // Use real API data
+  const {
+    year,
+    month,
+    events: apiEvents,
+    loading,
+    previousMonth,
+    nextMonth,
+    goToToday,
+  } = useAcademicCalendar()
+
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [showEventDetails, setShowEventDetails] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"month" | "week">("month")
   const [showFilters, setShowFilters] = useState(false)
+
+  // Transform API events to match student calendar format
+  const mockEvents = useMemo(() => {
+    return apiEvents.map((event) => {
+      const category = getCalendarCategory(event)
+
+      // Map calendar categories to student event categories
+      let studentCategory: "academic" | "sports" | "arts" | "social" | "exam" | "club" | "food" | "workshop" = "academic"
+      if (category === 'holiday') studentCategory = 'social'
+      else if (category === 'academic') studentCategory = 'exam'
+      else if (category === 'school-event') studentCategory = 'club'
+      else if (category === 'professional') studentCategory = 'workshop'
+
+      return {
+        id: event.id,
+        title: event.title,
+        date: new Date(event.date),
+        time: event.time || '9:00 AM',
+        location: event.location,
+        category: studentCategory,
+        color: eventCategories[studentCategory]?.color || 'bg-blue-500',
+        description: event.description,
+        priority: 'medium' as const,
+      }
+    })
+  }, [apiEvents])
+
+  const currentDate = new Date(year, month - 1)
 
   const monthNames = [
     "January",
@@ -371,27 +412,21 @@ export default function CalendarPage() {
   }, [])
 
   const navigateMonth = (direction: "prev" | "next") => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev)
-      if (direction === "prev") {
-        newDate.setMonth(prev.getMonth() - 1)
-      } else {
-        newDate.setMonth(prev.getMonth() + 1)
-      }
-      return newDate
-    })
+    if (direction === "prev") {
+      previousMonth()
+    } else {
+      nextMonth()
+    }
   }
 
   const navigateWeek = (direction: "prev" | "next") => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev)
-      if (direction === "prev") {
-        newDate.setDate(prev.getDate() - 7)
-      } else {
-        newDate.setDate(prev.getDate() + 7)
-      }
-      return newDate
-    })
+    // Week navigation still uses local state for now
+    // Could be enhanced to work with API in the future
+    if (direction === "prev") {
+      previousMonth()
+    } else {
+      nextMonth()
+    }
   }
 
   const getWeekStart = (date: Date) => {
@@ -426,9 +461,9 @@ export default function CalendarPage() {
       days.push(
         <div
           key={`prev-${day}`}
-          className="h-24 border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-2 text-gray-400"
+          className="h-16 sm:h-20 lg:h-24 border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-1 sm:p-2 text-gray-400"
         >
-          <span className="text-sm">{day}</span>
+          <span className="text-xs sm:text-sm">{day}</span>
         </div>,
       )
     }
@@ -445,12 +480,12 @@ export default function CalendarPage() {
         <div
           key={day}
           className={cn(
-            "h-24 border border-gray-200 dark:border-gray-700 p-2 cursor-pointer transition-all duration-300 relative group hover:shadow-lg hover:scale-[1.02]",
+            "h-16 sm:h-20 lg:h-24 border border-gray-200 dark:border-gray-700 p-1 sm:p-2 cursor-pointer transition-all duration-300 relative group hover:shadow-lg hover:scale-[1.02]",
             isToday &&
-              "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600 shadow-sm ring-2 ring-blue-200 dark:ring-blue-800",
+              "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600 shadow-sm ring-1 sm:ring-2 ring-blue-200 dark:ring-blue-800",
             isSelected &&
-              "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-800 dark:to-blue-700 text-blue-900 dark:text-blue-100 shadow-lg ring-2 ring-blue-300 dark:ring-blue-600",
-            hasHighPriorityEvent && "ring-2 ring-red-200 dark:ring-red-800",
+              "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-800 dark:to-blue-700 text-blue-900 dark:text-blue-100 shadow-lg ring-1 sm:ring-2 ring-blue-300 dark:ring-blue-600",
+            hasHighPriorityEvent && "ring-1 sm:ring-2 ring-red-200 dark:ring-red-800",
             "hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30",
           )}
           onClick={() => setSelectedDate(date)}
@@ -458,31 +493,49 @@ export default function CalendarPage() {
           <div className="flex justify-between items-start">
             <span
               className={cn(
-                "text-sm font-medium transition-all duration-300 hover:scale-110",
+                "text-xs sm:text-sm font-medium transition-all duration-300 hover:scale-110",
                 isSelected && "text-blue-800 dark:text-blue-200 font-bold",
                 isToday &&
-                  "text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded-full",
+                  "text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-800 px-1 sm:px-2 py-0.5 sm:py-1 rounded-full",
               )}
             >
               {day}
             </span>
-            {hasHighPriorityEvent && <Star className="w-3 h-3 text-red-500 fill-current animate-pulse" />}
+            {hasHighPriorityEvent && <Star className="w-2 h-2 sm:w-3 sm:h-3 text-red-500 fill-current animate-pulse" />}
           </div>
-          <div className="flex gap-1 mt-1 flex-wrap">
-            {events.slice(0, 3).map((event) => (
+          <div className="space-y-0.5 sm:space-y-1 mt-0.5 sm:mt-1">
+            {events.slice(0, 2).map((event) => (
               <div
                 key={event.id}
                 className={cn(
-                  "w-3 h-3 rounded-full transition-all duration-300 group-hover:scale-150 group-hover:shadow-lg border-2 border-white dark:border-gray-800 shadow-sm",
+                  "p-1 sm:p-2 rounded cursor-pointer transition-all border shadow-sm hover:shadow-lg hover:scale-[1.03]",
                   event.color,
+                  "text-white"
                 )}
-                title={event.title}
-              />
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedDate(currentDate)
+                  setShowEventDetails(event.id)
+                }}
+              >
+                <div className="flex items-start gap-0.5 sm:gap-1.5">
+                  <Calendar className="w-2 h-2 sm:w-3.5 sm:h-3.5 mt-0.5 flex-shrink-0 hidden sm:block" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] sm:text-sm font-bold leading-snug truncate">{event.title}</div>
+                    {event.time && (
+                      <div className="items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1 opacity-90 hidden sm:flex">
+                        <Clock className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0" />
+                        <span className="text-[9px] sm:text-xs">{event.time}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
-          {events.length > 3 && (
-            <div className="text-xs text-gray-500 mt-1 font-medium group-hover:text-blue-600 transition-colors bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-full">
-              +{events.length - 3} more
+          {events.length > 2 && (
+            <div className="text-[9px] sm:text-xs text-muted-foreground text-center py-0.5 sm:py-1 bg-muted/50 rounded-md font-medium border border-border/30 mt-0.5 sm:mt-1">
+              +{events.length - 2}
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-400/0 to-purple-400/0 group-hover:from-blue-400/10 group-hover:to-purple-400/10 rounded transition-all duration-500 pointer-events-none"></div>
@@ -498,9 +551,9 @@ export default function CalendarPage() {
       days.push(
         <div
           key={`next-${day}`}
-          className="h-24 border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-2 text-gray-400"
+          className="h-16 sm:h-20 lg:h-24 border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-1 sm:p-2 text-gray-400"
         >
-          <span className="text-sm">{day}</span>
+          <span className="text-xs sm:text-sm">{day}</span>
         </div>,
       )
     }
@@ -629,129 +682,130 @@ export default function CalendarPage() {
 
   return (
     <StudentLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-0">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent hover:scale-105 transition-transform cursor-pointer">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent hover:scale-105 transition-transform cursor-pointer">
               Academic Calendar
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">Stay updated with important dates and events</p>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Stay updated with important dates and events</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setViewMode(viewMode === "month" ? "week" : "month")}
               className={cn(
-                "hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 hover:scale-105 hover:shadow-md",
+                "hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 hover:scale-105 hover:shadow-md h-9 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-initial",
                 viewMode === "week" && "bg-blue-100 border-blue-300 text-blue-700",
               )}
             >
-              <Eye className="w-4 h-4 mr-2" />
-              {viewMode === "month" ? "Week View" : "Month View"}
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{viewMode === "month" ? "Week View" : "Month View"}</span>
+              <span className="sm:hidden">{viewMode === "month" ? "Week" : "Month"}</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="hover:bg-green-50 hover:border-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md bg-transparent"
+              className="hover:bg-green-50 hover:border-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md bg-transparent h-9 px-2 sm:px-3 text-xs sm:text-sm hidden sm:flex"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden md:inline">Export</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 hover:scale-110 bg-transparent hover:shadow-md"
+              className="hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 hover:scale-110 bg-transparent hover:shadow-md h-9 px-2 sm:px-3 text-xs sm:text-sm hidden lg:flex"
             >
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden md:inline">Share</span>
             </Button>
           </div>
         </div>
 
         {/* Enhanced Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 text-sm">This Week</p>
-                  <p className="text-2xl font-bold group-hover:scale-110 transition-transform">{eventStats.thisWeek}</p>
-                  <p className="text-xs text-blue-200 mt-1">Events scheduled</p>
+                  <p className="text-blue-100 text-xs sm:text-sm">This Week</p>
+                  <p className="text-xl sm:text-2xl font-bold group-hover:scale-110 transition-transform">{eventStats.thisWeek}</p>
+                  <p className="text-[10px] sm:text-xs text-blue-200 mt-1">Events</p>
                 </div>
                 <div className="relative">
-                  <Calendar className="w-8 h-8 text-blue-200 group-hover:rotate-12 transition-transform duration-300" />
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-blue-200 group-hover:rotate-12 transition-transform duration-300" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-400 rounded-full animate-pulse"></div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 text-white hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-100 text-sm">This Month</p>
-                  <p className="text-2xl font-bold group-hover:scale-110 transition-transform">
+                  <p className="text-green-100 text-xs sm:text-sm">This Month</p>
+                  <p className="text-xl sm:text-2xl font-bold group-hover:scale-110 transition-transform">
                     {eventStats.thisMonth}
                   </p>
-                  <p className="text-xs text-green-200 mt-1">Total events</p>
+                  <p className="text-[10px] sm:text-xs text-green-200 mt-1">Events</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-green-200 group-hover:translate-y-1 transition-transform duration-300" />
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-200 group-hover:translate-y-1 transition-transform duration-300" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-red-500 via-red-600 to-rose-700 text-white hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-red-100 text-sm">High Priority</p>
-                  <p className="text-2xl font-bold group-hover:scale-110 transition-transform">
+                  <p className="text-red-100 text-xs sm:text-sm">High Priority</p>
+                  <p className="text-xl sm:text-2xl font-bold group-hover:scale-110 transition-transform">
                     {eventStats.highPriority}
                   </p>
-                  <p className="text-xs text-red-200 mt-1">Important events</p>
+                  <p className="text-[10px] sm:text-xs text-red-200 mt-1">Important</p>
                 </div>
                 <div className="relative">
-                  <Bell className="w-8 h-8 text-red-200 group-hover:animate-bounce" />
-                  <Zap className="w-4 h-4 text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
+                  <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-red-200 group-hover:animate-bounce" />
+                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-700 text-white hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm">Categories</p>
-                  <p className="text-2xl font-bold group-hover:scale-110 transition-transform">
+                  <p className="text-purple-100 text-xs sm:text-sm">Categories</p>
+                  <p className="text-xl sm:text-2xl font-bold group-hover:scale-110 transition-transform">
                     {Object.keys(eventCategories).length}
                   </p>
-                  <p className="text-xs text-purple-200 mt-1">Event types</p>
+                  <p className="text-[10px] sm:text-xs text-purple-200 mt-1">Types</p>
                 </div>
-                <Target className="w-8 h-8 text-purple-200 group-hover:rotate-45 transition-transform duration-300" />
+                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-purple-200 group-hover:rotate-45 transition-transform duration-300" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Calendar */}
           <div className="lg:col-span-3">
             <Card className="shadow-xl border-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md hover:shadow-2xl transition-all duration-300">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-t-lg">
-                <div className="flex items-center gap-4">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0 pb-3 sm:pb-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-t-lg p-3 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => (viewMode === "month" ? navigateMonth("prev") : navigateWeek("prev"))}
-                    className="h-10 w-10 p-0 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 hover:scale-110 hover:shadow-md"
+                    className="h-8 w-8 sm:h-10 sm:w-10 p-0 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 hover:scale-110 hover:shadow-md flex-shrink-0"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent hover:scale-105 transition-transform cursor-pointer">
+                  <h2 className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent hover:scale-105 transition-transform cursor-pointer truncate flex-1">
                     {viewMode === "month"
                       ? `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`
                       : (() => {
@@ -767,37 +821,37 @@ export default function CalendarPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => (viewMode === "month" ? navigateMonth("next") : navigateWeek("next"))}
-                    className="h-10 w-10 p-0 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 hover:scale-110 hover:shadow-md"
+                    className="h-8 w-8 sm:h-10 sm:w-10 p-0 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 hover:scale-110 hover:shadow-md flex-shrink-0"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
                 {/* Enhanced Quick Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="hover:bg-blue-50 bg-transparent hover:scale-105 transition-all duration-200 hover:shadow-md"
+                    className="hover:bg-blue-50 bg-transparent hover:scale-105 transition-all duration-200 hover:shadow-md h-8 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-initial hidden sm:flex"
                   >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Event
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                    <span className="hidden md:inline">Add Event</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="hover:bg-green-50 bg-transparent hover:scale-105 transition-all duration-200 hover:shadow-md"
+                    className="hover:bg-green-50 bg-transparent hover:scale-105 transition-all duration-200 hover:shadow-md h-8 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-initial hidden sm:flex"
                   >
-                    <Bell className="w-4 h-4 mr-1" />
-                    Reminders
+                    <Bell className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                    <span className="hidden lg:inline">Reminders</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowFilters(!showFilters)}
-                    className="hover:bg-purple-50 bg-transparent hover:scale-105 transition-all duration-200 hover:shadow-md"
+                    className="hover:bg-purple-50 bg-transparent hover:scale-105 transition-all duration-200 hover:shadow-md h-8 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-initial"
                   >
-                    <Filter className="w-4 h-4 mr-1" />
-                    Filter
+                    <Filter className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Filter</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -810,7 +864,7 @@ export default function CalendarPage() {
                         <div
                           key={day}
                           className={cn(
-                            "p-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gradient-to-r",
+                            "p-2 sm:p-3 lg:p-4 text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 transition-all duration-200 hover:bg-gradient-to-r",
                             index === 0 && "hover:from-blue-50 hover:to-blue-100",
                             index === 1 && "hover:from-green-50 hover:to-green-100",
                             index === 2 && "hover:from-purple-50 hover:to-purple-100",
@@ -821,12 +875,23 @@ export default function CalendarPage() {
                             "bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700",
                           )}
                         >
-                          {day.slice(0, 3)}
+                          <span className="hidden sm:inline">{day.slice(0, 3)}</span>
+                          <span className="sm:hidden">{day.slice(0, 1)}</span>
                         </div>
                       ))}
                     </div>
-                    {/* Calendar grid */}
-                    <div className="grid grid-cols-7">{renderCalendarDays()}</div>
+                    {/* Calendar grid with loading overlay */}
+                    <div className="relative">
+                      {loading && (
+                        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                          <div className="flex items-center gap-2 bg-card p-3 rounded-lg shadow-lg border">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            <span className="text-sm text-muted-foreground">Loading events...</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-7">{renderCalendarDays()}</div>
+                    </div>
                   </>
                 ) : (
                   /* Week view */
@@ -837,24 +902,24 @@ export default function CalendarPage() {
           </div>
 
           {/* Event List Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {/* Enhanced Search and Filter Controls */}
             <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
-              <CardContent className="p-4 space-y-3">
+              <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                 <div className="relative group">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4 absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors" />
                   <input
                     type="text"
                     placeholder="Search events..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200"
+                    className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200 text-sm"
                   />
                 </div>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200"
+                  className="w-full p-2 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200 text-sm"
                 >
                   <option value="all">All Categories</option>
                   {Object.entries(eventCategories).map(([key, category]) => (
@@ -863,59 +928,59 @@ export default function CalendarPage() {
                     </option>
                   ))}
                 </select>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedCategory("exam")}
-                    className="text-xs hover:bg-red-50 hover:border-red-300 hover:scale-105 transition-all duration-200"
+                    className="text-[10px] sm:text-xs hover:bg-red-50 hover:border-red-300 hover:scale-105 transition-all duration-200 h-7 sm:h-8 px-2 sm:px-3"
                   >
-                    <GraduationCap className="w-3 h-3 mr-1" />
-                    Exams
+                    <GraduationCap className="w-2.5 h-2.5 sm:w-3 sm:h-3 sm:mr-1" />
+                    <span className="hidden sm:inline">Exams</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedCategory("sports")}
-                    className="text-xs hover:bg-green-50 hover:border-green-300 hover:scale-105 transition-all duration-200"
+                    className="text-[10px] sm:text-xs hover:bg-green-50 hover:border-green-300 hover:scale-105 transition-all duration-200 h-7 sm:h-8 px-2 sm:px-3"
                   >
-                    <Trophy className="w-3 h-3 mr-1" />
-                    Sports
+                    <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3 sm:mr-1" />
+                    <span className="hidden sm:inline">Sports</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedCategory("social")}
-                    className="text-xs hover:bg-pink-50 hover:border-pink-300 hover:scale-105 transition-all duration-200"
+                    className="text-[10px] sm:text-xs hover:bg-pink-50 hover:border-pink-300 hover:scale-105 transition-all duration-200 h-7 sm:h-8 px-2 sm:px-3"
                   >
-                    <Heart className="w-3 h-3 mr-1" />
-                    Social
+                    <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 sm:mr-1" />
+                    <span className="hidden sm:inline">Social</span>
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
+              <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                   <div className="relative">
-                    <Calendar className="w-5 h-5 text-blue-500" />
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                    <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
                   Upcoming Events
-                  <Badge variant="secondary" className="ml-auto hover:scale-110 transition-transform cursor-pointer">
+                  <Badge variant="secondary" className="ml-auto hover:scale-110 transition-transform cursor-pointer text-xs">
                     {upcomingEvents.length}
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 max-h-96 overflow-y-auto">
+              <CardContent className="space-y-2 sm:space-y-3 max-h-96 overflow-y-auto p-3 sm:p-6">
                 {upcomingEvents.map((event, index) => {
                   const CategoryIcon = eventCategories[event.category].icon
                   return (
                     <div
                       key={event.id}
                       className={cn(
-                        "p-3 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 cursor-pointer group relative overflow-hidden",
+                        "p-2 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 cursor-pointer group relative overflow-hidden",
                         "hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600",
                         "animate-in slide-in-from-right-5 duration-300",
                       )}
@@ -924,57 +989,57 @@ export default function CalendarPage() {
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 via-purple-50/0 to-pink-50/0 group-hover:from-blue-50/50 group-hover:via-purple-50/30 group-hover:to-pink-50/50 transition-all duration-500 rounded-lg"></div>
 
-                      <div className="flex items-start gap-3 relative z-10">
+                      <div className="flex items-start gap-2 sm:gap-3 relative z-10">
                         <div
                           className={cn(
-                            "w-3 h-3 rounded-full mt-2 transition-all duration-300",
+                            "w-2 h-2 sm:w-3 sm:h-3 rounded-full mt-1.5 sm:mt-2 transition-all duration-300 flex-shrink-0",
                             "group-hover:scale-150 group-hover:shadow-lg",
                             event.color,
                           )}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-sm truncate group-hover:text-blue-600 transition-colors">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <h4 className="font-medium text-xs sm:text-sm truncate group-hover:text-blue-600 transition-colors">
                               {event.title}
                             </h4>
                             {event.priority === "high" && (
-                              <Star className="w-3 h-3 text-red-500 fill-current animate-pulse" />
+                              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-500 fill-current animate-pulse flex-shrink-0" />
                             )}
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 mt-1 group-hover:text-gray-700 transition-colors">
-                            <Clock className="w-3 h-3" />
+                          <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1 group-hover:text-gray-700 transition-colors">
+                            <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                             <span>{event.date.toLocaleDateString()}</span>
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-700 transition-colors">
+                          <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-700 transition-colors">
                             <span>{event.time}</span>
                           </div>
                           {event.location && (
-                            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-700 transition-colors">
-                              <MapPin className="w-3 h-3" />
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-700 transition-colors">
+                              <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                               <span className="truncate">{event.location}</span>
                             </div>
                           )}
                           {event.attendees && (
-                            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-700 transition-colors">
-                              <Users className="w-3 h-3" />
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-700 transition-colors">
+                              <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                               <span>{event.attendees} attending</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center flex-wrap gap-1 sm:gap-2 mt-1 sm:mt-2">
                             {event.price && (
-                              <Badge variant="secondary" className="text-xs hover:scale-110 transition-transform">
+                              <Badge variant="secondary" className="text-[9px] sm:text-xs hover:scale-110 transition-transform h-5 sm:h-auto px-1.5 sm:px-2">
                                 {event.price}
                               </Badge>
                             )}
-                            <Badge variant="outline" className="text-xs hover:scale-110 transition-transform">
-                              <CategoryIcon className="w-3 h-3 mr-1" />
-                              {eventCategories[event.category].label}
+                            <Badge variant="outline" className="text-[9px] sm:text-xs hover:scale-110 transition-transform h-5 sm:h-auto px-1.5 sm:px-2">
+                              <CategoryIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 sm:mr-1" />
+                              <span className="hidden sm:inline">{eventCategories[event.category].label}</span>
                             </Badge>
                           </div>
                           {/* Expandable Event Details */}
                           {showEventDetails === event.id && event.description && (
-                            <div className="mt-3 p-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-lg text-xs text-gray-600 dark:text-gray-400 animate-in slide-in-from-top-2 duration-300 border-l-4 border-blue-400">
-                              <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">Event Details:</p>
+                            <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-lg text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 animate-in slide-in-from-top-2 duration-300 border-l-2 sm:border-l-4 border-blue-400">
+                              <p className="font-medium text-gray-700 dark:text-gray-300 mb-0.5 sm:mb-1">Event Details:</p>
                               {event.description}
                             </div>
                           )}

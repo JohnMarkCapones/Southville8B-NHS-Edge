@@ -2,19 +2,18 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { BackToTop } from "@/components/ui/back-to-top"
-import { ScrollToTop } from "@/components/scroll-to-top"
-import { ConditionalLayout } from "@/components/conditional-layout"
+import { Providers } from "@/components/providers"
 import { SITE_URL } from "@/lib/seo"
 import { Analytics } from "@vercel/analytics/react"
+import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner"
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   weight: ["300", "400", "500", "600", "700", "800"],
   fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+  preload: true,
+  adjustFontFallback: true,
 })
 
 export const metadata: Metadata = {
@@ -71,20 +70,31 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-black px-3 py-2 rounded">
-          Skip to content
+    <html lang="en-PH" suppressHydrationWarning>
+      <head>
+        {/* Preconnect to optimize external resource loading */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* DNS prefetch for faster external requests */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
+        {/* Enhanced Skip Links for Keyboard Navigation - WCAG 2.1 AAA */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-xl focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:focus:ring-blue-400 focus:outline-none transition-all"
+        >
+          Skip to main content
         </a>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange>
-          <ScrollToTop />
-          <main id="main-content">
-            <ConditionalLayout>{children}</ConditionalLayout>
-          </main>
-          <Toaster />
-          <BackToTop />
-          <Analytics />
-        </ThemeProvider>
+        <a
+          href="#navigation"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-xl focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:focus:ring-blue-400 focus:outline-none transition-all"
+        >
+          Skip to navigation
+        </a>
+        <Providers>{children}</Providers>
+        <CookieConsentBanner />
+        <Analytics />
       </body>
     </html>
   )

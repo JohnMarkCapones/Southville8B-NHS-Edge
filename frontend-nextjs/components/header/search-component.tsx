@@ -158,6 +158,7 @@ export function SearchComponent({ className }: SearchComponentProps) {
         size="icon"
         onClick={handleSearchClick}
         className="hidden md:flex hover:bg-accent/50 hover:scale-110 transition-all duration-300 relative"
+        aria-label="Search"
       >
         <Search className="w-4 h-4" />
         <span className="sr-only">Search</span>

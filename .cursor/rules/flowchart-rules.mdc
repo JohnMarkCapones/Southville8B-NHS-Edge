@@ -1,0 +1,150 @@
+---
+alwaysApply: true
+---
+
+Here are guidelines for creating a flowchart for your capstone project (system-based, covering mobile, web and desktop apps) — based on standard flowchart symbol conventions from SmartDraw. 
+SmartDraw
+
+You can adapt these to your specific system, modules and deployment platforms.
+
+1. Define the scope & purpose
+
+Clarify what part of the system your flowchart will cover. For example:
+
+User login / authentication flow
+
+Main menu/navigation across mobile/web/desktop
+
+Data input, processing and output workflow
+
+Error handling & exceptions
+
+Decide the audience: Are you drawing this for developers, testers, stakeholders, or as documentation?
+
+Identify the entry point and exit point of the workflow (what starts the process and what ends it).
+
+2. Choose the correct symbols
+
+According to SmartDraw:
+
+6
+
+Here are the basic ones you’ll want to use:
+
+Start/End (Terminator symbol) – usually an oval or “pill” shape. Marks start or end of the workflow. 
+SmartDraw
+
+Process / Action (Rectangle) – represents a step or action (e.g., “Validate user credentials”). 
+SmartDraw
+
+Decision (Diamond) – a branching point (e.g., “Is password correct?”) with yes/no or multiple outcomes. 
+SmartDraw
+
+Input/Output (Parallelogram) – data entering or leaving the system (e.g., user input, report output). 
+SmartDraw
+
+Data Storage / Database (Cylinder or special symbol) – indicates persistent data storage (e.g., “Save session token”). 
+SmartDraw
+
+Connector / Off-page (circle/arrow symbol) – for flows that continue elsewhere or across pages. 
+SmartDraw
+
+Tip: If you use less common symbols, include a legend to ensure clarity. 
+SmartDraw
+
+3. Map out the high-level flow first
+
+Sketch the major steps in your system across the three platforms (mobile, web, desktop). For example:
+
+Start → User chooses platform (mobile/web/desktop)
+
+Show login / authentication flow
+
+After login → Show main module(s) (e.g., Dashboard, Data Entry, Reporting)
+
+Data processing & storage steps
+
+Output/Report generation or logout → End
+
+At this high level you’re not worrying yet about every detail — just the main path(s).
+
+4. Drill into module-specific flows
+
+For each major module or platform, create more detailed flows. You can structure by platform or by function.
+For example:
+
+Mobile app: Launch → Check network → Show login screen → If first time → show onboarding → else → main dashboard → user taps “Add Record” → enter data → submit → API call → store in database → show confirmation → end.
+
+Web app: Browser opens → Load landing page → user logs in → choose module → data export → download file → end.
+
+Desktop app: Start application → connect to local database → synchronize with server → user edits offline → sync when online → end.
+
+Use decision diamonds for branching logic (e.g., “Is user online?”). Use input/output shape for “Enter data” or “Download file”. Use data-storage symbol for “Save to server” or “Local DB”.
+
+5. Pay attention to cross-platform aspects
+
+Since your system spans mobile, web and desktop, your flowchart should reflect shared logic and platform-specific logic.
+
+Show where the flows converge: e.g., all platforms call the same API, or all update the same database.
+
+Use consistent notation so the reader can easily follow differences vs similarities.
+
+Optionally use swimlanes (horizontal/vertical lanes) labelled by platform (Mobile / Web / Desktop) to visually distinguish which steps belong to which platform. (Although SmartDraw notes you can stick to basic symbols unless you’re doing very detailed diagrams.) 
+SmartDraw
+
+6. Use clear arrows and flow direction
+
+Ensure arrows clearly show the direction of flow (typically top to bottom, left to right).
+
+Avoid crossing arrows where possible. If necessary, use connector symbols.
+
+Label decision out-going arrows (e.g., “Yes”, “No”) for clarity.
+
+Make sure every process step leads to a next step (except end), and decision steps have every branch accounted for (i.e., no “dead” un‐handled path).
+
+7. Keep it readable and manageable
+
+Don’t overcrowd one flowchart with every tiny detail — break into sub‐ flowcharts if needed (you can use subroutine symbol for “See detailed flowchart”). 
+SmartDraw
+
+Use whitespace, align symbols, and maintain consistent symbol sizes.
+
+Use descriptive labels inside symbols (e.g., “Validate Credentials” rather than “Step 1”).
+
+Add a title, legend (if you use many symbol types), date and version of the flowchart.
+
+8. Review & validate with stakeholders
+
+Walk through the flowchart step‐by‐step with team members (developers, testers, business analysts) to ensure accuracy.
+
+Check whether all platforms (mobile, web, desktop) are covered, and whether the branching logic is correct.
+
+Verify that storage/data flows, error cases and exit paths are included.
+
+Update the flowchart if changes happen in system design.
+
+9. Document and integrate into your capstone deliverables
+
+Include the flowchart in your requirements/design document or appendix.
+
+Provide a short narrative describing the flow (so someone reading the chart knows what platform/option is being followed).
+
+Highlight any platform‐specific differences (e.g., offline mode for desktop, push notifications for mobile).
+
+Use the flowchart to guide test cases and verification.
+
+10. Example small snippet
+
+Here’s a textual example for the login process across platforms:
+
+Start (Oval) → Show “Platform Selection” (Rectangle) → Decision: “Is Platform Mobile?” (Diamond)
+
+Yes → Show Mobile Login Screen (Rectangle) → Input: “Enter credentials” (Parallelogram) → Process: “Validate credentials via API” (Rectangle) → Decision: “Credentials valid?” (Diamond)
+
+Yes → Process: “Initialize mobile session” (Rectangle) → End (Oval)
+
+No → Process: “Show error message” (Rectangle) → End (Oval)
+
+No → Decision: “Is Platform Web?” (Diamond) … and so on for desktop.
+
+You would draw this using the appropriate symbols for each step.

@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { SupabaseService } from './supabase/supabase.service';
 
 @ApiTags('Health & Info')
-@Controller('api/v1')
+@Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
@@ -40,11 +40,11 @@ export class AppController {
   })
   async getHealth() {
     try {
-      // Test Supabase connection
+      // Test Supabase connection using an existing table
       const supabase = this.supabaseService.getClient();
       const { data, error } = await supabase
-        .from('_health_check')
-        .select('*')
+        .from('users')
+        .select('id')
         .limit(1);
 
       return {

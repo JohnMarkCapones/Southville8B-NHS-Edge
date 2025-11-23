@@ -55,11 +55,14 @@ import {
   X,
   AlertCircle,
   Check,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation" // Import useRouter
+import { useModules } from "@/hooks/useModules"
+import type { Module } from "@/lib/api/endpoints/modules"
 
 // TODO: DATABASE - Replace with actual database types
 type MaterialStatus = "draft" | "published" | "scheduled" | "expired"
@@ -185,11 +188,83 @@ const gradeSectionsMap: Record<string, string[]> = {
   "Grade 10": ["Da Vinci", "Edison", "Franklin", "Faraday"],
 }
 
+/**
+ * Helper function to map file MIME type to FileType
+ */
+function getFileTypeFromMimeType(mimeType?: string): FileType {
+  if (!mimeType) return "other"
+
+  if (mimeType.includes("pdf")) return "pdf"
+  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "ppt"
+  if (mimeType.includes("document") || mimeType.includes("word")) return "doc"
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return "xls"
+  if (mimeType.includes("image")) return "image"
+  if (mimeType.includes("video")) return "video"
+
+  return "other"
+}
+
+/**
+ * Transform API Module to UI StudentMaterial format
+ * NOTE: This is a temporary transformation until we update the UI to use the API types directly
+ */
+function transformModuleToMaterial(module: Module): StudentMaterial {
+  return {
+    id: module.id,
+    title: module.title,
+    description: module.description || "",
+    fileUrl: module.file_url || "",
+    fileName: module.file_url?.split("/").pop() || "Unknown",
+    fileType: getFileTypeFromMimeType(module.mime_type),
+    fileSize: module.file_size_bytes || 0,
+    subject: module.subject?.subject_name || "Unknown",
+    gradeLevel: "Unknown", // TODO: Need to get from section relationship
+    topic: module.description?.split(".")[0] || "", // Extract first sentence as topic
+    status: "published", // API modules are always published
+    publishDate: new Date(module.created_at),
+    expirationDate: null,
+    allowDownload: true, // Default for now
+    assignedSections: module.sections?.map(s => s.name) || [],
+    views: module.downloadStats?.totalDownloads || 0, // Using downloads as views
+    downloads: module.downloadStats?.totalDownloads || 0,
+    uploadedAt: new Date(module.created_at),
+    updatedAt: new Date(module.updated_at),
+  }
+}
+
 export default function StudentMaterialsPage() {
   const { toast } = useToast()
   const router = useRouter() // Initialize useRouter
 
-  const [materials, setMaterials] = useState<StudentMaterial[]>(mockMaterials)
+  // API Integration: Use the modules hook
+  const {
+    modules: apiModules,
+    pagination,
+    loading: modulesLoading,
+    error: modulesError,
+    params,
+    setParams,
+    setSearch: setApiSearch,
+    setPage,
+    setLimit,
+    createModule: apiCreateModule,
+    deleteModule: apiDeleteModule,
+    refetch,
+  } = useModules({
+    enabled: true,
+    initialParams: {
+      page: 1,
+      limit: 20,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+    },
+  })
+
+  // Transform API modules to UI materials format
+  const materials = useMemo(() => {
+    return apiModules.map(transformModuleToMaterial)
+  }, [apiModules])
+
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [filterSubject, setFilterSubject] = useState<string>("all")
@@ -219,6 +294,7 @@ export default function StudentMaterialsPage() {
     materialId: "",
     materialTitle: "",
   })
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [uploadConfirmation, setUploadConfirmation] = useState({
     open: false,
@@ -345,22 +421,19 @@ export default function StudentMaterialsPage() {
   //   }
   // }, [uploadDialogOpen])
 
-  // Filter and search materials (optimized with useMemo)
+  // Use API-provided materials directly (API handles filtering and search)
+  // Keep client-side filtering for non-API filters (subject, grade, status, type)
+  // since the API doesn't support all these filters yet
   const filteredMaterials = useMemo(() => {
     return materials.filter((material) => {
-      const matchesSearch =
-        material.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        material.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        material.topic.toLowerCase().includes(searchQuery.toLowerCase())
-
       const matchesSubject = filterSubject === "all" || material.subject === filterSubject
       const matchesGrade = filterGrade === "all" || material.gradeLevel === filterGrade
       const matchesStatus = filterStatus === "all" || material.status === filterStatus
       const matchesType = filterType === "all" || material.fileType === filterType
 
-      return matchesSearch && matchesSubject && matchesGrade && matchesStatus && matchesType
+      return matchesSubject && matchesGrade && matchesStatus && matchesType
     })
-  }, [materials, searchQuery, filterSubject, filterGrade, filterStatus, filterType])
+  }, [materials, filterSubject, filterGrade, filterStatus, filterType])
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -435,66 +508,94 @@ export default function StudentMaterialsPage() {
     setIsUploading(true)
     setUploadProgress(0)
 
-    // TODO: DATABASE - Upload file to storage and save metadata to database
-    // Example:
-    // const formData = new FormData()
-    // uploadForm.files.forEach((file, index) => {
-    //   formData.append(`file${index}`, file)
-    // })
-    // formData.append('metadata', JSON.stringify({
-    //   title: uploadForm.title,
-    //   description: uploadForm.description,
-    //   subject: uploadForm.subject,
-    //   gradeLevel: uploadForm.gradeLevel,
-    //   topic: uploadForm.topic,
-    //   assignedSections: uploadForm.assignedSections,
-    //   publishDate: uploadForm.publishDate,
-    //   expirationDate: uploadForm.hasExpiration ? uploadForm.expirationDate : null,
-    //   allowDownload: uploadForm.allowDownload,
-    //   status: uploadForm.status
-    // }))
-    //
-    // const response = await fetch('/api/teacher/student-materials/upload', {
-    //   method: 'POST',
-    //   body: formData
-    // })
-    //
-    // const result = await response.json()
-    //
-    // if (result.success) {
-    //   // Assuming result.materials is an array of newly created materials
-    //   setMaterials(prev => [...prev, ...result.materials])
-    // }
+    try {
+      console.log('[StudentMaterials] Starting upload for:', uploadForm.title)
+      console.log('[StudentMaterials] Files to upload:', uploadForm.files.length)
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsUploading(false)
-          setUploadDialogOpen(false)
-          // Reset form
-          setUploadForm({
-            title: "",
-            description: "",
-            subject: "",
-            gradeLevel: "",
-            topic: "",
-            assignedSections: [],
-            publishDate: "",
-            expirationDate: "",
-            hasExpiration: false,
-            // </CHANGE>
-            allowDownload: true,
-            status: "published",
-            files: [], // Reset files
-          })
-          return 100
+      // Upload each file as a separate module
+      // NOTE: The API currently supports one file per module
+      // If there are multiple files, we create multiple modules
+      let uploadedCount = 0
+
+      for (const file of uploadForm.files) {
+        try {
+          console.log('[StudentMaterials] Uploading file:', file.name)
+
+          // TODO: Need to convert section names to section UUIDs
+          // For now, we'll set isGlobal to true or leave sectionIds empty
+          // This will be fixed in Phase 5 when we create useSections hook
+          await apiCreateModule(
+            {
+              title: uploadForm.files.length > 1 ? `${uploadForm.title} - ${file.name}` : uploadForm.title,
+              description: uploadForm.description || undefined,
+              isGlobal: true, // TODO: Set to false when we can map section names to UUIDs
+              // subjectId: undefined, // TODO: Need to map subject name to UUID
+              // sectionIds: [], // TODO: Need to map section names to UUIDs
+            },
+            file
+          )
+
+          uploadedCount++
+          setUploadProgress((uploadedCount / uploadForm.files.length) * 100)
+          console.log('[StudentMaterials] ✅ File uploaded:', file.name)
+        } catch (fileError) {
+          console.error('[StudentMaterials] ❌ File upload error:', file.name, fileError)
+          // Continue with next file
         }
-        return prev + 10
+      }
+
+      if (uploadedCount > 0) {
+        toast({
+          title: "Upload successful",
+          description: `Successfully uploaded ${uploadedCount} of ${uploadForm.files.length} file(s).`,
+          duration: 3000,
+        })
+      } else {
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload any files. Please try again.",
+          variant: "destructive",
+          duration: 5000,
+        })
+      }
+
+      console.log('[StudentMaterials] ✅ Upload complete:', uploadedCount, 'files')
+    } catch (error) {
+      console.error('[StudentMaterials] ❌ Upload error:', error)
+
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload materials",
+        variant: "destructive",
+        duration: 5000,
       })
-    }, 200)
-  }, [uploadForm]) // Include uploadForm in dependencies if it's used within confirmUpload
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(100)
+
+      // Close dialog after a short delay to show completion
+      setTimeout(() => {
+        setUploadDialogOpen(false)
+        setUploadProgress(0)
+
+        // Reset form
+        setUploadForm({
+          title: "",
+          description: "",
+          subject: "",
+          gradeLevel: "",
+          topic: "",
+          assignedSections: [],
+          publishDate: "",
+          expirationDate: "",
+          hasExpiration: false,
+          allowDownload: true,
+          status: "published",
+          files: [],
+        })
+      }, 500)
+    }
+  }, [uploadForm, apiCreateModule, toast])
   // CHANGE END
 
   // CHANGE: Modified handleDelete to show confirmation first
@@ -507,33 +608,87 @@ export default function StudentMaterialsPage() {
   }, [])
 
   // New function to actually delete after confirmation
-  const confirmDelete = useCallback(() => {
+  const confirmDelete = useCallback(async () => {
     const materialId = deleteConfirmation.materialId
 
-    // TODO: DATABASE - Delete material from database
-    // Example:
-    // await fetch(`/api/teacher/student-materials/${materialId}`, {
-    //   method: 'DELETE'
-    // })
-    //
-    // await db.query('DELETE FROM student_materials WHERE id = ?', [materialId])
+    if (isDeleting || !materialId) return
 
-    setMaterials((prev) => prev.filter((m) => m.id !== materialId))
-    setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })
-  }, [deleteConfirmation.materialId]) // Include deleteConfirmation.materialId in dependencies
+    setIsDeleting(true)
+    try {
+      console.log('[StudentMaterials] Deleting module:', materialId)
+      await apiDeleteModule(materialId)
+
+      toast({
+        title: "Material deleted",
+        description: "The material has been successfully deleted.",
+        duration: 3000,
+      })
+
+      console.log('[StudentMaterials] ✅ Module deleted successfully')
+      
+      // Close dialog immediately after successful deletion
+      setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })
+    } catch (error) {
+      console.error('[StudentMaterials] ❌ Delete error:', error)
+
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete material",
+        variant: "destructive",
+        duration: 5000,
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [deleteConfirmation.materialId, apiDeleteModule, toast, isDeleting])
   // CHANGE END
 
   // Handle bulk delete
-  const handleBulkDelete = useCallback(() => {
-    // TODO: DATABASE - Delete multiple materials
-    // await fetch('/api/teacher/student-materials/bulk-delete', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ ids: selectedMaterials })
-    // })
+  const handleBulkDelete = useCallback(async () => {
+    try {
+      console.log('[StudentMaterials] Bulk deleting modules:', selectedMaterials.length)
 
-    setMaterials((prev) => prev.filter((m) => !selectedMaterials.includes(m.id)))
-    setSelectedMaterials([])
-  }, [selectedMaterials])
+      // Delete each module sequentially
+      let deletedCount = 0
+      for (const materialId of selectedMaterials) {
+        try {
+          await apiDeleteModule(materialId)
+          deletedCount++
+        } catch (error) {
+          console.error('[StudentMaterials] ❌ Failed to delete:', materialId, error)
+          // Continue with next deletion
+        }
+      }
+
+      if (deletedCount > 0) {
+        toast({
+          title: "Materials deleted",
+          description: `Successfully deleted ${deletedCount} of ${selectedMaterials.length} material(s).`,
+          duration: 3000,
+        })
+      } else {
+        toast({
+          title: "Delete failed",
+          description: "Failed to delete any materials. Please try again.",
+          variant: "destructive",
+          duration: 5000,
+        })
+      }
+
+      console.log('[StudentMaterials] ✅ Bulk delete complete:', deletedCount, 'materials')
+    } catch (error) {
+      console.error('[StudentMaterials] ❌ Bulk delete error:', error)
+
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete materials",
+        variant: "destructive",
+        duration: 5000,
+      })
+    } finally {
+      setSelectedMaterials([])
+    }
+  }, [selectedMaterials, apiDeleteModule, toast])
 
   // Toggle material selection
   const toggleSelection = useCallback((materialId: string) => {
@@ -709,7 +864,11 @@ export default function StudentMaterialsPage() {
       {/* CHANGE: Added Delete Confirmation Dialog */}
       <Dialog
         open={deleteConfirmation.open}
-        onOpenChange={(open) => setDeleteConfirmation({ ...deleteConfirmation, open })}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader className="space-y-3">
@@ -738,11 +897,23 @@ export default function StudentMaterialsPage() {
               variant="outline"
               onClick={() => setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })}
               className="flex-1"
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button onClick={confirmDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
-              Delete
+            <Button 
+              onClick={confirmDelete} 
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1353,6 +1524,45 @@ export default function StudentMaterialsPage() {
           </Dialog>
         </div>
 
+        {/* API Error Display */}
+        {modulesError && (
+          <Card className="border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900 dark:text-red-100 mb-1">Failed to load materials</h3>
+                  <p className="text-sm text-red-700 dark:text-red-300">{modulesError.message}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetch()}
+                    className="mt-3 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/30"
+                  >
+                    Try again
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {modulesLoading && materials.length === 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                  <p className="text-slate-600 dark:text-slate-400">Loading materials...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
@@ -1407,7 +1617,11 @@ export default function StudentMaterialsPage() {
                   <Input
                     placeholder="Search materials..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value)
+                      // Sync with API search with debouncing
+                      setApiSearch(e.target.value)
+                    }}
                     className="pl-10"
                   />
                 </div>

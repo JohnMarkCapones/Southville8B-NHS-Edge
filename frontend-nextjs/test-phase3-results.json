@@ -1,0 +1,25 @@
+﻿{
+    "Timestamp":  "2025-10-18 18:18:15",
+    "Tests":  [
+                  {
+                      "Status":  "PASS",
+                      "Name":  "Backend Health",
+                      "Details":  "Backend responding on port 3004"
+                  },
+                  {
+                      "Status":  "WARNING",
+                      "Name":  "Announcements API",
+                      "Details":  "401 Unauthorized - May require authentication"
+                  },
+                  {
+                      "Status":  "PASS",
+                      "Name":  "Frontend Accessibility",
+                      "Details":  "Homepage accessible with announcements section"
+                  },
+                  {
+                      "Status":  "PASS",
+                      "Name":  "Frontend Files",
+                      "Details":  "All required files present"
+                  }
+              ]
+}

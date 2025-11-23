@@ -1,17 +1,30 @@
 import type { Metadata } from "next"
 import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { absoluteUrl } from "@/lib/seo"
-import { findEventBySlug } from "./data"
-import ClientPage from "./ui-client"
+import { findEventBySlug, EVENTS } from "./data"
+import { getEventBySlug } from "@/lib/api/endpoints/events"
+import ClientPageEnhanced from "./ui-client-enhanced"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const event = findEventBySlug(slug)
+  
+  // Try to fetch from API first, fallback to static data
+  let event
+  try {
+    event = await getEventBySlug(slug)
+    if (!event) {
+      event = findEventBySlug(slug)
+    }
+  } catch (error) {
+    console.error('Failed to fetch event from API, using static data:', error)
+    event = findEventBySlug(slug)
+  }
+  
   if (!event) {
     return {
       title: "Event Not Found | Events",
-      description: "The event you’re looking for does not exist.",
+      description: "The event you're looking for does not exist.",
       robots: { index: false, follow: false },
     }
   }
@@ -34,7 +47,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function EventPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const event = findEventBySlug(slug)
+  
+  // Try to fetch from API first, fallback to static data
+  let event
+  try {
+    event = await getEventBySlug(slug)
+    if (!event) {
+      event = findEventBySlug(slug)
+    }
+  } catch (error) {
+    console.error('Failed to fetch event from API, using static data:', error)
+    event = findEventBySlug(slug)
+  }
 
   const breadcrumbs = buildBreadcrumbListSchema([
     { name: "Home", url: absoluteUrl("/") },
@@ -89,10 +113,13 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           current={event ? event.title : "Event"}
         />
       </div>
-      <ClientPage params={{ slug }} />
+      <ClientPageEnhanced params={{ slug }} />
     </>
   )
 }
 
 // Revalidate event detail pages hourly
 export const revalidate = 3600
+
+// Use dynamic rendering to support API data
+export const dynamic = "force-dynamic"

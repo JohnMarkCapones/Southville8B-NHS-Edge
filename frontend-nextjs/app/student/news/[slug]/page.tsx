@@ -10,12 +10,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Calendar,
   Eye,
   Heart,
-  MessageCircle,
   Share2,
   Bookmark,
   Clock,
@@ -28,14 +26,19 @@ import {
   ChevronRight,
   Star,
   TrendingUp,
-  ThumbsUp,
-  Send,
   Users,
   BarChart3,
   Zap,
   ArrowUp,
   Printer,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react"
+import { useNewsArticle, useRelatedNews } from "@/hooks/useNews"
+import { NewsArticleSkeleton } from "@/components/ui/news-skeleton"
+import { getCategoryName, getAuthorName, formatDate } from "@/lib/api/endpoints/news"
+import { NewsArticle } from "@/types/news"
+import { useToast } from "@/hooks/use-toast"
 
 const RelatedArticleCard = memo(({ article }: { article: any }) => (
   <Link href={`/student/news/${article.slug}`} className="block group">
@@ -55,7 +58,7 @@ const RelatedArticleCard = memo(({ article }: { article: any }) => (
         </h4>
         <div className="flex items-center justify-between gap-2">
           <Badge variant="outline" className="text-xs capitalize px-2 py-0.5 font-medium">
-            {article.category}
+            {getCategoryName(article.category)}
           </Badge>
           <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
             <Clock className="w-3 h-3" />
@@ -68,177 +71,25 @@ const RelatedArticleCard = memo(({ article }: { article: any }) => (
 ))
 RelatedArticleCard.displayName = "RelatedArticleCard"
 
-const CommentItem = memo(({ comment }: { comment: any }) => (
-  <div className="flex gap-3 p-4 rounded-lg hover:bg-muted/30 transition-colors">
-    <Avatar className="w-8 h-8 flex-shrink-0">
-      <AvatarImage src={comment.avatar || "/placeholder.svg"} alt={comment.author} />
-      <AvatarFallback>
-        {comment.author
-          .split(" ")
-          .map((n) => n[0])
-          .join("")}
-      </AvatarFallback>
-    </Avatar>
-    <div className="flex-1 min-w-0 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="font-medium text-sm">{comment.author}</span>
-        <span className="text-xs text-muted-foreground">{new Date(comment.date).toLocaleDateString()}</span>
-      </div>
-      <p className="text-sm text-muted-foreground break-words">{comment.content}</p>
-      <div className="flex items-center gap-4 text-xs">
-        <button className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-          <ThumbsUp className="w-3 h-3" />
-          {comment.likes}
-        </button>
-        <button className="text-muted-foreground hover:text-primary transition-colors">Reply</button>
-        {comment.replies > 0 && (
-          <span className="text-muted-foreground">
-            {comment.replies} repl{comment.replies === 1 ? "y" : "ies"}
-          </span>
-        )}
-      </div>
-    </div>
-  </div>
-))
-CommentItem.displayName = "CommentItem"
-
 export default function NewsArticlePage() {
   const params = useParams()
   const slug = params.slug as string
+  const { toast } = useToast()
   const [isLiked, setIsLiked] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [likes, setLikes] = useState(0)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [readingProgress, setReadingProgress] = useState(0)
-  const [newComment, setNewComment] = useState("")
   const [rating, setRating] = useState(0)
   const [userRating, setUserRating] = useState(0)
-  const [showComments, setShowComments] = useState(true)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  const shareMenuRef = useRef<HTMLDivElement>(null)
 
-  const comments = useMemo(
-    () => [
-      {
-        id: 1,
-        author: "Sarah Johnson",
-        avatar: "/placeholder.svg?height=32&width=32&text=SJ",
-        content: "Congratulations to all the winners! This is such an inspiring achievement for our school.",
-        date: "2024-03-11",
-        likes: 5,
-        replies: 2,
-      },
-      {
-        id: 2,
-        author: "Mark Chen",
-        avatar: "/placeholder.svg?height=32&width=32&text=MC",
-        content:
-          "The solar-powered water purification system sounds amazing! Can't wait to see it at the regional competition.",
-        date: "2024-03-11",
-        likes: 3,
-        replies: 0,
-      },
-      {
-        id: 3,
-        author: "Lisa Rodriguez",
-        avatar: "/placeholder.svg?height=32&width=32&text=LR",
-        content: "So proud of our students! This shows the quality of education at Southville 8B NHS.",
-        date: "2024-03-10",
-        likes: 8,
-        replies: 1,
-      },
-    ],
-    [],
-  )
+  // API data fetching
+  const { data: article, isLoading: articleLoading, error: articleError, refetch: refetchArticle } = useNewsArticle(slug)
+  const { data: relatedArticles = [], isLoading: relatedLoading } = useRelatedNews(article?.id || "", 3)
 
-  const article = useMemo(
-    () => ({
-      id: 1,
-      title: "Southville 8B NHS Wins Municipal Science Fair",
-      slug: "southville-8b-nhs-wins-municipal-science-fair",
-      content: `
-      <div class="prose prose-lg max-w-none">
-        <p class="lead">In a remarkable display of scientific excellence, Southville 8B NHS students dominated the municipal science fair, bringing home multiple awards and recognition for their innovative projects.</p>
-        
-        <h2>Outstanding Achievements</h2>
-        <p>Our students showcased exceptional scientific innovation and creativity across various categories. The competition, held at the Municipal Convention Center, featured over 200 projects from 15 schools across the district.</p>
-        
-        <h3>Award Winners</h3>
-        <ul>
-          <li><strong>First Place - Physics Category:</strong> Maria Santos with "Solar-Powered Water Purification System"</li>
-          <li><strong>Second Place - Biology Category:</strong> John Dela Cruz with "Plant Growth Enhancement Using Natural Fertilizers"</li>
-          <li><strong>Third Place - Chemistry Category:</strong> Ana Rodriguez with "Biodegradable Plastic from Banana Peels"</li>
-          <li><strong>Best Innovation Award:</strong> Team Project by Grade 10 students on "Smart Waste Management System"</li>
-        </ul>
-        
-        <h2>Impact on Our School Community</h2>
-        <p>This achievement reflects the dedication of our students and the quality of science education at Southville 8B NHS. The winning projects will now advance to the regional competition next month.</p>
-        
-        <blockquote>
-          <p>"I'm incredibly proud of our students' achievements. Their hard work and innovative thinking truly represent the spirit of scientific inquiry we foster at our school."</p>
-          <cite>- Principal Maria Santos</cite>
-        </blockquote>
-        
-        <h2>Looking Forward</h2>
-        <p>The school will continue to support these talented students as they prepare for the regional competition. Additional mentoring sessions and laboratory time have been arranged to help them refine their projects further.</p>
-        
-        <p>We encourage all students to consider participating in next year's science fair. It's an excellent opportunity to explore scientific concepts, develop research skills, and showcase creativity.</p>
-      </div>
-    `,
-      author: "Principal Maria Santos",
-      authorImage: "/placeholder.svg?height=40&width=40&text=MS",
-      date: "2024-03-10",
-      category: "achievement",
-      image: "/placeholder.svg?height=400&width=800&text=Science+Fair+Victory",
-      views: 245,
-      initialLikes: 32,
-      comments: 8,
-      featured: true,
-      trending: true,
-      readTime: "4 min read",
-      tags: ["Science", "Achievement", "Competition", "Innovation", "Students"],
-      shares: 15,
-      avgRating: 4.8,
-      totalRatings: 24,
-    }),
-    [],
-  )
-
-  const relatedArticles = useMemo(
-    () => [
-      {
-        id: 2,
-        title: "New Computer Laboratory Opens",
-        slug: "new-computer-laboratory-opens",
-        excerpt: "State-of-the-art computer laboratory with 30 new workstations now available for student use.",
-        image: "/placeholder.svg?height=200&width=300&text=Computer+Lab",
-        date: "2024-03-08",
-        category: "facility",
-        readTime: "3 min read",
-      },
-      {
-        id: 3,
-        title: "Basketball Team Advances to Regional Finals",
-        slug: "basketball-team-advances-to-regional-finals",
-        excerpt: "Our varsity basketball team secured their spot in the regional championship.",
-        image: "/placeholder.svg?height=200&width=300&text=Basketball+Victory",
-        date: "2024-03-05",
-        category: "sports",
-        readTime: "5 min read",
-      },
-      {
-        id: 4,
-        title: "Math Olympiad Team Wins Regional Competition",
-        slug: "math-olympiad-team-wins-regional-competition",
-        excerpt: "Our mathematics team brought home first place in the regional Math Olympiad competition.",
-        image: "/placeholder.svg?height=200&width=300&text=Math+Olympiad",
-        date: "2024-02-20",
-        category: "achievement",
-        readTime: "4 min read",
-      },
-    ],
-    [],
-  )
 
   useEffect(() => {
     let ticking = false
@@ -262,9 +113,11 @@ export default function NewsArticlePage() {
   }, [])
 
   useEffect(() => {
-    setLikes(article.initialLikes)
-    setRating(article.avgRating)
-  }, [article.initialLikes, article.avgRating])
+    if (article) {
+      setLikes(article.initialLikes)
+      setRating(article.avgRating)
+    }
+  }, [article])
 
   const handleLike = () => {
     setIsLiked(!isLiked)
@@ -275,12 +128,6 @@ export default function NewsArticlePage() {
     setUserRating(newRating)
   }
 
-  const handleCommentSubmit = () => {
-    if (newComment.trim()) {
-      setNewComment("")
-    }
-  }
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -289,28 +136,135 @@ export default function NewsArticlePage() {
     window.print()
   }
 
-  const handleShare = (platform: string) => {
-    const url = window.location.href
+  // Close share menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+        setShowShareMenu(false)
+      }
+    }
+
+    if (showShareMenu) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showShareMenu])
+
+  const handleShare = async (platform: string) => {
+    if (!article) return
+    
+    // Use guest URL path instead of student path
+    const guestUrl = `${window.location.origin}/guess/news/${article.slug}`
     const title = article.title
 
     switch (platform) {
       case "facebook":
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank")
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(guestUrl)}`, "_blank")
+        toast({
+          title: "Opening Facebook",
+          description: "Share this article on Facebook",
+        })
         break
       case "twitter":
         window.open(
-          `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`,
+          `https://twitter.com/intent/tweet?url=${encodeURIComponent(guestUrl)}&text=${encodeURIComponent(title)}`,
           "_blank",
         )
+        toast({
+          title: "Opening Twitter",
+          description: "Share this article on Twitter",
+        })
         break
       case "email":
-        window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`
+        window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(guestUrl)}`
+        toast({
+          title: "Opening Email",
+          description: "Share this article via email",
+        })
         break
       case "copy":
-        navigator.clipboard.writeText(url)
+        try {
+          await navigator.clipboard.writeText(guestUrl)
+          toast({
+            title: "Link Copied!",
+            description: "Article link has been copied to your clipboard",
+          })
+        } catch (err) {
+          toast({
+            title: "Failed to Copy",
+            description: "Please try again or copy the link manually",
+            variant: "destructive",
+          })
+        }
         break
     }
     setShowShareMenu(false)
+  }
+
+  // Loading state
+  if (articleLoading) {
+    return (
+      <StudentLayout>
+        <NewsArticleSkeleton />
+      </StudentLayout>
+    )
+  }
+
+  // Error state
+  if (articleError) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Article not found</h3>
+              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                The news article you're looking for doesn't exist or has been removed.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button onClick={() => refetchArticle()} className="gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/student/news">Back to News</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
+  }
+
+  // Article not found
+  if (!article) {
+    return (
+      <StudentLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Article not found</h3>
+              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                The news article you're looking for doesn't exist or has been removed.
+              </p>
+              <Button variant="outline" asChild>
+                <Link href="/student/news">Back to News</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </StudentLayout>
+    )
   }
 
   return (
@@ -341,7 +295,7 @@ export default function NewsArticlePage() {
               Back to News
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span className="capitalize">{article.category}</span>
+            <span className="capitalize">{getCategoryName(article.category)}</span>
             <ChevronRight className="w-4 h-4" />
             <span className="text-foreground font-medium truncate">Article</span>
           </div>
@@ -350,7 +304,7 @@ export default function NewsArticlePage() {
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <Badge className="bg-blue-500 text-white capitalize">{article.category}</Badge>
+                <Badge className="bg-blue-500 text-white capitalize">{getCategoryName(article.category)}</Badge>
                 {article.featured && (
                   <Badge className="bg-yellow-500 text-white">
                     <Star className="w-3 h-3 mr-1" />
@@ -372,16 +326,16 @@ export default function NewsArticlePage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-muted-foreground">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10 ring-2 ring-blue-500/20">
-                    <AvatarImage src={article.authorImage || "/placeholder.svg"} alt={article.author} />
+                    <AvatarImage src={article.authorImage || "/placeholder.svg"} alt={getAuthorName(article.author)} />
                     <AvatarFallback>
-                      {article.author
+                      {getAuthorName(article.author)
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium text-foreground">{article.author}</div>
+                    <div className="font-medium text-foreground">{getAuthorName(article.author)}</div>
                     <div className="text-sm">Author</div>
                   </div>
                 </div>
@@ -391,11 +345,7 @@ export default function NewsArticlePage() {
                 <div className="grid grid-cols-2 sm:flex sm:items-center gap-4 text-sm">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {new Date(article.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {article.date}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
@@ -426,11 +376,6 @@ export default function NewsArticlePage() {
                   </div>
                   <span className="text-sm font-medium">{rating.toFixed(1)}</span>
                   <span className="text-sm text-muted-foreground">({article.totalRatings} ratings)</span>
-                </div>
-                <Separator orientation="vertical" className="h-4" />
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>{article.comments} comments</span>
                 </div>
               </div>
             </div>
@@ -498,16 +443,6 @@ export default function NewsArticlePage() {
                       </Button>
 
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 bg-transparent hover:scale-105 transition-all duration-300"
-                        onClick={() => setShowComments(!showComments)}
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        {article.comments}
-                      </Button>
-
-                      <Button
                         variant={isBookmarked ? "default" : "outline"}
                         size="sm"
                         onClick={() => setIsBookmarked(!isBookmarked)}
@@ -529,7 +464,16 @@ export default function NewsArticlePage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="relative">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShare("copy")}
+                        className="gap-2 hover:scale-105 transition-all duration-300"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copy Link
+                      </Button>
+                      <div className="relative" ref={shareMenuRef}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -619,40 +563,6 @@ export default function NewsArticlePage() {
                 </CardContent>
               </Card>
 
-              {showComments && (
-                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageCircle className="w-5 h-5" />
-                      Comments ({comments.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-3">
-                      <Textarea
-                        placeholder="Share your thoughts about this article..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        className="min-h-[100px] resize-none"
-                      />
-                      <div className="flex justify-end">
-                        <Button onClick={handleCommentSubmit} disabled={!newComment.trim()} className="gap-2">
-                          <Send className="w-4 h-4" />
-                          Post Comment
-                        </Button>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-4">
-                      {comments.map((comment) => (
-                        <CommentItem key={comment.id} comment={comment} />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
 
             <div className="space-y-6 lg:sticky lg:top-6 lg:self-start min-w-0">
@@ -664,31 +574,17 @@ export default function NewsArticlePage() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="w-12 h-12 ring-2 ring-blue-500/20 flex-shrink-0">
-                      <AvatarImage src={article.authorImage || "/placeholder.svg"} alt={article.author} />
+                      <AvatarImage src={article.authorImage || "/placeholder.svg"} alt={getAuthorName(article.author)} />
                       <AvatarFallback>
-                        {article.author
+                        {getAuthorName(article.author)
                           .split(" ")
                           .map((n) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <div className="font-medium truncate">{article.author}</div>
-                      <div className="text-sm text-muted-foreground">School Principal</div>
+                      <div className="font-medium truncate">{getAuthorName(article.author)}</div>
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Leading Southville 8B NHS with dedication to academic excellence and student development.
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <BarChart3 className="w-3 h-3" />
-                      15 articles
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      1.2k followers
-                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -713,10 +609,6 @@ export default function NewsArticlePage() {
                       <div className="text-2xl font-bold">{article.shares}</div>
                       <div className="text-white/80">Shares</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">{comments.length}</div>
-                      <div className="text-white/80">Comments</div>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -726,9 +618,27 @@ export default function NewsArticlePage() {
                   <CardTitle className="text-lg">Related Articles</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {relatedArticles.map((relatedArticle) => (
-                    <RelatedArticleCard key={relatedArticle.id} article={relatedArticle} />
-                  ))}
+                  {relatedLoading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index} className="flex gap-3 p-3 rounded-lg">
+                          <div className="w-20 h-20 bg-muted rounded-lg animate-pulse" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-muted rounded animate-pulse" />
+                            <div className="h-3 bg-muted rounded w-2/3 animate-pulse" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : relatedArticles.length > 0 ? (
+                    relatedArticles.map((relatedArticle) => (
+                      <RelatedArticleCard key={relatedArticle.id} article={relatedArticle} />
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No related articles found.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 

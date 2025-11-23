@@ -133,13 +133,16 @@ export function HeroSection() {
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="none"
           poster="/placeholder.jpg"
           onLoadedMetadata={onLoaded}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           aria-hidden="true"
+          loading="lazy"
         >
+          {/* Add WebM format when available - better compression */}
+          {/* <source src="/videos/hero-blue-campus.webm" type="video/webm" /> */}
           <source src="/videos/hero-blue-campus.mp4" type="video/mp4" />
           {"Your browser does not support the video tag."}
         </video>
@@ -160,9 +163,10 @@ export function HeroSection() {
           <div className="inline-flex items-center gap-3 rounded-full border bg-white text-slate-900 border-slate-200/70 shadow-sm px-2.5 pr-3 py-1.5 dark:bg-slate-800/80 dark:text-slate-100 dark:border-slate-700/60 backdrop-blur">
             <div className="relative h-8 w-8 md:h-9 md:w-9 rounded-full overflow-hidden ring-1 ring-slate-200 dark:ring-slate-700 bg-white">
               <Image
-                src="/logo.png"
+                src="/logo-48.webp"
                 alt="School logo"
-                fill
+                width={48}
+                height={48}
                 sizes="(max-width: 768px) 32px, 36px"
                 className="object-contain p-0.5"
                 priority
@@ -196,22 +200,20 @@ export function HeroSection() {
               </p>
 
               {/* CTA Row */}
-              <div className="mt-6 sm:mt-7 flex flex-col xs:flex-row gap-2.5 sm:gap-3">
-                <Link href="/guess/academics" className="w-full xs:w-auto">
+              <div className="mt-6 sm:mt-7 flex flex-col xs:flex-row gap-3 sm:gap-4">
+                <Link href="/guess/academics" className="inline-block w-full xs:w-auto">
                   <Button
-                    size="lg"
-                    className="w-full xs:w-auto rounded-full px-6 sm:px-7 py-5 sm:py-6 font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-xl transition-all"
+                    className="w-full xs:w-auto h-12 sm:h-14 min-h-[44px] rounded-full px-6 sm:px-7 font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-xl transition-all touch-manipulation"
                   >
                     <BookOpen className="w-5 h-5 mr-2" />
                     Explore Academics
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
-                <Link href="/guess/virtual-tour" className="w-full xs:w-auto">
+                <Link href="/guess/virtual-tour" className="inline-block w-full xs:w-auto">
                   <Button
-                    size="lg"
                     variant="outline"
-                    className="w-full xs:w-auto rounded-full px-6 sm:px-7 py-5 sm:py-6 font-semibold border-2 border-blue-300 text-blue-900 hover:bg-blue-50 dark:border-blue-200/80 dark:text-blue-200 dark:hover:bg-slate-800/70 bg-transparent"
+                    className="w-full xs:w-auto h-12 sm:h-14 min-h-[44px] rounded-full px-6 sm:px-7 font-semibold border-2 border-blue-300 text-blue-900 hover:bg-blue-50 dark:border-blue-200/80 dark:text-blue-200 dark:hover:bg-slate-800/70 bg-transparent touch-manipulation"
                   >
                     <Play className="w-5 h-5 mr-2" />
                     Virtual Tour
@@ -240,19 +242,19 @@ export function HeroSection() {
 
             {/* Right: Premium Quick Links grid (revamped) */}
             <div className="lg:justify-self-end w-full">
-              <div className="rounded-2xl p-5 sm:p-6 md:p-7 w-full max-w-md ml-auto bg-white/80 border border-white/60 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:border-slate-700/60">
-                <div className="flex items-center justify-between mb-4">
+              <div className="rounded-2xl p-4 sm:p-5 md:p-5 w-full max-w-md ml-auto bg-white/80 border border-white/60 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:border-slate-700/60">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg md:text-xl font-semibold">
+                    <h2 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg md:text-xl font-semibold">
                       Quick Links
-                    </h3>
+                    </h2>
                   </div>
                   <Badge className="bg-blue-600 text-white text-[11px] sm:text-xs">Start Here</Badge>
                 </div>
 
                 {/* New grid of actions (6 items) */}
-                <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                   {[
                     { title: "Academics", href: "/guess/academics", icon: BookOpen, desc: "Courses" },
                     { title: "Student Life", href: "/guess/student-life", icon: Users, desc: "Clubs" },
@@ -265,20 +267,20 @@ export function HeroSection() {
                       key={item.title}
                       href={item.href}
                       className={cn(
-                        "group relative rounded-xl p-3 sm:p-3.5 border overflow-hidden",
+                        "group relative rounded-xl p-2.5 sm:p-3 border overflow-hidden",
                         "bg-white/80 dark:bg-slate-800/70 border-slate-200/70 dark:border-slate-700/60",
                         "hover:shadow-md transition-all",
                       )}
                     >
                       {/* gradient ring on hover */}
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 ring-transparent group-hover:ring-2 group-hover:ring-blue-500/40 transition-all" />
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg grid place-items-center bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
-                          <item.icon className="w-5 h-5" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-lg grid place-items-center bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
+                          <item.icon className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-slate-900 dark:text-white truncate">{item.title}</div>
-                          <div className="text-[12px] text-slate-600 dark:text-slate-300">{item.desc}</div>
+                          <div className="text-[13px] sm:text-sm font-semibold text-slate-900 dark:text-white truncate">{item.title}</div>
+                          <div className="text-[11px] sm:text-[12px] text-slate-600 dark:text-slate-300">{item.desc}</div>
                         </div>
                       </div>
                     </Link>
@@ -286,14 +288,14 @@ export function HeroSection() {
                 </div>
 
                 {/* Accents */}
-                <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="mt-3 flex justify-center items-center gap-3">
                   {[
                     { icon: GraduationCap, label: "Excellence" },
                     { icon: Trophy, label: "Awards" },
                     { icon: BookOpen, label: "Learning" },
                   ].map(({ icon: Icon, label }) => (
-                    <div key={label} className="flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-300">
-                      <Icon className="w-4 h-4 text-blue-600" />
+                    <div key={label} className="flex items-center gap-1.5 text-[11px] sm:text-[12px] text-slate-600 dark:text-slate-300">
+                      <Icon className="w-3.5 h-3.5 text-blue-600" />
                       {label}
                     </div>
                   ))}

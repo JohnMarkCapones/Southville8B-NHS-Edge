@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAnnouncements, useDeleteAnnouncement, useUpdateAnnouncement } from "@/hooks/useAnnouncements"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useBanners, useBannerMutations } from "@/hooks/useBanners"
+import type { BannerNotification } from "@/lib/api/types/banners"
 import {
   Search,
   Plus,
@@ -213,7 +216,10 @@ const AnnouncementsPage = () => {
 
   const [activeTab, setActiveTab] = useState("announcements")
 
-  const [banners, setBanners] = useState(mockBanners)
+  // Fetch banners from API
+  const { data: bannersData, isLoading: bannersLoading, error: bannersError } = useBanners({ enabled: true })
+  const { createMutation, updateMutation, deleteMutation, toggleMutation } = useBannerMutations()
+  const banners = bannersData?.data || []
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false)
   const [editingBanner, setEditingBanner] = useState<any>(null)
   const [bannerPreview, setBannerPreview] = useState<any>(null)
@@ -237,7 +243,6 @@ const AnnouncementsPage = () => {
     dateRange: "",
   })
 
-  const [announcements, setAnnouncements] = useState(mockAnnouncements)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
@@ -247,6 +252,40 @@ const AnnouncementsPage = () => {
   const [itemsPerPage, setItemsPerPage] = useState(20)
   const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([])
   const [previewAnnouncement, setPreviewAnnouncement] = useState<any>(null)
+
+  // Fetch announcements from API
+  const { data: announcementsData, isLoading, error } = useAnnouncements({
+    page: currentPage,
+    limit: itemsPerPage,
+  })
+
+  // Mutation hooks for announcement CRUD operations
+  const deleteAnnouncementMutation = useDeleteAnnouncement()
+  const updateAnnouncementMutation = useUpdateAnnouncement()
+
+  // Transform backend data to match UI expectations
+  const announcements = announcementsData?.data.map(announcement => ({
+    id: announcement.id,
+    title: announcement.title,
+    content: announcement.content,
+    author: announcement.user?.full_name || announcement.user?.email || "Unknown",
+    category: announcement.type || "general",
+    priority: "normal", // Backend doesn't have priority field
+    status: "Published", // All fetched announcements are published
+    publishedDate: announcement.createdAt,
+    scheduledDate: null,
+    targetAudience: announcement.targetRoles?.map(r => r.name) || [],
+    isPinned: false, // Backend doesn't have isPinned yet
+    readCount: 0, // Would need view tracking
+    totalRecipients: 0, // Would need calculation
+    notificationSent: true,
+    emailSent: false,
+    smsSent: false,
+    attachments: [],
+    template: null,
+    expiresAt: announcement.expiresAt,
+    tags: announcement.tags?.map(t => t.name) || [],
+  })) || []
 
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean
@@ -299,6 +338,7 @@ const AnnouncementsPage = () => {
     isEdit: boolean
   }>({ isOpen: false, isEdit: false })
 
+  // Client-side filtering (for local filters only - backend handles pagination)
   const filteredAnnouncements = announcements.filter((announcement) => {
     const matchesSearch =
       announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -314,10 +354,12 @@ const AnnouncementsPage = () => {
     return matchesSearch && matchesCategory && matchesPriority && matchesStatus && matchesAudience
   })
 
-  const totalPages = Math.ceil(filteredAnnouncements.length / itemsPerPage)
+  // Use API pagination data
+  const totalPages = announcementsData?.pagination.totalPages || 1
+  const totalCount = announcementsData?.pagination.total || 0
   const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, endIndex)
+  const endIndex = Math.min(startIndex + itemsPerPage, totalCount)
+  const paginatedAnnouncements = filteredAnnouncements
 
   const handleFilterChange = (filterType: string, value: string) => {
     setCurrentPage(1)
@@ -619,16 +661,24 @@ const AnnouncementsPage = () => {
     })
   }
 
-  const confirmDeleteAnnouncement = () => {
+  const confirmDeleteAnnouncement = async () => {
     if (deleteConfirmation.announcement) {
-      // TODO: Backend - Delete announcement from database
-      setAnnouncements((prev) => prev.filter((a) => a.id !== deleteConfirmation.announcement.id))
+      try {
+        await deleteAnnouncementMutation.mutateAsync(deleteConfirmation.announcement.id)
 
-      toast({
-        title: "Announcement Deleted",
-        description: `"${deleteConfirmation.announcement.title}" has been permanently removed.`,
-        duration: 4000,
-      })
+        toast({
+          title: "Announcement Deleted",
+          description: `"${deleteConfirmation.announcement.title}" has been permanently removed.`,
+          duration: 4000,
+        })
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete announcement. Please try again.",
+          variant: "destructive",
+          duration: 4000,
+        })
+      }
 
       setDeleteConfirmation({ isOpen: false, announcement: null })
     }
@@ -639,18 +689,13 @@ const AnnouncementsPage = () => {
     closeContextMenu()
   }
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (statusConfirmation.announcement) {
-      // TODO: Backend - Update announcement status in database
-      setAnnouncements((prev) =>
-        prev.map((a) =>
-          a.id === statusConfirmation.announcement.id ? { ...a, status: statusConfirmation.newStatus } : a,
-        ),
-      )
-
+      // TODO: Backend doesn't support status field yet
       toast({
-        title: "Status Updated",
-        description: `"${statusConfirmation.announcement.title}" status changed to ${statusConfirmation.newStatus}`,
+        title: "Not Implemented",
+        description: "Status change is not yet supported by the backend.",
+        variant: "destructive",
         duration: 4000,
       })
 
@@ -663,18 +708,13 @@ const AnnouncementsPage = () => {
     closeContextMenu()
   }
 
-  const confirmPriorityChange = () => {
+  const confirmPriorityChange = async () => {
     if (priorityConfirmation.announcement) {
-      // TODO: Backend - Update announcement priority in database
-      setAnnouncements((prev) =>
-        prev.map((a) =>
-          a.id === priorityConfirmation.announcement.id ? { ...a, priority: priorityConfirmation.newPriority } : a,
-        ),
-      )
-
+      // TODO: Backend doesn't support priority field yet
       toast({
-        title: "Priority Updated",
-        description: `"${priorityConfirmation.announcement.title}" priority changed to ${priorityConfirmation.newPriority}`,
+        title: "Not Implemented",
+        description: "Priority change is not yet supported by the backend.",
+        variant: "destructive",
         duration: 4000,
       })
 
@@ -687,16 +727,13 @@ const AnnouncementsPage = () => {
     closeContextMenu()
   }
 
-  const confirmTogglePinned = () => {
+  const confirmTogglePinned = async () => {
     if (pinnedConfirmation.announcement) {
-      // TODO: Backend - Update announcement pinned status in database
-      setAnnouncements((prev) =>
-        prev.map((a) => (a.id === pinnedConfirmation.announcement.id ? { ...a, isPinned: !a.isPinned } : a)),
-      )
-
+      // TODO: Backend doesn't support isPinned field yet
       toast({
-        title: pinnedConfirmation.announcement.isPinned ? "Unpinned" : "Pinned",
-        description: `"${pinnedConfirmation.announcement.title}" ${pinnedConfirmation.announcement.isPinned ? "removed from" : "added to"} pinned announcements`,
+        title: "Not Implemented",
+        description: "Pin/Unpin is not yet supported by the backend.",
+        variant: "destructive",
         duration: 4000,
       })
 
@@ -706,23 +743,10 @@ const AnnouncementsPage = () => {
 
   const handleDuplicateAnnouncement = (announcement: any) => {
     // TODO: Backend - Create duplicate announcement in database
-    const newAnnouncement = {
-      ...announcement,
-      id: `${Date.now()}`,
-      title: `${announcement.title} (Copy)`,
-      status: "Draft",
-      publishedDate: null,
-      readCount: 0,
-      notificationSent: false,
-      emailSent: false,
-      smsSent: false,
-    }
-
-    setAnnouncements((prev) => [newAnnouncement, ...prev])
-
     toast({
-      title: "Announcement Duplicated",
-      description: `"${newAnnouncement.title}" created as draft`,
+      title: "Not Implemented",
+      description: "Duplicate announcement is not yet supported by the backend.",
+      variant: "destructive",
       duration: 4000,
     })
 
@@ -804,8 +828,12 @@ const AnnouncementsPage = () => {
       const start = new Date(bannerForm.startDate)
       const end = new Date(bannerForm.endDate)
       if (end <= start) {
-        errors.dateRange = "End date must be after start date"
+        errors.dateRange = "End date & time must be after start date & time. Please select a later end date."
       }
+    } else if (!bannerForm.startDate) {
+      errors.dateRange = "Start date & time is required"
+    } else if (!bannerForm.endDate) {
+      errors.dateRange = "End date & time is required"
     }
 
     setBannerFormErrors(errors)
@@ -891,39 +919,78 @@ const AnnouncementsPage = () => {
   }
 
   const confirmSaveBanner = () => {
-    // TODO: Backend - Save banner to database
     if (editingBanner) {
-      setBanners((prev) =>
-        prev.map((b) =>
-          b.id === editingBanner.id
-            ? {
-                ...b,
-                ...bannerForm,
-              }
-            : b,
-        ),
+      updateMutation.mutate(
+        {
+          id: editingBanner.id,
+          data: {
+            message: bannerForm.message,
+            shortMessage: bannerForm.shortMessage,
+            type: bannerForm.type,
+            isDismissible: bannerForm.isDismissible,
+            hasAction: bannerForm.hasAction,
+            actionLabel: bannerForm.actionLabel,
+            actionUrl: bannerForm.actionUrl,
+            startDate: bannerForm.startDate,
+            endDate: bannerForm.endDate,
+            template: bannerForm.template,
+          },
+        },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Banner Updated",
+              description: "Banner notification has been updated successfully",
+              duration: 3000,
+            })
+            setBannerDialogOpen(false)
+            setBannerCreateConfirmation({ isOpen: false, isEdit: false })
+          },
+          onError: (error: any) => {
+            toast({
+              title: "Error",
+              description: error?.response?.data?.message || "Failed to update banner",
+              variant: "destructive",
+              duration: 3000,
+            })
+          },
+        },
       )
-      toast({
-        title: "Banner Updated",
-        description: "Banner notification has been updated successfully",
-        duration: 3000,
-      })
     } else {
-      const newBanner = {
-        id: `b${Date.now()}`,
-        ...bannerForm,
-        isActive: false,
-        createdBy: "Current User",
-      }
-      setBanners((prev) => [newBanner, ...prev])
-      toast({
-        title: "Banner Created",
-        description: "New banner notification has been created",
-        duration: 3000,
-      })
+      createMutation.mutate(
+        {
+          message: bannerForm.message,
+          shortMessage: bannerForm.shortMessage,
+          type: bannerForm.type,
+          isDismissible: bannerForm.isDismissible,
+          hasAction: bannerForm.hasAction,
+          actionLabel: bannerForm.actionLabel,
+          actionUrl: bannerForm.actionUrl,
+          startDate: bannerForm.startDate,
+          endDate: bannerForm.endDate,
+          template: bannerForm.template,
+        },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Banner Created",
+              description: "New banner notification has been created",
+              duration: 3000,
+            })
+            setBannerDialogOpen(false)
+            setBannerCreateConfirmation({ isOpen: false, isEdit: false })
+          },
+          onError: (error: any) => {
+            toast({
+              title: "Error",
+              description: error?.response?.data?.message || "Failed to create banner",
+              variant: "destructive",
+              duration: 3000,
+            })
+          },
+        },
+      )
     }
-    setBannerDialogOpen(false)
-    setBannerCreateConfirmation({ isOpen: false, isEdit: false })
   }
 
   const handleToggleBannerActive = (banner: any) => {
@@ -932,21 +999,26 @@ const AnnouncementsPage = () => {
 
   const confirmToggleBannerActive = () => {
     if (bannerToggleConfirmation.banner) {
-      // TODO: Backend - Update banner active status in database
-      setBanners((prev) =>
-        prev.map(
-          (b) =>
-            b.id === bannerToggleConfirmation.banner.id ? { ...b, isActive: !b.isActive } : { ...b, isActive: false }, // Only one active banner at a time
-        ),
-      )
-      toast({
-        title: bannerToggleConfirmation.banner.isActive ? "Banner Deactivated" : "Banner Activated",
-        description: bannerToggleConfirmation.banner.isActive
-          ? "Banner is no longer visible on the website"
-          : "Banner is now visible on the website",
-        duration: 3000,
+      toggleMutation.mutate(bannerToggleConfirmation.banner.id, {
+        onSuccess: () => {
+          toast({
+            title: bannerToggleConfirmation.banner.isActive ? "Banner Deactivated" : "Banner Activated",
+            description: bannerToggleConfirmation.banner.isActive
+              ? "Banner is no longer visible on the website"
+              : "Banner is now visible on the website",
+            duration: 3000,
+          })
+          setBannerToggleConfirmation({ isOpen: false, banner: null })
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Error",
+            description: error?.response?.data?.message || "Failed to toggle banner status",
+            variant: "destructive",
+            duration: 3000,
+          })
+        },
       })
-      setBannerToggleConfirmation({ isOpen: false, banner: null })
     }
   }
 
@@ -956,24 +1028,32 @@ const AnnouncementsPage = () => {
 
   const confirmDeleteBanner = () => {
     if (bannerDeleteConfirmation.banner) {
-      // TODO: Backend - Delete banner from database
-      setBanners((prev) => prev.filter((b) => b.id !== bannerDeleteConfirmation.banner.id))
-      toast({
-        title: "Banner Deleted",
-        description: "Banner notification has been removed",
-        duration: 3000,
+      deleteMutation.mutate(bannerDeleteConfirmation.banner.id, {
+        onSuccess: () => {
+          toast({
+            title: "Banner Deleted",
+            description: "Banner notification has been removed",
+            duration: 3000,
+          })
+          setBannerDeleteConfirmation({ isOpen: false, banner: null })
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Error",
+            description: error?.response?.data?.message || "Failed to delete banner",
+            variant: "destructive",
+            duration: 3000,
+          })
+        },
       })
-      setBannerDeleteConfirmation({ isOpen: false, banner: null })
     }
   }
 
   const handlePromoteToBanner = (announcement: any) => {
-    // TODO: Backend - Create duplicate announcement in database
-    const newBanner = {
-      id: `b${Date.now()}`,
+    const bannerData = {
       message: announcement.title,
       shortMessage: announcement.title.substring(0, 50),
-      type: announcement.priority === "Urgent" ? "destructive" : announcement.priority === "High" ? "warning" : "info",
+      type: (announcement.priority === "Urgent" ? "destructive" : announcement.priority === "High" ? "warning" : "info") as "info" | "success" | "warning" | "destructive",
       isActive: false,
       isDismissible: true,
       hasAction: false,
@@ -981,16 +1061,27 @@ const AnnouncementsPage = () => {
       actionUrl: "",
       startDate: new Date().toISOString(),
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      createdBy: announcement.author,
       template: "From Announcement",
     }
-    setBanners((prev) => [newBanner, ...prev])
-    toast({
-      title: "Promoted to Banner",
-      description: `"${announcement.title}" has been promoted to a banner notification`,
-      duration: 4000,
+
+    createMutation.mutate(bannerData, {
+      onSuccess: () => {
+        toast({
+          title: "Promoted to Banner",
+          description: `"${announcement.title}" has been promoted to a banner notification`,
+          duration: 4000,
+        })
+        closeContextMenu()
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error?.response?.data?.message || "Failed to promote to banner",
+          variant: "destructive",
+          duration: 3000,
+        })
+      },
     })
-    closeContextMenu()
   }
 
   const applyBannerTemplate = (template: string) => {
@@ -1131,7 +1222,7 @@ const AnnouncementsPage = () => {
                   <Bell className="h-8 w-8 text-blue-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-muted-foreground">Total Announcements</p>
-                    <p className="text-2xl font-bold text-foreground">{announcements.length}</p>
+                    <p className="text-2xl font-bold text-foreground">{totalCount}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1327,7 +1418,32 @@ const AnnouncementsPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedAnnouncements.map((announcement) => (
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                            <span>Loading announcements...</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : error ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8 text-destructive">
+                          <div className="flex flex-col items-center gap-2">
+                            <AlertCircle className="h-8 w-8" />
+                            <p>Failed to load announcements</p>
+                            <p className="text-sm text-muted-foreground">{error.message}</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedAnnouncements.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                          No announcements found
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedAnnouncements.map((announcement) => (
                       <TableRow
                         key={announcement.id}
                         className="border-border cursor-pointer hover:bg-muted/50"
@@ -1350,9 +1466,10 @@ const AnnouncementsPage = () => {
                                 </Badge>
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                              {announcement.content}
-                            </div>
+                            <div
+                              className="text-sm text-muted-foreground mt-1 line-clamp-1"
+                              dangerouslySetInnerHTML={{ __html: announcement.content }}
+                            />
                             {announcement.attachments.length > 0 && (
                               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                                 <Paperclip className="w-3 h-3" />
@@ -1642,7 +1759,24 @@ const AnnouncementsPage = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {banners.map((banner) => (
+                {bannersLoading && (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading banners...</p>
+                  </div>
+                )}
+
+                {bannersError && (
+                  <div className="text-center py-12">
+                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <p className="text-red-500 font-medium mb-2">Failed to load banners</p>
+                    <p className="text-muted-foreground text-sm">
+                      {bannersError?.message || "An error occurred while fetching banners"}
+                    </p>
+                  </div>
+                )}
+
+                {!bannersLoading && !bannersError && banners.map((banner) => (
                   <div
                     key={banner.id}
                     className="border border-border rounded-lg p-4 hover:bg-muted/30 transition-colors"
@@ -1691,6 +1825,7 @@ const AnnouncementsPage = () => {
                             id={`active-${banner.id}`}
                             checked={banner.isActive}
                             onCheckedChange={() => handleToggleBannerActive(banner)}
+                            disabled={toggleMutation.isPending}
                           />
                         </div>
                         <DropdownMenu>
@@ -1711,6 +1846,7 @@ const AnnouncementsPage = () => {
                             <DropdownMenuItem
                               className="text-foreground"
                               onClick={() => handleToggleBannerActive(banner)}
+                              disabled={toggleMutation.isPending}
                             >
                               {banner.isActive ? (
                                 <>
@@ -1724,7 +1860,11 @@ const AnnouncementsPage = () => {
                                 </>
                               )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteBanner(banner)}>
+                            <DropdownMenuItem
+                              className="text-red-500"
+                              onClick={() => handleDeleteBanner(banner)}
+                              disabled={deleteMutation.isPending}
+                            >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete Banner
                             </DropdownMenuItem>
@@ -1735,7 +1875,7 @@ const AnnouncementsPage = () => {
                   </div>
                 ))}
 
-                {banners.length === 0 && (
+                {!bannersLoading && !bannersError && banners.length === 0 && (
                   <div className="text-center py-12">
                     <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No banner notifications yet</p>
@@ -2064,9 +2204,10 @@ const AnnouncementsPage = () => {
 
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Content</p>
-                    <div className="prose prose-sm max-w-none">
-                      <p className="text-foreground">{previewAnnouncement.content}</p>
-                    </div>
+                    <div
+                      className="prose prose-sm max-w-none text-foreground"
+                      dangerouslySetInnerHTML={{ __html: previewAnnouncement.content }}
+                    />
                   </div>
                 </div>
 
@@ -2647,10 +2788,25 @@ const AnnouncementsPage = () => {
                       <Input
                         id="start-date"
                         type="datetime-local"
+                        min={new Date().toISOString().slice(0, 16)}
                         value={bannerForm.startDate ? new Date(bannerForm.startDate).toISOString().slice(0, 16) : ""}
                         onChange={(e) => {
-                          setBannerForm((prev) => ({ ...prev, startDate: e.target.value }))
-                          if (bannerFormErrors.dateRange) {
+                          const newStartDate = e.target.value
+                          setBannerForm((prev) => ({ ...prev, startDate: newStartDate }))
+
+                          // Real-time validation
+                          if (newStartDate && bannerForm.endDate) {
+                            const start = new Date(newStartDate)
+                            const end = new Date(bannerForm.endDate)
+                            if (end <= start) {
+                              setBannerFormErrors((prev) => ({
+                                ...prev,
+                                dateRange: "End date & time must be after start date & time. Please select a later end date."
+                              }))
+                            } else {
+                              setBannerFormErrors((prev) => ({ ...prev, dateRange: "" }))
+                            }
+                          } else {
                             setBannerFormErrors((prev) => ({ ...prev, dateRange: "" }))
                           }
                         }}
@@ -2664,10 +2820,25 @@ const AnnouncementsPage = () => {
                       <Input
                         id="end-date"
                         type="datetime-local"
+                        min={new Date().toISOString().slice(0, 16)}
                         value={bannerForm.endDate ? new Date(bannerForm.endDate).toISOString().slice(0, 16) : ""}
                         onChange={(e) => {
-                          setBannerForm((prev) => ({ ...prev, endDate: e.target.value }))
-                          if (bannerFormErrors.dateRange) {
+                          const newEndDate = e.target.value
+                          setBannerForm((prev) => ({ ...prev, endDate: newEndDate }))
+
+                          // Real-time validation
+                          if (bannerForm.startDate && newEndDate) {
+                            const start = new Date(bannerForm.startDate)
+                            const end = new Date(newEndDate)
+                            if (end <= start) {
+                              setBannerFormErrors((prev) => ({
+                                ...prev,
+                                dateRange: "End date & time must be after start date & time. Please select a later end date."
+                              }))
+                            } else {
+                              setBannerFormErrors((prev) => ({ ...prev, dateRange: "" }))
+                            }
+                          } else {
                             setBannerFormErrors((prev) => ({ ...prev, dateRange: "" }))
                           }
                         }}

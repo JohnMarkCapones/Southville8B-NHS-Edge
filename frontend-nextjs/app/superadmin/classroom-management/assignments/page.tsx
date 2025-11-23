@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -31,10 +31,11 @@ import {
   BookTemplate,
   Calendar,
   Clock,
-  AlertTriangle,
   Map,
   ArrowDown,
 } from "lucide-react"
+import { useBuildings } from "@/hooks/useBuildings"
+import type { Building, Floor, Room } from "@/lib/api/endpoints/buildings"
 
 interface TimeSlot {
   id: string
@@ -46,27 +47,12 @@ interface TimeSlot {
   section: string
 }
 
-interface Classroom {
-  id: string
-  name: string
-  capacity: number
-  equipment: string
-  status: "available" | "in-use" | "maintenance"
+// Use API types instead of local interfaces
+type Classroom = Room & {
   schedule: TimeSlot[]
   section?: string // e.g., "Grade 8-A", "Grade 9-B"
   adviser?: string // Teacher who governs this section
-}
-
-interface Floor {
-  id: string
-  number: number
-  classrooms: Classroom[]
-}
-
-interface Building {
-  id: string
-  name: string
-  floors: Floor[]
+  equipment?: string // Additional equipment info
 }
 
 // Add interface for BuildingTemplate
@@ -78,60 +64,23 @@ interface BuildingTemplate {
   createdAt: string
 }
 
-interface ConflictInfo {
-  classroomId: string
-  classroomName: string
-  conflicts: {
-    slot1: TimeSlot
-    slot2: TimeSlot
-  }[]
-}
 
 export default function ClassAssignmentsPage() {
-  const [buildings, setBuildings] = useState<Building[]>([
-    {
-      id: "1",
-      name: "Main Building",
-      floors: [
-        {
-          id: "f1",
-          number: 1,
-          classrooms: [
-            {
-              id: "c1",
-              name: "Room 101",
-              capacity: 30,
-              equipment: "Projector, Whiteboard",
-              status: "available",
-              schedule: [], // Added empty schedule
-            },
-            {
-              id: "c2",
-              name: "Room 102",
-              capacity: 25,
-              equipment: "Computers, Projector",
-              status: "in-use",
-              schedule: [], // Added empty schedule
-            },
-          ],
-        },
-        {
-          id: "f2",
-          number: 2,
-          classrooms: [
-            {
-              id: "c3",
-              name: "Room 201",
-              capacity: 35,
-              equipment: "Lab Equipment",
-              status: "available",
-              schedule: [], // Added empty schedule
-            },
-          ],
-        },
-      ],
-    },
-  ])
+  // Use the buildings hook instead of mock data
+  const {
+    buildings,
+    loading,
+    error,
+    addBuilding,
+    removeBuilding,
+    addFloor,
+    removeFloor,
+    addRoom,
+    removeRoom,
+    loadFloors,
+    loadRooms,
+    clearError
+  } = useBuildings({ autoLoad: true })
 
   const [selectedClassroom, setSelectedClassroom] = useState<{
     buildingId: string
@@ -166,6 +115,14 @@ export default function ClassAssignmentsPage() {
     type: "success" | "error" | "info"
     message: string
   } | null>(null)
+
+  // Show error notification if API error occurs
+  useEffect(() => {
+    if (error) {
+      showNotification("error", error)
+      clearError()
+    }
+  }, [error, clearError])
   const [animatingItems, setAnimatingItems] = useState<Set<string>>(new Set())
 
   const [templates, setTemplates] = useState<BuildingTemplate[]>([])
@@ -175,8 +132,6 @@ export default function ClassAssignmentsPage() {
   const [templateDescription, setTemplateDescription] = useState("")
   const [selectedBuildingForTemplate, setSelectedBuildingForTemplate] = useState<string | null>(null)
 
-  const [conflicts, setConflicts] = useState<ConflictInfo[]>([])
-  const [showConflictsDialog, setShowConflictsDialog] = useState(false)
 
   const [showMinimap, setShowMinimap] = useState(true)
   const [currentBuildingInView, setCurrentBuildingInView] = useState<string | null>(null)
@@ -187,65 +142,12 @@ export default function ClassAssignmentsPage() {
     buildingId?: string
     floorId?: string
     name: string
+    roomCount?: number
   } | null>(null)
 
-  const detectConflicts = (): ConflictInfo[] => {
-    const allConflicts: ConflictInfo[] = []
+  // Use ref to prevent race conditions when adding multiple rooms
+  const addingRoomRef = useRef<boolean>(false)
 
-    buildings.forEach((building) => {
-      building.floors.forEach((floor) => {
-        floor.classrooms.forEach((classroom) => {
-          const classroomConflicts: { slot1: TimeSlot; slot2: TimeSlot }[] = []
-
-          // Check each time slot against all other time slots
-          for (let i = 0; i < classroom.schedule.length; i++) {
-            for (let j = i + 1; j < classroom.schedule.length; j++) {
-              const slot1 = classroom.schedule[i]
-              const slot2 = classroom.schedule[j]
-
-              // Check if slots are on the same day
-              if (slot1.day === slot2.day) {
-                // Check if time ranges overlap
-                const start1 = timeToMinutes(slot1.startTime)
-                const end1 = timeToMinutes(slot1.endTime)
-                const start2 = timeToMinutes(slot2.startTime)
-                const end2 = timeToMinutes(slot2.endTime)
-
-                // Overlap occurs if: start1 < end2 AND start2 < end1
-                if (start1 < end2 && start2 < end1) {
-                  classroomConflicts.push({ slot1, slot2 })
-                }
-              }
-            }
-          }
-
-          if (classroomConflicts.length > 0) {
-            allConflicts.push({
-              classroomId: classroom.id,
-              classroomName: classroom.name,
-              conflicts: classroomConflicts,
-            })
-          }
-        })
-      })
-    })
-
-    return allConflicts
-  }
-
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(":").map(Number)
-    return hours * 60 + minutes
-  }
-
-  useEffect(() => {
-    const detectedConflicts = detectConflicts()
-    setConflicts(detectedConflicts)
-  }, [buildings])
-
-  const hasConflict = (classroomId: string): boolean => {
-    return conflicts.some((conflict) => conflict.classroomId === classroomId)
-  }
 
   const showNotification = (type: "success" | "error" | "info", message: string) => {
     setNotification({ type, message })
@@ -271,144 +173,201 @@ export default function ClassAssignmentsPage() {
   }, [])
 
   // Add new building
-  const addBuilding = () => {
+  const handleAddBuilding = async () => {
     if (!newBuildingName.trim()) return
     setIsLoading(true)
-    setTimeout(() => {
-      const newBuilding: Building = {
-        id: Date.now().toString(),
-        name: newBuildingName,
-        floors: [],
+
+    try {
+      const newBuilding = await addBuilding({
+        buildingName: newBuildingName,
+        code: newBuildingName.substring(0, 3).toUpperCase(),
+        capacity: 1000
+      })
+
+      if (newBuilding) {
+        // Refresh the buildings list to get complete data
+        await refresh()
+
+        setNewBuildingName("")
+        setIsAddBuildingOpen(false)
+        animateItem(newBuilding.id)
+        showNotification("success", `Building "${newBuildingName}" created successfully`)
       }
-      setBuildings([...buildings, newBuilding])
-      setNewBuildingName("")
-      setIsAddBuildingOpen(false)
+    } catch (err) {
+      showNotification("error", "Failed to create building")
+    } finally {
       setIsLoading(false)
-      animateItem(newBuilding.id)
-      showNotification("success", `Building "${newBuildingName}" created successfully`)
-    }, 500)
+    }
   }
 
-  const deleteBuilding = (buildingId: string) => {
+  const handleDeleteBuilding = async (buildingId: string) => {
     const building = buildings.find((b) => b.id === buildingId)
     if (!building) return
 
-    setBuildings(buildings.filter((b) => b.id !== buildingId))
-    if (focusedBuilding === buildingId) {
-      setFocusedBuilding(null)
+    try {
+      const success = await removeBuilding(buildingId)
+      if (success) {
+        if (focusedBuilding === buildingId) {
+          setFocusedBuilding(null)
+        }
+        showNotification("success", `Building "${building.buildingName}" deleted`)
+        setDeleteConfirmation(null)
+      } else {
+        showNotification("error", "Failed to delete building")
+      }
+    } catch (err) {
+      showNotification("error", "Failed to delete building")
     }
-    showNotification("success", `Building "${building.name}" deleted`)
-    setDeleteConfirmation(null)
   }
 
   // Add floor to building
-  const addFloor = (buildingId: string) => {
-    setBuildings(
-      buildings.map((building) => {
-        if (building.id === buildingId) {
-          const newFloor: Floor = {
-            id: Date.now().toString(),
-            number: building.floors.length + 1,
-            classrooms: [],
-          }
-          animateItem(newFloor.id)
-          showNotification("success", `Floor ${newFloor.number} added to ${building.name}`)
-          return { ...building, floors: [...building.floors, newFloor] }
-        }
-        return building
-      }),
-    )
+  const handleAddFloor = async (buildingId: string) => {
+    const building = buildings.find((b) => b.id === buildingId)
+    if (!building) return
+
+    try {
+      const newFloor = await addFloor({
+        buildingId: buildingId,
+        name: `Floor ${(building.floors?.length || 0) + 1}`,
+        number: (building.floors?.length || 0) + 1
+      })
+      
+      if (newFloor) {
+        animateItem(newFloor.id)
+        showNotification("success", `Floor ${newFloor.number} added to ${building.buildingName}`)
+      }
+    } catch (err) {
+      showNotification("error", "Failed to add floor")
+    }
   }
 
-  const deleteFloor = (buildingId: string, floorId: string) => {
+  const handleDeleteFloor = async (buildingId: string, floorId: string) => {
     const building = buildings.find((b) => b.id === buildingId)
-    const floor = building?.floors.find((f) => f.id === floorId)
+    const floor = building?.floors?.find((f) => f.id === floorId)
 
-    setBuildings(
-      buildings.map((building) => {
-        if (building.id === buildingId) {
-          const updatedFloors = building.floors
-            .filter((f) => f.id !== floorId)
-            .map((f, index) => ({ ...f, number: index + 1 }))
-          return { ...building, floors: updatedFloors }
-        }
-        return building
-      }),
-    )
-    setCollapsedFloors((prev) => {
-      const next = new Set(prev)
-      next.delete(floorId)
-      return next
-    })
-
-    if (floor) {
-      showNotification("success", `Floor ${floor.number} deleted`)
+    if (!floor) {
+      showNotification("error", "Floor not found")
+      return
     }
-    setDeleteConfirmation(null)
+
+    // Get rooms on this floor
+    const rooms = floor.rooms || []
+    const roomCount = rooms.length
+
+    // If floor has rooms, delete them first (cascade delete)
+    if (roomCount > 0) {
+      try {
+        showNotification("info", `Deleting ${roomCount} room${roomCount > 1 ? 's' : ''}...`)
+
+        // Delete all rooms sequentially
+        for (const room of rooms) {
+          await removeRoom(room.id)
+        }
+
+        // Now delete the floor
+        const success = await removeFloor(floorId)
+        if (success) {
+          setCollapsedFloors((prev) => {
+            const next = new Set(prev)
+            next.delete(floorId)
+            return next
+          })
+
+          showNotification(
+            "success",
+            `Successfully deleted ${roomCount} room${roomCount > 1 ? 's' : ''} and Floor ${floor.number}`
+          )
+          setDeleteConfirmation(null)
+        } else {
+          showNotification("error", "Failed to delete floor after removing rooms")
+        }
+      } catch (err) {
+        console.error("Error during cascade delete:", err)
+        showNotification("error", "Failed to delete floor and rooms")
+      }
+    } else {
+      // No rooms, just delete the floor
+      try {
+        const success = await removeFloor(floorId)
+        if (success) {
+          setCollapsedFloors((prev) => {
+            const next = new Set(prev)
+            next.delete(floorId)
+            return next
+          })
+
+          showNotification("success", `Successfully deleted Floor ${floor.number}`)
+          setDeleteConfirmation(null)
+        } else {
+          showNotification("error", "Failed to delete floor")
+        }
+      } catch (err) {
+        showNotification("error", "Failed to delete floor")
+      }
+    }
   }
 
   // Add classroom to floor
-  const addClassroom = (buildingId: string, floorId: string) => {
-    setBuildings(
-      buildings.map((building) => {
-        if (building.id === buildingId) {
-          return {
-            ...building,
-            floors: building.floors.map((floor) => {
-              if (floor.id === floorId) {
-                const newClassroom: Classroom = {
-                  id: Date.now().toString(),
-                  name: `Room ${floor.number}0${floor.classrooms.length + 1}`,
-                  capacity: 30,
-                  equipment: "Whiteboard",
-                  status: "available",
-                  schedule: [], // Added empty schedule
-                }
-                animateItem(newClassroom.id)
-                showNotification("success", `${newClassroom.name} added`)
-                return {
-                  ...floor,
-                  classrooms: [...floor.classrooms, newClassroom],
-                }
-              }
-              return floor
-            }),
-          }
+  const handleAddClassroom = async (buildingId: string, floorId: string) => {
+    // Prevent multiple clicks while room is being created - use ref for immediate protection
+    if (addingRoomRef.current) {
+      console.log('Already creating a room (ref check), ignoring click')
+      return
+    }
+
+    // Set the ref immediately to block other calls
+    addingRoomRef.current = true
+
+    try {
+      console.log('Creating room on floor:', floorId)
+
+      // Let the BACKEND auto-generate the room number using the database function
+      // This is bulletproof - the database will handle race conditions
+      const newRoom = await addRoom({
+        floorId: floorId,
+        // roomNumber: NOT SENT - backend will auto-generate using get_next_room_number()
+        // name: NOT SENT - backend will auto-generate as "Room {number}"
+        capacity: 30,
+        status: "Available" // Capitalized to match API expectations
+      })
+
+      console.log('Room created successfully:', newRoom?.roomNumber)
+
+      if (newRoom) {
+        const newClassroom: Classroom = {
+          ...newRoom,
+          equipment: "Whiteboard",
+          schedule: []
         }
-        return building
-      }),
-    )
+        animateItem(newClassroom.id)
+        showNotification("success", `${newClassroom.name} added`)
+      }
+    } catch (err: any) {
+      showNotification("error", `Failed to add classroom: ${err?.message || 'Unknown error'}`)
+    } finally {
+      // Always release the lock
+      addingRoomRef.current = false
+    }
   }
 
-  const deleteClassroom = (buildingId: string, floorId: string, classroomId: string) => {
+  const handleDeleteClassroom = async (buildingId: string, floorId: string, classroomId: string) => {
     const building = buildings.find((b) => b.id === buildingId)
-    const floor = building?.floors.find((f) => f.id === floorId)
-    const classroom = floor?.classrooms.find((c) => c.id === classroomId)
+    const floor = building?.floors?.find((f) => f.id === floorId)
+    const classroom = floor?.rooms?.find((c) => c.id === classroomId)
 
-    setBuildings(
-      buildings.map((building) => {
-        if (building.id === buildingId) {
-          return {
-            ...building,
-            floors: building.floors.map((floor) => {
-              if (floor.id === floorId) {
-                return {
-                  ...floor,
-                  classrooms: floor.classrooms.filter((c) => c.id !== classroomId),
-                }
-              }
-              return floor
-            }),
-          }
+    try {
+      const success = await removeRoom(classroomId)
+      if (success) {
+        if (classroom) {
+          showNotification("success", `${classroom.name} deleted`)
         }
-        return building
-      }),
-    )
-
-    if (classroom) {
-      showNotification("success", `${classroom.name} deleted`)
+        setDeleteConfirmation(null)
+      } else {
+        showNotification("error", "Failed to delete classroom")
+      }
+    } catch (err) {
+      showNotification("error", "Failed to delete classroom")
     }
-    setDeleteConfirmation(null)
   }
 
   // Open classroom details
@@ -427,11 +386,11 @@ export default function ClassAssignmentsPage() {
           if (building.id === selectedClassroom.buildingId) {
             return {
               ...building,
-              floors: building.floors.map((floor) => {
+              floors: building.floors?.map((floor) => {
                 if (floor.id === selectedClassroom.floorId) {
                   return {
                     ...floor,
-                    classrooms: floor.classrooms.map((c) => (c.id === updatedClassroom.id ? updatedClassroom : c)),
+                    classrooms: floor.rooms?.map((c) => (c.id === updatedClassroom.id ? updatedClassroom : c)) || [],
                   }
                 }
                 return floor
@@ -462,73 +421,111 @@ export default function ClassAssignmentsPage() {
     setDragOverTarget(null)
   }
 
-  const handleDrop = (e: React.DragEvent, targetBuildingId: string, targetFloorId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetBuildingId: string, targetFloorId: string) => {
     e.preventDefault()
     if (!draggedClassroom) return
 
+    // Prevent dropping on the same floor
+    if (draggedClassroom.floorId === targetFloorId) {
+      setDraggedClassroom(null)
+      setDragOverTarget(null)
+      return
+    }
+
     const targetBuilding = buildings.find((b) => b.id === targetBuildingId)
-    const targetFloor = targetBuilding?.floors.find((f) => f.id === targetFloorId)
+    const targetFloor = targetBuilding?.floors?.find((f) => f.id === targetFloorId)
 
-    // Remove from original location
-    setBuildings(
-      buildings.map((building) => {
-        if (building.id === draggedClassroom.buildingId) {
-          return {
-            ...building,
-            floors: building.floors.map((floor) => {
-              if (floor.id === draggedClassroom.floorId) {
-                return {
-                  ...floor,
-                  classrooms: floor.classrooms.filter((c) => c.id !== draggedClassroom.classroom.id),
-                }
-              }
-              return floor
-            }),
-          }
+    if (!targetFloor) return
+
+    try {
+      // Calculate new room number based on target floor
+      const floorNumber = targetFloor.number
+      const floorBase = floorNumber * 100 // Floor 1 = 100, Floor 2 = 200, etc.
+
+      // Find existing room numbers on target floor
+      const existingRoomNumbers = targetFloor.rooms?.map(room => {
+        const num = parseInt(room.roomNumber)
+        const roomFloorBase = Math.floor(num / 100) * 100
+        return (roomFloorBase === floorBase && !isNaN(num)) ? num : 0
+      }).filter(num => num > 0) || []
+
+      // Calculate next room number for target floor
+      let newRoomNumber: number
+      if (existingRoomNumbers.length > 0) {
+        const maxRoomNumber = Math.max(...existingRoomNumbers)
+        newRoomNumber = maxRoomNumber + 1
+      } else {
+        newRoomNumber = floorBase + 1
+      }
+
+      // Validate room number doesn't exceed floor limit
+      const roomNumberWithinFloor = newRoomNumber - floorBase
+      if (roomNumberWithinFloor > 99) {
+        showNotification("error", `Floor ${floorNumber} has reached maximum capacity (99 rooms)`)
+        setDraggedClassroom(null)
+        setDragOverTarget(null)
+        return
+      }
+
+      const oldRoomNumber = draggedClassroom.classroom.roomNumber
+      const newRoomNumberStr = newRoomNumber.toString()
+
+      // Create updated classroom with new room number
+      const updatedClassroom: Classroom = {
+        ...draggedClassroom.classroom,
+        roomNumber: newRoomNumberStr,
+        name: `Room ${newRoomNumberStr}`,
+        floorId: targetFloorId
+      }
+
+      // Update room in API
+      const success = await removeRoom(draggedClassroom.classroom.id)
+
+      if (success) {
+        const newRoom = await addRoom({
+          floorId: targetFloorId,
+          roomNumber: newRoomNumberStr,
+          name: `Room ${newRoomNumberStr}`,
+          capacity: draggedClassroom.classroom.capacity,
+          status: draggedClassroom.classroom.status
+        })
+
+        if (newRoom) {
+          animateItem(newRoom.id)
+          showNotification(
+            "success",
+            `Room ${oldRoomNumber} moved to ${targetBuilding?.buildingName} - Floor ${targetFloor?.number} and renumbered to ${newRoomNumberStr}`,
+          )
         }
-        return building
-      }),
-    )
-
-    // Add to new location
-    setBuildings((prevBuildings) =>
-      prevBuildings.map((building) => {
-        if (building.id === targetBuildingId) {
-          return {
-            ...building,
-            floors: building.floors.map((floor) => {
-              if (floor.id === targetFloorId) {
-                return {
-                  ...floor,
-                  classrooms: [...floor.classrooms, draggedClassroom.classroom],
-                }
-              }
-              return floor
-            }),
-          }
-        }
-        return building
-      }),
-    )
-
-    animateItem(draggedClassroom.classroom.id)
-    showNotification(
-      "success",
-      `${draggedClassroom.classroom.name} moved to ${targetBuilding?.name} - Floor ${targetFloor?.number}`,
-    )
+      }
+    } catch (err) {
+      showNotification("error", "Failed to move room")
+    }
 
     setDraggedClassroom(null)
     setDragOverTarget(null)
   }
 
-  const getStatusColor = (status: Classroom["status"]) => {
-    switch (status) {
+  // Normalize status from backend (Available, Occupied, Maintenance) to UI format (available, in-use, maintenance)
+  const normalizeStatus = (status: string): "available" | "in-use" | "maintenance" => {
+    const normalized = status?.toLowerCase()
+    if (normalized === "available") return "available"
+    if (normalized === "occupied" || normalized === "in-use") return "in-use"
+    if (normalized === "maintenance") return "maintenance"
+    return "available" // Default to available if unknown
+  }
+
+  const getStatusColor = (status: string) => {
+    const normalized = normalizeStatus(status)
+    switch (normalized) {
       case "available":
         return "bg-emerald-500"
       case "in-use":
         return "bg-amber-500"
       case "maintenance":
         return "bg-red-500"
+      default:
+        return "bg-emerald-500"
     }
   }
 
@@ -643,7 +640,6 @@ export default function ClassAssignmentsPage() {
         setIsTemplateDialogOpen(false) // close save template dialog
         setIsLoadTemplateDialogOpen(false) // close load template dialog
         setShowKeyboardHelp(false)
-        setShowConflictsDialog(false) // close conflicts dialog
         setDeleteConfirmation(null) // close delete confirmation dialog
         if (focusedBuilding) {
           setFocusedBuilding(null)
@@ -684,7 +680,7 @@ export default function ClassAssignmentsPage() {
             setDeleteConfirmation({
               type: "building",
               id: building.id,
-              name: building.name,
+              name: building.buildingName,
             })
           }
         }
@@ -735,11 +731,11 @@ export default function ClassAssignmentsPage() {
       const newBuilding: Building = {
         ...JSON.parse(JSON.stringify(template.building)), // Deep clone
         id: Date.now().toString(),
-        name: `${template.building.name} (from template)`,
-        floors: template.building.floors.map((floor, floorIndex) => ({
+        buildingName: `${template.building.buildingName || template.building.name} (from template)`,
+        floors: template.building.floors?.map((floor, floorIndex) => ({
           ...floor,
           id: `${Date.now()}-f${floorIndex}`,
-          classrooms: floor.classrooms.map((classroom, classroomIndex) => ({
+          classrooms: floor.rooms?.map((classroom, classroomIndex) => ({
             ...classroom,
             id: `${Date.now()}-f${floorIndex}-c${classroomIndex}`,
           })),
@@ -824,7 +820,7 @@ export default function ClassAssignmentsPage() {
                 showNotification("success", `${classroom.name} duplicated`)
                 return {
                   ...floor,
-                  classrooms: [...floor.classrooms, newClassroom],
+                  classrooms: [...floor.rooms, newClassroom],
                 }
               }
               return floor
@@ -837,6 +833,18 @@ export default function ClassAssignmentsPage() {
   }
 
   const displayedBuildings = focusedBuilding ? buildings.filter((b) => b.id === focusedBuilding) : buildings
+
+  // Show loading state
+  if (loading && buildings.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-slate-600">Loading buildings...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-8">
@@ -876,9 +884,6 @@ export default function ClassAssignmentsPage() {
             {buildings.map((building) => {
               const isInView = currentBuildingInView === building.id
               const isFocused = focusedBuilding === building.id
-              const hasConflicts = conflicts.some((c) =>
-                building.floors.some((f) => f.classrooms.some((cl) => cl.id === c.classroomId)),
-              )
 
               return (
                 <button
@@ -900,7 +905,7 @@ export default function ClassAssignmentsPage() {
                             isInView ? "text-blue-900" : isFocused ? "text-purple-900" : "text-slate-900"
                           }`}
                         >
-                          {building.name}
+                          {building.buildingName}
                         </h4>
                         {isInView && (
                           <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
@@ -912,32 +917,27 @@ export default function ClassAssignmentsPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-slate-600">{building.floors.length} floors</span>
+                        <span className="text-xs text-slate-600">{building.floors?.length || 0} floors</span>
                         <span className="text-xs text-slate-600">
-                          {building.floors.reduce((sum, f) => sum + f.classrooms.length, 0)} rooms
+                          {building.floors?.reduce((sum, f) => sum + (f.rooms?.length || 0), 0) || 0} rooms
                         </span>
                       </div>
                     </div>
-                    {hasConflicts && (
-                      <div className="ml-2">
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                      </div>
-                    )}
                   </div>
 
                   {/* Mini building visualization */}
                   <div className="mt-2 flex gap-1">
-                    {building.floors.slice(0, 5).map((floor, idx) => (
+                    {building.floors?.slice(0, 5).map((floor, idx) => (
                       <div
                         key={floor.id}
                         className={`flex-1 h-2 rounded-sm ${
                           isInView ? "bg-blue-400" : isFocused ? "bg-purple-400" : "bg-slate-300"
                         }`}
-                        title={`Floor ${floor.number}: ${floor.classrooms.length} rooms`}
+                        title={`Floor ${floor.number}: ${floor.rooms?.length || 0} rooms`}
                       />
                     ))}
-                    {building.floors.length > 5 && (
-                      <span className="text-xs text-slate-500 ml-1">+{building.floors.length - 5}</span>
+                    {(building.floors?.length || 0) > 5 && (
+                      <span className="text-xs text-slate-500 ml-1">+{(building.floors?.length || 0) - 5}</span>
                     )}
                   </div>
                 </button>
@@ -970,17 +970,6 @@ export default function ClassAssignmentsPage() {
               <p className="text-slate-600">Manage your campus buildings, floors, and classrooms in 3D view</p>
             </div>
             <div className="flex gap-2">
-              {conflicts.length > 0 && (
-                <Button
-                  onClick={() => setShowConflictsDialog(true)}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50 animate-pulse"
-                >
-                  <AlertTriangle className="w-4 h-4" />
-                  {conflicts.length} Conflict{conflicts.length > 1 ? "s" : ""}
-                </Button>
-              )}
               <Button onClick={() => setIsLoadTemplateDialogOpen(true)} variant="outline" size="sm" className="gap-2">
                 <FolderOpen className="w-4 h-4" />
                 Load Template
@@ -1042,8 +1031,8 @@ export default function ClassAssignmentsPage() {
               {/* Building Header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-900">{building.name}</h2>
-                  <p className="text-slate-600">{building.floors.length} Floor(s)</p>
+                  <h2 className="text-3xl font-bold text-slate-900">{building.buildingName}</h2>
+                  <p className="text-slate-600">{building.floors?.length || 0} Floor(s)</p>
                 </div>
                 <div className="flex gap-3">
                   <Button
@@ -1088,7 +1077,7 @@ export default function ClassAssignmentsPage() {
                     </Button>
                   )}
                   <Button
-                    onClick={() => addFloor(building.id)}
+                    onClick={() => handleAddFloor(building.id)}
                     variant="outline"
                     className="border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
                   >
@@ -1117,7 +1106,7 @@ export default function ClassAssignmentsPage() {
               </div>
 
               <div className="relative">
-                {building.floors.length > 0 && (
+                {(building.floors?.length || 0) > 0 && (
                   <div className="flex justify-center mb-0">
                     <div className="relative w-full max-w-4xl">
                       <div className="relative h-16 bg-gradient-to-b from-slate-600 via-slate-700 to-slate-800 rounded-t-xl shadow-2xl border-x-4 border-t-4 border-slate-900">
@@ -1145,7 +1134,7 @@ export default function ClassAssignmentsPage() {
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="bg-gradient-to-br from-slate-900 to-slate-800 px-8 py-2 rounded-lg border-2 border-amber-600 shadow-2xl">
                             <span className="text-amber-400 text-lg font-bold tracking-wider drop-shadow-lg">
-                              {building.name}
+                              {building.buildingName}
                             </span>
                           </div>
                         </div>
@@ -1155,7 +1144,7 @@ export default function ClassAssignmentsPage() {
                 )}
 
                 <div className="space-y-0">
-                  {[...building.floors].reverse().map((floor, index) => {
+                  {[...(building.floors || [])].reverse().map((floor, index) => {
                     const isCollapsed = collapsedFloors.has(floor.id)
 
                     return (
@@ -1209,10 +1198,10 @@ export default function ClassAssignmentsPage() {
                               </button>
                               <span className="text-base font-bold">Floor {floor.number}</span>
                               <span className="text-xs text-slate-300 bg-slate-800/50 px-2 py-0.5 rounded-full">
-                                {floor.classrooms.length} Rooms
+                                {floor.rooms?.length || 0} Rooms
                               </span>
 
-                              {index < building.floors.length - 1 && (
+                              {index < (building.floors?.length || 0) - 1 && (
                                 <div className="flex items-center gap-2 ml-4">
                                   {/* Stairs icon */}
                                   <div className="flex items-center gap-0.5 bg-slate-800/70 px-2 py-1 rounded">
@@ -1232,7 +1221,7 @@ export default function ClassAssignmentsPage() {
                             </div>
                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                               <Button
-                                onClick={() => addClassroom(building.id, floor.id)}
+                                onClick={() => handleAddClassroom(building.id, floor.id)}
                                 size="sm"
                                 variant="secondary"
                                 className="bg-blue-500 hover:bg-blue-600 text-white h-7 text-xs"
@@ -1246,11 +1235,13 @@ export default function ClassAssignmentsPage() {
                                   const buildingRef = buildings.find((b) => b.id === building.id)
                                   const floorRef = buildingRef?.floors.find((f) => f.id === floor.id)
                                   if (floorRef) {
+                                    const roomCount = floorRef.rooms?.length || 0
                                     setDeleteConfirmation({
                                       type: "floor",
                                       id: floor.id,
                                       buildingId: building.id,
                                       name: `Floor ${floorRef.number}`,
+                                      roomCount,
                                     })
                                   }
                                 }}
@@ -1275,7 +1266,7 @@ export default function ClassAssignmentsPage() {
                               onDrop={(e) => handleDrop(e, building.id, floor.id)}
                             >
                               <div className="flex gap-6 min-w-max pb-6">
-                                {floor.classrooms.map((classroom) => (
+                                {floor.rooms?.map((classroom) => (
                                   <div
                                     key={classroom.id}
                                     className={`relative group cursor-move transition-all duration-300 ${
@@ -1301,11 +1292,6 @@ export default function ClassAssignmentsPage() {
                                       e.currentTarget.style.transform = "translateY(0) rotateX(0) rotateY(0) scale(1)"
                                     }}
                                   >
-                                    {hasConflict(classroom.id) && (
-                                      <div className="absolute -top-3 -right-3 z-30 bg-red-500 text-white rounded-full p-1.5 shadow-lg animate-pulse">
-                                        <AlertTriangle className="w-4 h-4" />
-                                      </div>
-                                    )}
 
                                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-slate-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                                       <GripVertical className="w-4 h-4" />
@@ -1338,13 +1324,11 @@ export default function ClassAssignmentsPage() {
                                       {/* Front Face */}
                                       <div
                                         className={`absolute inset-0 rounded-lg shadow-2xl border-4 flex flex-col p-4 ${
-                                          hasConflict(classroom.id)
-                                            ? "bg-gradient-to-br from-red-400 via-red-500 to-red-600 border-red-800 ring-2 ring-red-500"
-                                            : classroom.status === "available"
-                                              ? "bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-800"
-                                              : classroom.status === "in-use"
-                                                ? "bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-amber-800"
-                                                : "bg-gradient-to-br from-red-400 via-red-500 to-red-600 border-red-800"
+                                          normalizeStatus(classroom.status) === "available"
+                                            ? "bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-800"
+                                            : normalizeStatus(classroom.status) === "in-use"
+                                              ? "bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-amber-800"
+                                              : "bg-gradient-to-br from-red-400 via-red-500 to-red-600 border-red-800"
                                         }`}
                                         style={{
                                           transform: "translateZ(20px)",
@@ -1420,11 +1404,11 @@ export default function ClassAssignmentsPage() {
                                             </div>
                                           )}
 
-                                          {classroom.schedule.length > 0 && (
+                                          {(classroom.schedule?.length || 0) > 0 && (
                                             <div className="text-xs opacity-95 bg-black/30 px-3 py-1 rounded-full flex items-center gap-1.5 mt-1">
                                               <Calendar className="w-3 h-3" />
-                                              {classroom.schedule.length} schedule
-                                              {classroom.schedule.length > 1 ? "s" : ""}
+                                              {classroom.schedule?.length || 0} schedule
+                                              {(classroom.schedule?.length || 0) > 1 ? "s" : ""}
                                             </div>
                                           )}
                                         </div>
@@ -1439,13 +1423,11 @@ export default function ClassAssignmentsPage() {
                                       {/* Side Face - Enhanced depth */}
                                       <div
                                         className={`absolute inset-0 rounded-lg ${
-                                          hasConflict(classroom.id)
-                                            ? "bg-gradient-to-b from-red-500 to-red-800"
-                                            : classroom.status === "available"
-                                              ? "bg-gradient-to-b from-emerald-500 to-emerald-800"
-                                              : classroom.status === "in-use"
-                                                ? "bg-gradient-to-b from-amber-500 to-amber-800"
-                                                : "bg-gradient-to-b from-red-500 to-red-800"
+                                          normalizeStatus(classroom.status) === "available"
+                                            ? "bg-gradient-to-b from-emerald-500 to-emerald-800"
+                                            : normalizeStatus(classroom.status) === "in-use"
+                                              ? "bg-gradient-to-b from-amber-500 to-amber-800"
+                                              : "bg-gradient-to-b from-red-500 to-red-800"
                                         }`}
                                         style={{
                                           transform: "rotateY(90deg) translateZ(20px) translateX(20px)",
@@ -1457,13 +1439,11 @@ export default function ClassAssignmentsPage() {
                                       {/* Top Face - Enhanced depth */}
                                       <div
                                         className={`absolute inset-0 rounded-lg ${
-                                          hasConflict(classroom.id)
-                                            ? "bg-red-700"
-                                            : classroom.status === "available"
-                                              ? "bg-emerald-700"
-                                              : classroom.status === "in-use"
-                                                ? "bg-amber-700"
-                                                : "bg-red-700"
+                                          normalizeStatus(classroom.status) === "available"
+                                            ? "bg-emerald-700"
+                                            : normalizeStatus(classroom.status) === "in-use"
+                                              ? "bg-amber-700"
+                                              : "bg-red-700"
                                         }`}
                                         style={{
                                           transform: "rotateX(90deg) translateZ(20px) translateY(-20px)",
@@ -1484,50 +1464,40 @@ export default function ClassAssignmentsPage() {
                                     <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
                                       <span
                                         className={`relative text-xs font-bold px-2.5 py-0.5 rounded-full shadow-md border-2 ${
-                                          hasConflict(classroom.id)
-                                            ? "bg-red-50 text-red-700 border-red-200"
-                                            : classroom.status === "available"
-                                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                              : classroom.status === "in-use"
-                                                ? "bg-amber-50 text-amber-700 border-amber-200"
-                                                : "bg-red-50 text-red-700 border-red-200"
+                                          normalizeStatus(classroom.status) === "available"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            : normalizeStatus(classroom.status) === "in-use"
+                                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                                              : "bg-red-50 text-red-700 border-red-200"
                                         }`}
                                       >
-                                        {hasConflict(classroom.id) ? (
+                                        {
                                           <>
-                                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                                            </span>
-                                            Schedule Conflict
-                                          </>
-                                        ) : (
-                                          <>
-                                            {classroom.status === "in-use" && (
+                                            {normalizeStatus(classroom.status) === "in-use" && (
                                               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                                               </span>
                                             )}
-                                            {classroom.status === "maintenance" && (
+                                            {normalizeStatus(classroom.status) === "maintenance" && (
                                               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                               </span>
                                             )}
-                                            {classroom.status === "available"
+                                            {normalizeStatus(classroom.status) === "available"
                                               ? "Available"
-                                              : classroom.status === "in-use"
+                                              : normalizeStatus(classroom.status) === "in-use"
                                                 ? "In Use"
                                                 : "Maintenance"}
                                           </>
-                                        )}
+                                        }
                                       </span>
                                     </div>
                                   </div>
                                 ))}
 
-                                {floor.classrooms.length === 0 && (
+                                {(floor.rooms?.length || 0) === 0 && (
                                   <div className="text-slate-400 text-center py-8 w-full">
                                     {dragOverTarget?.buildingId === building.id && dragOverTarget?.floorId === floor.id
                                       ? "Drop classroom here"
@@ -1548,7 +1518,7 @@ export default function ClassAssignmentsPage() {
                   })}
                 </div>
 
-                {building.floors.length > 0 && (
+                {(building.floors?.length || 0) > 0 && (
                   <div className="relative h-8 rounded-b-xl border-x-4 border-b-4 border-slate-500 overflow-hidden shadow-2xl">
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900" />
                     {/* Concrete texture */}
@@ -1574,7 +1544,7 @@ export default function ClassAssignmentsPage() {
                   </div>
                 )}
 
-                {building.floors.length > 0 && (
+                {(building.floors?.length || 0) > 0 && (
                   <div className="relative mt-2 h-16 flex items-end justify-center gap-8">
                     {/* Pathway */}
                     <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-b from-slate-400 to-slate-500 border-t-2 border-slate-300">
@@ -1623,10 +1593,10 @@ export default function ClassAssignmentsPage() {
                   </div>
                 )}
 
-                {building.floors.length === 0 && (
-                  <div className="text-center py-20 text-slate-400">
-                    <p className="text-xl">No floors yet.</p>
-                    <p>Click "Add Floor" to start building.</p>
+                {(building.floors?.length || 0) === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <p className="text-xl font-medium">No floors yet.</p>
+                    <p className="text-sm mt-1">Click "Add Floor" to start building.</p>
                   </div>
                 )}
               </div>
@@ -1642,66 +1612,6 @@ export default function ClassAssignmentsPage() {
         )}
       </div>
 
-      <Dialog open={showConflictsDialog} onOpenChange={setShowConflictsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-6 h-6" />
-              Schedule Conflicts Detected
-            </DialogTitle>
-            <DialogDescription>
-              The following classrooms have overlapping time slots. Please resolve these conflicts to avoid
-              double-booking.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6">
-            {conflicts.map((conflict) => (
-              <div key={conflict.classroomId} className="border border-red-200 rounded-lg p-4 bg-red-50">
-                <h3 className="font-semibold text-lg text-red-900 mb-3 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
-                  {conflict.classroomName}
-                </h3>
-                <div className="space-y-3">
-                  {conflict.conflicts.map((conflictPair, index) => (
-                    <div key={index} className="bg-white rounded-lg p-3 border border-red-200">
-                      <p className="text-sm font-medium text-red-800 mb-2">Conflict #{index + 1}</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-red-50 rounded p-3 border border-red-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Clock className="w-4 h-4 text-red-600" />
-                            <span className="font-semibold text-sm text-red-900">{conflictPair.slot1.day}</span>
-                          </div>
-                          <p className="text-sm text-red-800">
-                            {conflictPair.slot1.startTime} - {conflictPair.slot1.endTime}
-                          </p>
-                          <p className="text-sm font-medium text-red-900 mt-1">{conflictPair.slot1.subject}</p>
-                          <p className="text-xs text-red-700">{conflictPair.slot1.teacher}</p>
-                          <p className="text-xs text-red-700">{conflictPair.slot1.section}</p>
-                        </div>
-                        <div className="bg-red-50 rounded p-3 border border-red-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Clock className="w-4 h-4 text-red-600" />
-                            <span className="font-semibold text-sm text-red-900">{conflictPair.slot2.day}</span>
-                          </div>
-                          <p className="text-sm text-red-800">
-                            {conflictPair.slot2.startTime} - {conflictPair.slot2.endTime}
-                          </p>
-                          <p className="text-sm font-medium text-red-900 mt-1">{conflictPair.slot2.subject}</p>
-                          <p className="text-xs text-red-700">{conflictPair.slot2.teacher}</p>
-                          <p className="text-xs text-red-700">{conflictPair.slot2.section}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={() => setShowConflictsDialog(false)}>Close</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Add Building Dialog */}
       <Dialog open={isAddBuildingOpen} onOpenChange={setIsAddBuildingOpen}>
@@ -1725,7 +1635,7 @@ export default function ClassAssignmentsPage() {
               <Button variant="outline" onClick={() => setIsAddBuildingOpen(false)} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button onClick={addBuilding} disabled={isLoading}>
+              <Button onClick={handleAddBuilding} disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Add Building
               </Button>
@@ -1840,11 +1750,11 @@ export default function ClassAssignmentsPage() {
                         {template.description && <p className="text-sm text-slate-600 mb-3">{template.description}</p>}
                         <div className="flex gap-4 text-xs text-slate-500">
                           <span className="flex items-center gap-1">
-                            <span className="font-medium">{template.building.floors.length}</span> floors
+                            <span className="font-medium">{template.building.floors?.length || 0}</span> floors
                           </span>
                           <span className="flex items-center gap-1">
                             <span className="font-medium">
-                              {template.building.floors.reduce((sum, floor) => sum + floor.classrooms.length, 0)}
+                              {template.building.floors?.reduce((sum, floor) => sum + (floor.rooms?.length || 0), 0) || 0}
                             </span>{" "}
                             classrooms
                           </span>
@@ -2023,7 +1933,7 @@ export default function ClassAssignmentsPage() {
                 <button
                   className="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center gap-3 text-sm"
                   onClick={() => {
-                    addClassroom(contextMenu.buildingId, contextMenu.floorId!)
+                    handleAddClassroom(contextMenu.buildingId, contextMenu.floorId!)
                     setContextMenu(null)
                   }}
                 >
@@ -2056,11 +1966,13 @@ export default function ClassAssignmentsPage() {
                     const building = buildings.find((b) => b.id === contextMenu.buildingId)
                     const floor = building?.floors.find((f) => f.id === contextMenu.floorId)
                     if (floor) {
+                      const roomCount = floor.rooms?.length || 0
                       setDeleteConfirmation({
                         type: "floor",
                         id: floor.id,
                         buildingId: contextMenu.buildingId,
                         name: `Floor ${floor.number}`,
+                        roomCount,
                       })
                     }
                     setContextMenu(null)
@@ -2078,7 +1990,7 @@ export default function ClassAssignmentsPage() {
                 <button
                   className="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center gap-3 text-sm"
                   onClick={() => {
-                    addFloor(contextMenu.buildingId)
+                    handleAddFloor(contextMenu.buildingId)
                     setContextMenu(null)
                   }}
                 >
@@ -2126,7 +2038,7 @@ export default function ClassAssignmentsPage() {
                       setDeleteConfirmation({
                         type: "building",
                         id: building.id,
-                        name: building.name,
+                        name: building.buildingName,
                       })
                     }
                     setContextMenu(null)
@@ -2146,7 +2058,7 @@ export default function ClassAssignmentsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" />
+              <AlertCircle className="w-5 h-5" />
               Confirm Deletion
             </DialogTitle>
             <DialogDescription>
@@ -2163,9 +2075,16 @@ export default function ClassAssignmentsPage() {
                 <>
                   Are you sure you want to delete <strong>{deleteConfirmation.name}</strong>?
                   <br />
-                  <span className="text-red-600 font-medium">
-                    This will permanently delete all classrooms on this floor.
-                  </span>
+                  {deleteConfirmation.roomCount && deleteConfirmation.roomCount > 0 ? (
+                    <span className="text-red-600 font-medium">
+                      This floor contains <strong>{deleteConfirmation.roomCount}</strong> room
+                      {deleteConfirmation.roomCount > 1 ? 's' : ''}. All rooms will be permanently deleted.
+                    </span>
+                  ) : (
+                    <span className="text-red-600 font-medium">
+                      This action cannot be undone.
+                    </span>
+                  )}
                 </>
               )}
               {deleteConfirmation?.type === "classroom" && (
@@ -2193,11 +2112,11 @@ export default function ClassAssignmentsPage() {
               onClick={() => {
                 if (!deleteConfirmation) return
                 if (deleteConfirmation.type === "building") {
-                  deleteBuilding(deleteConfirmation.id)
+                  handleDeleteBuilding(deleteConfirmation.id)
                 } else if (deleteConfirmation.type === "floor") {
-                  deleteFloor(deleteConfirmation.buildingId!, deleteConfirmation.id)
+                  handleDeleteFloor(deleteConfirmation.buildingId!, deleteConfirmation.id)
                 } else if (deleteConfirmation.type === "classroom") {
-                  deleteClassroom(deleteConfirmation.buildingId!, deleteConfirmation.floorId!, deleteConfirmation.id)
+                  handleDeleteClassroom(deleteConfirmation.buildingId!, deleteConfirmation.floorId!, deleteConfirmation.id)
                 } else if (deleteConfirmation.type === "template") {
                   deleteTemplate(deleteConfirmation.id)
                 }
@@ -2224,7 +2143,10 @@ function ClassroomDetailsForm({
   onCancel: () => void
   isLoading?: boolean
 }) {
-  const [formData, setFormData] = useState(classroom)
+  const [formData, setFormData] = useState({
+    ...classroom,
+    schedule: classroom.schedule || []
+  })
   const [isAddingSchedule, setIsAddingSchedule] = useState(false)
   const [newTimeSlot, setNewTimeSlot] = useState<Partial<TimeSlot>>({
     day: "Monday",
@@ -2257,7 +2179,7 @@ function ClassroomDetailsForm({
 
     setFormData({
       ...formData,
-      schedule: [...formData.schedule, timeSlot],
+      schedule: [...(formData.schedule || []), timeSlot],
     })
 
     // Reset form
@@ -2275,7 +2197,7 @@ function ClassroomDetailsForm({
   const removeTimeSlot = (slotId: string) => {
     setFormData({
       ...formData,
-      schedule: formData.schedule.filter((slot) => slot.id !== slotId),
+      schedule: (formData.schedule || []).filter((slot) => slot.id !== slotId),
     })
   }
 
@@ -2471,7 +2393,7 @@ function ClassroomDetailsForm({
             </div>
           )}
 
-          {formData.schedule.length > 0 ? (
+          {formData.schedule?.length > 0 ? (
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {formData.schedule.map((slot) => (
                 <div key={slot.id} className="bg-slate-50 rounded-lg p-3 flex items-start justify-between">

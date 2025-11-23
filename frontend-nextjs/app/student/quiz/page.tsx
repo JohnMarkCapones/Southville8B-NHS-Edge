@@ -36,10 +36,15 @@ import {
   Clock,
   Bell,
   Mail,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
 import StudentLayout from "@/components/student/student-layout"
-
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useToast } from "@/hooks/use-toast"
+import { useAvailableQuizzes } from "@/hooks/useAvailableQuizzes"
+import { getSubjects, type Subject } from "@/lib/api/endpoints/subjects"
+import { getUserProfile } from "@/lib/api/endpoints/auth"
 
 export default function QuizPage() {
   const [selectedFilter, setSelectedFilter] = useState("all")
@@ -48,14 +53,96 @@ export default function QuizPage() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showQuizNotification, setShowQuizNotification] = useState(true)
   const [instructionModalOpen, setInstructionModalOpen] = useState(false)
+  const [noRetakesModalOpen, setNoRetakesModalOpen] = useState(false)
+  const [selectedQuizForRetakeCheck, setSelectedQuizForRetakeCheck] = useState<any>(null)
   const router = useRouter()
+  const { toast } = useToast()
+
+  // Backend integration: Fetch quizzes from API
+  const {
+    quizzes: backendQuizzes,
+    loading: loadingBackend,
+    error: backendError,
+    refetch: refetchQuizzes,
+  } = useAvailableQuizzes({
+    limit: 20,
+    autoFetch: true,
+    subjectId: selectedSubject !== "all" ? selectedSubject : undefined,
+  })
+
+  // Subject and teacher name mapping state
+  const [subjectsMap, setSubjectsMap] = useState<Map<string, string>>(new Map())
+  const [teachersMap, setTeachersMap] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
-  const liveQuizzes = [
+  // Show error toast if backend fails
+  useEffect(() => {
+    if (backendError) {
+      toast({
+        title: "Unable to fetch live quizzes",
+        description: "Showing example quizzes. Check your connection.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
+  }, [backendError, toast])
+
+  // Load subjects on mount
+  useEffect(() => {
+    const loadSubjects = async () => {
+      try {
+        const response = await getSubjects({ limit: 1000 })
+        const map = new Map<string, string>()
+        response.data.forEach((subject: Subject) => {
+          map.set(subject.id, subject.subject_name)
+        })
+        setSubjectsMap(map)
+        console.log('[StudentQuiz] Loaded subjects:', map.size)
+      } catch (error) {
+        console.error('[StudentQuiz] Error loading subjects:', error)
+      }
+    }
+    loadSubjects()
+  }, [])
+
+  // Load teacher names when quizzes change
+  useEffect(() => {
+    const loadTeachers = async () => {
+      if (backendQuizzes.length === 0) return
+
+      console.log('[StudentQuiz] Quiz data sample:', backendQuizzes[0])
+      const teacherIds = [...new Set(backendQuizzes.map((q: any) => q.teacher_id).filter(Boolean))]
+      console.log('[StudentQuiz] Teacher IDs found:', teacherIds)
+      const map = new Map<string, string>()
+
+      await Promise.all(
+        teacherIds.map(async (userId) => {
+          try {
+            const userProfile = await getUserProfile(userId)
+            const fullName = userProfile.full_name
+              || userProfile.email
+              || 'Unknown Teacher'
+            map.set(userId, fullName)
+          } catch (error) {
+            console.error('[StudentQuiz] Error fetching teacher:', userId, error)
+            map.set(userId, 'Unknown Teacher')
+          }
+        })
+      )
+
+      setTeachersMap(map)
+      console.log('[StudentQuiz] Loaded teacher names:', map.size)
+    }
+
+    loadTeachers()
+  }, [backendQuizzes])
+
+  // Mock data (kept as fallback)
+  const mockLiveQuizzes = [
     {
       id: 1,
       title: "Mathematics - Quadratic Equations",
@@ -208,6 +295,61 @@ export default function QuizPage() {
     },
   ]
 
+  // Transform backend quizzes to match UI format
+  const transformedBackendQuizzes = backendQuizzes.map((quiz: any) => {
+    const now = new Date()
+    const startDate = quiz.sectionStartDate ? new Date(quiz.sectionStartDate) : null
+    const endDate = quiz.sectionEndDate ? new Date(quiz.sectionEndDate) : null
+
+    let status = "live"
+    if (startDate && startDate > now) {
+      status = "starting-soon"
+    } else if (endDate && endDate < now) {
+      status = "expired"
+    }
+
+    const timeLeft = endDate ? Math.max(0, Math.floor((endDate.getTime() - now.getTime()) / 1000 / 60)) : 0
+
+    // ✅ Get subject name from map, fallback to "Not Set"
+    const subjectName = quiz.subject_id
+      ? (subjectsMap.get(quiz.subject_id) || "Not Set")
+      : "Not Set"
+
+    // ✅ Get teacher name from map, fallback to "Unknown Teacher"
+    const teacherName = quiz.teacher_id
+      ? (teachersMap.get(quiz.teacher_id) || "Loading...")
+      : "Unknown Teacher"
+
+    // ✅ Calculate total points from questions
+    const totalPoints = quiz.questions?.reduce((sum: number, q: any) => sum + (q.points || 0), 0) || quiz.total_points || 100
+    console.log(`[StudentQuiz] Quiz "${quiz.title}" - total_points from DB: ${quiz.total_points}, calculated from questions: ${totalPoints}`)
+
+    return {
+      id: quiz.quiz_id,
+      title: quiz.title,
+      subject: subjectName,
+      teacher: teacherName,
+      duration: quiz.sectionTimeLimit || quiz.time_limit || 60,
+      timeLeft: timeLeft,
+      participants: 0, // TODO: Fetch from analytics API
+      maxScore: totalPoints,
+      difficulty: "Medium", // TODO: Calculate from question stats
+      status: status,
+      instructions: quiz.description || "Complete all questions in the quiz.",
+      startedAt: startDate,
+      endsAt: endDate,
+      isFromBackend: true, // Mark as real data
+    }
+  })
+
+  // ✅ FIXED: Show BOTH backend AND mock quizzes (merge them)
+  const liveQuizzes = backendError
+    ? mockLiveQuizzes // If backend fails, show mock only
+    : [
+        ...transformedBackendQuizzes, // Real quizzes from backend (if any)
+        ...mockLiveQuizzes.map((quiz) => ({ ...quiz, isDemo: true })), // Mock quizzes marked as demo
+      ]
+
   const scheduledQuizzes = [
     {
       id: 3,
@@ -325,7 +467,10 @@ export default function QuizPage() {
     streak: 5,
   }
 
-  const getTimeRemaining = (endTime: Date) => {
+  const getTimeRemaining = (endTime: Date | null | undefined) => {
+    // ✅ Handle null/undefined endTime
+    if (!endTime) return "00:00"
+
     const now = new Date()
     const diff = endTime.getTime() - now.getTime()
     const minutes = Math.floor(diff / (1000 * 60))
@@ -358,24 +503,54 @@ export default function QuizPage() {
   const [showContactDialog, setShowContactDialog] = useState(false)
   const [selectedExpiredQuiz, setSelectedExpiredQuiz] = useState<any>(null)
 
-  const handleJoinQuiz = (quizId: number) => {
-    const quiz = liveQuizzes.find((q) => q.id === quizId)
-    if (quiz?.status === "expired") {
-      setSelectedExpiredQuiz(quiz)
+  const handleJoinQuiz = async (quizId: number | string) => {
+    console.log('[Quiz List] Attempting to join quiz:', quizId)
+
+    // Find quiz from backend quizzes or mock data
+    const backendQuiz = backendQuizzes.find((q: any) => (q.quiz_id || q.id) === quizId)
+    const mockQuiz = liveQuizzes.find((q) => q.id === quizId)
+    const quiz = backendQuiz || mockQuiz
+
+    if (mockQuiz?.status === "expired") {
+      setSelectedExpiredQuiz(mockQuiz)
       setShowContactDialog(true)
       return
     }
 
-    if (quizId === 2) {
-      // Science Photosynthesis -> Quiz 2 (continuous scroll format)
-      router.push(`/student/quiz/2`)
-    } else if (quizId === 3) {
-      // English Grammar -> Quiz 3 (hybrid format)
-      router.push(`/student/quiz/3`)
-    } else {
-      // Default routing for other quizzes
-      router.push(`/student/quiz/${quizId}`)
+    // Check if quiz allows retakes by checking backend
+    try {
+      console.log('[Quiz List] Checking retake status for quiz:', quizId)
+      const { quizApi } = await import("@/lib/api/endpoints/quiz")
+      const quizDetails = await quizApi.teacher.getQuizById(quizId.toString())
+      console.log('[Quiz List] Quiz details received:', quizDetails)
+
+      // Check if student has already taken this quiz
+      const hasAttempted = quizDetails.student_attempts && quizDetails.student_attempts.length > 0
+      const allowsRetakes = quizDetails.allow_retakes === true
+
+      console.log('[Quiz List] Has attempted:', hasAttempted)
+      console.log('[Quiz List] Allows retakes:', allowsRetakes)
+
+      if (hasAttempted && !allowsRetakes) {
+        // Show no retakes modal
+        console.log('[Quiz List] Blocking quiz - no retakes allowed')
+        setSelectedQuizForRetakeCheck({
+          id: quizId,
+          title: quizDetails.title || quiz?.title || 'Quiz',
+          subject: quiz?.subject || ''
+        })
+        setNoRetakesModalOpen(true)
+        return
+      }
+
+      console.log('[Quiz List] Retake check passed, navigating to quiz')
+    } catch (error) {
+      console.warn('[Quiz List] Could not check retake status:', error)
+      // Continue anyway - better to let them try than block them incorrectly
     }
+
+    // Navigate to quiz
+    router.push(`/student/quiz/${quizId}`)
   }
 
   return (
@@ -391,29 +566,27 @@ export default function QuizPage() {
               <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 🚨 Incoming Quiz Alert!
               </DialogTitle>
-              <DialogDescription className="text-base text-slate-700 dark:text-slate-300">
-                <div className="space-y-3">
-                  <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-indigo-200/30 dark:border-indigo-700/30">
-                    <div className="font-semibold text-indigo-700 dark:text-indigo-300">
-                      Mathematics - Quadratic Equations
-                    </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Starting in 5 minutes</div>
-                    <div className="flex items-center gap-2 mt-2 text-xs">
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        <Timer className="w-3 h-3 mr-1" />
-                        45 min
-                      </Badge>
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                        <Trophy className="w-3 h-3 mr-1" />
-                        100 pts
-                      </Badge>
-                    </div>
+              <div className="text-base text-slate-700 dark:text-slate-300 space-y-3 mt-2">
+                <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-indigo-200/30 dark:border-indigo-700/30">
+                  <div className="font-semibold text-indigo-700 dark:text-indigo-300">
+                    Mathematics - Quadratic Equations
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    Get ready! Make sure you have a stable internet connection and a quiet environment.
+                  <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Starting in 5 minutes</div>
+                  <div className="flex items-center gap-2 mt-2 text-xs">
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      <Timer className="w-3 h-3 mr-1" />
+                      45 min
+                    </Badge>
+                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      <Trophy className="w-3 h-3 mr-1" />
+                      100 pts
+                    </Badge>
                   </div>
                 </div>
-              </DialogDescription>
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  Get ready! Make sure you have a stable internet connection and a quiet environment.
+                </div>
+              </div>
             </DialogHeader>
             <DialogFooter className="flex gap-2 mt-6">
               <Button
@@ -459,17 +632,32 @@ export default function QuizPage() {
           </div>
 
           <div className="relative p-4 sm:p-6 lg:p-8 text-white">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="p-2 sm:p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 shadow-2xl hover:scale-105 transition-transform duration-300">
-                <Brain className="w-6 h-6 sm:w-8 lg:w-10 sm:h-8 lg:h-10 animate-pulse" />
+            <div className="flex items-center gap-2 sm:gap-4 justify-between">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="p-2 sm:p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 shadow-2xl hover:scale-105 transition-transform duration-300">
+                  <Brain className="w-6 h-6 sm:w-8 lg:w-10 sm:h-8 lg:h-10 animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+                    Quiz Center
+                  </h1>
+                  <p className="text-indigo-100 dark:text-indigo-200 text-sm sm:text-lg lg:text-xl font-medium">
+                    Test your knowledge and track your progress
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
-                  Quiz Center
-                </h1>
-                <p className="text-indigo-100 dark:text-indigo-200 text-sm sm:text-lg lg:text-xl font-medium">
-                  Test your knowledge and track your progress
-                </p>
+
+              {/* Refresh button */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refetchQuizzes}
+                  disabled={loadingBackend}
+                  className="bg-white/10 hover:bg-white/20 border border-white/20"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loadingBackend ? "animate-spin" : ""}`} />
+                </Button>
               </div>
             </div>
           </div>
@@ -557,7 +745,34 @@ export default function QuizPage() {
               <TabsContent value="live" className="space-y-6">
                 <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30 rounded-3xl p-6 sm:p-8 border-2 border-blue-200/50 dark:border-blue-800/50 shadow-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-blue-800 dark:text-blue-200">Live Quizzes</h2>
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-blue-800 dark:text-blue-200">Live Quizzes</h2>
+                      {/* ✅ ADD: Backend status indicator */}
+                      <div className="flex items-center gap-2 mt-2">
+                        {loadingBackend && (
+                          <Badge className="bg-blue-500 text-white px-3 py-1 text-xs">
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Loading...
+                          </Badge>
+                        )}
+                        {!loadingBackend && backendQuizzes.length === 0 && !backendError && (
+                          <Badge className="bg-amber-500 text-white px-3 py-1 text-xs">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            No published quizzes yet
+                          </Badge>
+                        )}
+                        {!loadingBackend && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={refetchQuizzes}
+                            className="h-7 px-2"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     <div className="hidden sm:flex gap-3">
                       <Badge
                         variant="secondary"
@@ -657,27 +872,6 @@ export default function QuizPage() {
                                     {quiz.maxScore} pts
                                   </span>
                                 </div>
-                              </div>
-
-                              {/* Center Section - Time Info */}
-                              <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-2 sm:gap-2 px-2 sm:px-4 w-full sm:w-auto">
-                                <div className="flex sm:flex-col items-center gap-2 sm:gap-1">
-                                  <div
-                                    className={`text-lg sm:text-xl lg:text-2xl font-bold ${
-                                      isExpired
-                                        ? "text-red-600 dark:text-red-400"
-                                        : isStartingSoon
-                                          ? "text-blue-600 dark:text-blue-400"
-                                          : "text-green-600 dark:text-green-400"
-                                    }`}
-                                  >
-                                    {isExpired ? "EXPIRED" : timeRemaining}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground text-center">
-                                    {isExpired ? "" : isStartingSoon ? "Starts in" : "Time left"}
-                                  </div>
-                                </div>
-                                <div className="text-xs text-muted-foreground">Duration: {quiz.duration} min</div>
                               </div>
 
                               {/* Right Section - Action Button */}
@@ -1000,6 +1194,90 @@ export default function QuizPage() {
           </div>
         </div>
       )}
+
+      {/* No Retakes Allowed Modal */}
+      <Dialog open={noRetakesModalOpen} onOpenChange={setNoRetakesModalOpen}>
+        <DialogContent className="max-w-lg bg-white dark:bg-slate-800 border-2 border-amber-200 dark:border-amber-700">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-full flex items-center justify-center border-4 border-amber-200 dark:border-amber-700/50">
+                  <RotateCcw className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800">
+                  <span className="text-white font-bold text-lg">×</span>
+                </div>
+              </div>
+            </div>
+            <DialogTitle className="text-2xl font-bold text-center text-slate-800 dark:text-slate-200">
+              Quiz Already Completed
+            </DialogTitle>
+            <DialogDescription className="text-center text-slate-600 dark:text-slate-300 mt-2">
+              You have already taken this quiz and retakes are not allowed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {selectedQuizForRetakeCheck && (
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                  {selectedQuizForRetakeCheck.title}
+                </h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {selectedQuizForRetakeCheck.subject && `Subject: ${selectedQuizForRetakeCheck.subject}`}
+                </p>
+              </div>
+            )}
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                    Why can't I retake this quiz?
+                  </p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Your teacher has disabled retakes for this assessment to ensure fair evaluation. Your previous attempt has been recorded.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-4">
+              <div className="flex gap-3">
+                <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                    Need to retake this quiz?
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Contact your teacher if you believe you should be allowed to retake this quiz.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setNoRetakesModalOpen(false)}
+              className="flex-1"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setNoRetakesModalOpen(false)
+                router.push('/student/quiz')
+              }}
+              className="flex-1 bg-gradient-to-r from-school-blue to-indigo-600 hover:from-school-blue/90 hover:to-indigo-600/90"
+            >
+              Back to Quizzes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </StudentLayout>
   )
 }

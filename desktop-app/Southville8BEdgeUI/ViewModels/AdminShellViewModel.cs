@@ -3,16 +3,21 @@ using Avalonia.Controls;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Southville8BEdgeUI.ViewModels.Admin;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Threading;
+using System.Globalization;
 
 namespace Southville8BEdgeUI.ViewModels;
 
-public partial class AdminShellViewModel : ViewModelBase
+public partial class AdminShellViewModel : ViewModelBase, IDisposable
 {
     [ObservableProperty]
     private ViewModelBase _currentContent;
@@ -27,13 +32,28 @@ public partial class AdminShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDarkMode = false; // toggled and applied via partial method after initialization
 
-    [ObservableProperty] private string _userName = "Richard Ramos Jr";
-    [ObservableProperty] private string _userRole = "Administrator";
-    [ObservableProperty] private string _userInitials = "RR";
-    [ObservableProperty] private string _userEmail = "richard.ramos@southville.edu.ph";
+    [ObservableProperty] private string _userName = "User";
+    [ObservableProperty] private string _userRole = "User";
+    [ObservableProperty] private string _userInitials = "U";
+    [ObservableProperty] private string _userEmail = "user@southville.edu.ph";
     [ObservableProperty] private string _currentDate = DateTime.Now.ToString("MMMM dd, yyyy");
     [ObservableProperty] private string _currentTime = DateTime.Now.ToString("hh:mm tt");
     [ObservableProperty] private string _currentVersion = "1.0.0";
+    [ObservableProperty] private string _academicYear = "2024-2025"; // Default fallback
+
+    // SSE KPI Metrics Properties
+    [ObservableProperty] private int _eventsCount = 120;
+    [ObservableProperty] private int _teachersCount = 45;
+    [ObservableProperty] private int _studentsCount = 1512;
+    [ObservableProperty] private int _sectionsCount = 144;
+    [ObservableProperty] private string _connectionStatus = "Disconnected";
+
+    // Services
+    private readonly ISseService _sseService;
+    private readonly IApiClient _apiClient;
+    private readonly ITokenStorageService _tokenStorage;
+    private string? _userId;
+    private readonly string? _accessToken;
 
     // Dynamic calendar (week pager similar to TeacherShell)
     private DateTime _currentMonthDate = DateTime.Today;
@@ -55,6 +75,9 @@ public partial class AdminShellViewModel : ViewModelBase
     [ObservableProperty] private string _currentClassRoom = string.Empty;
     public bool HasMultipleTodayClasses => TodayClasses.Count > 1;
 
+    // Recent Activities for Activity Log sidebar
+    [ObservableProperty] private ObservableCollection<ActivityLogItemViewModel> _recentActivities = new();
+
     private DispatcherTimer? _todayRotationTimer;
 
     [ObservableProperty] private GridLength _leftColumnWidth = new(260);
@@ -62,16 +85,103 @@ public partial class AdminShellViewModel : ViewModelBase
 
     // Flag to suppress applying a theme while initializing (so we respect OS/default app theme)
     private bool _suppressThemeApply = true;
+    private DispatcherTimer? _clock;
+    private SidebarMetrics? _lastValidMetrics;
+    private SidebarMetrics? _pendingMetrics;
+    private DispatcherTimer? _metricsApplyTimer;
+    private const int RecentActivitiesDisplayCount = 3;
 
     public bool ShowLeftSidebarToggle => !IsLeftSidebarVisible;
     public bool ShowRightSidebarToggle => !IsRightSidebarVisible;
 
     public Action<ViewModelBase>? NavigateTo { get; set; }
+    
+    // Main-level navigation action for app-level navigation (e.g., logout to login)
+    public Action<ViewModelBase>? MainNavigateTo { get; set; }
+    
+    // Cached ViewModel instances
+    private UserManagementViewModel? _cachedUserManagementViewModel;
+    private ClassSchedulesViewModel? _cachedClassSchedulesViewModel;
+    private EventDashboardViewModel? _cachedEventDashboardViewModel;
+    private BuildingManagementViewModel? _cachedBuildingManagementViewModel;
+
+    // Sidebar events (current/next + upcoming page)
+    [ObservableProperty] private EventDto? _currentEvent;
+    [ObservableProperty] private EventDto? _nextEvent;
+    [ObservableProperty] private ObservableCollection<EventDto> _upcomingEvents = new();
+    [ObservableProperty] private bool _hasCurrentEvent;
+    [ObservableProperty] private bool _hasNextEvent;
+
+    // Computed properties for 12-hour formatted times with day of week
+    public string CurrentEventTimeFormatted => FormatTimeWithDay(CurrentEvent);
+    public string NextEventTimeFormatted => FormatTimeWithDay(NextEvent);
+
+    private string FormatTimeWithDay(EventDto? eventDto)
+    {
+        if (eventDto == null)
+            return "N/A";
+        
+        string dayOfWeek = GetDayOfWeek(eventDto.Date);
+        string timeFormatted = FormatTime(eventDto.Time);
+        
+        return $"{dayOfWeek}, {timeFormatted}";
+    }
+
+    private string GetDayOfWeek(string dateString)
+    {
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("dddd"); // e.g., "Tuesday", "Wednesday"
+        }
+        return "N/A";
+    }
+
+    private string FormatTime(string? time)
+    {
+        if (string.IsNullOrEmpty(time))
+            return "N/A";
+        
+        if (TimeSpan.TryParse(time, out var timeSpan))
+        {
+            var dateTime = DateTime.Today.Add(timeSpan);
+            return dateTime.ToString("h:mm tt"); // e.g., "9:00 AM"
+        }
+        
+        return time;
+    }
 
     // Added optional parameter enableRotation (default true) to allow unit tests to disable DispatcherTimer creation.
-    public AdminShellViewModel(bool enableRotation = true)
+    public AdminShellViewModel(ISseService sseService, IApiClient apiClient, ITokenStorageService tokenStorage, UserDto? user = null, string? accessToken = null, bool enableRotation = true, Action<ViewModelBase>? mainNavigateTo = null)
     {
+        _sseService = sseService;
+        _apiClient = apiClient;
+        _tokenStorage = tokenStorage;
+        _accessToken = accessToken;
+        
+        // Store the main-level navigation action
+        MainNavigateTo = mainNavigateTo;
+        
+        // Create dashboard immediately with token (no async initialization needed)
         _currentContent = CreateDashboardViewModel();
+        
+        // Store token in background for future sessions (fire-and-forget)
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            _ = StoreAccessTokenAsync(accessToken);
+        }
+        
+        // Initialize with basic data from login
+        if (user != null)
+        {
+            _userId = user.Id;
+            UserEmail = user.Email ?? "user@southville.edu.ph";
+            UserRole = FormatRoleName(user.Role);
+            UserInitials = GetInitialsFromEmail(user.Email);
+            
+            // Fetch full profile asynchronously
+            _ = LoadUserProfileAsync();
+        }
+        
         UpdateColumnWidths();
 
         // Initialize theme without triggering change
@@ -84,8 +194,187 @@ public partial class AdminShellViewModel : ViewModelBase
 
         InitializeTodayClasses();
         GenerateCalendarDays();
-        if (enableRotation)
-            StartTodayRotation();
+        // Remove auto-rotation per requirement (keep data structure for now but do not start timer)
+
+        // Initialize SSE connection
+        InitializeSseConnection();
+
+        // Load sidebar events (today + next 7 days)
+        _ = LoadSidebarEventsAsync();
+
+        // Load active academic year
+        _ = LoadActiveAcademicYearAsync();
+        
+        // Load recent activities for sidebar
+        _ = LoadRecentActivitiesAsync();
+
+        // Realtime clock for date/time display
+        _clock?.Stop();
+        _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _clock.Tick += (_, _) =>
+        {
+            CurrentDate = DateTime.Now.ToString("MMMM dd, yyyy");
+            CurrentTime = DateTime.Now.ToString("hh:mm tt");
+        };
+        _clock.Start();
+    }
+
+
+    private void InitializeSseConnection()
+    {
+        // Subscribe to SSE events
+        _sseService.MetricsUpdated += OnMetricsUpdated;
+        _sseService.AdminActivitiesUpdated += OnAdminActivitiesUpdated;
+        _sseService.ConnectionStatusChanged += OnConnectionStatusChanged;
+
+        // Start SSE connection
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _sseService.StartAsync("desktop-sidebar/kpi/stream");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to start SSE connection: {ex.Message}");
+            }
+        });
+    }
+
+    private void OnMetricsUpdated(object? sender, SidebarMetrics metrics)
+    {
+        // Guard: ignore transient all-zero snapshots while connected (likely heartbeat/placeholder)
+        bool looksEmpty = metrics.Events == 0 && metrics.Teachers == 0 && metrics.Students == 0 && metrics.Sections == 0;
+        if (looksEmpty && !string.Equals(ConnectionStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Debounce/coalesce: keep only latest metrics within a short window
+        _pendingMetrics = metrics;
+        _metricsApplyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _metricsApplyTimer.Tick -= ApplyPendingMetrics;
+        _metricsApplyTimer.Tick += ApplyPendingMetrics;
+        _metricsApplyTimer.Stop();
+        _metricsApplyTimer.Start();
+    }
+
+    private void OnAdminActivitiesUpdated(object? sender, IReadOnlyList<AdminActivity> activities)
+    {
+        if (activities == null)
+        {
+            return;
+        }
+
+        UpdateRecentActivities(activities);
+    }
+
+    private void ApplyPendingMetrics(object? sender, EventArgs e)
+    {
+        _metricsApplyTimer?.Stop();
+        var snapshot = _pendingMetrics;
+        _pendingMetrics = null;
+        if (snapshot == null) return;
+
+        _lastValidMetrics = snapshot;
+        Dispatcher.UIThread.Post(() =>
+        {
+            EventsCount = snapshot.Events;
+            TeachersCount = snapshot.Teachers;
+            StudentsCount = snapshot.Students;
+            SectionsCount = snapshot.Sections;
+        });
+    }
+
+    private void OnConnectionStatusChanged(object? sender, string status)
+    {
+        Dispatcher.UIThread.Post(() => ConnectionStatus = status);
+    }
+
+    private async Task LoadUserProfileAsync()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        
+        try
+        {
+            var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+            
+            // Use the token if available (from login), otherwise rely on storage
+            UserProfile? profile;
+            if (!string.IsNullOrEmpty(_accessToken))
+            {
+                profile = await apiClient.GetUserProfileAsync(_userId, _accessToken);
+            }
+            else
+            {
+                profile = await apiClient.GetUserProfileAsync(_userId);
+            }
+            
+            if (profile != null)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    UserName = profile.FullName ?? "User";
+                    UserEmail = profile.Email;
+                    UserRole = FormatRoleName(profile.Role?.Name);
+                    UserInitials = GetInitialsFromName(profile.FullName);
+                    
+                    System.Diagnostics.Debug.WriteLine($"User profile loaded: {UserName} ({UserRole})");
+                });
+            }
+        }
+        catch (UnauthorizedException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load user profile: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            // Keep the default values from login response
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load user profile: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            // Keep the default values from login response
+        }
+    }
+
+    private static string FormatRoleName(string? role)
+    {
+        if (string.IsNullOrEmpty(role)) return "User";
+        
+        return role.ToLowerInvariant() switch
+        {
+            "admin" => "Administrator",
+            "teacher" => "Teacher",
+            "student" => "Student",
+            _ => role
+        };
+    }
+
+    private static string GetInitialsFromName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "U";
+        
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "U";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        
+        // First and last name initials
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+
+    private static string GetInitialsFromEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return "U";
+        
+        var username = email.Split('@')[0];
+        if (username.Length > 0)
+            return username[0].ToString().ToUpper();
+        
+        return "U";
     }
 
     private void InitializeTodayClasses()
@@ -147,6 +436,181 @@ public partial class AdminShellViewModel : ViewModelBase
         _todayRotationTimer.Start();
     }
 
+    // Loads current and next events and the first page of upcoming events (5 items)
+    private async Task LoadSidebarEventsAsync()
+    {
+        try
+        {
+            var today = DateTime.Now.Date;
+            var end = today.AddDays(7);
+            var startStr = today.ToString("yyyy-MM-dd");
+            var endStr = end.ToString("yyyy-MM-dd");
+
+            // Fetch published events within range using generic GET to pass date filters
+            var endpoint = $"events?page=1&limit=50&status=published&startDate={startStr}&endDate={endStr}";
+            var response = await _apiClient.GetAsync<EventListResponse>(endpoint);
+            if (response?.Data == null)
+            {
+                CurrentEvent = null;
+                NextEvent = null;
+                UpcomingEvents.Clear();
+                return;
+            }
+
+            var events = response.Data;
+
+            // Build comparable DateTime for each event using date + time (time may be HH:mm or HH:mm:ss)
+            static DateTime? toDateTime(EventDto e)
+            {
+                if (string.IsNullOrWhiteSpace(e.Date)) return null;
+                if (!DateTime.TryParseExact(e.Date, new[] { "yyyy-MM-dd", "yyyy-M-d" }, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var d))
+                    return null;
+                if (string.IsNullOrWhiteSpace(e.Time)) return d;
+                // Normalize time
+                if (TimeSpan.TryParse(e.Time, out var ts))
+                    return d.Date.Add(ts);
+                return d;
+            }
+
+            var now = DateTime.Now;
+            var todayStr = today.ToString("yyyy-MM-dd");
+
+            var candidatesToday = events
+                .Where(e => string.Equals(e.Date, todayStr, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            EventDto? current = candidatesToday
+                .Where(e =>
+                {
+                    var dt = toDateTime(e);
+                    return dt.HasValue && dt.Value <= now;
+                })
+                .OrderBy(e => toDateTime(e))
+                .LastOrDefault();
+
+            EventDto? next = events
+                .Where(e =>
+                {
+                    var dt = toDateTime(e);
+                    return dt.HasValue && dt.Value > now;
+                })
+                .OrderBy(e => toDateTime(e))
+                .FirstOrDefault();
+
+            CurrentEvent = current;
+            HasCurrentEvent = CurrentEvent != null;
+            NextEvent = next;
+            HasNextEvent = NextEvent != null;
+
+            // Upcoming list starting after now, take next 5
+            var upcoming = events
+                .Where(e =>
+                {
+                    var dt = toDateTime(e);
+                    return dt.HasValue && dt.Value >= now;
+                })
+                .OrderBy(e => toDateTime(e))
+                .Take(5)
+                .ToList();
+
+            UpcomingEvents.Clear();
+            foreach (var ev in upcoming) UpcomingEvents.Add(ev);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load sidebar events: {ex.Message}");
+            CurrentEvent = null;
+            NextEvent = null;
+            UpcomingEvents.Clear();
+        }
+    }
+
+    private async Task LoadActiveAcademicYearAsync()
+    {
+        try
+        {
+            var academicYear = await _apiClient.GetActiveAcademicYearAsync();
+            if (academicYear != null)
+            {
+                // Debug: Log the raw DTO values to see what we're getting
+                System.Diagnostics.Debug.WriteLine($"AcademicYear DTO received:");
+                System.Diagnostics.Debug.WriteLine($"  Id: {academicYear.Id}");
+                System.Diagnostics.Debug.WriteLine($"  YearName: {academicYear.YearName}");
+                System.Diagnostics.Debug.WriteLine($"  StartDate: {academicYear.StartDate}");
+                System.Diagnostics.Debug.WriteLine($"  EndDate: {academicYear.EndDate}");
+                System.Diagnostics.Debug.WriteLine($"  IsActive: {academicYear.IsActive}");
+                
+                var displayName = academicYear.GetDisplayName();
+                
+                // If GetDisplayName returns "N/A", it means all fields are empty/null
+                // In this case, keep the default value instead of showing "N/A"
+                if (displayName == "N/A")
+                {
+                    System.Diagnostics.Debug.WriteLine("AcademicYear DTO has no usable data (all fields null/empty), keeping default value");
+                    // Keep the default "2024-2025" value
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        AcademicYear = displayName;
+                        System.Diagnostics.Debug.WriteLine($"Active academic year loaded: {AcademicYear}");
+                    });
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No active academic year found (API returned null), keeping default value");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load active academic year: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Keep the default "2024-2025" value on error
+        }
+    }
+
+    // Property change handlers for computed time properties
+    partial void OnCurrentEventChanged(EventDto? value)
+    {
+        OnPropertyChanged(nameof(CurrentEventTimeFormatted));
+    }
+
+    partial void OnNextEventChanged(EventDto? value)
+    {
+        OnPropertyChanged(nameof(NextEventTimeFormatted));
+    }
+
+    [RelayCommand]
+    private async Task MarkCurrentEventCompleted()
+    {
+        if (CurrentEvent == null || string.IsNullOrWhiteSpace(CurrentEvent.Id)) return;
+        try
+        {
+          await _apiClient.UpdateEventAsync(CurrentEvent.Id, new UpdateEventDto { Status = "completed" });
+await LoadSidebarEventsAsync();
+}
+        catch (Exception ex)
+    {
+     System.Diagnostics.Debug.WriteLine($"Failed to complete current event: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ViewMoreEvents()
+    {
+    DisposeCurrentContent();
+        var vm = CreateEventDashboardViewModel();
+      if (vm != null)
+        {
+            vm.PageSize = 5; // paginate by 5 as requested
+  CurrentContent = vm;
+        }
+        CurrentPage = "Events Dashboard";
+        CloseUserDropdown();
+    }
+
     private void GenerateCalendarDays()
     {
         _monthGridDays.Clear();
@@ -184,9 +648,41 @@ public partial class AdminShellViewModel : ViewModelBase
             FirstWeekDays.Add(d);
     }
 
-    private AdminDashboardViewModel CreateDashboardViewModel() => new()
+    private void DisposeCurrentContent()
     {
-        NavigateToRoomManagementCommand = NavigateToRoomManagementCommand,
+        if (CurrentContent is IDisposable disposable)
+        {
+            // Clear cache when disposing UserManagementViewModel
+            if (disposable is UserManagementViewModel)
+            {
+                _cachedUserManagementViewModel = null;
+            }
+            
+            // Clear cache when disposing ClassSchedulesViewModel
+            if (disposable is ClassSchedulesViewModel)
+            {
+                _cachedClassSchedulesViewModel = null;
+            }
+            
+            // Clear cache when disposing EventDashboardViewModel
+            if (disposable is EventDashboardViewModel)
+            {
+                _cachedEventDashboardViewModel = null;
+            }
+            
+            // Clear cache when disposing BuildingManagementViewModel
+            if (disposable is BuildingManagementViewModel)
+            {
+                _cachedBuildingManagementViewModel = null;
+            }
+            
+            disposable.Dispose();
+        }
+    }
+
+    private AdminDashboardViewModel CreateDashboardViewModel() => new(_apiClient, _sseService, _accessToken)
+    {
+        NavigateToBuildingManagementCommand = NavigateToBuildingManagementCommand,
         NavigateToEventsDashboardCommand = NavigateToEventsDashboardCommand,
         NavigateToUserManagementCommand = NavigateToUserManagementCommand,
         NavigateToChatCommand = NavigateToChatCommand,
@@ -207,20 +703,75 @@ public partial class AdminShellViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToAlerts()
     {
-        CurrentContent = new AlertsViewModel();
+        var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+        var toastService = ServiceLocator.Services.GetRequiredService<IToastService>();
+        CurrentContent = new AlertsViewModel(apiClient, toastService);
         CurrentPage = "Alerts";
         CloseUserDropdown();
     }
 
-    [RelayCommand] private void NavigateToDashboard() { CurrentContent = CreateDashboardViewModel(); CurrentPage = "Dashboard"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToRoomManagement() { var vm = new RoomManagementViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Room Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToEventsDashboard() { var vm = new EventDashboardViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Events Dashboard"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToDashboard() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateDashboardViewModel(); 
+        CurrentPage = "Dashboard"; 
+        CloseUserDropdown(); 
+    }
+    [RelayCommand] private void NavigateToBuildingManagement() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateBuildingManagementViewModel(); 
+        CurrentPage = "Building Management"; 
+        CloseUserDropdown(); 
+    }
+    [RelayCommand] private void NavigateToClassSchedules() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateClassSchedulesViewModel(); 
+        CurrentPage = "Class Schedules"; 
+        CloseUserDropdown(); 
+    }
+    [RelayCommand] private void NavigateToEventsDashboard() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateEventDashboardViewModel(); 
+        CurrentPage = "Events Dashboard"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToELibrary() { CurrentContent = new ELibraryManagementViewModel(); CurrentPage = "E-Library Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToUserManagement() { CurrentContent = CreateUserManagementViewModel(); CurrentPage = "User Management"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToChat() { var vm = new ChatViewModel(); vm.NavigateTo = inner => CurrentContent = inner; vm.NavigateBack = () => NavigateToDashboard(); CurrentContent = vm; CurrentPage = "Chat"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToProfile() { CurrentContent = new ProfileViewModel(); CurrentPage = "Profile"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToUserManagement() 
+    { 
+        DisposeCurrentContent();
+        CurrentContent = CreateUserManagementViewModel(); 
+        CurrentPage = "User Management"; 
+        CloseUserDropdown(); 
+    }
+    [RelayCommand] 
+    private void NavigateToChat() 
+    { 
+        var chatService = ServiceLocator.Services.GetRequiredService<Services.IChatService>();
+        var vm = new ChatViewModel(chatService, _userId); 
+        vm.NavigateTo = inner => CurrentContent = inner; 
+        vm.NavigateBack = () => NavigateToDashboard(); 
+        CurrentContent = vm; 
+        CurrentPage = "Chat"; 
+        CloseUserDropdown(); 
+    }
+    [RelayCommand] 
+    private void NavigateToProfile() 
+    { 
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        var apiClient = ServiceLocator.Services.GetRequiredService<IApiClient>();
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var vm = new ProfileViewModel(apiClient, toastService, _userId);
+        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        CurrentContent = vm; 
+        CurrentPage = "Profile"; 
+        CloseUserDropdown(); 
+    }
     [RelayCommand] private void NavigateToSettings() { CurrentContent = new SettingsViewModel(); CurrentPage = "Settings"; CloseUserDropdown(); }
-    [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(); CurrentPage = "Notifications"; CloseUserDropdown(); }
+    [RelayCommand] private void NavigateToNotifications() { CurrentContent = new NotificationsViewModel(_apiClient); CurrentPage = "Notifications"; CloseUserDropdown(); }
     [RelayCommand] private void NavigateToHelpGuide() { CurrentContent = new HelpGuideViewModel(); CurrentPage = "Help Guide"; CloseUserDropdown(); }
 
     [RelayCommand]
@@ -230,7 +781,101 @@ public partial class AdminShellViewModel : ViewModelBase
         CloseUserDropdown();
     }
 
-    [RelayCommand] private void Logout() { CloseUserDropdown(); NavigateTo?.Invoke(new LoginViewModel()); }
+    [RelayCommand]
+    private async Task Logout()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== LOGOUT STARTED ===");
+            System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
+            
+            CloseUserDropdown();
+            
+            // Show confirmation dialog
+            // Note: In a real implementation, you would show a proper dialog
+            // For now, we'll proceed directly with logout
+            
+            // Clear all cached ViewModels to free memory
+            System.Diagnostics.Debug.WriteLine("Clearing cached ViewModels...");
+            _cachedUserManagementViewModel = null;
+            _cachedClassSchedulesViewModel = null;
+            _cachedEventDashboardViewModel = null;
+            _cachedBuildingManagementViewModel = null;
+            System.Diagnostics.Debug.WriteLine("Cached ViewModels cleared");
+            
+            // Reset current content
+            System.Diagnostics.Debug.WriteLine("Resetting CurrentContent...");
+            CurrentContent = null!;
+            System.Diagnostics.Debug.WriteLine("CurrentContent reset");
+            
+            // Call auth service logout (clears tokens and user data)
+            System.Diagnostics.Debug.WriteLine("Calling AuthService.LogoutAsync...");
+            var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            await authService.LogoutAsync();
+            System.Diagnostics.Debug.WriteLine("AuthService.LogoutAsync completed");
+            
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode");
+            }
+            
+            // Show success message
+            var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+            toastService.Success("You have been logged out successfully", "Goodbye!");
+            
+            // Navigate to login screen
+            System.Diagnostics.Debug.WriteLine("Creating LoginViewModel...");
+            var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
+            var loginVm = new LoginViewModel(authService, toastService, roleValidationService, dialogService);
+            System.Diagnostics.Debug.WriteLine($"LoginViewModel created: {loginVm != null}");
+            
+            // Set NavigateTo on the new LoginViewModel so it can navigate to AdminShell after login
+       if (MainNavigateTo != null)
+    {
+        loginVm!.NavigateTo = MainNavigateTo;
+        System.Diagnostics.Debug.WriteLine($"LoginViewModel.NavigateTo set to MainNavigateTo");
+            }
+
+   System.Diagnostics.Debug.WriteLine($"About to invoke MainNavigateTo with LoginViewModel");
+        System.Diagnostics.Debug.WriteLine($"MainNavigateTo is null: {MainNavigateTo == null}");
+       
+          if (MainNavigateTo != null)
+            {
+           System.Diagnostics.Debug.WriteLine("Invoking MainNavigateTo...");
+      MainNavigateTo.Invoke(loginVm!);
+    System.Diagnostics.Debug.WriteLine("MainNavigateTo invoked successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== LOGOUT ERROR ===");
+            System.Diagnostics.Debug.WriteLine($"Exception: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            
+            // Even if there's an error, still try to navigate to login
+            var authService = ServiceLocator.Services.GetRequiredService<Services.IAuthService>();
+            var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+            var roleValidationService = ServiceLocator.Services.GetRequiredService<Services.IRoleValidationService>();
+            
+            // Reset theme to Light mode for login screen
+            if (Application.Current != null)
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                System.Diagnostics.Debug.WriteLine("Theme reset to Light mode (fallback path)");
+            }
+            
+            toastService.Warning("Logout completed with warnings", "Warning");
+            
+            var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
+            var loginVm = new LoginViewModel(authService, toastService, roleValidationService, dialogService);
+            loginVm.NavigateTo = MainNavigateTo;
+            System.Diagnostics.Debug.WriteLine($"Fallback: MainNavigateTo is null: {MainNavigateTo == null}");
+            MainNavigateTo?.Invoke(loginVm);
+        }
+    }
     [RelayCommand] private void DismissAlert(SystemAlertViewModel alert) { if (CurrentContent is AdminDashboardViewModel d) d.SystemAlerts.Remove(alert); }
 
     // Calendar week navigation (previous / next) - wraps across months
@@ -279,14 +924,102 @@ public partial class AdminShellViewModel : ViewModelBase
 
     private UserManagementViewModel CreateUserManagementViewModel()
     {
-        var vm = new UserManagementViewModel();
+        // Return cached instance if exists
+        if (_cachedUserManagementViewModel != null)
+        {
+            // Show loading state briefly for better UX, then clear it immediately
+            // since data is already loaded
+            _cachedUserManagementViewModel.ShowLoadingState();
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(100); // Brief visual feedback
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _cachedUserManagementViewModel.IsLoading = false;
+                });
+            });
+            return _cachedUserManagementViewModel;
+        }
+
+        // Create new instance
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var dialogService = ServiceLocator.Services.GetRequiredService<Services.IDialogService>();
+        var vm = new UserManagementViewModel(_apiClient, toastService, dialogService);
         vm.NavigateTo = innerVm => CurrentContent = innerVm;
         vm.NavigateBack = () => NavigateToDashboard();
+        
+        // Cache the instance
+        _cachedUserManagementViewModel = vm;
+        
+        return vm;
+    }
+
+    private ClassSchedulesViewModel CreateClassSchedulesViewModel()
+    {
+        // Return cached instance if exists
+        if (_cachedClassSchedulesViewModel != null)
+        {
+            return _cachedClassSchedulesViewModel;
+        }
+
+        // Create new instance
+        var toastService = ServiceLocator.Services.GetRequiredService<Services.IToastService>();
+        var vm = new ClassSchedulesViewModel(_apiClient, toastService);
+        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        vm.NavigateBack = () => NavigateToDashboard();
+        
+        // Cache the instance
+        _cachedClassSchedulesViewModel = vm;
+        
+        return vm;
+    }
+
+    private EventDashboardViewModel CreateEventDashboardViewModel()
+    {
+        // Return cached instance if exists
+        if (_cachedEventDashboardViewModel != null)
+        {
+            return _cachedEventDashboardViewModel;
+        }
+
+        // Create new instance
+        var vm = new EventDashboardViewModel(_apiClient);
+        vm.NavigateTo = innerVm => CurrentContent = innerVm;
+        vm.NavigateBack = () => NavigateToDashboard();
+        
+        // Cache the instance
+        _cachedEventDashboardViewModel = vm;
+        
+        return vm;
+    }
+
+    private BuildingManagementViewModel CreateBuildingManagementViewModel()
+    {
+        if (_cachedBuildingManagementViewModel != null)
+        {
+            _cachedBuildingManagementViewModel.ShowLoadingState();
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(100); // Brief visual feedback
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _cachedBuildingManagementViewModel.IsLoading = false;
+                });
+            });
+            return _cachedBuildingManagementViewModel;
+        }
+
+        var vm = new BuildingManagementViewModel(_apiClient);
+        vm.NavigateTo = inner => CurrentContent = inner;
+        vm.NavigateBack = () => NavigateToDashboard();
+        _cachedBuildingManagementViewModel = vm;
         return vm;
     }
 
     // Existing active-page flags
     public bool IsDashboardActive => CurrentPage == "Dashboard";
+    public bool IsBuildingManagementActive => CurrentPage == "Building Management";
+    public bool IsClassSchedulesActive => CurrentPage == "Class Schedules";
     public bool IsRoomManagementActive => CurrentPage == "Room Management";
     public bool IsEventsDashboardActive => CurrentPage == "Events Dashboard";
     public bool IsELibraryActive => CurrentPage == "E-Library Management";
@@ -301,6 +1034,8 @@ public partial class AdminShellViewModel : ViewModelBase
     partial void OnCurrentPageChanged(string value)
     {
         OnPropertyChanged(nameof(IsDashboardActive));
+        OnPropertyChanged(nameof(IsBuildingManagementActive));
+        OnPropertyChanged(nameof(IsClassSchedulesActive));
         OnPropertyChanged(nameof(IsRoomManagementActive));
         OnPropertyChanged(nameof(IsEventsDashboardActive));
         OnPropertyChanged(nameof(IsELibraryActive));
@@ -327,4 +1062,159 @@ public partial class AdminShellViewModel : ViewModelBase
                 stat.RefreshTheme();
         }
     }
+
+    private async Task StoreAccessTokenAsync(string accessToken)
+    {
+        try
+        {
+            // Calculate expiration time (typically JWT tokens expire in 1 hour)
+            var expiresAt = DateTime.UtcNow.AddHours(1);
+            await _tokenStorage.SaveTokensAsync(accessToken, string.Empty, expiresAt);
+            System.Diagnostics.Debug.WriteLine("Access token stored successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to store access token: {ex.Message}");
+        }
+    }
+
+    private async Task LoadRecentActivitiesAsync()
+    {
+        try
+        {
+            var activities = await _apiClient.GetAdminActivitiesAsync(limit: RecentActivitiesDisplayCount);
+            if (activities != null)
+            {
+                UpdateRecentActivities(activities);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading recent activities: {ex.Message}");
+        }
+    }
+
+    private void UpdateRecentActivities(IEnumerable<AdminActivity> activities)
+    {
+        var snapshot = activities
+            .Where(activity => activity != null)
+            .Take(RecentActivitiesDisplayCount)
+            .Select(CreateActivityViewModel)
+            .ToList();
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            RecentActivities.Clear();
+            foreach (var vm in snapshot)
+            {
+                RecentActivities.Add(vm);
+            }
+        });
+    }
+
+    private ActivityLogItemViewModel CreateActivityViewModel(AdminActivity activity)
+    {
+        var user = string.IsNullOrWhiteSpace(activity.UserName) ? "System" : activity.UserName;
+        var createdAtUtc = ParseDateToUtc(activity.CreatedAt);
+
+        return new ActivityLogItemViewModel
+        {
+            UserName = user,
+            UserInitials = BuildInitials(user),
+            Description = activity.Description,
+            Timestamp = FormatRelativeTime(createdAtUtc),
+        };
+    }
+
+    private static DateTime ParseDateToUtc(string? timestamp)
+    {
+        if (string.IsNullOrWhiteSpace(timestamp))
+        {
+            return DateTime.UtcNow;
+        }
+
+        if (DateTime.TryParse(timestamp, out var parsed))
+        {
+            if (parsed.Kind == DateTimeKind.Local)
+            {
+                return parsed.ToUniversalTime();
+            }
+
+            if (parsed.Kind == DateTimeKind.Utc)
+            {
+                return parsed;
+            }
+
+            return DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+        }
+
+        return DateTime.UtcNow;
+    }
+
+    private static string FormatRelativeTime(DateTime createdAtUtc)
+    {
+        var diff = DateTime.UtcNow - createdAtUtc;
+
+        if (diff.TotalMinutes < 1)
+        {
+            return "just now";
+        }
+
+        if (diff.TotalMinutes < 60)
+        {
+            return $"{(int)Math.Floor(diff.TotalMinutes)}mins ago";
+        }
+
+        if (diff.TotalHours < 24)
+        {
+            return $"{(int)Math.Floor(diff.TotalHours)}hrs ago";
+        }
+
+        return $"{(int)Math.Floor(diff.TotalDays)}d ago";
+    }
+
+    private static string BuildInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "U";
+        }
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            return "U";
+        }
+        if (parts.Length >= 2)
+        {
+            return $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[1][0])}";
+        }
+
+        var first = parts[0];
+        if (first.Length >= 2)
+        {
+            return first.Substring(0, 2).ToUpperInvariant();
+        }
+
+        return first[0].ToString().ToUpperInvariant();
+    }
+
+    public void Dispose()
+    {
+        _clock?.Stop();
+        _metricsApplyTimer?.Stop();
+        _sseService.MetricsUpdated -= OnMetricsUpdated;
+        _sseService.AdminActivitiesUpdated -= OnAdminActivitiesUpdated;
+        _sseService.ConnectionStatusChanged -= OnConnectionStatusChanged;
+        _ = _sseService.StopAsync();
+    }
+}
+
+// Activity Log Item for Sidebar
+public partial class ActivityLogItemViewModel : ViewModelBase
+{
+    [ObservableProperty] private string _userName = "";
+    [ObservableProperty] private string _userInitials = "";
+    [ObservableProperty] private string _description = "";
+    [ObservableProperty] private string _timestamp = "";
 }

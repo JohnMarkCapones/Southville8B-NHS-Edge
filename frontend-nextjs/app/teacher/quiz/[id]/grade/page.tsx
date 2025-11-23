@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -188,11 +189,93 @@ const mockSubmissions = [
   },
 ]
 
-export default function GradeQuizPage({ params }: { params: { id: string } }) {
+export default function GradeQuizPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const { toast } = useToast()
+  const { id: quizId } = use(params)
+
+  // State
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   const [submissions, setSubmissions] = useState(mockSubmissions)
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [backendError, setBackendError] = useState<Error | null>(null)
+
+  // Backend integration: Load pending answers to grade
+  useEffect(() => {
+    const loadPendingAnswers = async () => {
+      setIsLoading(true)
+      setBackendError(null)
+
+      try {
+        const { quizApi } = await import("@/lib/api/endpoints")
+        const answersToGrade = await quizApi.grading.getAnswersToGrade(quizId)
+
+        if (answersToGrade && answersToGrade.length > 0) {
+          // Group answers by attempt/student
+          const submissionsMap = new Map()
+
+          for (const answer of answersToGrade) {
+            const attemptId = answer.attempt_id
+
+            if (!submissionsMap.has(attemptId)) {
+              submissionsMap.set(attemptId, {
+                id: attemptId,
+                studentId: answer.student_id || "unknown",
+                studentName: "Student", // TODO: Get from student data
+                studentAvatar: "/placeholder.svg?height=40&width=40",
+                submittedAt: answer.created_at,
+                timeSpent: "N/A",
+                gradingStatus: "pending",
+                answers: [],
+              })
+            }
+
+            const submission = submissionsMap.get(attemptId)
+            submission.answers.push({
+              questionId: answer.question_id,
+              answerId: answer.answer_id,
+              type: answer.question_type?.includes("answer") || answer.question_type?.includes("essay")
+                ? "long-answer"
+                : "short-answer",
+              answer: answer.student_answer,
+              isCorrect: null,
+              points: answer.points_earned,
+              maxPoints: answer.question_points,
+              gradingStatus: answer.grading_status || "pending",
+              feedback: answer.feedback,
+            })
+          }
+
+          const loadedSubmissions = Array.from(submissionsMap.values())
+          setSubmissions(loadedSubmissions)
+
+          toast({
+            title: "Answers Loaded",
+            description: `Found ${loadedSubmissions.length} submission(s) to grade.`,
+          })
+        } else {
+          toast({
+            title: "No Pending Answers",
+            description: "All submissions have been graded.",
+            variant: "info",
+          })
+        }
+      } catch (error) {
+        console.error("Error loading answers:", error)
+        setBackendError(error as Error)
+        toast({
+          title: "Failed to Load Answers",
+          description: "Showing example data. Check your connection.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadPendingAnswers()
+  }, [quizId, toast])
 
   const currentSubmission = submissions[currentStudentIndex]
   const pendingSubmissions = submissions.filter((s) => s.gradingStatus === "pending")
@@ -231,41 +314,60 @@ export default function GradeQuizPage({ params }: { params: { id: string } }) {
   const handleSaveAndNext = async () => {
     setIsSaving(true)
 
-    // TODO: DATABASE - Save grades to database
-    // Example:
-    // for (const answer of currentSubmission.answers) {
-    //   if (answer.type === 'short-answer' || answer.type === 'long-answer') {
-    //     await db.query(
-    //       'UPDATE student_answers SET essay_score = ?, essay_feedback = ?, graded_by = ?, graded_at = NOW(), grading_status = "graded" WHERE submission_id = ? AND question_id = ?',
-    //       [answer.points, answer.feedback, teacherId, currentSubmission.id, answer.questionId]
-    //     )
-    //   }
-    // }
-    // await db.query('UPDATE quiz_submissions SET grading_status = "graded", total_score = ? WHERE id = ?', [totalScore, currentSubmission.id])
+    try {
+      // Backend integration: Save grades to database
+      const { quizApi } = await import("@/lib/api/endpoints")
 
-    // Calculate total score
-    const totalScore = currentSubmission.answers.reduce((sum, ans) => sum + (ans.points || 0), 0)
+      // Grade each essay/manual answer
+      for (const answer of currentSubmission.answers) {
+        if (answer.type === "short-answer" || answer.type === "long-answer") {
+          // Only grade if answer has an answerId from backend
+          if (answer.answerId) {
+            await quizApi.grading.gradeAnswer({
+              answer_id: answer.answerId,
+              points_earned: answer.points || 0,
+              feedback: answer.feedback || "",
+            })
+          }
+        }
+      }
 
-    // Update submission status
-    setSubmissions((prev) =>
-      prev.map((sub, idx) =>
-        idx === currentStudentIndex
-          ? {
-              ...sub,
-              totalScore,
-              gradingStatus: "graded",
-            }
-          : sub,
-      ),
-    )
+      // Calculate total score
+      const totalScore = currentSubmission.answers.reduce((sum, ans) => sum + (ans.points || 0), 0)
 
-    setTimeout(() => {
-      setIsSaving(false)
+      // Update local state
+      setSubmissions((prev) =>
+        prev.map((sub, idx) =>
+          idx === currentStudentIndex
+            ? {
+                ...sub,
+                totalScore,
+                gradingStatus: "graded",
+              }
+            : sub,
+        ),
+      )
+
+      toast({
+        title: "Grades Saved",
+        description: `Submission graded successfully. Total score: ${totalScore}`,
+        variant: "success",
+      })
+
       // Move to next student if available
       if (currentStudentIndex < totalStudents - 1) {
         setCurrentStudentIndex(currentStudentIndex + 1)
       }
-    }, 500)
+    } catch (error) {
+      console.error("Error saving grades:", error)
+      toast({
+        title: "Error Saving Grades",
+        description: "Failed to save grades to backend. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Navigate between students
@@ -420,6 +522,19 @@ export default function GradeQuizPage({ params }: { params: { id: string } }) {
                 </CardHeader>
                 <CardContent>
                   <p className="text-slate-700 dark:text-slate-300 mb-3">{question?.question}</p>
+
+                  {/* Question Image */}
+                  {question?.questionImageUrl && (
+                    <div className="mt-3 mb-3">
+                      <img
+                        src={question.questionImageUrl}
+                        alt="Question"
+                        className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     {answer.isCorrect ? (
                       <CheckCircle className="w-5 h-5 text-green-600" />
@@ -464,6 +579,18 @@ export default function GradeQuizPage({ params }: { params: { id: string } }) {
                 <div>
                   <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Question</Label>
                   <p className="text-slate-900 dark:text-white text-lg">{question?.question}</p>
+
+                  {/* Question Image */}
+                  {question?.questionImageUrl && (
+                    <div className="mt-3">
+                      <img
+                        src={question.questionImageUrl}
+                        alt="Question"
+                        className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Grading Rubric */}

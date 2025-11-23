@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -11,15 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useUser } from "@/hooks/useUser"
 import {
   Settings,
   Bell,
@@ -47,26 +39,53 @@ import {
   EyeOff,
   AlertTriangle,
 } from "lucide-react"
-import { toast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { changePasswordSchema, type ChangePasswordInput } from "@/lib/validation/auth"
+import { changePassword } from "@/lib/api/endpoints"
 
 export default function TeacherSettingsPage() {
   const [activeTab, setActiveTab] = useState("account")
-  const [showPassword, setShowPassword] = useState(false)
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  // Fetch current user data
+  const { data: user, isLoading, isError } = useUser()
+
+  // Toast hook
+  const { toast } = useToast()
+
+  // Password change form
+  const passwordForm = useForm<ChangePasswordInput>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
   })
-  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false)
-  const [showPasswordError, setShowPasswordError] = useState(false)
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
+  }
+
   const [formData, setFormData] = useState({
-    firstName: "Maria",
-    lastName: "Santos",
-    email: "maria.santos@teacher.southville8b.edu",
-    phone: "+63 917 123 4567",
-    department: "Mathematics",
-    employeeId: "TCH-2024-001",
-    bio: "Passionate mathematics teacher with 8 years of experience in secondary education.",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    department: "",
+    employeeId: "",
+    bio: "",
     notifications: {
       assignments: true,
       grades: true,
@@ -91,45 +110,91 @@ export default function TeacherSettingsPage() {
     },
   })
 
-  const handlePasswordChangeClick = () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all password fields.",
-        variant: "destructive",
-      })
-      return
-    }
+  // Update form data when user data loads
+  useEffect(() => {
+    if (user) {
+      const firstName = user?.teacher?.first_name || user?.full_name?.split(' ')[0] || 'Teacher'
+      const lastName = user?.teacher?.last_name || user?.full_name?.split(' ').slice(-1)[0] || 'User'
+      const email = user?.email || 'teacher@southville8b.edu'
+      const phone = user?.teacher?.phone || user?.profile?.phone || '+63 917 000 0000'
+      const department = user?.teacher?.department || 'Education'
+      const employeeId = user?.teacher?.employee_id || user?.id || 'TCH-2024-000'
+      const bio = user?.teacher?.bio || user?.profile?.bio || 'Passionate educator dedicated to student success.'
 
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "New password and confirm password must match.",
-        variant: "destructive",
-      })
-      return
+      setFormData(prev => ({
+        ...prev,
+        firstName,
+        lastName,
+        email,
+        phone,
+        department,
+        employeeId,
+        bio,
+      }))
     }
+  }, [user])
 
-    setShowPasswordConfirmation(true)
+  // Computed teacher data for UI display
+  const teacherData = {
+    firstName: user?.teacher?.first_name || user?.full_name?.split(' ')[0] || 'Teacher',
+    lastName: user?.teacher?.last_name || user?.full_name?.split(' ').slice(-1)[0] || 'User',
+    fullName: user?.teacher
+      ? `${user.teacher.first_name} ${user.teacher.middle_name ? user.teacher.middle_name + ' ' : ''}${user.teacher.last_name}`.trim()
+      : user?.full_name || 'Teacher User',
+    email: user?.email || 'teacher@southville8b.edu',
+    phone: user?.teacher?.phone || user?.profile?.phone || '+63 917 000 0000',
+    department: user?.teacher?.department || 'Education',
+    employeeId: user?.teacher?.employee_id || user?.id || 'TCH-2024-000',
+    bio: user?.teacher?.bio || user?.profile?.bio || 'Passionate educator dedicated to student success.',
+    avatar: user?.profile?.avatar || '/teacher-avatar.png'
   }
 
-  const handleConfirmPasswordChange = () => {
-    setShowPasswordConfirmation(false)
+  const handleChangePassword = async (data: ChangePasswordInput) => {
+    setIsChangingPassword(true)
+    try {
+      await changePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      })
 
-    const correctCurrentPassword = "teacher123"
-
-    if (passwordForm.currentPassword !== correctCurrentPassword) {
-      setShowPasswordError(true)
-    } else {
       toast({
-        title: "Password changed successfully",
+        title: "Password Changed Successfully",
         description: "Your password has been updated.",
       })
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      })
+
+      // Reset form
+      passwordForm.reset()
+      setShowCurrentPassword(false)
+      setShowNewPassword(false)
+      setShowConfirmPassword(false)
+    } catch (error: any) {
+      console.error("Failed to change password:", error)
+
+      // Handle different error types
+      // ApiError has status property directly, or check error.status
+      const status = error?.status || error?.response?.status
+      const errorMessage = error?.message || "Failed to change password. Please try again."
+
+      // Check if it's an authentication error (401) or wrong password
+      if (status === 401 || errorMessage.toLowerCase().includes("incorrect") || errorMessage.toLowerCase().includes("wrong")) {
+        toast({
+          title: "Authentication Failed",
+          description: "Current password is incorrect. Please try again.",
+          variant: "destructive",
+        })
+        passwordForm.setError("currentPassword", {
+          type: "manual",
+          message: "Current password is incorrect",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -229,8 +294,8 @@ export default function TeacherSettingsPage() {
                   <div className="flex items-center space-x-6">
                     <div className="relative">
                       <Avatar className="w-24 h-24 border-4 border-green-200 dark:border-green-700">
-                        <AvatarImage src="/teacher-avatar.png" alt="Profile" />
-                        <AvatarFallback className="bg-green-600 text-white text-xl">MS</AvatarFallback>
+                        <AvatarImage src={teacherData.avatar} alt="Profile" />
+                        <AvatarFallback className="bg-green-600 text-white text-xl">{getInitials(teacherData.fullName)}</AvatarFallback>
                       </Avatar>
                       <Button
                         size="sm"
@@ -240,8 +305,8 @@ export default function TeacherSettingsPage() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Maria Santos</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Mathematics Teacher</p>
+                      <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{teacherData.fullName}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{teacherData.department} Teacher</p>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -372,68 +437,124 @@ export default function TeacherSettingsPage() {
                   <CardDescription>Manage your account security and password</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword" className="text-green-800 dark:text-green-300">
-                      Current Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <Input
-                        id="currentPassword"
-                        type={showPassword ? "text" : "password"}
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                        className="pl-10 pr-10 bg-white/80 dark:bg-gray-700/80 border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500"
-                        placeholder="Enter current password"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={passwordForm.handleSubmit(handleChangePassword)} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="newPassword" className="text-green-800 dark:text-green-300">
-                        New Password
+                      <Label htmlFor="currentPassword" className="text-green-800 dark:text-green-300">
+                        Current Password
                       </Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                        className="bg-white/80 dark:bg-gray-700/80 border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500"
-                        placeholder="Enter new password"
-                      />
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400 dark:text-gray-500 z-10" />
+                        <Input
+                          id="currentPassword"
+                          type={showCurrentPassword ? "text" : "password"}
+                          {...passwordForm.register("currentPassword")}
+                          className={`pl-10 pr-10 bg-white/80 dark:bg-gray-700/80 border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500 ${
+                            passwordForm.formState.errors.currentPassword ? "border-red-500" : ""
+                          }`}
+                          placeholder="Enter current password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        >
+                          {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                      {passwordForm.formState.errors.currentPassword && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {passwordForm.formState.errors.currentPassword.message}
+                        </p>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-green-800 dark:text-green-300">
-                        Confirm Password
-                      </Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                        className="bg-white/80 dark:bg-gray-700/80 border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500"
-                        placeholder="Confirm new password"
-                      />
-                    </div>
-                  </div>
 
-                  <Button
-                    onClick={handlePasswordChangeClick}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Lock className="w-4 h-4 mr-2" />
-                    Change Password
-                  </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword" className="text-green-800 dark:text-green-300">
+                          New Password
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="newPassword"
+                            type={showNewPassword ? "text" : "password"}
+                            {...passwordForm.register("newPassword")}
+                            className={`bg-white/80 dark:bg-gray-700/80 border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500 pr-10 ${
+                              passwordForm.formState.errors.newPassword ? "border-red-500" : ""
+                            }`}
+                            placeholder="Enter new password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                          >
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        {passwordForm.formState.errors.newPassword && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {passwordForm.formState.errors.newPassword.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword" className="text-green-800 dark:text-green-300">
+                          Confirm Password
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            {...passwordForm.register("confirmPassword")}
+                            className={`bg-white/80 dark:bg-gray-700/80 border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500 pr-10 ${
+                              passwordForm.formState.errors.confirmPassword ? "border-red-500" : ""
+                            }`}
+                            placeholder="Confirm new password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        {passwordForm.formState.errors.confirmPassword && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {passwordForm.formState.errors.confirmPassword.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      disabled={isChangingPassword}
+                    >
+                      <Lock className="w-4 h-4 mr-2" />
+                      {isChangingPassword ? "Changing Password..." : "Change Password"}
+                    </Button>
+                  </form>
+
+                  {/* Password Requirements */}
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                    <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
+                      Password Requirements
+                    </h4>
+                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                      <li>• At least 8 characters long</li>
+                      <li>• Include uppercase and lowercase letters</li>
+                      <li>• Include at least one number</li>
+                      <li>• Include at least one special character (!@#$%^&*)</li>
+                    </ul>
+                  </div>
 
                   <Separator />
 
@@ -1075,63 +1196,6 @@ export default function TeacherSettingsPage() {
           </div>
         </TabsContent>
       </Tabs>
-
-      {/* Password Change Confirmation Dialog */}
-      <Dialog open={showPasswordConfirmation} onOpenChange={setShowPasswordConfirmation}>
-        <DialogContent className="bg-white dark:bg-gray-800">
-          <DialogHeader>
-            <DialogTitle className="flex items-center text-green-800 dark:text-green-300">
-              <Shield className="w-5 h-5 mr-2" />
-              Confirm Password Change
-            </DialogTitle>
-            <DialogDescription>Are you sure you want to change your password?</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
-              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-              <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-                This action will update your account password. Make sure you remember your new password.
-              </AlertDescription>
-            </Alert>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPasswordConfirmation(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmPasswordChange} className="bg-green-600 hover:bg-green-700 text-white">
-              Confirm Change
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Password Error Dialog */}
-      <Dialog open={showPasswordError} onOpenChange={setShowPasswordError}>
-        <DialogContent className="bg-white dark:bg-gray-800">
-          <DialogHeader>
-            <DialogTitle className="flex items-center text-red-600 dark:text-red-400">
-              <AlertTriangle className="w-5 h-5 mr-2" />
-              Password Change Failed
-            </DialogTitle>
-            <DialogDescription>There was a problem changing your password.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-500" />
-              <AlertDescription className="text-red-800 dark:text-red-200">
-                <strong>Current password is incorrect.</strong>
-                <br />
-                Please verify your current password and try again.
-              </AlertDescription>
-            </Alert>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setShowPasswordError(false)} className="bg-red-600 hover:bg-red-700 text-white">
-              Try Again
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

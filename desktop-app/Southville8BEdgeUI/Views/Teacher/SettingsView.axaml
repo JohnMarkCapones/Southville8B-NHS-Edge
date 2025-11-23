@@ -123,98 +123,77 @@
                     </Grid>
                 </Border>
 
-                <!-- Content Grid -->
-                <Grid x:Name="ContentGrid" ColumnDefinitions="*,*">
-                    <!-- Left Column -->
-                    <StackPanel x:Name="LeftPanel" Grid.Column="0" Spacing="12">
-                        <!-- Appearance -->
-                        <Border Classes="card">
+                <!-- Content -->
+                <StackPanel x:Name="ContentPanel" Spacing="12" MaxWidth="600">
+                    <!-- Change Password -->
+                    <Border Classes="card">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="Change Password" Classes="section-header"/>
+                            <TextBlock Text="Update your account password to keep your account secure" 
+                                      Classes="secondary" 
+                                      TextWrapping="Wrap" 
+                                      Margin="0,0,0,8"/>
+                            
                             <StackPanel Spacing="12">
-                                <TextBlock Text="Appearance" Classes="section-header"/>
-                                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto">
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Theme" Classes="muted" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="12,0,0,0">
-                                        <RadioButton Content="System" IsChecked="True"/>
-                                        <RadioButton Content="Light"/>
-                                        <RadioButton Content="Dark"/>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Current Password" Classes="muted" FontSize="13"/>
+                                    <TextBox Text="{Binding CurrentPassword}" 
+                                            PasswordChar="●" 
+                                            Watermark="Enter your current password"/>
+                                </StackPanel>
+                                
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="New Password" Classes="muted" FontSize="13"/>
+                                    <TextBox Text="{Binding NewPassword}" 
+                                            PasswordChar="●" 
+                                            Watermark="Enter new password"/>
+                                </StackPanel>
+                                
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Confirm New Password" Classes="muted" FontSize="13"/>
+                                    <TextBox Text="{Binding ConfirmPassword}" 
+                                            PasswordChar="●" 
+                                            Watermark="Confirm new password"/>
+                                </StackPanel>
+                                
+                                <!-- Password Requirements -->
+                                <Border Background="{DynamicResource InfoBackgroundBrush}" 
+                                       BorderBrush="{DynamicResource InfoBrush}" 
+                                       BorderThickness="1" 
+                                       CornerRadius="6" 
+                                       Padding="12"
+                                       Margin="0,4,0,0">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Password Requirements:" 
+                                                  FontWeight="SemiBold" 
+                                                  FontSize="12" 
+                                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="• At least 8 characters long" 
+                                                  FontSize="11" 
+                                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="• Contains uppercase and lowercase letters" 
+                                                  FontSize="11" 
+                                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="• Includes at least one number" 
+                                                  FontSize="11" 
+                                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </StackPanel>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Accent Color" Classes="muted" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
-                                        <Button Classes="accent-swatch" Background="{DynamicResource SuccessBrush}"/>
-                                        <Button Classes="accent-swatch" Background="{DynamicResource InfoBrush}"/>
-                                        <Button Classes="accent-swatch" Background="{DynamicResource DangerBrush}"/>
-                                        <Button Classes="accent-swatch" Background="{DynamicResource WarningBrush}"/>
+                                </Border>
+                                
+                                <Button Command="{Binding ChangePasswordCommand}" 
+                                       Classes="primary" 
+                                       HorizontalAlignment="Left"
+                                       Margin="0,8,0,0"
+                                       IsEnabled="{Binding !IsChangingPassword}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <ic:FluentIcon Icon="LockClosed" IconSize="Size16"/>
+                                        <TextBlock Text="{Binding ChangePasswordButtonText}" VerticalAlignment="Center"/>
                                     </StackPanel>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Font Size" Classes="muted" VerticalAlignment="Center"/>
-                                    <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="1" Margin="12,0,0,0">
-                                        <ComboBoxItem Content="Small"/>
-                                        <ComboBoxItem Content="Medium"/>
-                                        <ComboBoxItem Content="Large"/>
-                                    </ComboBox>
-                                </Grid>
+                                </Button>
                             </StackPanel>
-                        </Border>
-
-                        <!-- Notifications -->
-                        <Border Classes="card">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Notifications" Classes="section-header"/>
-                                <StackPanel Spacing="10">
-                                    <CheckBox Content="Email notifications"/>
-                                    <CheckBox Content="In-app alerts"/>
-                                    <CheckBox Content="Sound on new message"/>
-                                    <CheckBox Content="Assignment reminders"/>
-                                    <CheckBox Content="Schedule change alerts"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Right Column -->
-                    <StackPanel x:Name="RightPanel" Grid.Column="1" Spacing="12" Margin="12,0,0,0">
-                        <!-- Privacy & Security -->
-                        <Border Classes="card">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Privacy and Security" Classes="section-header"/>
-                                <StackPanel Spacing="10">
-                                    <ToggleSwitch Content="Show profile to students" IsChecked="{Binding ShowProfileToStudents}"/>
-                                    <ToggleSwitch Content="Allow messages from parents" IsChecked="{Binding AllowParentMessages}"/>
-                                    <ToggleSwitch Content="Re-authenticate on sensitive actions" IsChecked="{Binding RequireReauthentication}"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Data & Storage -->
-                        <Border Classes="card">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Data and Storage" Classes="section-header"/>
-                                <StackPanel Spacing="10">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="App cache"/>
-                                        <Button Grid.Column="1" Content="Clear" Classes="outline"/>
-                                    </Grid>
-                                    <StackPanel>
-                                        <TextBlock Text="Storage usage" Classes="secondary"/>
-                                        <ProgressBar Minimum="0" Maximum="100" Value="35" Height="6" CornerRadius="3"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Advanced -->
-                        <Border Classes="card">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Advanced" Classes="section-header"/>
-                                <StackPanel Spacing="8">
-                                    <Button Content="Export Data" Classes="outline" HorizontalAlignment="Left"/>
-                                    <Button Content="Reset Settings" Classes="danger" HorizontalAlignment="Left"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
     </Grid>

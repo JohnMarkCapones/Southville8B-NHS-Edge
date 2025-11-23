@@ -4,7 +4,13 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, Clock, MapPin, ChevronLeft, ChevronRight, Play, Pause, School } from "lucide-react"
+import { Users, Clock, MapPin, ChevronLeft, ChevronRight, Play, Pause, School, Loader2 } from "lucide-react"
+import { useUser } from "@/hooks/useUser"
+import { getTeacherSections, type SectionWithStudents } from "@/lib/api/endpoints"
+import { getTeacherSchedules } from "@/lib/api/endpoints/schedules"
+import { type Schedule } from "@/lib/api/types/schedules"
+import { apiClient } from "@/lib/api/client"
+import Link from "next/link"
 
 interface ClassroomSection {
   id: string
@@ -20,174 +26,213 @@ interface ClassroomSection {
   teacher: string
   duration: string
   day: string
+  sectionId: string
 }
 
-const classroomSections: ClassroomSection[] = [
-  {
-    id: "1",
-    sectionName: "NEUTRON-10",
-    subject: "Advanced Mathematics",
-    room: "Room 201",
-    time: "8:00 AM",
-    students: 35,
-    status: "previous",
-    color: "from-blue-500 to-blue-600",
-    gradientFrom: "from-blue-400",
-    gradientTo: "to-blue-600",
-    teacher: "Ms. Rodriguez",
-    duration: "90 min",
-    day: "Monday",
-  },
-  {
-    id: "2",
-    sectionName: "PROTON-9",
-    subject: "Physics Laboratory",
-    room: "Lab 105",
-    time: "9:45 AM",
-    students: 28,
-    status: "previous",
-    color: "from-green-500 to-green-600",
-    gradientFrom: "from-green-400",
-    gradientTo: "to-green-600",
-    teacher: "Dr. Chen",
-    duration: "120 min",
-    day: "Monday",
-  },
-  {
-    id: "3",
-    sectionName: "ELECTRON-11",
-    subject: "English Literature",
-    room: "Room 304",
-    time: "11:30 AM",
-    students: 32,
-    status: "previous",
-    color: "from-purple-500 to-purple-600",
-    gradientFrom: "from-purple-400",
-    gradientTo: "to-purple-600",
-    teacher: "Mr. Thompson",
-    duration: "75 min",
-    day: "Monday",
-  },
-  {
-    id: "4",
-    sectionName: "PHOTON-8",
-    subject: "Chemistry",
-    room: "Lab 203",
-    time: "1:30 PM",
-    students: 30,
-    status: "current",
-    color: "from-orange-500 to-orange-600",
-    gradientFrom: "from-orange-400",
-    gradientTo: "to-orange-600",
-    teacher: "Ms. Johnson",
-    duration: "90 min",
-    day: "Monday",
-  },
-  {
-    id: "5",
-    sectionName: "QUARK-12",
-    subject: "Biology",
-    room: "Room 108",
-    time: "3:15 PM",
-    students: 26,
-    status: "next",
-    color: "from-red-500 to-red-600",
-    gradientFrom: "from-red-400",
-    gradientTo: "to-red-600",
-    teacher: "Dr. Williams",
-    duration: "60 min",
-    day: "Monday",
-  },
-  {
-    id: "6",
-    sectionName: "ATOM-7",
-    subject: "Computer Science",
-    room: "Lab 301",
-    time: "4:30 PM",
-    students: 24,
-    status: "next",
-    color: "from-cyan-500 to-cyan-600",
-    gradientFrom: "from-cyan-400",
-    gradientTo: "to-cyan-600",
-    teacher: "Mr. Davis",
-    duration: "105 min",
-    day: "Monday",
-  },
-  {
-    id: "7",
-    sectionName: "BOSON-6",
-    subject: "History",
-    room: "Room 205",
-    time: "6:00 PM",
-    students: 29,
-    status: "next",
-    color: "from-amber-500 to-amber-600",
-    gradientFrom: "from-amber-400",
-    gradientTo: "to-amber-600",
-    teacher: "Ms. Garcia",
-    duration: "80 min",
-    day: "Monday",
-  },
-  {
-    id: "8",
-    sectionName: "MUON-5",
-    subject: "Art & Design",
-    room: "Studio 102",
-    time: "7:30 PM",
-    students: 22,
-    status: "next",
-    color: "from-pink-500 to-pink-600",
-    gradientFrom: "from-pink-400",
-    gradientTo: "to-pink-600",
-    teacher: "Mr. Lee",
-    duration: "120 min",
-    day: "Monday",
-  },
-  {
-    id: "9",
-    sectionName: "GLUON-4",
-    subject: "Physical Education",
-    room: "Gymnasium",
-    time: "9:00 PM",
-    students: 40,
-    status: "next",
-    color: "from-emerald-500 to-emerald-600",
-    gradientFrom: "from-emerald-400",
-    gradientTo: "to-emerald-600",
-    teacher: "Coach Martinez",
-    duration: "90 min",
-    day: "Monday",
-  },
-  {
-    id: "10",
-    sectionName: "LEPTON-3",
-    subject: "Music Theory",
-    room: "Music Hall",
-    time: "10:45 PM",
-    students: 18,
-    status: "next",
-    color: "from-violet-500 to-violet-600",
-    gradientFrom: "from-violet-400",
-    gradientTo: "to-violet-600",
-    teacher: "Ms. Anderson",
-    duration: "75 min",
-    day: "Monday",
-  },
+// Color palette matching the classes page
+const colorPalette = [
+  { color: "from-blue-500 to-blue-600", gradientFrom: "from-blue-400", gradientTo: "to-blue-600" },
+  { color: "from-green-500 to-green-600", gradientFrom: "from-green-400", gradientTo: "to-green-600" },
+  { color: "from-orange-500 to-orange-600", gradientFrom: "from-orange-400", gradientTo: "to-orange-600" },
+  { color: "from-purple-500 to-purple-600", gradientFrom: "from-purple-400", gradientTo: "to-purple-600" },
+  { color: "from-indigo-500 to-blue-600", gradientFrom: "from-indigo-400", gradientTo: "to-blue-600" },
+  { color: "from-teal-500 to-green-600", gradientFrom: "from-teal-400", gradientTo: "to-green-600" },
+  { color: "from-pink-500 to-rose-600", gradientFrom: "from-pink-400", gradientTo: "to-rose-600" },
+  { color: "from-cyan-500 to-blue-600", gradientFrom: "from-cyan-400", gradientTo: "to-blue-600" },
+  { color: "from-amber-500 to-amber-600", gradientFrom: "from-amber-400", gradientTo: "to-amber-600" },
+  { color: "from-emerald-500 to-emerald-600", gradientFrom: "from-emerald-400", gradientTo: "to-emerald-600" },
 ]
 
 export default function SubjectsCarousel() {
-  const [currentIndex, setCurrentIndex] = useState(3) // Start with current class (PHOTON-8)
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(false)
+  const [classroomSections, setClassroomSections] = useState<ClassroomSection[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const { data: user } = useUser()
+
+  // Get current day name
+  const getCurrentDayName = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return days[new Date().getDay()]
+  }
+
+  // Transform API data to ClassroomSection format
+  const transformToClassroomSection = (
+    section: SectionWithStudents,
+    schedules: Schedule[],
+    index: number,
+    todayDayName: string
+  ): ClassroomSection | null => {
+    const sectionSchedules = schedules.filter(s => s.sectionId === section.id)
+    
+    // If no schedules at all for this section, don't show it
+    if (sectionSchedules.length === 0) {
+      return null
+    }
+    
+    // Find schedule for today - MUST match today's day exactly
+    const scheduleDayNormalized = (day: string) => day.trim().toLowerCase()
+    const todaySchedule = sectionSchedules.find(s => {
+      return scheduleDayNormalized(s.dayOfWeek) === scheduleDayNormalized(todayDayName)
+    })
+    
+    // If no schedule for today, return null - don't show this section
+    if (!todaySchedule) {
+      return null
+    }
+    
+    const primarySchedule = todaySchedule
+    
+    const colorInfo = colorPalette[index % colorPalette.length]
+    
+    // Get subject name
+    const subject = primarySchedule?.subject?.subjectName || 'Subject TBA'
+    
+    // Get room info
+    const room = primarySchedule?.room?.roomNumber
+      ? `Room ${primarySchedule.room.roomNumber}${primarySchedule.room.floor?.building?.name ? ` (${primarySchedule.room.floor.building.name})` : ''}`
+      : section.room_number
+        ? `Room ${section.room_number}${section.room_name ? ` (${section.room_name})` : ''}`
+        : 'Room TBA'
+    
+    // Get time info
+    const time = primarySchedule
+      ? `${primarySchedule.startTime.slice(0, 5)}`
+      : 'TBA'
+    
+    // Calculate duration
+    let duration = 'TBA'
+    if (primarySchedule?.startTime && primarySchedule?.endTime) {
+      const start = new Date(`2000-01-01T${primarySchedule.startTime}`)
+      const end = new Date(`2000-01-01T${primarySchedule.endTime}`)
+      const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
+      duration = `${diffMinutes} min`
+    }
+    
+    // Determine status based on current time (only for today's schedule)
+    let status: "current" | "next" | "previous" = "next"
+    if (primarySchedule && primarySchedule.dayOfWeek.toLowerCase() === todayDayName.toLowerCase()) {
+      const now = new Date()
+      const currentTime = now.getHours() * 60 + now.getMinutes()
+      const startTime = primarySchedule.startTime.split(':').map(Number)
+      const endTime = primarySchedule.endTime.split(':').map(Number)
+      const scheduleStart = startTime[0] * 60 + startTime[1]
+      const scheduleEnd = endTime[0] * 60 + endTime[1]
+      
+      if (currentTime >= scheduleStart && currentTime <= scheduleEnd) {
+        status = "current"
+      } else if (currentTime < scheduleStart) {
+        status = "next"
+      } else {
+        status = "previous"
+      }
+    }
+    
+    // Get teacher name (from section or schedule)
+    const teacher = section.teacher?.user?.full_name || 
+                   section.teacher?.user?.first_name && section.teacher?.user?.last_name
+                     ? `${section.teacher.user.first_name} ${section.teacher.user.last_name}`
+                     : 'Teacher TBA'
+    
+    return {
+      id: section.id,
+      sectionId: section.id,
+      sectionName: section.name,
+      subject,
+      room,
+      time,
+      students: section.students?.length || 0,
+      status,
+      color: colorInfo.color,
+      gradientFrom: colorInfo.gradientFrom,
+      gradientTo: colorInfo.gradientTo,
+      teacher,
+      duration,
+      day: primarySchedule?.dayOfWeek || 'TBA',
+    }
+  }
+
+  // Fetch sections and schedules
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) {
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        
+        // Get teacher ID
+        const userProfile = await apiClient.get<any>('/users/me')
+        const teacherId = userProfile.teacher?.id
+
+        if (!teacherId) {
+          setClassroomSections([])
+          setIsLoading(false)
+          return
+        }
+
+        // Fetch both sections and schedules
+        const [sections, schedules] = await Promise.all([
+          getTeacherSections(user.id),
+          getTeacherSchedules(teacherId)
+        ])
+
+        // Get today's day name
+        const todayDayName = getCurrentDayName()
+        
+        // Check if today is a weekday - if weekend, show nothing
+        const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        const isWeekday = weekdays.includes(todayDayName)
+        
+        if (!isWeekday) {
+          // Weekend (Saturday or Sunday) - no classes, clear sections
+          setClassroomSections([])
+          setIsLoading(false)
+          return
+        }
+
+        // Transform data - only include sections with classes scheduled for TODAY
+        const transformed = sections
+          .map((section, index) => transformToClassroomSection(section, schedules, index, todayDayName))
+          .filter((section): section is ClassroomSection => section !== null)
+
+        // Sort by status: current first, then next, then previous
+        const sorted = transformed.sort((a, b) => {
+          const statusOrder = { current: 0, next: 1, previous: 2 }
+          return statusOrder[a.status] - statusOrder[b.status]
+        })
+
+        setClassroomSections(sorted)
+        
+        // Set initial index to current class if available
+        const currentIndex = sorted.findIndex(s => s.status === 'current')
+        if (currentIndex >= 0) {
+          setCurrentIndex(currentIndex)
+        } else {
+          setCurrentIndex(0)
+        }
+      } catch (error) {
+        console.error('[SubjectsCarousel] Error loading data:', error)
+        setClassroomSections([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user?.id])
 
   useEffect(() => {
-    if (!isAutoPlay) return
+    if (!isAutoPlay || classroomSections.length === 0) return
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % classroomSections.length)
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [isAutoPlay])
+  }, [isAutoPlay, classroomSections.length])
 
   const getCardStyle = (index: number) => {
     const diff = index - currentIndex
@@ -218,15 +263,19 @@ export default function SubjectsCarousel() {
   }
 
   const nextSlide = () => {
+    if (classroomSections.length === 0) return
     setCurrentIndex((prev) => (prev + 1) % classroomSections.length)
   }
 
   const prevSlide = () => {
+    if (classroomSections.length === 0) return
     setCurrentIndex((prev) => (prev - 1 + classroomSections.length) % classroomSections.length)
   }
 
   const goToSlide = (index: number) => {
-    setCurrentIndex(index)
+    if (index >= 0 && index < classroomSections.length) {
+      setCurrentIndex(index)
+    }
   }
 
   const currentSection = classroomSections[currentIndex]
@@ -272,10 +321,38 @@ export default function SubjectsCarousel() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center h-80 mb-6">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+              <p className="text-sm text-slate-600 dark:text-slate-400">Loading sections...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && classroomSections.length === 0 && (
+          <div className="flex items-center justify-center h-80 mb-6">
+            <div className="text-center">
+              <School className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                {!['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(getCurrentDayName())
+                  ? `No class - Enjoy your weekend!`
+                  : 'No classes scheduled for today'}
+              </p>
+              {!['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(getCurrentDayName()) && (
+                <p className="text-xs text-slate-500 dark:text-slate-500">Classes resume on Monday</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 3D Carousel */}
-        <div className="relative h-80 mb-6" style={{ perspective: "1000px" }}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            {classroomSections.map((section, index) => (
+        {!isLoading && classroomSections.length > 0 && (
+          <div className="relative h-80 mb-6" style={{ perspective: "1000px" }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {classroomSections.map((section, index) => (
               <div
                 key={section.id}
                 className="absolute w-72 h-64 cursor-pointer transition-all duration-700 ease-in-out"
@@ -330,8 +407,7 @@ export default function SubjectsCarousel() {
                         <div className="text-sm font-medium">{section.duration}</div>
                       </div>
 
-                      <div className="text-xs text-white/80 space-y-1">
-                        <div>Teacher: {section.teacher}</div>
+                      <div className="text-xs text-white/80">
                         <div className="flex items-center justify-between">
                           <span>{section.day}</span>
                           <span className="font-medium">
@@ -343,45 +419,44 @@ export default function SubjectsCarousel() {
                   </CardContent>
                 </Card>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h4 className="font-bold text-lg text-slate-900 dark:text-slate-100">{currentSection.sectionName}</h4>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {currentSection.subject} • {currentSection.room}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-500">
-                {currentSection.day} at {currentSection.time} ({currentSection.duration})
-              </p>
+              ))}
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-center">
-                <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{currentSection.students}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Students</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  {currentSection.teacher.split(" ")[1]}
+          </div>
+        )}
+
+        {!isLoading && classroomSections.length > 0 && currentSection && (
+          <>
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-lg text-slate-900 dark:text-slate-100">{currentSection.sectionName}</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {currentSection.subject} • {currentSection.room}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    {currentSection.day} at {currentSection.time} ({currentSection.duration})
+                  </p>
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Teacher</div>
+                <div className="flex items-center space-x-4">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{currentSection.students}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Students</div>
+                  </div>
+                  <Link href={`/teacher/classes/${currentSection.sectionId}`}>
+                    <Button
+                      size="sm"
+                      className={`bg-gradient-to-r ${currentSection.color} hover:opacity-90 text-white shadow-md hover:shadow-lg transition-all duration-300`}
+                    >
+                      View Section
+                    </Button>
+                  </Link>
+                </div>
               </div>
-              <Button
-                size="sm"
-                className={`bg-gradient-to-r ${currentSection.color} hover:opacity-90 text-white shadow-md hover:shadow-lg transition-all duration-300`}
-              >
-                View Section
-              </Button>
             </div>
-          </div>
-        </div>
 
-        {/* Navigation Dots */}
-        <div className="flex justify-center space-x-2 mt-4">
-          {classroomSections.map((_, index) => (
+            {/* Navigation Dots */}
+            <div className="flex justify-center space-x-2 mt-4" role="tablist" aria-label="Subject slides">
+              {classroomSections.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
@@ -390,9 +465,16 @@ export default function SubjectsCarousel() {
                   ? "bg-indigo-500 w-6"
                   : "bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500"
               }`}
-            />
-          ))}
-        </div>
+              role="tab"
+              aria-label={`Go to slide ${index + 1} of ${classroomSections.length}`}
+                aria-selected={index === currentIndex}
+              >
+                <span className="sr-only">{index === currentIndex ? `Slide ${index + 1} (current)` : `Slide ${index + 1}`}</span>
+              </button>
+            ))}
+          </div>
+          </>
+        )}
       </div>
     </Card>
   )

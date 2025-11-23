@@ -1,0 +1,436 @@
+---
+alwaysApply: true
+---
+# NestJS CLI Generator Rules
+
+## 🎯 **Always Use CLI Generators**
+
+When creating new NestJS components, **ALWAYS** use the CLI generators instead of manually creating files. This ensures consistency, proper imports, and follows NestJS best practices.
+
+## 📋 **Complete Generator Commands**
+
+### **🏗️ Application Structure**
+
+```bash
+# New application
+nest new <project-name>
+
+# New library (monorepo)
+nest g lib <library-name>
+
+# New application (monorepo)
+nest g app <app-name>
+```
+
+### **📁 Modules & Resources**
+
+```bash
+# Generate module only
+nest g module <module-name>
+
+# Generate complete resource (module + controller + service + DTOs + entities)
+nest g resource <resource-name>
+
+# Generate sub-app (monorepo)
+nest g sub-app <sub-app-name>
+```
+
+### **🎯 Core Components**
+
+```bash
+# Controllers
+nest g controller <controller-name>
+
+# Services
+nest g service <service-name>
+
+# Providers
+nest g provider <provider-name>
+```
+
+### **🛡️ Security & Middleware**
+
+```bash
+# Guards
+nest g guard <guard-name>
+
+# Interceptors
+nest g interceptor <interceptor-name>
+
+# Middleware
+nest g middleware <middleware-name>
+
+# Pipes
+nest g pipe <pipe-name>
+
+# Filters
+nest g filter <filter-name>
+
+# Decorators
+nest g decorator <decorator-name>
+```
+
+### **🌐 Advanced Features**
+
+```bash
+# WebSocket Gateways
+nest g gateway <gateway-name>
+
+# GraphQL Resolvers
+nest g resolver <resolver-name>
+```
+
+### **📊 Data Layer**
+
+```bash
+# Classes
+nest g class <class-name>
+
+# Interfaces
+nest g interface <interface-name>
+
+# Enums
+nest g enum <enum-name>
+```
+
+### **⚙️ Configuration**
+
+```bash
+# Configuration
+nest g config <config-name>
+
+# Configuration files
+nest g config-file <config-file-name>
+```
+
+## 🔧 **Standard Options**
+
+### **Always Use These Options:**
+
+```bash
+# Skip test files (unless specifically needed)
+--no-spec
+
+# Specify path when needed
+--path <path>
+
+# Dry run to preview changes
+--dry-run
+```
+
+### **Example Usage:**
+
+```bash
+# Generate resource without tests
+nest g resource users --no-spec
+
+# Generate controller in specific path
+nest g controller auth --path src/auth
+
+# Preview what would be generated
+nest g service notifications --dry-run
+```
+
+## 📁 **File Organization Rules**
+
+### **Resource Generation:**
+
+- Use `nest g resource <name>` for complete CRUD modules
+- Always use `--no-spec` unless tests are specifically required
+- Place in appropriate directory structure
+
+### **Component Generation:**
+
+- Generate components in their respective modules
+- Use descriptive names that match functionality
+- Follow naming conventions (camelCase for files, PascalCase for classes)
+
+## 🎯 **Best Practices**
+
+### **1. Always Use Generators**
+
+- ✅ `nest g resource users --no-spec`
+- ❌ Manually creating controller.ts, service.ts, etc.
+
+### **2. Consistent Naming**
+
+- Use kebab-case for resource names: `user-profiles`
+- Use descriptive names: `email-notification-service`
+- Avoid abbreviations: `user-mgmt` → `user-management`
+
+### **3. Path Organization**
+
+- Generate in appropriate directories
+- Use `--path` option for nested structures
+- Follow existing project conventions
+
+### **4. Resource vs Individual Components**
+
+- Use `nest g resource` for complete CRUD operations
+- Use individual generators for specific components
+- Generate modules first, then add components
+
+## 📝 **Common Patterns**
+
+### **Complete Module Setup:**
+
+```bash
+# 1. Generate resource
+nest g resource <module-name> --no-spec
+
+# 2. Add additional components if needed
+nest g guard <guard-name> --path src/<module-name>
+nest g pipe <pipe-name> --path src/<module-name>
+```
+
+### **Service-Only Generation:**
+
+```bash
+# For utility services
+nest g service <service-name> --path src/common
+```
+
+### **Guard Generation:**
+
+```bash
+# For authentication/authorization
+nest g guard <guard-name> --path src/auth
+```
+
+## ⚠️ **Important Notes**
+
+1. **Always use `--no-spec`** unless tests are specifically required
+2. **Preview with `--dry-run`** before generating
+3. **Use descriptive names** that clearly indicate functionality
+4. **Follow existing project structure** and naming conventions
+5. **Generate in appropriate directories** using `--path` option
+
+## 🔍 **Verification**
+
+After generation, always:
+
+1. Check that files are created in correct locations
+2. Verify imports are properly set up
+3. Ensure module imports are added correctly
+4. Test that the application builds successfully
+
+---
+
+**Remember: CLI generators ensure consistency, proper imports, and follow NestJS conventions. Always prefer generators over manual file creation.**
+
+# NestJS CLI Generator Rules
+
+## 🎯 **Always Use CLI Generators**
+
+When creating new NestJS components, **ALWAYS** use the CLI generators instead of manually creating files. This ensures consistency, proper imports, and follows NestJS best practices.
+
+## 📋 **Complete Generator Commands**
+
+### **🏗️ Application Structure**
+
+```bash
+# New application
+nest new <project-name>
+
+# New library (monorepo)
+nest g lib <library-name>
+
+# New application (monorepo)
+nest g app <app-name>
+```
+
+### **📁 Modules & Resources**
+
+```bash
+# Generate module only
+nest g module <module-name>
+
+# Generate complete resource (module + controller + service + DTOs + entities)
+nest g resource <resource-name>
+
+# Generate sub-app (monorepo)
+nest g sub-app <sub-app-name>
+```
+
+### **🎯 Core Components**
+
+```bash
+# Controllers
+nest g controller <controller-name>
+
+# Services
+nest g service <service-name>
+
+# Providers
+nest g provider <provider-name>
+```
+
+### **🛡️ Security & Middleware**
+
+```bash
+# Guards
+nest g guard <guard-name>
+
+# Interceptors
+nest g interceptor <interceptor-name>
+
+# Middleware
+nest g middleware <middleware-name>
+
+# Pipes
+nest g pipe <pipe-name>
+
+# Filters
+nest g filter <filter-name>
+
+# Decorators
+nest g decorator <decorator-name>
+```
+
+### **🌐 Advanced Features**
+
+```bash
+# WebSocket Gateways
+nest g gateway <gateway-name>
+
+# GraphQL Resolvers
+nest g resolver <resolver-name>
+```
+
+### **📊 Data Layer**
+
+```bash
+# Classes
+nest g class <class-name>
+
+# Interfaces
+nest g interface <interface-name>
+
+# Enums
+nest g enum <enum-name>
+```
+
+### **⚙️ Configuration**
+
+```bash
+# Configuration
+nest g config <config-name>
+
+# Configuration files
+nest g config-file <config-file-name>
+```
+
+## 🔧 **Standard Options**
+
+### **Always Use These Options:**
+
+```bash
+# Skip test files (unless specifically needed)
+--no-spec
+
+# Specify path when needed
+--path <path>
+
+# Dry run to preview changes
+--dry-run
+```
+
+### **Example Usage:**
+
+```bash
+# Generate resource without tests
+nest g resource users --no-spec
+
+# Generate controller in specific path
+nest g controller auth --path src/auth
+
+# Preview what would be generated
+nest g service notifications --dry-run
+```
+
+## 📁 **File Organization Rules**
+
+### **Resource Generation:**
+
+- Use `nest g resource <name>` for complete CRUD modules
+- Always use `--no-spec` unless tests are specifically required
+- Place in appropriate directory structure
+
+### **Component Generation:**
+
+- Generate components in their respective modules
+- Use descriptive names that match functionality
+- Follow naming conventions (camelCase for files, PascalCase for classes)
+
+## 🎯 **Best Practices**
+
+### **1. Always Use Generators**
+
+- ✅ `nest g resource users --no-spec`
+- ❌ Manually creating controller.ts, service.ts, etc.
+
+### **2. Consistent Naming**
+
+- Use kebab-case for resource names: `user-profiles`
+- Use descriptive names: `email-notification-service`
+- Avoid abbreviations: `user-mgmt` → `user-management`
+
+### **3. Path Organization**
+
+- Generate in appropriate directories
+- Use `--path` option for nested structures
+- Follow existing project conventions
+
+### **4. Resource vs Individual Components**
+
+- Use `nest g resource` for complete CRUD operations
+- Use individual generators for specific components
+- Generate modules first, then add components
+
+## 📝 **Common Patterns**
+
+### **Complete Module Setup:**
+
+```bash
+# 1. Generate resource
+nest g resource <module-name> --no-spec
+
+# 2. Add additional components if needed
+nest g guard <guard-name> --path src/<module-name>
+nest g pipe <pipe-name> --path src/<module-name>
+```
+
+### **Service-Only Generation:**
+
+```bash
+# For utility services
+nest g service <service-name> --path src/common
+```
+
+### **Guard Generation:**
+
+```bash
+# For authentication/authorization
+nest g guard <guard-name> --path src/auth
+```
+
+## ⚠️ **Important Notes**
+
+1. **Always use `--no-spec`** unless tests are specifically required
+2. **Preview with `--dry-run`** before generating
+3. **Use descriptive names** that clearly indicate functionality
+4. **Follow existing project structure** and naming conventions
+5. **Generate in appropriate directories** using `--path` option
+
+## 🔍 **Verification**
+
+After generation, always:
+
+1. Check that files are created in correct locations
+2. Verify imports are properly set up
+3. Ensure module imports are added correctly
+4. Test that the application builds successfully
+
+---
+
+**Remember: CLI generators ensure consistency, proper imports, and follow NestJS conventions. Always prefer generators over manual file creation.**

@@ -7,6 +7,7 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 import helmet from '@fastify/helmet';
 import compression from '@fastify/compress';
+import multipart from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -31,8 +32,18 @@ async function bootstrap() {
     },
   });
 
-  // Compression middleware
-  await app.register(compression);
+  // Compression middleware with optimized settings
+  await app.register(compression, {
+    encodings: ['gzip', 'deflate', 'br'], // Brotli compression for better performance
+    threshold: 1024, // Compress responses larger than 1KB
+  });
+
+  // Multipart support for file uploads
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  });
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -43,17 +54,46 @@ async function bootstrap() {
     }),
   );
 
-  // Enable API versioning
+  // Enable API versioning with global prefix
+  app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
   });
 
   // Enable CORS
+  const getAllowedOrigins = (): string[] | boolean => {
+    if (process.env.NODE_ENV !== 'production') {
+      return true; // Allow all origins in development
+    }
+
+    // In production, use ALLOWED_ORIGINS or FRONTEND_URL environment variable
+    const allowedOrigins =
+      process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL;
+
+    if (!allowedOrigins) {
+      // Fallback: allow all origins if not configured (should be set in production)
+      console.warn(
+        '⚠️  WARNING: No ALLOWED_ORIGINS or FRONTEND_URL set in production. Allowing all origins.',
+      );
+      return true;
+    }
+
+    // Support comma-separated list of origins
+    return allowedOrigins.split(',').map((origin) => origin.trim());
+  };
+
   app.enableCors({
-    origin:
-      process.env.NODE_ENV === 'production' ? ['https://yourdomain.com'] : true,
+    origin: getAllowedOrigins(),
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-CSRF-Token',
+      'x-csrf-token',
+    ],
   });
 
   // Swagger documentation
@@ -86,7 +126,7 @@ async function bootstrap() {
   // Enable shutdown hooks for graceful shutdown
   app.enableShutdownHooks();
 
-  const port = configService.get<number>('PORT') || 3000;
+  const port = configService.get<number>('PORT') || 3004;
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);

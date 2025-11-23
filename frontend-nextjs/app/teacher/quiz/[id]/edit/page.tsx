@@ -1,24 +1,43 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { ArrowLeft, Save, Sparkles, Monitor, HelpCircle, FileText, Layers, ArrowRight, CheckCircle } from "lucide-react"
-import { useRouter, useParams } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
+import type React from "react";
+import { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  ArrowLeft,
+  Save,
+  Sparkles,
+  Monitor,
+  HelpCircle,
+  FileText,
+  Layers,
+  ArrowRight,
+  CheckCircle,
+} from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { useTeacherAssignments } from "@/hooks/useTeacherAssignments";
+import { apiClient } from "@/lib/api/client";
 
 export default function EditQuiz() {
-  const router = useRouter()
-  const params = useParams()
-  const { toast } = useToast()
-  const [animatingToggles, setAnimatingToggles] = useState<Set<string>>(new Set())
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null)
-  const [formProgress, setFormProgress] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const router = useRouter();
+  const params = useParams();
+  const { toast } = useToast();
+  const [animatingToggles, setAnimatingToggles] = useState<Set<string>>(
+    new Set()
+  );
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [formProgress, setFormProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const [newQuiz, setNewQuiz] = useState({
     testType: "long-form" as "long-form" | "mixed" | "one-at-a-time",
@@ -53,69 +72,44 @@ export default function EditQuiz() {
     stratifiedSampling: false,
     totalQuestions: 20,
     poolSize: 20,
-  })
+  });
 
-  const [newSubject, setNewSubject] = useState("")
-  const [newGrade, setNewGrade] = useState("")
-  const [newSection, setNewSection] = useState("")
+  const [newSubject, setNewSubject] = useState("");
+  const [newGrade, setNewGrade] = useState("");
+  const [newSection, setNewSection] = useState("");
 
-  const subjectOptions = [
-    "Mathematics",
-    "Science",
-    "English",
-    "Filipino",
-    "Social Studies",
-    "Physical Education",
-    "Music",
-    "Arts",
-    "Technology and Livelihood Education",
-    "Values Education",
-    "Computer Science",
-    "Physics",
-    "Chemistry",
-    "Biology",
-  ]
+  // Backend integration: Fetch teacher's assigned subjects/sections/grades
+  const [teacherUserId, setTeacherUserId] = useState<string | null>(null);
+  const {
+    subjects: teacherSubjects,
+    sections: teacherSections,
+    gradeLevels: teacherGrades,
+    isLoading: loadingAssignments,
+  } = useTeacherAssignments(teacherUserId);
 
-  const gradeOptions = [
-    "Grade 7",
-    "Grade 8",
-    "Grade 9",
-    "Grade 10",
-    "Grade 11",
-    "Grade 12",
-    "Kindergarten",
-    "Grade 1",
-    "Grade 2",
-    "Grade 3",
-    "Grade 4",
-    "Grade 5",
-    "Grade 6",
-  ]
-
-  const sectionOptions = [
-    "Section A",
-    "Section B",
-    "Section C",
-    "Section D",
-    "Section E",
-    "Section F",
-    "Section G",
-    "Section H",
-    "Section I",
-    "Section J",
-    "Diamond",
-    "Emerald",
-    "Ruby",
-    "Sapphire",
-    "Pearl",
-    "Gold",
-    "Silver",
-  ]
+  // Fetch teacher user ID on mount
+  useEffect(() => {
+    const fetchTeacherId = async () => {
+      try {
+        const userProfile = await apiClient.get<any>("/users/me");
+        const teacherId = userProfile.teacher?.id || userProfile.id;
+        setTeacherUserId(teacherId);
+      } catch (error) {
+        console.error("Error fetching teacher ID:", error);
+        toast({
+          title: "Warning",
+          description: "Could not load your assigned subjects and sections.",
+          variant: "destructive",
+        });
+      }
+    };
+    fetchTeacherId();
+  }, [toast]);
 
   const [expandedSections, setExpandedSections] = useState({
     securedQuiz: false,
     questionPool: false,
-  })
+  });
 
   useEffect(() => {
     // Simulate loading quiz data from API or localStorage
@@ -131,7 +125,8 @@ export default function EditQuiz() {
         grades: ["Grade 8", "Grade 9"],
         sections: ["Section A", "Section B"],
         duration: 60,
-        description: "This is a comprehensive midterm exam covering topics from the first semester.",
+        description:
+          "This is a comprehensive midterm exam covering topics from the first semester.",
         dueDate: "2025-02-15",
         startTime: "09:00",
         endTime: "10:30",
@@ -155,92 +150,101 @@ export default function EditQuiz() {
         stratifiedSampling: true,
         totalQuestions: 25,
         poolSize: 35,
-      }
+      };
 
-      setNewQuiz(mockQuizData)
+      setNewQuiz(mockQuizData);
 
       // Set expanded sections if they're enabled
       if (mockQuizData.securedQuiz) {
-        setExpandedSections((prev) => ({ ...prev, securedQuiz: true }))
+        setExpandedSections((prev) => ({ ...prev, securedQuiz: true }));
       }
       if (mockQuizData.questionPool) {
-        setExpandedSections((prev) => ({ ...prev, questionPool: true }))
+        setExpandedSections((prev) => ({ ...prev, questionPool: true }));
       }
 
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
-    loadQuizData()
-  }, [params.id])
+    loadQuizData();
+  }, [params.id]);
   // </CHANGE>
 
   useEffect(() => {
-    const requiredFields = ["title", "subjects", "grades", "sections"]
+    const requiredFields = ["title", "subjects", "grades", "sections"];
     const filledFields = requiredFields.filter((field) => {
-      const value = newQuiz[field as keyof typeof newQuiz]
-      return Array.isArray(value) ? value.length > 0 : value
-    })
-    setFormProgress((filledFields.length / requiredFields.length) * 100)
-  }, [newQuiz])
+      const value = newQuiz[field as keyof typeof newQuiz];
+      return Array.isArray(value) ? value.length > 0 : value;
+    });
+    setFormProgress((filledFields.length / requiredFields.length) * 100);
+  }, [newQuiz]);
 
   const addSubject = () => {
     if (newSubject && !newQuiz.subjects.includes(newSubject)) {
-      setNewQuiz({ ...newQuiz, subjects: [...newQuiz.subjects, newSubject] })
-      setNewSubject("")
+      setNewQuiz({ ...newQuiz, subjects: [...newQuiz.subjects, newSubject] });
+      setNewSubject("");
     }
-  }
+  };
 
   const removeSubject = (subject: string) => {
     if (newQuiz.subjects.length > 1) {
-      setNewQuiz({ ...newQuiz, subjects: newQuiz.subjects.filter((s) => s !== subject) })
+      setNewQuiz({
+        ...newQuiz,
+        subjects: newQuiz.subjects.filter((s) => s !== subject),
+      });
     }
-  }
+  };
 
   const addGrade = () => {
     if (newGrade && !newQuiz.grades.includes(newGrade)) {
-      setNewQuiz({ ...newQuiz, grades: [...newQuiz.grades, newGrade] })
-      setNewGrade("")
+      setNewQuiz({ ...newQuiz, grades: [...newQuiz.grades, newGrade] });
+      setNewGrade("");
     }
-  }
+  };
 
   const removeGrade = (grade: string) => {
     if (newQuiz.grades.length > 1) {
-      setNewQuiz({ ...newQuiz, grades: newQuiz.grades.filter((g) => g !== grade) })
+      setNewQuiz({
+        ...newQuiz,
+        grades: newQuiz.grades.filter((g) => g !== grade),
+      });
     }
-  }
+  };
 
   const addSection = () => {
     if (newSection && !newQuiz.sections.includes(newSection)) {
-      setNewQuiz({ ...newQuiz, sections: [...newQuiz.sections, newSection] })
-      setNewSection("")
+      setNewQuiz({ ...newQuiz, sections: [...newQuiz.sections, newSection] });
+      setNewSection("");
     }
-  }
+  };
 
   const removeSection = (section: string) => {
     if (newQuiz.sections.length > 1) {
-      setNewQuiz({ ...newQuiz, sections: newQuiz.sections.filter((s) => s !== section) })
+      setNewQuiz({
+        ...newQuiz,
+        sections: newQuiz.sections.filter((s) => s !== section),
+      });
     }
-  }
+  };
 
   const handleToggleChange = (key: string, checked: boolean) => {
-    setAnimatingToggles((prev) => new Set(prev).add(key))
-    setNewQuiz({ ...newQuiz, [key]: checked })
+    setAnimatingToggles((prev) => new Set(prev).add(key));
+    setNewQuiz({ ...newQuiz, [key]: checked });
 
     setTimeout(() => {
       setAnimatingToggles((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(key)
-        return newSet
-      })
-    }, 300)
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }, 300);
 
     if (key === "securedQuiz" && checked) {
-      setExpandedSections((prev) => ({ ...prev, securedQuiz: true }))
+      setExpandedSections((prev) => ({ ...prev, securedQuiz: true }));
     }
     if (key === "questionPool" && checked) {
-      setExpandedSections((prev) => ({ ...prev, questionPool: true }))
+      setExpandedSections((prev) => ({ ...prev, questionPool: true }));
     }
-  }
+  };
 
   const handleSaveChanges = () => {
     if (
@@ -253,45 +257,52 @@ export default function EditQuiz() {
         title: "Missing Information",
         description: "Please fill in all required fields.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Save quiz changes (in real app, this would be an API call)
     toast({
       title: "Quiz Updated",
       description: "Your quiz has been successfully updated.",
-    })
+    });
 
     // Navigate back to quiz list
-    router.push("/teacher/quiz")
-  }
+    router.push("/teacher/quiz");
+  };
   // </CHANGE>
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
+    }));
+  };
 
   const getRecommendations = () => {
-    const recommendations = []
+    const recommendations = [];
 
-    if (newQuiz.title.toLowerCase().includes("exam") || newQuiz.title.toLowerCase().includes("test")) {
-      recommendations.push("securedQuiz")
-      recommendations.push("questionPool")
+    if (
+      newQuiz.title.toLowerCase().includes("exam") ||
+      newQuiz.title.toLowerCase().includes("test")
+    ) {
+      recommendations.push("securedQuiz");
+      recommendations.push("questionPool");
     }
 
-    if (newQuiz.subjects.some((subject) => subject === "Mathematics" || subject === "Science")) {
-      recommendations.push("questionPool")
-      recommendations.push("shuffleQuestions")
+    if (
+      newQuiz.subjects.some(
+        (subject) => subject === "Mathematics" || subject === "Science"
+      )
+    ) {
+      recommendations.push("questionPool");
+      recommendations.push("shuffleQuestions");
     }
 
-    return recommendations
-  }
+    return recommendations;
+  };
 
-  const recommendations = getRecommendations()
+  const recommendations = getRecommendations();
 
   const tooltipExplanations = {
     securedQuiz:
@@ -318,9 +329,15 @@ export default function EditQuiz() {
       "Disable right-click context menu to prevent access to browser developer tools and other potentially helpful features.",
     lockdownUI:
       "Force the quiz into full-screen mode and hide browser navigation, taskbar, and other UI elements that could be distracting or helpful for cheating.",
-  }
+  };
 
-  const QuestionTooltip = ({ content, children }: { content: string; children: React.ReactNode }) => (
+  const QuestionTooltip = ({
+    content,
+    children,
+  }: {
+    content: string;
+    children: React.ReactNode;
+  }) => (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -333,40 +350,45 @@ export default function EditQuiz() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  )
+  );
 
   const calculateDuration = () => {
-    if (!newQuiz.startTime || !newQuiz.endTime) return null
+    if (!newQuiz.startTime || !newQuiz.endTime) return null;
 
-    const [startHours, startMinutes] = newQuiz.startTime.split(":").map(Number)
-    const [endHours, endMinutes] = newQuiz.endTime.split(":").map(Number)
+    const [startHours, startMinutes] = newQuiz.startTime.split(":").map(Number);
+    const [endHours, endMinutes] = newQuiz.endTime.split(":").map(Number);
 
-    let totalMinutes = endHours * 60 + endMinutes - (startHours * 60 + startMinutes)
+    let totalMinutes =
+      endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
 
     if (totalMinutes < 0) {
-      totalMinutes += 24 * 60
+      totalMinutes += 24 * 60;
     }
 
-    const hours = Math.floor(totalMinutes / 60)
-    const minutes = totalMinutes % 60
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
 
-    if (hours === 0 && minutes === 0) return "Same time"
-    if (hours === 0) return `${minutes} minute${minutes !== 1 ? "s" : ""}`
-    if (minutes === 0) return `${hours} hour${hours !== 1 ? "s" : ""}`
-    return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`
-  }
+    if (hours === 0 && minutes === 0) return "Same time";
+    if (hours === 0) return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+    if (minutes === 0) return `${hours} hour${hours !== 1 ? "s" : ""}`;
+    return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${
+      minutes !== 1 ? "s" : ""
+    }`;
+  };
 
-  const duration = calculateDuration()
+  const duration = calculateDuration();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading quiz data...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading quiz data...
+          </p>
         </div>
       </div>
-    )
+    );
   }
   // </CHANGE>
 
@@ -388,7 +410,9 @@ export default function EditQuiz() {
               Edit Quiz
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <p className="text-gray-600 dark:text-gray-400">Update your quiz settings and configuration</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Update your quiz settings and configuration
+              </p>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
@@ -396,7 +420,9 @@ export default function EditQuiz() {
                     style={{ width: `${formProgress}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{Math.round(formProgress)}%</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {Math.round(formProgress)}%
+                </span>
               </div>
             </div>
             {/* </CHANGE> */}
@@ -410,8 +436,8 @@ export default function EditQuiz() {
               Choose Your Test Format
             </CardTitle>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Select how students will experience your quiz. Each format offers different benefits for various
-              assessment types.
+              Select how students will experience your quiz. Each format offers
+              different benefits for various assessment types.
             </p>
           </CardHeader>
 
@@ -430,25 +456,37 @@ export default function EditQuiz() {
                     ? "scale-105 ring-2 ring-blue-500 shadow-xl"
                     : "hover:scale-102 hover:shadow-lg"
                 }`}
-                onClick={() => setNewQuiz({ ...newQuiz, testType: "long-form" })}
+                onClick={() =>
+                  setNewQuiz({ ...newQuiz, testType: "long-form" })
+                }
               >
                 <div className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-2 border-blue-200 dark:border-blue-800 h-full">
                   <div className="flex items-start justify-between mb-4">
-                    <RadioGroupItem value="long-form" id="long-form" className="mt-1" />
+                    <RadioGroupItem
+                      value="long-form"
+                      id="long-form"
+                      className="mt-1"
+                    />
                     <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   </div>
 
                   <Label htmlFor="long-form" className="cursor-pointer">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">All Questions (Long Form)</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      All Questions (Long Form)
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      All questions displayed on one scrollable page, like Google Forms
+                      All questions displayed on one scrollable page, like
+                      Google Forms
                     </p>
                   </Label>
 
                   <div className="relative h-32 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-300 dark:border-blue-700 overflow-hidden mb-4">
                     <div className="absolute inset-0 p-3 space-y-2 animate-scroll-slow">
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="flex items-start gap-2 bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
+                        <div
+                          key={i}
+                          className="flex items-start gap-2 bg-blue-100 dark:bg-blue-900/30 p-2 rounded"
+                        >
                           <div className="w-4 h-4 rounded-full bg-blue-500 flex-shrink-0 mt-0.5" />
                           <div className="flex-1 space-y-1">
                             <div className="h-2 bg-blue-300 dark:bg-blue-700 rounded w-3/4" />
@@ -491,7 +529,9 @@ export default function EditQuiz() {
                   </div>
 
                   <Label htmlFor="mixed" className="cursor-pointer">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Mixed Sections</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      Mixed Sections
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Questions organized into sections or pages with navigation
                     </p>
@@ -545,16 +585,24 @@ export default function EditQuiz() {
                     ? "scale-105 ring-2 ring-orange-500 shadow-xl"
                     : "hover:scale-102 hover:shadow-lg"
                 }`}
-                onClick={() => setNewQuiz({ ...newQuiz, testType: "one-at-a-time" })}
+                onClick={() =>
+                  setNewQuiz({ ...newQuiz, testType: "one-at-a-time" })
+                }
               >
                 <div className="p-6 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-2 border-orange-200 dark:border-orange-800 h-full">
                   <div className="flex items-start justify-between mb-4">
-                    <RadioGroupItem value="one-at-a-time" id="one-at-a-time" className="mt-1" />
+                    <RadioGroupItem
+                      value="one-at-a-time"
+                      id="one-at-a-time"
+                      className="mt-1"
+                    />
                     <Monitor className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                   </div>
 
                   <Label htmlFor="one-at-a-time" className="cursor-pointer">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">One Question at a Time</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      One Question at a Time
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Single question per screen with next/previous navigation
                     </p>
@@ -562,7 +610,9 @@ export default function EditQuiz() {
 
                   <div className="relative h-32 bg-white dark:bg-gray-800 rounded-lg border-2 border-orange-300 dark:border-orange-700 overflow-hidden mb-4">
                     <div className="absolute inset-0 p-4 flex flex-col justify-between">
-                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">Question 1 of 10</div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        Question 1 of 10
+                      </div>
                       <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg flex-1 my-2 flex items-center justify-center animate-question-slide">
                         <div className="w-full space-y-2">
                           <div className="h-3 bg-orange-300 dark:bg-orange-700 rounded w-full" />
@@ -603,7 +653,8 @@ export default function EditQuiz() {
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
                     {newQuiz.testType === "long-form" && "Long Form Selected"}
                     {newQuiz.testType === "mixed" && "Mixed Sections Selected"}
-                    {newQuiz.testType === "one-at-a-time" && "One at a Time Selected"}
+                    {newQuiz.testType === "one-at-a-time" &&
+                      "One at a Time Selected"}
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {newQuiz.testType === "long-form" &&
@@ -660,5 +711,5 @@ export default function EditQuiz() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

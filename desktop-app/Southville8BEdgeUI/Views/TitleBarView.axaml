@@ -12,12 +12,17 @@
 	</UserControl.Resources>
 	<UserControl.Styles>
 		<Style Selector="Button.caption">
-			<Setter Property="Background"	 Value="Transparent"/>
+			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="CornerRadius" Value="0"/>
 			<Setter Property="Width" Value="46"/>
 			<Setter Property="Height" Value="32"/>
 			<Setter Property="VerticalAlignment" Value="Top"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
 		</Style>
 		<Style Selector="Button.caption:pointerover /template/ ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}"/>
@@ -37,25 +42,25 @@
 	</UserControl.Styles>
 	<Grid Name="TitleBarBackground" Background="Transparent" PointerPressed="TitleBar_PointerPressed" DoubleTapped="TitleBar_DoubleTapped">
 		<Grid ColumnDefinitions="Auto,*,Auto">
-			<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="10,0">
-				<Image Source="{Binding Icon}" Width="16" Height="16" />
-				<TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+			<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="16,0">
+				<Image Source="{Binding Icon}" Width="20" Height="20" IsHitTestVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality"/>
+				<TextBlock Text="CampusConnect" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12" IsHitTestVisible="False"/>
 			</StackPanel>
 
 			<StackPanel Grid.Column="2" Orientation="Horizontal">
-				<Button Classes="caption" Command="{Binding MinimizeCommand}">
-					<Path Data="M0 4 H8" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1"/>
+				<Button Classes="caption" Command="{Binding MinimizeCommand}" ToolTip.Tip="Minimize">
+					<Path Data="M0 0 H10" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" VerticalAlignment="Center" Margin="0,8,0,0"/>
 				</Button>
 				<Button Classes="caption" Command="{Binding MaximizeRestoreCommand}">
 					<Grid>
 						<!-- Maximize icon -->
-						<Path Data="M0 0 H8 V8 H0Z" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" IsVisible="{Binding IsMaximized, Converter={StaticResource InverseBoolConverter}}"/>
+						<Path Data="M0 0 H10 V10 H0Z" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" IsVisible="{Binding IsMaximized, Converter={StaticResource InverseBoolConverter}}"/>
 						<!-- Restore icon (two overlapping squares) -->
-						<Path Data="M0 2 H6 V8 H0Z M2 0 H8 V6 H2Z" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" IsVisible="{Binding IsMaximized}"/>
+						<Path Data="M0 2 H8 V10 H0Z M2 0 H10 V8 H2Z" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1" IsVisible="{Binding IsMaximized}"/>
 					</Grid>
 				</Button>
-				<Button Classes="caption close" Command="{Binding CloseCommand}">
-					<Path Data="M0 0 L8 8 M0 8 L8 0" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1"/>
+				<Button Classes="caption close" Command="{Binding CloseCommand}" ToolTip.Tip="Close">
+					<Path Data="M0 0 L10 10 M0 10 L10 0" Stroke="{DynamicResource SystemControlForegroundBaseHighBrush}" StrokeThickness="1"/>
 				</Button>
 			</StackPanel>
 		</Grid>

@@ -156,15 +156,18 @@ function TrendChip({ value }: { value: number }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]",
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
         up
-          ? "border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200"
-          : "border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200",
+          ? "border-emerald-600 text-emerald-900 bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-950 dark:text-emerald-100"
+          : "border-rose-600 text-rose-900 bg-rose-100 dark:border-rose-500 dark:bg-rose-950 dark:text-rose-100",
       )}
+      aria-label={`Trend ${up ? "up" : "down"} by ${Math.abs(value).toFixed(1)} points`}
     >
-      {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-      {up ? "+" : ""}
-      {value.toFixed(1)}
+      {up ? <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" /> : <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />}
+      <span aria-hidden="true">
+        {up ? "+" : ""}
+        {value.toFixed(1)}
+      </span>
     </span>
   )
 }

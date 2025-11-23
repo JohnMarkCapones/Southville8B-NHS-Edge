@@ -10,12 +10,12 @@
     --card-foreground: 215 25% 27%;
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
-    --primary: 188 81% 35%;
+    --primary: 188 81% 28%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 98%;
     --secondary-foreground: 215 25% 27%;
     --muted: 210 40% 98%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 25% 45%;
     --accent: 210 40% 98%;
     --accent-foreground: 215 25% 27%;
     --destructive: 0 84% 60%;
@@ -32,7 +32,7 @@
     --teacher-ranking-card: 0 0% 100%; /* White card for light mode */
     --teacher-ranking-card-foreground: 215 25% 27%; /* Dark text for light mode */
     --teacher-ranking-muted: 210 40% 98%; /* Light muted background */
-    --teacher-ranking-muted-foreground: 215 20% 65%; /* Muted text */
+    --teacher-ranking-muted-foreground: 215 25% 45%; /* Muted text with better contrast */
     --teacher-ranking-border: 214 32% 91%; /* Light border */
     --teacher-ranking-input: 0 0% 100%; /* White input */
     --teacher-ranking-ring: 217 91% 60%; /* Blue focus ring */
@@ -109,7 +109,7 @@
     --analytics-accent: 142 76% 36%;
     --analytics-accent-foreground: 0 0% 100%;
     --analytics-muted: 210 40% 98%;
-    --analytics-muted-foreground: 215 20% 65%;
+    --analytics-muted-foreground: 215 25% 45%;
     --analytics-border: 214 32% 91%;
     --analytics-input: 0 0% 100%;
     --analytics-ring: 217 91% 60%;
@@ -169,12 +169,12 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 84% 5%;
     --popover-foreground: 210 40% 98%;
-    --primary: 188 81% 50%;
+    --primary: 188 81% 45%;
     --primary-foreground: 222 84% 5%;
     --secondary: 217 32% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217 32% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 20% 75%;
     --accent: 217 32% 17%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
@@ -190,7 +190,7 @@
     --teacher-ranking-card: 220 13% 14%; /* Dark card */
     --teacher-ranking-card-foreground: 210 40% 98%; /* Light text */
     --teacher-ranking-muted: 215 28% 17%; /* Muted dark */
-    --teacher-ranking-muted-foreground: 215 20% 65%; /* Muted text */
+    --teacher-ranking-muted-foreground: 215 20% 75%; /* Muted text with better contrast for dark mode */
     --teacher-ranking-border: 215 28% 17%; /* Dark border */
     --teacher-ranking-input: 220 13% 14%; /* Dark input */
     --teacher-ranking-ring: 217 91% 60%; /* Blue focus ring */
@@ -267,7 +267,7 @@
     --analytics-accent: 142 76% 36%;
     --analytics-accent-foreground: 220 13% 9%;
     --analytics-muted: 215 28% 17%;
-    --analytics-muted-foreground: 215 20% 65%;
+    --analytics-muted-foreground: 215 20% 75%;
     --analytics-border: 215 28% 17%;
     --analytics-input: 215 28% 17%;
     --analytics-ring: 217 91% 60%;
@@ -327,6 +327,22 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    /* WCAG 2.1 AAA: Base font size and line height */
+    font-size: 16px;
+    line-height: 1.6;
+    /* Allow user overrides for text spacing */
+    letter-spacing: inherit;
+    word-spacing: inherit;
+  }
+
+  /* WCAG 2.1 AAA: Enhanced text readability */
+  p {
+    max-width: 70ch; /* Limit line length for readability */
+  }
+
+  /* WCAG 2.1 AAA: Heading line height */
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.3;
   }
 
   ::selection {
@@ -341,6 +357,33 @@
   }
   a:hover {
     @apply decoration-primary;
+  }
+
+  /* WCAG 2.1 AAA: Enhanced focus indicators */
+  *:focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    *:focus-visible {
+      outline-width: 4px;
+      outline-color: currentColor;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -410,6 +453,34 @@
 
   .admin-sidebar {
     @apply bg-[hsl(var(--admin-sidebar-primary))] border-[hsl(var(--admin-border))];
+  }
+
+  /* Accessibility: Touch target sizing (WCAG 2.1 AAA) */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px] inline-flex items-center justify-center;
+  }
+
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .sr-only-focusable:focus,
+  .sr-only-focusable:active {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
   }
 }
 
@@ -576,4 +647,25 @@ html {
 
 .animate-button-pulse {
   animation: button-pulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+ * IMAGE RENDERING OPTIMIZATION
+ * ======================================== */
+
+/* Force crisp, high-quality image rendering across all browsers */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Ensure gallery images are sharp and clear */
+img[src*="imagedelivery.net"] {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }

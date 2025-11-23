@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TimePicker } from "@/components/ui/time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -29,9 +31,18 @@ import {
   Info,
   AlertCircle,
   CheckCircle2,
+  X,
+  ImageIcon,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useCreateEvent, useUpdateEvent, useEvents } from "@/hooks/useEvents"
+import { useUser } from "@/hooks/useUser"
+import { uploadEventImage } from "@/lib/api/endpoints/events"
+import { EventStatus, EventVisibility, type Event } from "@/lib/api/types/events"
+import { validateEvent, type ValidationResult, hasBlockingErrors, hasWarnings } from "@/lib/utils/event-validations"
+import { EventValidationModal } from "@/components/events/event-validation-modal"
 
 interface EventHighlight {
   id: string
@@ -55,17 +66,55 @@ interface AdditionalInfo {
   text: string
 }
 
-export default function CreateEventPage() {
+interface CreateEventPageProps {
+  initialData?: Event | null
+  isEditMode?: boolean
+  eventId?: string | null
+}
+
+export default function CreateEventPage({
+  initialData = null,
+  isEditMode = false,
+  eventId = null
+}: CreateEventPageProps = {}) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const createEventMutation = useCreateEvent()
+  const updateEventMutation = useUpdateEvent()
+  const { data: user, isLoading: userLoading } = useUser()
+
+  // Fetch existing events for validation
+  const { data: eventsData } = useEvents({ limit: 1000 })
+  const existingEvents = eventsData?.data || []
+
+  // Validation state
+  const [showValidationModal, setShowValidationModal] = useState(false)
+  const [validationResults, setValidationResults] = useState<ValidationResult[]>([])
+  const [validationOverridden, setValidationOverridden] = useState(false)
 
   // Form state
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [date, setDate] = useState("")
+  const [time, setTime] = useState("")
   const [venue, setVenue] = useState("")
   const [attendance, setAttendance] = useState("")
+  const [status, setStatus] = useState<EventStatus>(EventStatus.DRAFT)
+  const [visibility, setVisibility] = useState<EventVisibility>(EventVisibility.PUBLIC)
+
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  // Use ref to persist metadata across re-renders
+  const cloudflareImageMetadataRef = useRef<{
+    url: string
+    cf_image_id: string
+    cf_image_url: string
+    fileSize: number
+    mimeType: string
+  } | null>(null)
 
   // Dynamic sections
   const [highlights, setHighlights] = useState<EventHighlight[]>([{ id: "1", text: "" }])
@@ -75,6 +124,82 @@ export default function CreateEventPage() {
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Populate form with initial data when editing
+  useEffect(() => {
+    if (initialData && isEditMode) {
+      console.log("Loading event data for edit:", initialData)
+
+      // Basic fields
+      setTitle(initialData.title || "")
+      setDescription(initialData.description || "")
+      setDate(initialData.date || "")
+      setTime(initialData.time || "")
+      setVenue(initialData.location || "")
+      setStatus(initialData.status || EventStatus.DRAFT)
+      setVisibility(initialData.visibility || EventVisibility.PUBLIC)
+
+      console.log("Set basic fields:", {
+        title: initialData.title,
+        description: initialData.description,
+        date: initialData.date,
+        time: initialData.time,
+        location: initialData.location,
+        status: initialData.status,
+        visibility: initialData.visibility
+      })
+
+      // Set existing image as preview
+      if (initialData.eventImage) {
+        setImagePreview(initialData.eventImage)
+        console.log("Set image preview:", initialData.eventImage)
+      }
+
+      // Populate highlights
+      if (Array.isArray(initialData.highlights) && initialData.highlights.length > 0) {
+        const highlightsData = initialData.highlights.map((h, i) => ({
+          id: String(i + 1),
+          text: h.title || h.content || ""
+        }))
+        setHighlights(highlightsData)
+        console.log("Set highlights:", highlightsData)
+      }
+
+      // Populate schedule
+      if (Array.isArray(initialData.schedule) && initialData.schedule.length > 0) {
+        const scheduleData = initialData.schedule.map((s, i) => ({
+          id: String(i + 1),
+          time: s.activityTime || "",
+          title: s.activityDescription || ""
+        }))
+        setSchedule(scheduleData)
+        console.log("Set schedule:", scheduleData)
+      }
+
+      // Populate FAQs
+      if (Array.isArray(initialData.faq) && initialData.faq.length > 0) {
+        const faqData = initialData.faq.map((f, i) => ({
+          id: String(i + 1),
+          question: f.question || "",
+          answer: f.answer || ""
+        }))
+        setFaqs(faqData)
+        console.log("Set FAQs:", faqData)
+      }
+
+      // Populate additional info
+      if (Array.isArray(initialData.additionalInfo) && initialData.additionalInfo.length > 0) {
+        const additionalInfoData = initialData.additionalInfo.map((a, i) => ({
+          id: String(i + 1),
+          text: a.content || a.title || ""
+        }))
+        setAdditionalInfo(additionalInfoData)
+        console.log("Set additional info:", additionalInfoData)
+      }
+
+      console.log("Finished loading all event data")
+    }
+  }, [initialData, isEditMode])
 
   // Get all used times in schedule
   const usedTimes = schedule.map((item) => item.time).filter(Boolean)
@@ -136,6 +261,51 @@ export default function CreateEventPage() {
     setAdditionalInfo(additionalInfo.map((a) => (a.id === id ? { ...a, text } : a)))
   }
 
+  // Image upload handlers
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedImage(file)
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    cloudflareImageMetadataRef.current = null
+  }
+
+  const uploadImageToCloudflare = async (file: File): Promise<string | null> => {
+    try {
+      console.log("📤 Uploading image to Cloudflare...")
+      const result = await uploadEventImage(file)
+      console.log("✅ Cloudflare upload response:", result)
+
+      // Store the full metadata in ref
+      const metadata = {
+        url: result.url || result.cf_image_url,
+        cf_image_id: result.cf_image_id,
+        cf_image_url: result.cf_image_url,
+        fileSize: result.fileSize,
+        mimeType: result.mimeType
+      }
+
+      console.log("💾 Storing Cloudflare metadata in ref:", metadata)
+      cloudflareImageMetadataRef.current = metadata
+
+      return result.url || result.cf_image_url
+    } catch (error) {
+      console.error('❌ Error uploading image:', error)
+      throw error
+    }
+  }
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
@@ -143,14 +313,26 @@ export default function CreateEventPage() {
     if (!title.trim()) newErrors.title = "Title is required"
     if (!description.trim()) newErrors.description = "Description is required"
     if (!date) newErrors.date = "Date is required"
+    if (!time) newErrors.time = "Time is required"
     if (!venue.trim()) newErrors.venue = "Venue is required"
     if (!attendance.trim()) newErrors.attendance = "Attendance is required"
 
     // Validate at least one filled item in each dynamic section
     const filledHighlights = highlights.filter((h) => h.text.trim())
+    const validHighlights = highlights.filter((h) => h.text.trim() && h.text.trim().length >= 10)
+    
     if (filledHighlights.length === 0) {
       newErrors.highlights = "At least one event highlight is required"
+    } else if (validHighlights.length === 0) {
+      newErrors.highlights = "At least one highlight must be at least 10 characters long"
     }
+
+    // Validate highlight content length (backend requires 10+ characters)
+    highlights.forEach((highlight, index) => {
+      if (highlight.text.trim() && highlight.text.trim().length < 10) {
+        newErrors[`highlight_${highlight.id}`] = "Highlight content must be at least 10 characters long"
+      }
+    })
 
     const filledSchedule = schedule.filter((s) => s.time && s.title.trim())
     if (filledSchedule.length === 0) {
@@ -185,6 +367,9 @@ export default function CreateEventPage() {
       if (!faq.question.trim() && faq.answer.trim()) {
         newErrors[`faq_${faq.id}_question`] = "Question is required when answer is provided"
       }
+      if (faq.question.trim() && faq.answer.trim() && faq.answer.trim().length < 10) {
+        newErrors[`faq_${faq.id}_answer`] = "Answer must be at least 10 characters long"
+      }
     })
 
     setErrors(newErrors)
@@ -194,6 +379,13 @@ export default function CreateEventPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
+    // Check if user is loaded
+    if (userLoading || !user?.id) {
+      console.error("User not loaded or not authenticated")
+      return
+    }
+
+    // Basic form validation first
     if (!validateForm()) {
       // Scroll to first error
       const firstError = document.querySelector('[data-error="true"]')
@@ -201,7 +393,40 @@ export default function CreateEventPage() {
       return
     }
 
-    // Show confirmation modal instead of submitting directly
+    // Run event validations (date/time conflicts, etc.)
+    const validations = validateEvent(
+      {
+        title: title.trim(),
+        description: description.trim(),
+        date,
+        time,
+        location: venue.trim()
+      },
+      existingEvents,
+      {
+        allowPastDates: false,              // Block past dates
+        minimumLeadTimeHours: 2,            // Warn if less than 2 hours notice
+        allowSameDateEvents: true,          // Allow but warn
+        allowSameDateTimeEvents: false,     // Block same date & time
+        checkVenueConflicts: true,          // Check venue availability
+        warnOnWeekends: false,              // Don't warn on weekends (schools can have weekend events)
+        warnOnCloseProximity: true,         // Warn if events are close together
+        proximityThresholdHours: 2          // 2 hour proximity threshold
+      },
+      eventId || undefined
+    )
+
+    // Filter out INFO level validations, keep only errors and warnings
+    const failedValidations = validations.filter(v => !v.isValid)
+
+    if (failedValidations.length > 0) {
+      // If there are errors or warnings, show validation modal
+      setValidationResults(failedValidations)
+      setShowValidationModal(true)
+      return
+    }
+
+    // No validation issues, proceed to confirmation
     setShowConfirmModal(true)
   }
 
@@ -209,26 +434,88 @@ export default function CreateEventPage() {
     setShowConfirmModal(false)
     setIsSubmitting(true)
 
-    // Filter out empty items
-    const eventData = {
-      title,
-      description,
-      date,
-      venue,
-      attendance,
-      highlights: highlights.filter((h) => h.text.trim()).map((h) => h.text),
-      schedule: schedule.filter((s) => s.time && s.title.trim()),
-      faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()),
-      additionalInfo: additionalInfo.filter((a) => a.text.trim()).map((a) => a.text),
-    }
+    try {
+      // Upload image first if selected (new image uploaded)
+      let imageUrl: string | undefined = undefined
+      if (selectedImage) {
+        try {
+          imageUrl = await uploadImageToCloudflare(selectedImage) || undefined
+        } catch (error) {
+          console.error("Failed to upload image:", error)
+          alert(`Failed to upload image. ${isEditMode ? 'Updating' : 'Creating'} event without new image.`)
+        }
+      } else if (isEditMode && imagePreview && initialData?.eventImage) {
+        // Keep existing image if in edit mode and no new image selected
+        imageUrl = initialData.eventImage
+      }
 
-    console.log("[v0] Event data:", eventData)
+      // Filter out empty items and map to API format
+      const eventData: any = {
+        title: title.trim(),
+        description: description.trim(),
+        date,
+        time,
+        location: venue.trim(),
+        organizerId: user?.id || initialData?.organizer?.id || "",
+        eventImage: imageUrl,
+        status,
+        visibility,
+        highlights: highlights
+          .filter((h) => h.text.trim() && h.text.trim().length >= 10)
+          .map((h) => ({ title: h.text, content: h.text, imageUrl: undefined })),
+        schedule: schedule
+          .filter((s) => s.time && s.title.trim())
+          .map((s) => ({ activityTime: s.time, activityDescription: s.title })),
+        faq: faqs
+          .filter((f) => f.question.trim() && f.answer.trim() && f.answer.trim().length >= 10)
+          .map((f) => ({ question: f.question, answer: f.answer })),
+        additionalInfo: additionalInfo
+          .filter((a) => a.text.trim())
+          .map((a) => ({ title: "Additional Info", content: a.text })),
+      }
 
-    // TODO: Implement event creation logic
-    setTimeout(() => {
-      setIsSubmitting(false)
+      // Add Cloudflare Images metadata if available
+      const cfMetadata = cloudflareImageMetadataRef.current
+      console.log("🔍 Checking cloudflareImageMetadataRef.current:", cfMetadata)
+
+      if (cfMetadata) {
+        console.log("🖼️ Adding Cloudflare Images metadata to event:", cfMetadata)
+        eventData.cfImageId = cfMetadata.cf_image_id
+        eventData.cfImageUrl = cfMetadata.cf_image_url
+        eventData.imageFileSize = cfMetadata.fileSize
+        eventData.imageMimeType = cfMetadata.mimeType
+      } else {
+        console.warn("⚠️ No Cloudflare metadata available to add")
+        console.warn("⚠️ This means either no image was uploaded, or metadata was lost")
+      }
+
+      console.log(`📨 ${isEditMode ? 'Updating' : 'Creating'} event with data:`, eventData)
+      console.log("🔍 Event data keys:", Object.keys(eventData))
+      console.log("🎯 Image fields:", {
+        eventImage: eventData.eventImage,
+        cfImageId: eventData.cfImageId,
+        cfImageUrl: eventData.cfImageUrl,
+        imageFileSize: eventData.imageFileSize,
+        imageMimeType: eventData.imageMimeType
+      })
+
+      if (isEditMode && eventId) {
+        // Update existing event
+        await updateEventMutation.mutateAsync({ id: eventId, data: eventData })
+      } else {
+        // Create new event
+        await createEventMutation.mutateAsync(eventData)
+      }
+
+      // Success - redirect to events page
       router.push("/superadmin/events")
-    }, 1000)
+    } catch (error) {
+      console.error("Failed to create event:", error)
+      // Error handling is done by the mutation hook
+      // The mutation hook will show a toast notification
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const getValidCounts = () => {
@@ -237,6 +524,35 @@ export default function CreateEventPage() {
     const validFAQs = faqs.filter((f) => f.question.trim() && f.answer.trim())
     const validAdditionalInfo = additionalInfo.filter((a) => a.text.trim())
     return { validHighlights, validSchedule, validFAQs, validAdditionalInfo }
+  }
+
+  // Show loading state while user is being fetched
+  if (userLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading user data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if user is not authenticated
+  if (!user?.id) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-500 opacity-50" />
+            <p className="text-red-600 font-medium">Authentication required</p>
+            <p className="text-muted-foreground text-sm mt-1">Please log in to create events</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -257,8 +573,14 @@ export default function CreateEventPage() {
               <Calendar className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl">Create New Event</CardTitle>
-              <CardDescription>Fill in the details to create a new event</CardDescription>
+              <CardTitle className="text-2xl">
+                {isEditMode ? "Edit Event" : "Create New Event"}
+              </CardTitle>
+              <CardDescription>
+                {isEditMode
+                  ? "Update the event details below"
+                  : "Fill in the details to create a new event"}
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -315,6 +637,22 @@ export default function CreateEventPage() {
                   {errors.date && <p className="text-sm text-red-500">{errors.date}</p>}
                 </div>
 
+                <div className="space-y-2" data-error={!!errors.time}>
+                  <Label htmlFor="time" className="text-base">
+                    Time <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className={cn(errors.time && "border-red-500")}
+                  />
+                  {errors.time && <p className="text-sm text-red-500">{errors.time}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2" data-error={!!errors.attendance}>
                   <Label htmlFor="attendance" className="text-base">
                     Expected Attendance <span className="text-red-500">*</span>
@@ -328,6 +666,36 @@ export default function CreateEventPage() {
                     className={cn(errors.attendance && "border-red-500")}
                   />
                   {errors.attendance && <p className="text-sm text-red-500">{errors.attendance}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-base">
+                    Status <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={status} onValueChange={(value) => setStatus(value as EventStatus)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={EventStatus.DRAFT}>Draft</SelectItem>
+                      <SelectItem value={EventStatus.PUBLISHED}>Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="visibility" className="text-base">
+                    Visibility <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={visibility} onValueChange={(value) => setVisibility(value as EventVisibility)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select visibility" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={EventVisibility.PUBLIC}>Public</SelectItem>
+                      <SelectItem value={EventVisibility.PRIVATE}>Private</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -346,6 +714,63 @@ export default function CreateEventPage() {
                   />
                 </div>
                 {errors.venue && <p className="text-sm text-red-500">{errors.venue}</p>}
+              </div>
+
+              {/* Event Image Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="event-image" className="text-base">
+                  Event Image (Optional)
+                </Label>
+                <div className="space-y-3">
+                  {!imagePreview ? (
+                    <div className="relative border-2 border-dashed rounded-lg p-6 hover:border-primary/50 transition-colors">
+                      <input
+                        type="file"
+                        id="event-image"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            Click to upload or drag and drop
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PNG, JPG, GIF up to 10MB
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative rounded-lg overflow-hidden border-2 border-border">
+                      <img
+                        src={imagePreview}
+                        alt="Event preview"
+                        className="w-full h-64 object-cover"
+                      />
+                      <div className="absolute top-2 right-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={handleRemoveImage}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {imagePreview
+                      ? "Image will be uploaded when you create the event"
+                      : "Upload an eye-catching image for your event. This will be displayed on the event page."}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -369,24 +794,30 @@ export default function CreateEventPage() {
               )}
               <div className="space-y-3">
                 {highlights.map((highlight, index) => (
-                  <div key={highlight.id} className="flex gap-2 items-start">
-                    <div className="flex-1">
-                      <Input
-                        value={highlight.text}
-                        onChange={(e) => updateHighlight(highlight.id, e.target.value)}
-                        placeholder={`Highlight ${index + 1}`}
-                      />
+                  <div key={highlight.id} className="space-y-2">
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <Input
+                          value={highlight.text}
+                          onChange={(e) => updateHighlight(highlight.id, e.target.value)}
+                          placeholder={`Highlight ${index + 1} (minimum 10 characters)`}
+                          className={cn(errors[`highlight_${highlight.id}`] && "border-red-500")}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeHighlight(highlight.id)}
+                        disabled={highlights.length === 1}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeHighlight(highlight.id)}
-                      disabled={highlights.length === 1}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {errors[`highlight_${highlight.id}`] && (
+                      <p className="text-xs text-red-500 ml-1">{errors[`highlight_${highlight.id}`]}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -567,7 +998,11 @@ export default function CreateEventPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} size="lg" className="min-w-[150px]">
-                {isSubmitting ? "Creating..." : "Create Event"}
+                {isSubmitting
+                  ? (selectedImage
+                      ? (isEditMode ? "Uploading & Updating..." : "Uploading & Creating...")
+                      : (isEditMode ? "Updating..." : "Creating..."))
+                  : (isEditMode ? "Update Event" : "Create Event")}
               </Button>
             </div>
           </form>
@@ -583,9 +1018,13 @@ export default function CreateEventPage() {
                 <AlertCircle className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <DialogTitle className="text-2xl">Confirm Event Creation</DialogTitle>
+                <DialogTitle className="text-2xl">
+                  {isEditMode ? "Confirm Event Update" : "Confirm Event Creation"}
+                </DialogTitle>
                 <DialogDescription className="text-base">
-                  Please review the details before creating this event
+                  {isEditMode
+                    ? "Please review the changes before updating this event"
+                    : "Please review the details before creating this event"}
                 </DialogDescription>
               </div>
             </div>
@@ -605,9 +1044,21 @@ export default function CreateEventPage() {
                       <span>{date}</span>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{time}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       <span>{venue}</span>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs">
+                    <Badge variant="outline" className="text-xs">
+                      {status === EventStatus.DRAFT ? "Draft" : "Published"}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {visibility === EventVisibility.PUBLIC ? "Public" : "Private"}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -767,13 +1218,31 @@ export default function CreateEventPage() {
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Yes, Create Event
+                  {isEditMode ? "Yes, Update Event" : "Yes, Create Event"}
                 </>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Validation Modal */}
+      <EventValidationModal
+        isOpen={showValidationModal}
+        onClose={() => setShowValidationModal(false)}
+        onProceed={
+          hasBlockingErrors(validationResults)
+            ? undefined  // No proceed button for blocking errors
+            : () => {
+                // Close validation modal and proceed to confirmation
+                setShowValidationModal(false)
+                setValidationOverridden(true)
+                setShowConfirmModal(true)
+              }
+        }
+        validationResults={validationResults}
+        mode={isEditMode ? 'edit' : 'create'}
+      />
     </div>
   )
 }

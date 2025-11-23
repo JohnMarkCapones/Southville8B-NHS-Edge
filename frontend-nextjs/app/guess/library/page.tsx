@@ -1,3 +1,5 @@
+export const dynamic = "force-static"
+export const revalidate = 86400
 import type { Metadata } from "next"
 import { DEFAULT_OG_IMAGE } from "@/lib/seo"
 import Link from "next/link"
@@ -29,9 +31,12 @@ export const metadata: Metadata = {
   },
 }
 
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
+
 export default function LibraryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
+      <GuessBreadcrumb items={[{ label: "Library" }]} />
       {/* Header */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8">

@@ -10,10 +10,10 @@ public partial class BookRoomViewModel : ViewModelBase
 {
     public Action? NavigateBack { get; set; }
 
-    public ObservableCollection<RoomViewModel> Rooms { get; }
+    public ObservableCollection<RoomCardViewModel> Rooms { get; }
     public ObservableCollection<string> TimeSlots { get; } = new();
 
-    [ObservableProperty] private RoomViewModel? _selectedRoom;
+    [ObservableProperty] private RoomCardViewModel? _selectedRoom;
     [ObservableProperty] private DateTime _selectedDate = DateTime.Today;
     [ObservableProperty] private string? _selectedSlot;
     [ObservableProperty] private string _purpose = string.Empty;
@@ -54,7 +54,7 @@ public partial class BookRoomViewModel : ViewModelBase
                             !string.IsNullOrWhiteSpace(Purpose) &&
                             SelectedDate.Date >= DateTime.Today; // prevent past-date bookings
 
-    public BookRoomViewModel(ObservableCollection<RoomViewModel> rooms)
+    public BookRoomViewModel(ObservableCollection<RoomCardViewModel> rooms)
     {
         Rooms = rooms;
         foreach (var h in Enumerable.Range(8, 10))
@@ -63,7 +63,7 @@ public partial class BookRoomViewModel : ViewModelBase
         }
     }
 
-    partial void OnSelectedRoomChanged(RoomViewModel? value) => OnPropertyChanged(nameof(CanBook));
+    partial void OnSelectedRoomChanged(RoomCardViewModel? value) => OnPropertyChanged(nameof(CanBook));
     partial void OnSelectedSlotChanged(string? value) => OnPropertyChanged(nameof(CanBook));
     partial void OnPurposeChanged(string value) => OnPropertyChanged(nameof(CanBook));
     partial void OnSelectedDateChanged(DateTime value)
@@ -101,13 +101,13 @@ public partial class BookRoomViewModel : ViewModelBase
         SelectedRoom.Bookings.Add(new RoomBookingEntry
         {
             Date = SelectedDate.Date,
-            Slot = SelectedSlot!,
+            TimeSlot = SelectedSlot!,
             Purpose = Purpose.Trim()
         });
 
         // Update room status & display marker
         SelectedRoom.Status = "Occupied";
-        SelectedRoom.CurrentBooking = $"{SelectedDate:MMM dd} {SelectedSlot} - {Purpose}";
+        // CurrentBooking is read-only, so we can't assign to it directly
         StatusMessage = "Room booked successfully.";
     }
 

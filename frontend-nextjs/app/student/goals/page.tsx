@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { StudentLayout } from "@/components/student/student-layout"
+import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { formatDate } from "@/lib/utils/dateUtils"
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "@/lib/i18n"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -122,7 +125,9 @@ const motivationalContent = {
 }
 
 export default function GoalsPage() {
-  const [goals, setGoals] = useState<Goal[]>([])
+  const { t } = useTranslation()
+  // Use reliable localStorage hook
+  const [goals, setGoals] = useLocalStorage<Goal[]>("student-goals-v2", [])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [currentQuote, setCurrentQuote] = useState("")
@@ -142,16 +147,9 @@ export default function GoalsPage() {
   const [showCelebration, setShowCelebration] = useState(false)
   const [currentTip, setCurrentTip] = useState("")
 
+  // Initialize with sample data only if no goals exist
   useEffect(() => {
-    const savedGoals = localStorage.getItem("student-goals")
-    if (savedGoals) {
-      const parsedGoals = JSON.parse(savedGoals).map((goal: any) => ({
-        ...goal,
-        createdAt: new Date(goal.createdAt),
-        targetDate: new Date(goal.targetDate),
-      }))
-      setGoals(parsedGoals)
-    } else {
+    if (goals.length === 0) {
       const sampleGoals: Goal[] = [
         {
           id: "1",
@@ -181,15 +179,27 @@ export default function GoalsPage() {
         },
       ]
       setGoals(sampleGoals)
+    } else {
+      // Ensure all dates are properly converted to Date objects
+      const goalsWithProperDates = goals.map(goal => ({
+        ...goal,
+        createdAt: goal.createdAt instanceof Date ? goal.createdAt : new Date(goal.createdAt),
+        targetDate: goal.targetDate instanceof Date ? goal.targetDate : new Date(goal.targetDate),
+      }))
+      
+      // Only update if dates were actually converted
+      const needsUpdate = goals.some(goal => 
+        !(goal.createdAt instanceof Date) || !(goal.targetDate instanceof Date)
+      )
+      
+      if (needsUpdate) {
+        setGoals(goalsWithProperDates)
+      }
     }
 
     setCurrentQuote(motivationalContent.quotes[Math.floor(Math.random() * motivationalContent.quotes.length)])
     setCurrentTip(motivationalContent.tips[Math.floor(Math.random() * motivationalContent.tips.length)])
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem("student-goals", JSON.stringify(goals))
-  }, [goals])
+  }, [goals.length, setGoals])
 
   const addMilestone = () => {
     setNewGoal({
@@ -367,7 +377,7 @@ export default function GoalsPage() {
                   <Target className="w-6 h-6 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Goals Tracker
+                  {t('productivity.goals.title')}
                 </h1>
                 {showCelebration && (
                   <div className="animate-bounce">
@@ -375,7 +385,7 @@ export default function GoalsPage() {
                   </div>
                 )}
               </div>
-              <p className="text-gray-600">Set, track, and achieve your dreams with purpose</p>
+              <p className="text-gray-600">{t('student.readyToAchieve')}</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -443,23 +453,23 @@ export default function GoalsPage() {
 
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
                       <Plus className="w-4 h-4 mr-2" />
-                      Add Goal
+                    {t('productivity.goals.addGoal')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>{editingGoal ? "Edit Goal" : "Add New Goal"}</DialogTitle>
+                    <DialogTitle>{editingGoal ? t('productivity.goals.editGoal') : t('productivity.goals.addGoal')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <Input
-                        placeholder="Goal title"
+                      placeholder={t('productivity.goals.goalTitle')}
                         value={newGoal.title}
                         onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
                       />
                       <Textarea
-                        placeholder="Description"
+                      placeholder={t('productivity.goals.goalDescription')}
                         value={newGoal.description}
                         onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
                         rows={3}
@@ -487,9 +497,9 @@ export default function GoalsPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="low">Low Priority</SelectItem>
-                            <SelectItem value="medium">Medium Priority</SelectItem>
-                            <SelectItem value="high">High Priority</SelectItem>
+                          <SelectItem value="low">{t('productivity.todo.low')}</SelectItem>
+                          <SelectItem value="medium">{t('productivity.todo.medium')}</SelectItem>
+                          <SelectItem value="high">{t('productivity.todo.high')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -501,7 +511,7 @@ export default function GoalsPage() {
                             className="w-full justify-start text-left font-normal bg-transparent"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newGoal.targetDate ? format(newGoal.targetDate, "PPP") : "Set target date"}
+                          {newGoal.targetDate ? format(newGoal.targetDate, "PPP") : t('productivity.goals.targetDate')}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -515,7 +525,7 @@ export default function GoalsPage() {
                       </Popover>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Milestones</label>
+                        <label className="text-sm font-medium">{t('productivity.goals.updateProgress')}</label>
                         {newGoal.milestones.map((milestone, index) => (
                           <div key={index} className="flex gap-2">
                             <Input
@@ -536,13 +546,13 @@ export default function GoalsPage() {
                           </div>
                         ))}
                         <Button variant="outline" onClick={addMilestone} className="w-full bg-transparent">
-                          Add Milestone
+                          {t('productivity.goals.updateProgress')}
                         </Button>
                       </div>
 
                       <div className="flex gap-2">
                         <Button onClick={editingGoal ? updateGoal : addGoal} className="flex-1">
-                          {editingGoal ? "Update Goal" : "Add Goal"}
+                          {editingGoal ? t('success.updated') : t('productivity.goals.addGoal')}
                         </Button>
                         <Button
                           variant="outline"
@@ -552,7 +562,7 @@ export default function GoalsPage() {
                             resetForm()
                           }}
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </Button>
                       </div>
                     </div>
@@ -740,7 +750,7 @@ export default function GoalsPage() {
                           </Badge>
                           <Badge variant="outline" className="text-xs hover:bg-gray-50 transition-all duration-200">
                             <CalendarIcon className="w-3 h-3 mr-1" />
-                            Due {format(goal.targetDate, "MMM dd, yyyy")}
+                            Due {formatDate(goal.targetDate, { month: "short", day: "2-digit", year: "numeric" })}
                           </Badge>
                         </div>
                       </div>

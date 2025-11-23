@@ -60,7 +60,7 @@ export function TeacherFooter() {
                 <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
                   <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <span>123 Education Ave, Learning City</span>
+                <span>Southville 8B, Brgy San Isidro, Rodriguez, Rizal</span>
               </div>
               <div className="flex items-center space-x-3 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                 <div className="w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
@@ -105,7 +105,7 @@ export function TeacherFooter() {
                   color: "text-purple-600 dark:text-purple-400",
                 },
                 {
-                  href: "/teacher/schedule",
+                  href: "/teacher/class-schedule",
                   label: "Schedule",
                   icon: Calendar,
                   color: "text-orange-600 dark:text-orange-400",
@@ -282,8 +282,8 @@ export function TeacherFooter() {
             </p>
             <div className="flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-2 text-sm">
               {[
-                { href: "/privacy", label: "Privacy Policy" },
-                { href: "/terms", label: "Terms of Service" },
+                { href: "/teacher/privacy", label: "Privacy Policy" },
+                { href: "/teacher/terms", label: "Terms of Service" },
                 { href: "/accessibility", label: "Accessibility" },
                 { href: "/cookies", label: "Cookie Policy" },
               ].map((link, index) => (

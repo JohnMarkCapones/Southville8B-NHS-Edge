@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { cn } from "@/lib/utils"
 import {
   Camera,
@@ -228,6 +229,7 @@ export default function GalleryClient() {
 
   return (
     <div className="min-h-screen bg-background">
+      <GuessBreadcrumb items={[{ label: "Gallery" }]} />
       {/* Hero Section */}
       <section
         ref={heroRef}

@@ -3,6 +3,8 @@
 import type React from "react"
 import { usePathname } from "next/navigation"
 import { DashboardLayout } from "@/components/superadmin/dashboard/layout"
+import { RequireAuth } from "@/components/auth"
+import { MobileBlock } from "@/components/superadmin/mobile-block"
 
 export default function SuperAdminLayout({
   children,
@@ -48,19 +50,19 @@ export default function SuperAdminLayout({
     }
 
     // Content Management section
-    if (pathname === "/superadmin/news") {
+    if (pathname === "/superadmin/news" || pathname.startsWith("/superadmin/news/")) {
       return { activeSection: "content", activeSubSection: "News" }
     }
-    if (pathname === "/superadmin/announcements") {
+    if (pathname === "/superadmin/announcements" || pathname.startsWith("/superadmin/announcements/")) {
       return { activeSection: "content", activeSubSection: "Announcements" }
     }
-    if (pathname === "/superadmin/events") {
+    if (pathname === "/superadmin/events" || pathname.startsWith("/superadmin/events/")) {
       return { activeSection: "content", activeSubSection: "Events" }
     }
     if (pathname === "/superadmin/clubs") {
       return { activeSection: "content", activeSubSection: "Clubs/Organizations" }
     }
-    if (pathname === "/superadmin/gallery") {
+    if (pathname === "/superadmin/gallery" || pathname.startsWith("/superadmin/gallery/")) {
       return { activeSection: "content", activeSubSection: "School Gallery" }
     }
     if (pathname === "/superadmin/faqs") {
@@ -74,7 +76,7 @@ export default function SuperAdminLayout({
     }
 
     // Academic Management section
-    if (pathname === "/superadmin/subjects") {
+    if (pathname === "/superadmin/subjects" || pathname.startsWith("/superadmin/subjects/")) {
       return { activeSection: "academic", activeSubSection: "Subjects" }
     }
     if (pathname === "/superadmin/classes") {
@@ -89,6 +91,9 @@ export default function SuperAdminLayout({
     if (pathname === "/superadmin/reports") {
       return { activeSection: "academic", activeSubSection: "Progress Tracking" }
     }
+    if (pathname === "/superadmin/top-performers") {
+      return { activeSection: "academic", activeSubSection: "Top Performers" }
+    }
 
     // Schedule Management section
     if (pathname === "/superadmin/timetable") {
@@ -96,6 +101,12 @@ export default function SuperAdminLayout({
     }
     if (pathname === "/superadmin/academic-calendar") {
       return { activeSection: "schedule", activeSubSection: "Academic Calendar" }
+    }
+    if (pathname === "/superadmin/schedule" || (pathname.startsWith("/superadmin/schedule") && !pathname.startsWith("/superadmin/schedule/wizard"))) {
+      return { activeSection: "schedule", activeSubSection: "Schedule Management" }
+    }
+    if (pathname === "/superadmin/schedule/wizard" || pathname.startsWith("/superadmin/schedule/wizard/")) {
+      return { activeSection: "schedule", activeSubSection: "Schedule Wizard" }
     }
     if (pathname === "/superadmin/events") {
       return { activeSection: "schedule", activeSubSection: "Events" }
@@ -145,9 +156,12 @@ export default function SuperAdminLayout({
   const { activeSection, activeSubSection } = getCurrentSection()
 
   return (
-    <DashboardLayout activeSection={activeSection} activeSubSection={activeSubSection}>
-      {children}
-    </DashboardLayout>
+    <RequireAuth requiredRoles={['Admin']}>
+      <MobileBlock />
+      <DashboardLayout activeSection={activeSection} activeSubSection={activeSubSection}>
+        {children}
+      </DashboardLayout>
+    </RequireAuth>
   )
 }
 

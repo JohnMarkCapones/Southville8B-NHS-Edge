@@ -1,19 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
-import { HeroSection } from "@/components/ui/hero-section"
+import { HeroSectionEnhanced } from "@/components/ui/hero-section-enhanced"
 import { FeatureCard } from "@/components/ui/feature-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { AnnouncementsSection } from "@/components/homepage/announcements-section"
+import { EventsSection } from "@/components/homepage/events-section"
+import { ClubsSection } from "@/components/homepage/clubs-section"
+import { NewsSection } from "@/components/homepage/news-section"
 import {
   BookOpen,
   Users,
@@ -25,7 +27,6 @@ import {
   Heart,
   Sparkles,
   GraduationCap,
-  Target,
   ArrowRight,
   Clock,
   User,
@@ -42,6 +43,13 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { AnnouncementBanner } from "@/components/ui/announcement-banner"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 // Defer heavy, below-the-fold widgets to reduce initial JS
 const StudentRankings = dynamic(
@@ -70,78 +78,44 @@ const CelebrationOverlay = dynamic(
 )
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState("academic")
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme } = useTheme()
-  const isGamingTheme = theme === "gaming"
-  const isDarkMode = theme === "dark" || theme === "gaming"
+
+  // Calculate theme values safely after mounting to avoid hydration mismatch
+  const isGamingTheme = mounted ? theme === "gaming" : false
+  const isDarkMode = mounted ? (theme === "dark" || theme === "gaming") : false
+
+  // Generate background circles only on client to avoid hydration mismatch
+  const [backgroundCircles, setBackgroundCircles] = useState<Array<{
+    left: string
+    top: string
+    width: string
+    height: string
+  }>>([])
+
+  useEffect(() => {
+    setMounted(true)
+
+    // Generate random positions only on client side
+    setBackgroundCircles(
+      Array.from({ length: 6 }, () => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        width: `${Math.random() * 200 + 100}px`,
+        height: `${Math.random() * 200 + 100}px`,
+      }))
+    )
+  }, [])
 
   const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 })
   const [welcomeRef, welcomeInView] = useIntersectionObserver({ threshold: 0.1 })
   const [rankingsRef, rankingsInView] = useIntersectionObserver({ threshold: 0.1 })
   const [galleryRef, galleryInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [featuresRef, featuresInView] = useIntersectionObserver({ threshold: 0.1 })
   const [extracurricularRef, extracurricularInView] = useIntersectionObserver({ threshold: 0.1 })
   const [eventsRef, eventsInView] = useIntersectionObserver({ threshold: 0.1 })
   const [achievementsRef, achievementsInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [testimonialsRef, testimonialsInView] = useIntersectionObserver({ threshold: 0.1 })
   const [ctaRef, ctaInView] = useIntersectionObserver({ threshold: 0.1 })
-
-  const features = [
-    {
-      title: "Academic Excellence",
-      description:
-        "Comprehensive curriculum with AP courses, STEM programs, and college preparation that prepares students for success.",
-      icon: <BookOpen className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400&text=Academic+Excellence",
-      badge: "98% College Acceptance",
-      stats: [
-        { label: "AP Courses", value: "25+" },
-        { label: "Average GPA", value: "3.8" },
-      ],
-      variant: "featured" as const,
-    },
-    {
-      title: "Student Life",
-      description: "Vibrant campus community with diverse clubs, organizations, and activities for every interest.",
-      icon: <Users className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400&text=Student+Life",
-      badge: "30+ Clubs",
-      stats: [
-        { label: "Active Clubs", value: "30+" },
-        { label: "Participation", value: "85%" },
-      ],
-    },
-    {
-      title: "Athletics",
-      description: "Championship sports programs that build character, teamwork, and school pride.",
-      icon: <Trophy className="w-6 h-6" />,
-      image: "/placeholder.svg?height=200&width=400&text=Athletics",
-      badge: "State Champions",
-      stats: [
-        { label: "Sports Teams", value: "15+" },
-        { label: "Championships", value: "12" },
-      ],
-    },
-    {
-      title: "Events & Activities",
-      description: "Year-round events, performances, and celebrations that bring our community together.",
-      icon: <Calendar className="w-6 h-6" />,
-      badge: "100+ Events/Year",
-    },
-    {
-      title: "Awards & Recognition",
-      description: "Celebrating student achievements and academic excellence at local, state, and national levels.",
-      icon: <Award className="w-6 h-6" />,
-      badge: "50+ Awards",
-    },
-    {
-      title: "College Preparation",
-      description: "Comprehensive guidance and support to help students achieve their higher education goals.",
-      icon: <GraduationCap className="w-6 h-6" />,
-      badge: "95% College Bound",
-    },
-  ]
 
   const achievements = [
     {
@@ -174,38 +148,6 @@ export default function HomePage() {
     },
   ]
 
-  const featuredNews = [
-    {
-      id: 1,
-      title: "Science Fair Champions Advance to Nationals",
-      excerpt: "Our students' innovative projects earn recognition at state level competition.",
-      author: "Dr.Sarah Chen",
-      date: "2024-02-15",
-      category: "Academic",
-      image: "/placeholder.svg?height=200&width=300&text=Science+Fair",
-      readTime: "3 min read",
-    },
-    {
-      id: 2,
-      title: "New STEM Laboratory Opens",
-      excerpt: "State-of-the-art facilities now available for advanced research and learning.",
-      author: "Principal Martinez",
-      date: "2024-02-10",
-      category: "Facilities",
-      image: "/placeholder.svg?height=200&width=300&text=STEM+Lab",
-      readTime: "2 min read",
-    },
-    {
-      id: 3,
-      title: "Basketball Team Reaches State Finals",
-      excerpt: "Eagles continue undefeated season with championship game ahead.",
-      author: "Coach Johnson",
-      date: "2024-02-08",
-      category: "Athletics",
-      image: "/placeholder.svg?height=200&width=300&text=Basketball",
-      readTime: "4 min read",
-    },
-  ]
 
   const upcomingEvents = [
     {
@@ -237,65 +179,59 @@ export default function HomePage() {
     },
   ]
 
-  const extracurricularCategories = [
-    {
-      category: "Academic",
-      color: "from-blue-500 to-blue-600",
-      clubs: [
-        { name: "National Honor Society", members: 85, icon: <GraduationCap className="w-5 h-5" /> },
-        { name: "Math Club", members: 42, icon: <Calculator className="w-5 h-5" /> },
-        { name: "Science Olympiad", members: 38, icon: <Microscope className="w-5 h-5" /> },
-        { name: "Debate Team", members: 28, icon: <Users className="w-5 h-5" /> },
-      ],
-    },
-    {
-      category: "Arts & Culture",
-      color: "from-purple-500 to-pink-500",
-      clubs: [
-        { name: "Drama Club", members: 55, icon: <Drama className="w-5 h-5" /> },
-        { name: "Art Society", members: 47, icon: <Palette className="w-5 h-5" /> },
-        { name: "Music Ensemble", members: 62, icon: <Music className="w-5 h-5" /> },
-        { name: "Photography Club", members: 34, icon: <Camera className="w-5 h-5" /> },
-      ],
-    },
-    {
-      category: "Special Interest",
-      color: "from-green-500 to-teal-500",
-      clubs: [
-        { name: "Gaming Club", members: 78, icon: <Gamepad2 className="w-5 h-5" /> },
-        { name: "Environmental Club", members: 41, icon: <Globe className="w-5 h-5" /> },
-        { name: "Volunteer Corps", members: 92, icon: <Heart className="w-5 h-5" /> },
-        { name: "Cultural Club", members: 56, icon: <Users className="w-5 h-5" /> },
-      ],
-    },
-  ]
+  const [clubs, setClubs] = useState<any[]>([])
+  const [isLoadingClubs, setIsLoadingClubs] = useState(true)
 
-  const testimonials = [
-    {
-      name: "Sarah Johnson",
-      role: "Class of 2023",
-      content:
-        "Southville 8B NHS provided me with the foundation I needed to succeed in college. The teachers truly care about each student's success.",
-      image: "/placeholder.svg?height=80&width=80&text=SJ",
-      rating: 5,
-    },
-    {
-      name: "Michael Chen",
-      role: "Current Student",
-      content:
-        "The variety of clubs and activities here is amazing. I've been able to explore my interests and develop leadership skills.",
-      image: "/placeholder.svg?height=80&width=80&text=MC",
-      rating: 5,
-    },
-    {
-      name: "Dr. Emily Rodriguez",
-      role: "Parent",
-      content:
-        "As a parent, I'm impressed by the school's commitment to academic excellence and character development. My daughter thrives here.",
-      image: "/placeholder.svg?height=80&width=80&text=ER",
-      rating: 5,
-    },
-  ]
+  // Fetch clubs from API
+  useEffect(() => {
+    async function fetchClubs() {
+      try {
+        setIsLoadingClubs(true)
+        const { getClubs } = await import("@/lib/api/endpoints/clubs")
+        const clubsData = await getClubs({ limit: 50 })
+        setClubs(clubsData)
+      } catch (error) {
+        console.error("Error fetching clubs:", error)
+      } finally {
+        setIsLoadingClubs(false)
+      }
+    }
+    fetchClubs()
+  }, [])
+
+  // Icon mapping for clubs
+  const getClubIcon = (clubName: string) => {
+    const name = clubName.toLowerCase()
+    if (name.includes("math")) return <Calculator className="w-5 h-5" />
+    if (name.includes("science")) return <Microscope className="w-5 h-5" />
+    if (name.includes("art") || name.includes("arts")) return <Palette className="w-5 h-5" />
+    if (name.includes("music")) return <Music className="w-5 h-5" />
+    if (name.includes("drama") || name.includes("theater")) return <Drama className="w-5 h-5" />
+    if (name.includes("photo")) return <Camera className="w-5 h-5" />
+    if (name.includes("game") || name.includes("gaming")) return <Gamepad2 className="w-5 h-5" />
+    if (name.includes("environment")) return <Globe className="w-5 h-5" />
+    if (name.includes("volunteer")) return <Heart className="w-5 h-5" />
+    if (name.includes("debate") || name.includes("speech")) return <Users className="w-5 h-5" />
+    if (name.includes("honor") || name.includes("academic")) return <GraduationCap className="w-5 h-5" />
+    if (name.includes("sport") || name.includes("athletic")) return <Trophy className="w-5 h-5" />
+    return <Users className="w-5 h-5" /> // Default icon
+  }
+
+  // Get color gradient for clubs
+  const getClubColor = (index: number) => {
+    const colors = [
+      "from-blue-500 to-blue-600",
+      "from-purple-500 to-purple-600",
+      "from-green-500 to-teal-600",
+      "from-orange-500 to-red-500",
+      "from-pink-500 to-rose-600",
+      "from-indigo-500 to-blue-600",
+      "from-cyan-500 to-blue-500",
+      "from-emerald-500 to-green-600",
+    ]
+    return colors[index % colors.length]
+  }
+
 
   const announcementItems = [
     {
@@ -311,10 +247,11 @@ export default function HomePage() {
   ]
 
   return (
-    <div className={cn("min-h-screen", isDarkMode && "dark")}>      
-      <section ref={heroRef}>
-        <HeroSection />
-      </section>
+    <div className={cn("min-h-screen", isDarkMode && "dark")} suppressHydrationWarning>
+      <div id="main-content">
+        <section ref={heroRef} aria-label="Hero section">
+          <HeroSectionEnhanced />
+        </section>
       <div className="relative z-[30] -mt-3 sm:-mt-4">
         <AnnouncementBanner items={announcementItems} fullBleed />
       </div>
@@ -331,7 +268,7 @@ export default function HomePage() {
       >
         {/* Background decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
+          {backgroundCircles.map((circle, i) => (
             <div
               key={i}
               className={cn(
@@ -339,10 +276,10 @@ export default function HomePage() {
                 isDarkMode ? "bg-blue-400" : "bg-gradient-to-r from-blue-400 to-purple-400",
               )}
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                width: `${Math.random() * 200 + 100}px`,
-                height: `${Math.random() * 200 + 100}px`,
+                left: circle.left,
+                top: circle.top,
+                width: circle.width,
+                height: circle.height,
               }}
             />
           ))}
@@ -424,6 +361,10 @@ export default function HomePage() {
 
       <AnnouncementsSection />
 
+      <EventsSection />
+
+      <NewsSection />
+
       {/* Student Rankings */}
       <section ref={rankingsRef} className="py-20 bg-background">
         <div className="container mx-auto px-4">
@@ -453,324 +394,162 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured News */}
-      <section className="py-16 sm:py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-8 sm:mb-12 gap-4">
-            <div className="animate-slideInLeft">
-              <Badge variant="secondary" className="mb-4">
-                <Newspaper className="w-4 h-4 mr-2" />
-                Latest Updates
-              </Badge>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Featured <span className="gradient-text">News</span>
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground">
-                Stay informed with the latest happenings in our school community.
-              </p>
-            </div>
-            <AnimatedButton
-              variant="outline"
-              className="self-start lg:self-auto animate-slideInRight group hover:scale-105 transition-all duration-300"
-              asChild
-            >
-              <Link href="/guess/news-events">
-                View All News
-                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </AnimatedButton>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 xs:gap-6 sm:gap-8">
-            {featuredNews.map((article, index) => (
-              <AnimatedCard
-                key={article.id}
-                className="group cursor-pointer hover:scale-105 transition-all duration-300 animate-slideInUp overflow-visible relative"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <Link href={article.id === 1 ? "/guess/news/science-fair-champions" : "/guess/news"}>
-                  <div className="aspect-video relative overflow-hidden mb-4">
-                    <Image
-                      src={article.image || "/placeholder.svg"}
-                      alt={article.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
-                      priority={index === 0}
-                    />
-                    <div className="absolute top-2 xs:top-4 right-2 xs:right-4">
-                      <Badge
-                        variant="secondary"
-                        className="bg-white/95 text-gray-900 backdrop-blur-sm text-xs xs:text-sm"
-                      >
-                        {article.category}
-                      </Badge>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-
-                  {/* Box format for md screens and up */}
-                  <div className="hidden md:block absolute left-4 xs:left-6 sm:left-8 top-4 xs:top-6 sm:top-8 z-10">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-md p-1.5 xs:p-2 shadow-lg min-w-[50px] xs:min-w-[60px] text-center group-hover:scale-110 transition-transform duration-300">
-                      <div className="text-sm xs:text-lg font-bold leading-none">
-                        {new Date(article.date).getDate()}
-                      </div>
-                      <div className="text-[10px] xs:text-xs font-medium uppercase leading-none mt-0.5 xs:mt-1">
-                        {new Date(article.date).toLocaleDateString("en-US", { month: "short" })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Text format for smaller screens */}
-                  <div className="md:hidden absolute top-2 left-2 z-10">
-                    <div className="bg-black/70 text-white px-2 py-1 rounded text-xs font-medium backdrop-blur-sm">
-                      {new Date(article.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="p-4 xs:p-5 sm:p-6">
-                    <h3 className="text-lg xs:text-xl font-bold mb-2 xs:mb-3 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
-                      {article.title}
-                    </h3>
-                    <p className="text-muted-foreground mb-3 xs:mb-4 line-clamp-2 leading-relaxed text-sm xs:text-base">
-                      {article.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <div className="flex items-center text-muted-foreground hover:text-primary transition-colors">
-                        <div className="w-5 h-5 xs:w-6 xs:h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2">
-                          <User className="w-2.5 h-2.5 xs:w-3 xs:h-3 text-white" />
-                        </div>
-                        <span className="font-medium truncate">{article.author}</span>
-                      </div>
-                      <div className="flex items-center text-muted-foreground flex-shrink-0 ml-2">
-                        <Clock className="w-3 h-3 xs:w-4 xs:h-4 mr-1" />
-                        <span>{article.readTime}</span>
-                      </div>
-                    </div>
-                    <div className="mt-3 xs:mt-4 pt-3 xs:pt-4 border-t border-transparent group-hover:border-border transition-colors">
-                      <div className="flex items-center text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                        <span className="text-xs xs:text-sm font-medium">Read more</span>
-                        <ArrowRight className="w-3 h-3 xs:w-4 xs:h-4 ml-1" />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </AnimatedCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section ref={featuresRef} className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className={cn("text-center mb-16", featuresInView && "animate-fadeIn")}>            
-            <Badge variant="secondary" className="mb-4">
-              <Target className="w-4 h-4 mr-2" />
-              Our Programs
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Discover Your <span className="gradient-text">Potential</span>
-            </h2>
-            <p className="text-xl max-w-3xl mx-auto text-muted-foreground">
-              From rigorous academics to vibrant extracurriculars, we offer comprehensive programs designed to help
-              every student succeed and thrive.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <FeatureCard
-                key={index}
-                {...feature}
-                className={cn(featuresInView && "animate-slideInUp")}
-                style={{ animationDelay: `${index * 0.1}s` }}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Extracurricular Activities Section */}
-      <section className="py-12 xs:py-16 sm:py-20 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-        <div className="container mx-auto px-4 xs:px-6 sm:px-8">
+      <section className="py-12 xs:py-16 sm:py-20 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-20 right-10 w-40 h-40 bg-gradient-to-r from-indigo-400/10 to-cyan-400/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+        </div>
+
+        <div className="container mx-auto px-4 xs:px-6 sm:px-8 relative z-10">
           <div className="text-center mb-8 xs:mb-12 sm:mb-16">
+            {/* Enhanced badge */}
+            <div className="inline-flex items-center justify-center mb-4 xs:mb-6">
+              <div className="rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-3 animate-float">
+                <Sparkles className="w-6 h-6 xs:w-8 xs:h-8 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+
             <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 px-4 xs:px-6 py-2 xs:py-3 rounded-full text-sm xs:text-base font-bold mb-4 xs:mb-6 shadow-sm">
-              <Sparkles className="w-4 h-4 xs:w-5 xs:h-5" />
               <span>🎯 Extracurricular</span>
             </div>
+
             <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 xs:mb-6">
               Beyond the <span className="gradient-text">Classroom</span>
+              <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-blue-600 to-purple-600"></div>
             </h2>
-            <p className="text-base xs:text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto">
+
+            <p className="text-base xs:text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
               Discover opportunities to grow, lead, and make lasting connections through our diverse range of clubs and
               activities.
             </p>
+
+            {/* Stats row */}
+            {!isLoadingClubs && clubs.length > 0 && (
+              <div className="flex justify-center gap-6 sm:gap-12 mt-8 flex-wrap">
+                <div className="text-center">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    {clubs.length}+
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Active Clubs</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    95%
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Participation</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    200+
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Events Yearly</div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex justify-center mb-12">
-              <TabsList className="grid grid-cols-3 bg-gray-100 dark:bg-gray-800 rounded-full p-1 shadow-sm">
-                <TabsTrigger
-                  value="academic"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
-                >
-                  <GraduationCap className="w-4 h-4 mr-2" />
-                  Academic Excellence
-                </TabsTrigger>
-                <TabsTrigger
-                  value="arts"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
-                >
-                  <Palette className="w-4 h-4 mr-2" />
-                  Arts & Culture
-                </TabsTrigger>
-                <TabsTrigger
-                  value="special"
-                  className="text-sm font-medium px-6 py-2 rounded-full data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-gray-600 dark:data-[state=inactive]:text-gray-400 transition-all duration-200"
-                >
-                  <Heart className="w-4 h-4 mr-2" />
-                  Special Interest
-                </TabsTrigger>
-              </TabsList>
+          {isLoadingClubs ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-muted-foreground">Loading clubs...</p>
+              </div>
             </div>
-
-            {extracurricularCategories.map((category, categoryIndex) => (
-              <TabsContent
-                key={category.category}
-                value={["academic", "arts", "special"][categoryIndex]}
-                className="space-y-8"
+          ) : clubs.length === 0 ? (
+            <div className="text-center py-20">
+              <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">No Clubs Available</h3>
+              <p className="text-muted-foreground">Check back soon for exciting club opportunities!</p>
+            </div>
+          ) : (
+            <div className="relative px-8 sm:px-12 md:px-16">
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: true,
+                }}
+                className="w-full"
               >
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold mb-3">
-                    {category.category === "Academic" && "🎓 Academic Excellence Clubs"}
-                    {category.category === "Arts & Culture" && "🎨 Creative Arts & Cultural Organizations"}
-                    {category.category === "Special Interest" && "🌟 Special Interest & Community Groups"}
-                  </h3>
-                  <p className="text-muted-foreground max-w-2xl mx-auto">
-                    {category.category === "Academic" &&
-                      "Enhance your learning through academic competitions, research projects, and scholarly pursuits."}
-                    {category.category === "Arts & Culture" &&
-                      "Express your creativity and celebrate diverse cultures through artistic endeavors and performances."}
-                    {category.category === "Special Interest" &&
-                      "Pursue your unique interests and make a positive impact in your community."}
-                  </p>
-                </div>
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {clubs.map((club, index) => (
+                    <CarouselItem key={club.id} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                      <AnimatedCard
+                        className="group hover:scale-105 transition-all duration-300 cursor-pointer animate-slideInUp bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 border border-gray-200 dark:border-gray-700 hover:border-primary/30 shadow-md hover:shadow-xl relative overflow-hidden h-full"
+                        style={{ animationDelay: `${index * 0.05}s` }}
+                      >
+                        {/* Decorative gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-500/5 dark:to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                <div className="grid xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xs:gap-6">
-                  {category.clubs.map((club, index) => (
-                    <AnimatedCard
-                      key={club.name}
-                      className="group hover:scale-105 transition-all duration-300 cursor-pointer animate-slideInUp bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 border border-gray-200 dark:border-gray-700 hover:border-primary/30 shadow-md hover:shadow-lg relative overflow-hidden"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <div className="p-4 xs:p-5 sm:p-6 text-center relative z-10">
-                        {/* Club icon with enhanced styling */}
-                        <div className="relative mb-4 xs:mb-5 sm:mb-6">
-                          <div
-                            className={cn(
-                              "w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 mx-auto rounded-lg xs:rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-all duration-300 shadow-md",
-                              `bg-gradient-to-r ${category.color}`,
-                            )}
-                          >
-                            {club.icon}
+                        <div className="p-4 xs:p-5 sm:p-6 text-center relative z-10 flex flex-col h-full">
+                          {/* Club icon with enhanced styling */}
+                          <div className="relative mb-4 xs:mb-5 sm:mb-6">
+                            <div
+                              className={cn(
+                                "w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 mx-auto rounded-lg xs:rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-all duration-300 shadow-md group-hover:shadow-lg",
+                                `bg-gradient-to-r ${getClubColor(index)}`,
+                              )}
+                            >
+                              {getClubIcon(club.name)}
+                            </div>
                           </div>
-                          {/* Member count badge */}
-                          <div className="absolute -top-1 xs:-top-2 -right-1 xs:-right-2 bg-gradient-to-r from-orange-400 to-red-400 text-white text-[10px] xs:text-xs font-bold px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full shadow-md">
-                            {club.members}
-                          </div>
-                        </div>
 
-                        {/* Club name */}
-                        <h3 className="text-base xs:text-lg font-bold mb-2 xs:mb-3 group-hover:text-primary transition-colors duration-300 leading-tight">
-                          {club.name}
-                        </h3>
+                          {/* Club name */}
+                          <h3 className="text-base xs:text-lg font-bold mb-2 xs:mb-3 group-hover:text-primary transition-colors duration-300 leading-tight min-h-[3rem]">
+                            {club.name}
+                          </h3>
 
-                        {/* Member info */}
-                        <div className="flex items-center justify-center space-x-1 xs:space-x-2 mb-3 xs:mb-4">
-                          <Users className="w-3 h-3 xs:w-4 xs:h-4 text-muted-foreground" />
-                          <span className="text-xs xs:text-sm font-medium text-muted-foreground">
-                            {club.members} active members
-                          </span>
-                        </div>
+                          {/* Description */}
+                          {club.description && (
+                            <p className="text-xs text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem] flex-grow">
+                              {club.description}
+                            </p>
+                          )}
 
-                        {/* Join button */}
-                        <Link
-                          href={club.name === "Math Club" ? "/guess/math-club" : "/guess/extracurricular"}
-                          className="w-full"
-                        >
-                          <AnimatedButton
-                            variant="outline"
-                            size="sm"
-                            className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all duration-300 group-hover:scale-105 text-xs xs:text-sm h-8 xs:h-9 sm:h-10 md:h-11 lg:h-12 rounded-full"
+                          {/* Join button */}
+                          <Link
+                            href={club.name === "Math Club" ? "/guess/math-club" : "/guess/extracurricular"}
+                            className="w-full mt-auto"
                           >
-                            <span className="mr-1 xs:mr-2">Join Club</span>
-                            <ArrowRight className="w-3 h-3 xs:w-4 xs:h-4" />
-                          </AnimatedButton>
-                        </Link>
-                      </div>
-                    </AnimatedCard>
+                            <AnimatedButton
+                              variant="outline"
+                              size="sm"
+                              className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 hover:text-white hover:border-transparent transition-all duration-300 group-hover:scale-105 text-xs xs:text-sm h-8 xs:h-9 sm:h-10 rounded-full"
+                            >
+                              <span className="mr-1 xs:mr-2">Learn More</span>
+                              <ArrowRight className="w-3 h-3 xs:w-4 xs:h-4 group-hover:translate-x-1 transition-transform" />
+                            </AnimatedButton>
+                          </Link>
+                        </div>
+                      </AnimatedCard>
+                    </CarouselItem>
                   ))}
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+                </CarouselContent>
+                <CarouselPrevious className="hidden sm:flex -left-4 md:-left-6 lg:-left-8 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 shadow-lg" />
+                <CarouselNext className="hidden sm:flex -right-4 md:-right-6 lg:-right-8 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 shadow-lg" />
+              </Carousel>
+            </div>
+          )}
+
+          {/* View All Clubs Button */}
+          {!isLoadingClubs && clubs.length > 0 && (
+            <div className="text-center mt-12">
+              <Link href="/guess/extracurricular">
+                <AnimatedButton
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                >
+                  <Users className="w-5 h-5 mr-2" />
+                  Explore All {clubs.length} Clubs
+                  <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </AnimatedButton>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section ref={testimonialsRef} className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className={cn("text-center mb-16", testimonialsInView && "animate-fadeIn")}>            
-            <Badge variant="secondary" className="mb-4">
-              <Heart className="w-4 h-4 mr-2" />
-              Community Voices
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              What Our <span className="gradient-text">Community</span> Says
-            </h2>
-            <p className="text-xl max-w-3xl mx-auto text-muted-foreground">
-              Hear from students, parents, and alumni about their experiences at Southville 8B National High School.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <AnimatedCard
-                key={index}
-                className="group hover:scale-105 transition-all duration-300 animate-slideInUp"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    <Image
-                      src={testimonial.image || "/placeholder.svg"}
-                      alt={testimonial.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform object-cover"
-                      loading="lazy"
-                    />
-                    <div>
-                      <h3 className="font-bold group-hover:text-primary transition-colors">{testimonial.name}</h3>
-                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground mb-4 italic">"{testimonial.content}"</p>
-                  <div className="flex">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
-                    ))}
-                  </div>
-                </div>
-              </AnimatedCard>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Academic Calendar */}
       <section className="py-20 bg-background">
@@ -800,12 +579,85 @@ export default function HomePage() {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          {/* content omitted for brevity (unchanged from original) */}
+          <div className={cn("text-center max-w-4xl mx-auto", ctaInView && "animate-fadeIn")}>
+            <Badge variant="secondary" className="mb-6 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Advanced Learning Platform
+            </Badge>
+            
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              Experience Our <span className="gradient-text">Advanced AI LMS Platform</span>
+            </h2>
+            
+            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+              Cutting-edge educational technology designed to enhance learning and streamline teaching. 
+              Our comprehensive platform provides everything students and educators need to succeed.
+            </p>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Interactive Learning</h3>
+                <p className="text-sm text-muted-foreground">Engaging digital content and interactive lessons</p>
+              </div>
+              
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Quiz System</h3>
+                <p className="text-sm text-muted-foreground">Interactive assessments and instant feedback</p>
+              </div>
+              
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">Progress Tracking</h3>
+                <p className="text-sm text-muted-foreground">Real-time analytics and performance insights</p>
+              </div>
+
+              <div className="text-center p-6 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">AI Assistant</h3>
+                <p className="text-sm text-muted-foreground">Intelligent support and personalized learning guidance</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/guess/student">
+                <AnimatedButton 
+                  size="lg" 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <User className="w-5 h-5 mr-2" />
+                  Student Portal
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </AnimatedButton>
+              </Link>
+              
+              <Link href="/guess/teacher">
+                <AnimatedButton 
+                  variant="outline" 
+                  size="lg"
+                  className="border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white transition-all duration-300"
+                >
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Teacher Portal
+                </AnimatedButton>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Celebration Overlay */}
       <CelebrationOverlay isOpen={isCelebrationOpen} onClose={() => setIsCelebrationOpen(false)} />
+      </div>
     </div>
   )
 }

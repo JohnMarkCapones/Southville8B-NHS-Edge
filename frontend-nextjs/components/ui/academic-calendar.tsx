@@ -9,14 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { getAcademicCalendars } from "@/lib/api/endpoints/academic-calendar"
+import { getEvents } from "@/lib/api/endpoints/events"
+import type { AcademicCalendar, AcademicCalendarDay } from "@/lib/api/types/academic-calendar"
+import type { Event as ApiEvent } from "@/lib/api/types/events"
+import { EventStatus, EventVisibility } from "@/lib/api/types/events"
 import {
   Calendar,
   ChevronLeft,
   ChevronRight,
   Search,
   Filter,
-  Download,
-  Bell,
   Clock,
   Plus,
   BookOpen,
@@ -28,12 +31,14 @@ import {
   CalendarDays,
   Coffee,
   Music,
-  Heart,
   Star,
   Sparkles,
   PartyPopper,
   Briefcase,
   Zap,
+  X,
+  Copy,
+  Heart,
 } from "lucide-react"
 
 interface CalendarEvent {
@@ -59,6 +64,8 @@ interface CalendarEvent {
   time?: string
   color: string
   priority?: "high" | "medium" | "low"
+  source?: 'academic-calendar' | 'main-events' | 'mock' // Add source identifier
+  originalEvent?: ApiEvent // Keep reference to original event for linking
 }
 
 const eventCategories = {
@@ -458,7 +465,12 @@ export function AcademicCalendar() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [selectedEventDetails, setSelectedEventDetails] = useState<CalendarEvent | null>(null) // New state for sidebar event details
   const [personalEvents, setPersonalEvents] = useState<string[]>([])
+  const [apiCalendars, setApiCalendars] = useState<AcademicCalendar[]>([])
+  const [mainEvents, setMainEvents] = useState<ApiEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Custom hook to handle window width safely for SSR
@@ -479,6 +491,44 @@ export function AcademicCalendar() {
     return () => window.removeEventListener('resize', checkScreenSize)
   }, [])
 
+  // Fetch API data - both academic calendar and main events
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Fetch both academic calendar and main events in parallel
+        const [academicResponse, eventsResponse] = await Promise.all([
+          getAcademicCalendars({
+            include_days: true,
+            include_markers: true,
+            limit: 50
+          }),
+          getEvents({
+            page: 1,
+            limit: 100,
+            status: EventStatus.PUBLISHED,
+            visibility: EventVisibility.PUBLIC
+          })
+        ])
+        
+        setApiCalendars(academicResponse.data)
+        setMainEvents(eventsResponse.data)
+      } catch (err) {
+        console.error('Failed to fetch data:', err)
+        setError('Failed to load calendar and events data')
+        // Fallback to empty arrays
+        setApiCalendars([])
+        setMainEvents([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAllData()
+  }, [])
+
   const monthNames = [
     "January",
     "February",
@@ -496,15 +546,138 @@ export function AcademicCalendar() {
 
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
+  // Convert Academic Calendar data to CalendarEvent format
+  const convertAcademicCalendarToEvents = useMemo(() => {
+    const events: CalendarEvent[] = []
+    
+    apiCalendars.forEach(calendar => {
+      if (calendar.days) {
+        calendar.days.forEach(day => {
+          if (day.note && day.note.trim() !== '' && day.note !== 'Weekend') {
+            // Determine category based on note content - using only existing eventCategories
+            let category = 'academic'
+            let priority: 'low' | 'medium' | 'high' = 'medium'
+            
+            const note = day.note.toLowerCase()
+            
+            if (note.includes('exam') || note.includes('test') || note.includes('midterm')) {
+              category = 'exam'
+              priority = 'high'
+            } else if (note.includes('holiday') || note.includes('break') || note.includes('no school')) {
+              category = 'holiday'
+              priority = 'medium'
+            } else if (note.includes('party') || note.includes('halloween') || note.includes('contest')) {
+              category = 'celebration'
+              priority = 'medium'
+            } else if (note.includes('meeting') || note.includes('council')) {
+              category = 'meeting'
+              priority = 'medium'
+            } else if (note.includes('fair') || note.includes('registration')) {
+              category = 'registration'
+              priority = 'medium'
+            } else if (note.includes('deadline') || note.includes('due')) {
+              category = 'deadline'
+              priority = 'high'
+            } else if (note.includes('orientation') || note.includes('welcome')) {
+              category = 'orientation'
+              priority = 'medium'
+            }
+            
+            // Get color from eventCategories
+            const color = eventCategories[category as keyof typeof eventCategories]?.color || 'bg-gradient-to-r from-blue-500 to-blue-600'
+            
+            events.push({
+              id: `academic-${calendar.id}-${day.id}`,
+              title: day.note,
+              date: new Date(day.date),
+              time: day.is_holiday ? 'All Day' : '9:00 AM',
+              location: 'School Campus',
+              description: `${day.note} - ${calendar.month_name} ${calendar.year}`,
+              category,
+              priority,
+              color,
+              source: 'academic-calendar' // Add source identifier
+            })
+          }
+        })
+      }
+    })
+    
+    return events
+  }, [apiCalendars])
+
+  // Convert Main Events API data to CalendarEvent format
+  const convertMainEventsToCalendarEvents = useMemo(() => {
+    const events: CalendarEvent[] = []
+    
+    mainEvents.forEach(event => {
+      // Determine category based on event title/description
+      let category = 'academic'
+      let priority: 'low' | 'medium' | 'high' = 'medium'
+      
+      const title = event.title.toLowerCase()
+      const description = event.description.toLowerCase()
+      
+      if (title.includes('exam') || title.includes('test') || description.includes('exam')) {
+        category = 'exam'
+        priority = 'high'
+      } else if (title.includes('party') || title.includes('celebration') || title.includes('halloween')) {
+        category = 'celebration'
+        priority = 'medium'
+      } else if (title.includes('meeting') || title.includes('council')) {
+        category = 'meeting'
+        priority = 'medium'
+      } else if (title.includes('sports') || title.includes('basketball') || title.includes('championship')) {
+        category = 'sports'
+        priority = 'high'
+      } else if (title.includes('registration') || title.includes('enrollment')) {
+        category = 'registration'
+        priority = 'medium'
+      } else if (title.includes('deadline') || title.includes('due')) {
+        category = 'deadline'
+        priority = 'high'
+      } else if (title.includes('orientation') || title.includes('welcome')) {
+        category = 'orientation'
+        priority = 'medium'
+      }
+      
+      // Get color from eventCategories
+      const color = eventCategories[category as keyof typeof eventCategories]?.color || 'bg-gradient-to-r from-blue-500 to-blue-600'
+      
+      events.push({
+        id: `main-event-${event.id}`,
+        title: event.title,
+        date: new Date(event.date),
+        time: event.time || '9:00 AM',
+        location: event.location || 'School Campus',
+        description: event.description,
+        category,
+        priority,
+        color,
+        source: 'main-events', // Add source identifier
+        originalEvent: event // Keep reference to original event
+      })
+    })
+    
+    return events
+  }, [mainEvents])
+
   const filteredEvents = useMemo(() => {
-    return mockEvents.filter((event) => {
+    // Combine all event sources: mock events, academic calendar events, and main events
+    const allEvents = [
+      ...mockEvents.map(event => ({ ...event, source: 'mock' as const })),
+      ...convertAcademicCalendarToEvents,
+      ...convertMainEventsToCalendarEvents
+    ]
+    
+    return allEvents.filter((event) => {
       const matchesSearch =
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.description?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === "all" || event.category === selectedCategory
       return matchesSearch && matchesCategory
     })
-  }, [searchTerm, selectedCategory])
+  }, [searchTerm, selectedCategory, convertAcademicCalendarToEvents, convertMainEventsToCalendarEvents])
 
   const getEventsForDate = (date: Date) => {
     return filteredEvents.filter(
@@ -567,12 +740,12 @@ export function AcademicCalendar() {
     }
   }
 
-  const downloadCalendar = () => {
-    toast({
-      title: "Download Started",
-      description: "Calendar file is being prepared for download.",
-    })
+  // Handle event click from calendar grid
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEventDetails(event)
+    setSelectedDate(event.date)
   }
+
 
   const renderCalendarDays = () => {
     const daysInMonth = getDaysInMonth(currentDate)
@@ -625,14 +798,25 @@ export function AcademicCalendar() {
               <div
                 key={event.id}
                 className={cn(
-                  "w-full h-1 sm:h-1.5 rounded-full shadow-sm transition-all duration-200 hover:h-1.5 sm:hover:h-2",
+                  "w-full h-1 sm:h-1.5 rounded-full shadow-sm transition-all duration-200 hover:h-1.5 sm:hover:h-2 cursor-pointer hover:shadow-md",
                   event.color,
                 )}
                 title={event.title}
+                onClick={() => handleEventClick(event)}
               />
             ))}
             {events.length > (isSmallScreen ? 2 : 3) && (
-              <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 rounded px-0.5 sm:px-1 py-0.5 text-center">
+              <div 
+                className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 rounded px-0.5 sm:px-1 py-0.5 text-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                onClick={() => {
+                  // Show the first hidden event when clicking "+X more"
+                  const hiddenEvents = events.slice(isSmallScreen ? 2 : 3);
+                  if (hiddenEvents.length > 0) {
+                    handleEventClick(hiddenEvents[0]);
+                  }
+                }}
+                title={`Click to see ${events.length - (isSmallScreen ? 2 : 3)} more events`}
+              >
                 +{events.length - (isSmallScreen ? 2 : 3)}
               </div>
             )}
@@ -658,6 +842,79 @@ export function AcademicCalendar() {
     }
 
     return days
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 px-2 sm:px-4">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="flex justify-center mb-3 sm:mb-4">
+            <Badge
+              variant="secondary"
+              className="text-sm sm:text-base px-3 sm:px-6 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 border-0"
+            >
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Academic Year 2025-2026
+              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
+            </Badge>
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+            Academic <span className="gradient-text">Calendar</span>
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto">
+            Stay organized with important dates, deadlines, and exciting events throughout the school year
+          </p>
+        </div>
+        
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading academic calendar...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 px-2 sm:px-4">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="flex justify-center mb-3 sm:mb-4">
+            <Badge
+              variant="secondary"
+              className="text-sm sm:text-base px-3 sm:px-6 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 border-0"
+            >
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Academic Year 2025-2026
+              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
+            </Badge>
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+            Academic <span className="gradient-text">Calendar</span>
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto">
+            Stay organized with important dates, deadlines, and exciting events throughout the school year
+          </p>
+        </div>
+        
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="hover:scale-105 transition-transform"
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -695,7 +952,10 @@ export function AcademicCalendar() {
             />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectTrigger 
+              className="w-full sm:w-48 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+              aria-label="Filter events by category"
+            >
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -713,25 +973,6 @@ export function AcademicCalendar() {
           </Select>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadCalendar}
-            className="hover:scale-105 transition-transform bg-transparent justify-center sm:justify-start"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export Calendar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="hover:scale-105 transition-transform bg-transparent justify-center sm:justify-start"
-          >
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
-          </Button>
-        </div>
       </div>
 
       <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 sm:gap-8">
@@ -744,6 +985,7 @@ export function AcademicCalendar() {
                   size="sm"
                   onClick={() => navigateMonth("prev")}
                   className="hover:scale-110 transition-transform bg-white/80 dark:bg-gray-800/80 flex-shrink-0"
+                  aria-label="Previous month"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -755,6 +997,7 @@ export function AcademicCalendar() {
                   size="sm"
                   onClick={() => navigateMonth("next")}
                   className="hover:scale-110 transition-transform bg-white/80 dark:bg-gray-800/80 flex-shrink-0"
+                  aria-label="Next month"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -815,7 +1058,7 @@ export function AcademicCalendar() {
             </CardHeader>
             <CardContent className="space-y-2 sm:space-y-3 p-3 sm:p-4 max-h-80 sm:max-h-96 overflow-y-auto">
               {upcomingEvents.map((event) => {
-                const CategoryIcon = eventCategories[event.category].icon
+                const CategoryIcon = eventCategories[event.category as keyof typeof eventCategories]?.icon || BookOpen
                 return (
                   <Dialog key={event.id}>
                     <DialogTrigger asChild>
@@ -833,7 +1076,7 @@ export function AcademicCalendar() {
                           <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                             <span className="truncate">
-                              {event.date.toLocaleDateString()} • {eventCategories[event.category].label}
+                              {event.date.toLocaleDateString()} • {eventCategories[event.category as keyof typeof eventCategories]?.label || 'Event'}
                             </span>
                           </p>
                           {event.priority === "high" && (
@@ -856,7 +1099,7 @@ export function AcademicCalendar() {
                         <div className="flex flex-wrap items-center gap-2 text-sm">
                           <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                             <div className={cn("w-2 h-2 rounded-full", event.color)} />
-                            {eventCategories[event.category].label}
+                            {eventCategories[event.category as keyof typeof eventCategories]?.label || 'Event'}
                           </Badge>
                           {event.priority === "high" && (
                             <Badge variant="destructive" className="text-xs">
@@ -904,46 +1147,142 @@ export function AcademicCalendar() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-green-50 dark:from-gray-900 dark:to-green-900/20">
-            <CardHeader className="bg-gradient-to-r from-green-500/10 to-teal-500/10 dark:from-green-500/20 dark:to-teal-500/20 pb-3 sm:pb-4">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 sm:space-y-3 p-3 sm:p-4">
-              <Button
-                variant="outline"
-                className="w-full justify-start bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 hover:scale-105 transition-all text-sm"
-                onClick={downloadCalendar}
-              >
-                <Download className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
-                Export Calendar
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 hover:scale-105 transition-all text-sm"
-              >
-                <Bell className="w-4 h-4 mr-2 text-yellow-500 flex-shrink-0" />
-                Event Reminders
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 hover:scale-105 transition-all text-sm"
-              >
-                <Clock className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
-                School Schedule
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 hover:scale-105 transition-all text-sm"
-              >
-                <Music className="w-4 h-4 mr-2 text-purple-500 flex-shrink-0" />
-                Event Calendar
-              </Button>
-            </CardContent>
-          </Card>
+
+          {/* Event Details Panel */}
+          {selectedEventDetails && (
+            <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-900/20 animate-in slide-in-from-bottom duration-300">
+              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 pb-3 sm:pb-4">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-3 h-3 sm:w-4 sm:h-4 rounded-full", selectedEventDetails.color)} />
+                    <span>Event Details</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedEventDetails(null)}
+                    className="h-6 w-6 p-0 hover:bg-white/60 dark:hover:bg-gray-800/60"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base mb-2 text-gray-900 dark:text-white">
+                    {selectedEventDetails.title}
+                  </h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                      <div className={cn("w-2 h-2 rounded-full", selectedEventDetails.color)} />
+                      {eventCategories[selectedEventDetails.category as keyof typeof eventCategories]?.label || 'Event'}
+                    </Badge>
+                    {selectedEventDetails.priority === "high" && (
+                      <Badge variant="destructive" className="text-xs">
+                        <Star className="w-3 h-3 mr-1" />
+                        High Priority
+                      </Badge>
+                    )}
+                    {selectedEventDetails.source && (
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-xs",
+                          selectedEventDetails.source === 'academic-calendar' && "border-blue-500 text-blue-600",
+                          selectedEventDetails.source === 'main-events' && "border-green-500 text-green-600",
+                          selectedEventDetails.source === 'mock' && "border-gray-500 text-gray-600"
+                        )}
+                      >
+                        {selectedEventDetails.source === 'academic-calendar' && '📅 Academic'}
+                        {selectedEventDetails.source === 'main-events' && '🎉 School Event'}
+                        {selectedEventDetails.source === 'mock' && '📝 Sample'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {selectedEventDetails.description && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      {selectedEventDetails.description}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <span className="font-medium">{selectedEventDetails.date.toLocaleDateString()}</span>
+                  </div>
+                  {selectedEventDetails.time && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span>{selectedEventDetails.time}</span>
+                    </div>
+                  )}
+                  {selectedEventDetails.location && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
+                      <span className="truncate">{selectedEventDetails.location}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => addToPersonalCalendar(selectedEventDetails.id)}
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-md hover:shadow-lg transition-all text-sm"
+                    disabled={personalEvents.includes(selectedEventDetails.id)}
+                    size="sm"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    {personalEvents.includes(selectedEventDetails.id) ? "Added" : "Add to Calendar"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover:scale-105 transition-transform"
+                    onClick={() => {
+                      // Copy event details to clipboard
+                      const eventText = `${selectedEventDetails.title}\n${selectedEventDetails.date.toLocaleDateString()}\n${selectedEventDetails.description || ''}`;
+                      navigator.clipboard.writeText(eventText);
+                      toast({
+                        title: "Copied to Clipboard",
+                        description: "Event details have been copied to your clipboard.",
+                      });
+                    }}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
+
+                {/* View Full Event Button for Main Events */}
+                {selectedEventDetails.source === 'main-events' && selectedEventDetails.originalEvent && (
+                  <div className="pt-2">
+                    <Button
+                      asChild
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-md hover:shadow-lg transition-all text-sm"
+                      size="sm"
+                    >
+                      <a 
+                        href={`/guess/event/${selectedEventDetails.originalEvent.slug || selectedEventDetails.originalEvent.title
+                          .toLowerCase()
+                          .replace(/[^a-z0-9\s-]/g, '')
+                          .replace(/\s+/g, '-')
+                          .replace(/-+/g, '-')
+                          .trim()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Calendar className="w-3 h-3 mr-1" />
+                        View Full Event Details
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

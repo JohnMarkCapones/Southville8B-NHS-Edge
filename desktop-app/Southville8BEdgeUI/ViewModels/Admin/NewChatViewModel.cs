@@ -4,11 +4,18 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 
 namespace Southville8BEdgeUI.ViewModels.Admin;
 
 public partial class NewChatViewModel : ViewModelBase
 {
+    private readonly IChatService _chatService;
+    private readonly IApiClient _apiClient;
+    private readonly string _currentUserId;
+
     public Action? NavigateBack { get; set; }
     public Action<ChatCreationResult>? OnCreated { get; set; }
 
@@ -20,6 +27,7 @@ public partial class NewChatViewModel : ViewModelBase
     [ObservableProperty] private string _chatImagePath = string.Empty; // file path
     [ObservableProperty] private string _participantSearch = string.Empty;
     [ObservableProperty] private UserOption? _selectedAvailableUser;
+    [ObservableProperty] private bool _isLoadingUsers;
 
     public ObservableCollection<UserOption> AllUsers { get; } = new();
     public ObservableCollection<UserOption> FilteredAvailableUsers { get; } = new();
@@ -53,8 +61,66 @@ public partial class NewChatViewModel : ViewModelBase
             "Maria Rodriguez","Robert Wilson","Dr. Michael Brown","Jennifer Taylor","Catherine Martinez","Alex Johnson","Emily Davis","Daniel Lee","Sophia Clark","Liam Harris"
         };
         foreach (var n in names)
-            AllUsers.Add(new UserOption { Name = n });
+            AllUsers.Add(new UserOption { Name = n, UserId = Guid.NewGuid().ToString() });
         RefreshFiltered();
+    }
+
+    public NewChatViewModel(IChatService chatService, IApiClient apiClient, string currentUserId)
+    {
+        _chatService = chatService;
+        _apiClient = apiClient;
+        _currentUserId = currentUserId;
+        _ = LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        try
+        {
+            IsLoadingUsers = true;
+            
+            // Load Admins and Teachers (exclude current user)
+            var adminResponse = await _apiClient.GetUsersAsync(role: "Admin", limit: 100);
+            var teacherResponse = await _apiClient.GetUsersAsync(role: "Teacher", limit: 100);
+            
+            AllUsers.Clear();
+            
+            if (adminResponse?.Users != null)
+            {
+                foreach (var user in adminResponse.Users.Where(u => u.Id != _currentUserId))
+                {
+                    AllUsers.Add(new UserOption
+                    {
+                        UserId = user.Id,
+                        Name = user.FullName ?? user.Email,
+                        Role = user.Role ?? "Admin"
+                    });
+                }
+            }
+            
+            if (teacherResponse?.Users != null)
+            {
+                foreach (var user in teacherResponse.Users.Where(u => u.Id != _currentUserId))
+                {
+                    AllUsers.Add(new UserOption
+                    {
+                        UserId = user.Id,
+                        Name = user.FullName ?? user.Email,
+                        Role = user.Role ?? "Teacher"
+                    });
+                }
+            }
+            
+            RefreshFiltered();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[NewChatViewModel] Error loading users: {ex.Message}");
+        }
+        finally
+        {
+            IsLoadingUsers = false;
+        }
     }
 
     partial void OnChatNameChanged(string value)
@@ -154,24 +220,68 @@ public partial class NewChatViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CreateChat()
+    private async void CreateChat()
     {
         // Re-validate image once more before creation (in case file was deleted after selection)
         RecalculateImageValidation();
         UpdateCanCreate();
         if (!CanCreate) return;
 
-        var result = new ChatCreationResult
+        // For direct chat, we only need one participant
+        var targetUser = SelectedParticipants.FirstOrDefault();
+        if (targetUser == null || string.IsNullOrEmpty(targetUser.UserId))
         {
-            Name = ChatName.Trim(),
-            Description = Description.Trim(),
-            IsPublic = IsPublic,
-            AllowInvites = AllowInvites,
-            ImagePath = HasImage ? ChatImagePath : null,
-            Participants = SelectedParticipants.Select(p => p.Name).ToArray()
-        };
-        OnCreated?.Invoke(result);
-        NavigateBack?.Invoke();
+            System.Diagnostics.Debug.WriteLine("[NewChatViewModel] Cannot create chat: No valid participant selected");
+            return;
+        }
+
+        try
+        {
+            if (_chatService == null)
+            {
+                // For unit tests - invoke callbacks without API call
+                var result = new ChatCreationResult
+                {
+                    ConversationId = Guid.NewGuid().ToString(),
+                    Name = ChatName.Trim(),
+                    Description = Description.Trim(),
+                    IsPublic = IsPublic,
+                    AllowInvites = AllowInvites,
+                    ImagePath = HasImage ? ChatImagePath : null,
+                    Participants = SelectedParticipants.Select(p => p.Name).ToArray()
+                };
+                OnCreated?.Invoke(result);
+                NavigateBack?.Invoke();
+                return;
+            }
+
+            // Create direct conversation via API
+            var conversation = await _chatService.CreateDirectConversationAsync(targetUser.UserId);
+            
+            if (conversation != null)
+            {
+                var result = new ChatCreationResult
+                {
+                    ConversationId = conversation.Id,
+                    Name = targetUser.Name,
+                    Description = Description.Trim(),
+                    IsPublic = IsPublic,
+                    AllowInvites = AllowInvites,
+                    ImagePath = HasImage ? ChatImagePath : null,
+                    Participants = SelectedParticipants.Select(p => p.Name).ToArray()
+                };
+                OnCreated?.Invoke(result);
+                NavigateBack?.Invoke();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[NewChatViewModel] Failed to create conversation: API returned null");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[NewChatViewModel] Error creating conversation: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -182,12 +292,15 @@ public partial class NewChatViewModel : ViewModelBase
 
     public record UserOption
     {
+        public string UserId { get; init; } = string.Empty;
         public string Name { get; init; } = string.Empty;
+        public string Role { get; init; } = string.Empty;
         public override string ToString() => Name;
     }
 
     public class ChatCreationResult
     {
+        public string ConversationId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public bool IsPublic { get; set; }

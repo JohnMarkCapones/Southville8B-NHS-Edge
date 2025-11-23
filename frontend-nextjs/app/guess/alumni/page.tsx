@@ -1,7 +1,10 @@
+export const dynamic = "force-static"
+export const revalidate = 86400
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { MOCK_ALUMNI } from "@/lib/constants"
 import Image from "next/image"
 import { GraduationCap, Award, Users, Heart } from "lucide-react"
@@ -9,6 +12,7 @@ import { GraduationCap, Award, Users, Heart } from "lucide-react"
 export default function AlumniPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+      <GuessBreadcrumb items={[{ label: "Alumni" }]} />
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-vibrant-purple via-vibrant-pink to-vibrant-orange text-white">
         <div className="container mx-auto px-4 text-center">
@@ -36,7 +40,7 @@ export default function AlumniPage() {
             {MOCK_ALUMNI.map((alumni, index) => (
               <AnimatedCard
                 key={alumni.id}
-                animation="lift"
+                animation="glow"
                 variant="gradient" // Changed from boolean gradient prop to variant="gradient"
                 className="overflow-hidden animate-fadeIn"
                 style={{ animationDelay: `${index * 0.2}s` }}
@@ -92,7 +96,7 @@ export default function AlumniPage() {
             ].map((stat, index) => (
               <AnimatedCard
                 key={index}
-                animation="float"
+                animation="glow"
                 className="text-center p-6 animate-fadeIn"
                 style={{ animationDelay: `${index * 0.3}s` }}
               >
@@ -113,12 +117,12 @@ export default function AlumniPage() {
             Stay connected with your alma mater and fellow graduates. Share your success story!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <AnimatedButton
-              variant="outline"
-              size="lg"
-              animation="lift"
-              className="text-white border-white hover:bg-white/10"
-            >
+              <AnimatedButton
+                variant="outline"
+                size="lg"
+                animation="glow"
+                className="text-white border-white hover:bg-white/10"
+              >
               Register as Alumni
             </AnimatedButton>
             <AnimatedButton

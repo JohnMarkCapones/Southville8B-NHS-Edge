@@ -33,6 +33,11 @@ export function QuizSubmissionDialog({
 }: QuizSubmissionDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Safety check: if quiz is not loaded, don't render
+  if (!quiz) {
+    return null
+  }
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -40,10 +45,12 @@ export function QuizSubmissionDialog({
   }
 
   const getAnsweredCount = () => {
+    if (!quiz?.questions) return 0
     return quiz.questions.filter((q) => responses[q.id]).length
   }
 
   const getUnansweredQuestions = () => {
+    if (!quiz?.questions) return []
     return quiz.questions.filter((q) => !responses[q.id])
   }
 
@@ -130,7 +137,7 @@ export function QuizSubmissionDialog({
                     {unansweredQuestions.slice(0, 3).map((question, index) => (
                       <div key={question.id} className="text-sm text-yellow-700 dark:text-yellow-300">
                         • Question {quiz.questions.findIndex((q) => q.id === question.id) + 1}:{" "}
-                        {question.title.substring(0, 50)}...
+                        {(question.text || question.title || "Question").substring(0, 50)}...
                       </div>
                     ))}
                     {unansweredQuestions.length > 3 && (
@@ -151,7 +158,7 @@ export function QuizSubmissionDialog({
               <li>• Double-check your answers are complete and accurate</li>
               <li>• Make sure you've answered all required questions</li>
               <li>• Remember, you cannot change answers after submission</li>
-              {quiz.allowRetakes && <li>• You can retake this quiz if needed</li>}
+              {quiz.allowRetake && <li>• You can retake this quiz if needed</li>}
             </ul>
           </div>
         </div>

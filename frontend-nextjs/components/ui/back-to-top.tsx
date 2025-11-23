@@ -29,14 +29,13 @@ export function BackToTop() {
     })
   }
 
-  if (!isVisible) {
-    return null
-  }
-
+  // Don't return null - causes hydration mismatch. Instead, render but hide with opacity
   return (
     <Button
       onClick={scrollToTop}
-      className="fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full bg-primary shadow-lg hover:bg-primary/90 transition-all duration-300 hover:scale-110"
+      className={`fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full bg-primary shadow-lg hover:bg-primary/90 transition-all duration-300 hover:scale-110 ${
+        isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      }`}
       size="icon"
       aria-label="Back to top"
       title="Back to top"

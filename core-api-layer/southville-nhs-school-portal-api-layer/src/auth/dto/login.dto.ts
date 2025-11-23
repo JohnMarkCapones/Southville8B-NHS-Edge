@@ -28,3 +28,11 @@ export class TokenVerifyDto {
   token: string;
 }
 
+export class RefreshTokenDto {
+  @ApiProperty({
+    description: 'Supabase refresh token',
+    example: 'v1.MjQwNjQ4NTItYWU5...',
+  })
+  @IsNotEmpty({ message: 'Refresh token is required' })
+  refresh_token: string;
+}

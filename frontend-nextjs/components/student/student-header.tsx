@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -34,93 +34,145 @@ import {
   Sun,
   Moon,
   Monitor,
+  Calendar,
+  Users,
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { logoutAction } from "@/app/actions/auth"
+import { useTranslation, languages } from "@/lib/i18n"
+import { useNotifications } from "@/hooks/useNotifications"
 
 interface StudentHeaderProps {
   studentName: string
   studentAvatar?: string
+  gradeLevel?: string
+  section?: string
+  studentId?: string
   onToggleSidebar: () => void
   isMobile?: boolean
 }
 
-export default function StudentHeader({ studentName, studentAvatar, onToggleSidebar, isMobile }: StudentHeaderProps) {
-  const [selectedLanguage, setSelectedLanguage] = useState("English")
+export default function StudentHeader({ studentName, studentAvatar, gradeLevel, section, studentId, onToggleSidebar, isMobile }: StudentHeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { t, language, setLanguage } = useTranslation()
+  
+  const {
+    notifications: apiNotifications,
+    loading: notificationsLoading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications()
 
-  const languages = [
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "fil", name: "Filipino", flag: "🇵🇭" },
-  ]
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-  const notifications = [
-    {
-      id: 1,
-      type: "assignment",
-      title: "Math Assignment Due",
-      message: "Algebra homework is due tomorrow at 11:59 PM",
-      time: "2 hours ago",
-      read: false,
-      icon: BookOpen,
-      color: "text-blue-500",
-    },
-    {
-      id: 2,
-      type: "grade",
-      title: "New Grade Posted",
-      message: "Your Science quiz grade has been posted: 95/100",
-      time: "4 hours ago",
-      read: false,
-      icon: AlertCircle,
-      color: "text-green-500",
-    },
-    {
-      id: 3,
-      type: "schedule",
-      title: "Schedule Change",
-      message: "PE class moved to Gymnasium B for today",
-      time: "1 day ago",
-      read: true,
-      icon: Clock,
-      color: "text-orange-500",
-    },
-    {
-      id: 4,
-      type: "announcement",
-      title: "School Announcement",
-      message: "Parent-Teacher Conference scheduled for next week",
-      time: "2 days ago",
-      read: true,
-      icon: Bell,
-      color: "text-purple-500",
-    },
-  ]
+  // Map API notifications to the format expected by this component
+  const notifications = apiNotifications.map((n) => {
+    // Map notification type to icon and color
+    let icon = Bell
+    let color = "text-blue-500"
+    
+    switch (n.type) {
+      case "academic":
+        icon = BookOpen
+        color = "text-blue-500"
+        break
+      case "event":
+        icon = Calendar
+        color = "text-purple-500"
+        break
+      case "social":
+        icon = Users
+        color = "text-green-500"
+        break
+      case "success":
+        icon = AlertCircle
+        color = "text-green-500"
+        break
+      case "warning":
+        icon = AlertCircle
+        color = "text-orange-500"
+        break
+      case "error":
+        icon = AlertCircle
+        color = "text-red-500"
+        break
+      default:
+        icon = Bell
+        color = "text-blue-500"
+    }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+    // Format timestamp
+    const now = new Date()
+    const diff = now.getTime() - n.timestamp.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-  const markAsRead = (id: number) => {
-    // In a real app, this would update the notification status
-    console.log(`[v0] Marking notification ${id} as read`)
+    let time: string
+    if (minutes < 1) {
+      time = language === 'fil' ? "Ngayon lang" : "Just now"
+    } else if (minutes < 60) {
+      time = language === 'fil' ? `${minutes} minuto na ang nakalipas` : `${minutes}m ago`
+    } else if (hours < 24) {
+      time = language === 'fil' ? `${hours} oras na ang nakalipas` : `${hours}h ago`
+    } else if (days < 7) {
+      time = language === 'fil' ? `${days} araw na ang nakalipas` : `${days}d ago`
+    } else {
+      time = n.timestamp.toLocaleDateString()
+    }
+
+    return {
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      time,
+      read: n.read,
+      icon,
+      color,
+      actionUrl: n.actionUrl,
+    }
+  })
+
+  const handleMarkAsRead = async (id: string) => {
+    await markAsRead(id)
   }
 
-  const markAllAsRead = () => {
-    // In a real app, this would mark all notifications as read
-    console.log("[v0] Marking all notifications as read")
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
   }
 
   const themeOptions = [
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "system", label: "System", icon: Monitor },
+    { value: "light", label: t('header.light'), icon: Sun },
+    { value: "dark", label: t('header.dark'), icon: Moon },
+    { value: "system", label: t('header.system'), icon: Monitor },
   ]
 
-  const handleLogout = () => {
-    // Handle logout logic here
-    console.log("[v0] Student logout confirmed")
-    // Redirect to login or handle logout
-    window.location.href = "/guess/login"
+  const handleLogout = async () => {
+    try {
+      // Call the proper logout action to clear authentication cookies
+      const result = await logoutAction()
+      
+      if (result.success) {
+        console.log("[StudentHeader] Logout successful")
+        // Redirect to portal page after successful logout
+        window.location.href = "/guess/portal?role=student"
+      } else {
+        console.error("[StudentHeader] Logout failed:", result.error)
+        // Still redirect even if logout action fails (fallback)
+        window.location.href = "/guess/portal?role=student"
+      }
+    } catch (error) {
+      console.error("[StudentHeader] Logout error:", error)
+      // Fallback redirect on error
+      window.location.href = "/guess/portal?role=student"
+    }
   }
 
   return (
@@ -134,6 +186,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 variant="ghost"
                 size="sm"
                 onClick={onToggleSidebar}
+                aria-label="Toggle sidebar"
                 className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
               >
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -145,11 +198,11 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-sm sm:text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
-                  <span className="hidden xs:inline">Welcome back, </span>
+                  <span className="hidden xs:inline">{t('student.welcome')}, </span>
                   {studentName.split(" ")[0]}!
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium hidden sm:block">
-                  Ready to achieve greatness today? ✨
+                  {t('student.readyToAchieve')}
                 </p>
               </div>
             </div>
@@ -164,10 +217,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   variant="ghost"
                   size="sm"
                   className="hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-w-[44px] min-h-[44px] p-2"
+                  suppressHydrationWarning
                 >
-                  {theme === "light" && <Sun className="w-4 h-4" />}
-                  {theme === "dark" && <Moon className="w-4 h-4" />}
-                  {theme === "system" && <Monitor className="w-4 h-4" />}
+                  {mounted && theme === "light" && <Sun className="w-4 h-4" />}
+                  {mounted && theme === "dark" && <Moon className="w-4 h-4" />}
+                  {mounted && theme === "system" && <Monitor className="w-4 h-4" />}
+                  {!mounted && <Sun className="w-4 h-4" />}
                   <ChevronDown className="w-3 h-3 ml-1 hidden sm:inline" />
                 </Button>
               </DropdownMenuTrigger>
@@ -182,7 +237,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                     >
                       <IconComponent className="w-4 h-4" />
                       <span className="text-sm">{option.label}</span>
-                      {theme === option.value && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
+                      {mounted && theme === option.value && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
                     </DropdownMenuItem>
                   )
                 })}
@@ -198,7 +253,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   className="hidden sm:flex items-center space-x-2 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 touch-manipulation min-h-[44px]"
                 >
                   <Globe className="w-4 h-4" />
-                  <span className="hidden md:inline text-sm font-medium">{selectedLanguage}</span>
+                  <span className="hidden md:inline text-sm font-medium">{languages.find(lang => lang.code === language)?.name}</span>
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -206,12 +261,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 {languages.map((lang) => (
                   <DropdownMenuItem
                     key={lang.code}
-                    onClick={() => setSelectedLanguage(lang.name)}
+                    onClick={() => setLanguage(lang.code)}
                     className="flex items-center space-x-2 cursor-pointer touch-manipulation min-h-[44px]"
                   >
                     <span>{lang.flag}</span>
                     <span>{lang.name}</span>
-                    {selectedLanguage === lang.name && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
+                    {language === lang.code && <div className="w-2 h-2 bg-blue-500 rounded-full ml-auto" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -240,17 +295,17 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 <div className="p-3 sm:p-4 border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-base sm:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      Notifications
+                      {t('header.notifications')}
                     </h3>
                     <div className="flex items-center space-x-2">
                       {unreadCount > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={markAllAsRead}
+                          onClick={handleMarkAllAsRead}
                           className="text-xs hover:bg-white/50 dark:hover:bg-slate-800/50 touch-manipulation min-h-[36px]"
                         >
-                          Mark all read
+                          {t('header.markAllRead')}
                         </Button>
                       )}
                       <Button
@@ -265,7 +320,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   </div>
                 </div>
                 <div className="max-h-80 sm:max-h-96 overflow-y-auto">
-                  {notifications.length > 0 ? (
+                  {notificationsLoading ? (
+                    <div className="p-8 text-center text-slate-500">
+                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p>{t('header.loading') || 'Loading...'}</p>
+                    </div>
+                  ) : notifications.length > 0 ? (
                     notifications.map((notification) => {
                       const IconComponent = notification.icon
                       return (
@@ -274,7 +334,13 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                           className={`p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors touch-manipulation ${
                             !notification.read ? "bg-blue-50 dark:bg-blue-900/10" : ""
                           }`}
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={() => {
+                            if (notification.actionUrl) {
+                              window.location.href = notification.actionUrl
+                            } else {
+                              handleMarkAsRead(notification.id)
+                            }
+                          }}
                         >
                           <div className="flex items-start space-x-3">
                             <div
@@ -301,7 +367,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   ) : (
                     <div className="p-8 text-center text-slate-500">
                       <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No notifications</p>
+                      <p>{t('header.noNotifications')}</p>
                     </div>
                   )}
                 </div>
@@ -327,7 +393,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   </Avatar>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-sm truncate max-w-[100px]">{studentName.split(" ")[0]}</p>
-                    <p className="text-xs text-slate-500">Grade 8B</p>
+                    <p className="text-xs text-slate-500">{gradeLevel || 'N/A'} {section || ''}</p>
                   </div>
                   <ChevronDown className="w-3 h-3 hidden sm:inline" />
                 </Button>
@@ -349,12 +415,12 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-sm truncate text-slate-900 dark:text-slate-100">{studentName}</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Grade 8 • Section B</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{gradeLevel || 'N/A'} • {section || 'N/A'}</p>
                       <Badge
                         variant="secondary"
                         className="text-xs mt-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                       >
-                        Student ID: S2024001
+                        Student ID: {studentId || 'N/A'}
                       </Badge>
                     </div>
                   </div>
@@ -362,11 +428,11 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                 <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
                 <DropdownMenuItem className="flex items-center space-x-3 cursor-pointer py-3 touch-manipulation text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <User className="w-4 h-4" />
-                  <span>View Profile</span>
+                  <span>{t('header.viewProfile')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="flex items-center space-x-3 cursor-pointer py-3 touch-manipulation text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <Settings className="w-4 h-4" />
-                  <span>Account Settings</span>
+                  <span>{t('header.accountSettings')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
                 <DropdownMenuItem
@@ -377,7 +443,7 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
                   }}
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{t('header.signOut')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -391,10 +457,10 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-slate-900 dark:text-slate-100">
               <LogOut className="w-5 h-5 text-red-500" />
-              <span>Sign Out</span>
+              <span>{t('header.signOut')}</span>
             </DialogTitle>
             <DialogDescription className="text-slate-600 dark:text-slate-400">
-              Are you sure you want to sign out of your account? You'll need to log in again to access your dashboard.
+              {t('header.signOutConfirm')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex space-x-2">
@@ -403,11 +469,11 @@ export default function StudentHeader({ studentName, studentAvatar, onToggleSide
               onClick={() => setShowLogoutModal(false)}
               className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
               <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              {t('header.signOut')}
             </Button>
           </DialogFooter>
         </DialogContent>

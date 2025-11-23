@@ -15,6 +15,7 @@
         <converters:EqualityConverter x:Key="EqualityConverter" />
         <!-- Added inverse bool converter to replace unsupported ! syntax in bindings -->
         <converters:BooleanNegationConverter x:Key="InverseBoolConverter" />
+        <converters:CollectionIsEmptyConverter x:Key="CollectionIsEmptyConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -131,7 +132,7 @@
 
         <!-- RESPONSIVE BUTTON STYLES -->
         <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -255,14 +256,16 @@
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="MaxWidth" Value="240"/>
         </Style>
-
-        <Style Selector="Border.message-sent">
-            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+        <!-- Sent messages - Use navigation color (DangerBrush/red) to match AdminShellView -->
+        <Style Selector="Border.message-bubble.message-sent">
+            <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
-
-        <Style Selector="Border.message-received">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+        <!-- Received messages - Use CardBackground with border for contrast -->
+        <Style Selector="Border.message-bubble.message-received">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
         </Style>
 
@@ -397,9 +400,7 @@
             <Setter Property="Height" Value="12"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
         </Style>
-        <Style Selector="ScrollBar /template/ Track#PART_Track">
-            <Setter Property="IsDirectionReversed" Value="True"/>
-        </Style>
+        <!-- Removed global IsDirectionReversed to keep normal scroll behavior -->
         <Style Selector="ScrollBar /template/ Thumb">
             <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="CornerRadius" Value="6"/>
@@ -449,6 +450,45 @@
             <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
             <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         </Style>
+        
+        <!-- Disable hover/active visuals on ListBox items -->
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pressed">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <!-- Disable hover/active visuals on ContentPresenter template part (without overriding child backgrounds) -->
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <!-- Modal Responsive Styles -->
+        <Style Selector="Border.modal-container">
+            <Setter Property="MaxWidth" Value="400"/>
+            <Setter Property="Padding" Value="24"/>
+        </Style>
+        <Style Selector="Border.modal-container.tablet">
+            <Setter Property="MaxWidth" Value="360"/>
+            <Setter Property="Padding" Value="20"/>
+        </Style>
+        <Style Selector="Border.modal-container.mobile">
+            <Setter Property="MaxWidth" Value="320"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="16"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid x:Name="MainGrid" Classes="main-content" ColumnDefinitions="360,*" Margin="24">
@@ -481,6 +521,15 @@
 
                 <!-- Conversations List and Empty State -->
                 <Grid Grid.Row="2">
+                    <!-- Loading Indicator for Conversations -->
+                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsLoading}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16" Foreground="{DynamicResource IndigoBrush}"/>
+                            <TextBlock Text="Loading conversations..." Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
                     <ScrollViewer x:Name="ConversationsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasConversations}" AllowAutoHide="True">
                         <ItemsControl ItemsSource="{Binding FilteredConversations}">
                             <ItemsControl.ItemTemplate>
@@ -510,12 +559,16 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                    </Border>
 
-                    <!-- Empty state now uses inverse converter instead of ! syntax -->
-                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding HasConversations, Converter={StaticResource InverseBoolConverter}}">
+                    <!-- Empty state for conversations -->
+                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+                        <StackPanel IsVisible="{Binding HasConversations, Converter={StaticResource InverseBoolConverter}}">
                         <ic:FluentIcon Icon="ChatMultiple" IconSize="Size32" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="NoMessagesText" Text="No conversations found" Classes="empty-title"/>
                         <TextBlock Text="Try adjusting your search criteria" Classes="subtitle"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -550,27 +603,77 @@
                                 <Button x:Name="VideoButton" Classes="chat-icon">
                                     <ic:FluentIcon Icon="Video" IconSize="Size20"/>
                                 </Button>
-                                <Button x:Name="InfoButton" Classes="chat-icon">
+                                <Button x:Name="InfoButton" Classes="chat-icon" Command="{Binding ShowContactInfoCommand}">
                                     <ic:FluentIcon Icon="Info" IconSize="Size20"/>
                                 </Button>
                             </StackPanel>
                         </Grid>
                     </Border>
 
-                    <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="20" AllowAutoHide="True">
-                        <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:ChatMessageViewModel">
-                                    <StackPanel Margin="0,8">
-                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsFromCurrentUser}" Classes.message-received="{Binding IsFromCurrentUser, Converter={StaticResource InverseBoolConverter}}" Background="{Binding MessageBackgroundBrush}">
-                                            <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextBrush}" TextWrapping="Wrap" Classes="message-text"/>
-                                        </Border>
-                                        <TextBlock Text="{Binding TimestampText}" FontSize="10" Classes="light" HorizontalAlignment="{Binding MessageAlignment}" Margin="12,2,12,0"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <Grid Grid.Row="1">
+                        <!-- Loading Indicator for Messages -->
+                        <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                    IsVisible="{Binding IsLoadingMessages}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16" Foreground="{DynamicResource IndigoBrush}"/>
+                                <TextBlock Text="Loading messages..." Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Messages List -->
+                    <ListBox x:Name="MessagesListBox"
+                             ItemsSource="{Binding SelectedConversation.Messages}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             SelectionMode="Single"
+                                 Margin="20"
+                                 IsVisible="{Binding IsLoadingMessages, Converter={StaticResource InverseBoolConverter}}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:ChatMessageViewModel">
+                                <StackPanel Margin="0,8">
+                                        <Border Classes="message-bubble" 
+                                                Classes.message-sent="{Binding IsFromCurrentUser}" 
+                                                Classes.message-received="{Binding IsFromCurrentUser, Converter={StaticResource InverseBoolConverter}}">
+                                            <TextBlock Text="{Binding Content}" 
+                                                       Foreground="{Binding MessageTextBrush}" 
+                                                       TextWrapping="Wrap" 
+                                                       Classes="message-text"/>
+                                    </Border>
+                                        <StackPanel Orientation="Horizontal" 
+                                                   HorizontalAlignment="{Binding MessageAlignment}" 
+                                                   Spacing="4"
+                                                   Margin="12,2,12,0"
+                                                   IsVisible="{Binding IsFromCurrentUser}">
+                                            <TextBlock Text="{Binding TimestampText}" 
+                                                       FontSize="10" 
+                                                       Classes="light"/>
+                                            <!-- Status indicator for sent messages -->
+                                            <ic:FluentIcon Icon="ArrowClockwise" 
+                                                          IconSize="Size12" 
+                                                          Foreground="{DynamicResource TextMutedBrush}"
+                                                          IsVisible="{Binding IsSending}"/>
+                                            <ic:FluentIcon Icon="Checkmark" 
+                                                          IconSize="Size12" 
+                                                          Foreground="{DynamicResource TextMutedBrush}"
+                                                          IsVisible="{Binding IsSentStatus}"/>
+                                        </StackPanel>
+                                        <!-- Timestamp for received messages (no status indicator) -->
+                                        <TextBlock Text="{Binding TimestampText}" 
+                                                   FontSize="10" 
+                                                   Classes="light" 
+                                                   HorizontalAlignment="{Binding MessageAlignment}" 
+                                                   Margin="12,2,12,0"
+                                                   IsVisible="{Binding IsFromCurrentUser, Converter={StaticResource InverseBoolConverter}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                    </Grid>
 
                     <Border Grid.Row="2" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
                         <Grid x:Name="MessageInputGrid" ColumnDefinitions="*,Auto">
@@ -592,6 +695,99 @@
                     <TextBlock x:Name="NoConversationSubtitleText" Text="Choose a conversation from the list to start messaging" Classes="subtitle"/>
                 </StackPanel>
             </Grid>
+        </Border>
+
+        <!-- Contact Info Modal Overlay -->
+        <Border IsVisible="{Binding IsContactInfoModalVisible}" 
+                Background="#80000000" 
+                ZIndex="1000"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="24"
+                    MaxWidth="400"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    BoxShadow="0 8 32 0 #40000000"
+                    Classes="modal-container">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,20" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="Contact Information" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding CloseContactInfoModalCommand}"
+                                Padding="4"
+                                VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Dismiss" IconSize="Size20" Foreground="{DynamicResource TextMutedBrush}"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Contact Info Content -->
+                    <StackPanel Grid.Row="1" Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Border Width="64" 
+                                    Height="64" 
+                                    Background="{Binding SelectedConversation.RoleBrush}" 
+                                    CornerRadius="32"
+                                    HorizontalAlignment="Left">
+                                <TextBlock Text="{Binding SelectedConversation.ContactInitials}" 
+                                           FontSize="24" 
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedConversation.ContactName}" 
+                                           FontSize="16" 
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding SelectedConversation.ContactRole}" 
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,4,0,0"/>
+                                <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}}" 
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Actions -->
+                    <StackPanel Grid.Row="2" Spacing="12" Margin="0,20,0,0">
+                        <Button Content="Delete Conversation" 
+                                Classes="danger"
+                                Command="{Binding DeleteConversationCommand}"
+                                HorizontalAlignment="Stretch"
+                                Padding="16,12">
+                            <Button.Styles>
+                                <Style Selector="Button.danger">
+                                    <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                                <Style Selector="Button.danger:pointerover">
+                                    <Setter Property="Background" Value="#B91C1C"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Border>
     </Grid>
 </UserControl>
