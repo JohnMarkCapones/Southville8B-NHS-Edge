@@ -27,12 +27,13 @@
 
         <!-- Responsive Card Styles -->
         <Style Selector="Border.card.mobile">
-            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
+
         <Style Selector="Border.card.tablet">
-            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Padding" Value="18"/>
             <Setter Property="CornerRadius" Value="10"/>
         </Style>
 
@@ -58,14 +59,10 @@
         <Style Selector="Button.action-btn:pressed">
             <Setter Property="RenderTransform" Value="scale(0.97)"/>
         </Style>
-        <Style Selector="Button.action-btn.mobile">
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="FontSize" Value="12"/>
-        </Style>
 
-        <!-- Secondary Button Styles (Neutral / Muted) -->
+        <!-- Secondary Button Styles -->
         <Style Selector="Button.secondary-btn">
-            <Setter Property="Background" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InfoBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -74,8 +71,8 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
                     <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
                 </Transitions>
             </Setter>
         </Style>
@@ -85,9 +82,27 @@
         <Style Selector="Button.secondary-btn:pressed">
             <Setter Property="RenderTransform" Value="scale(0.97)"/>
         </Style>
-        <Style Selector="Button.secondary-btn.mobile">
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="FontSize" Value="12"/>
+
+        <Style Selector="Button.tertiary-btn">
+            <Setter Property="Background" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.tertiary-btn:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+        <Style Selector="Button.tertiary-btn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
         </Style>
 
         <!-- Typography Styles -->
@@ -96,29 +111,21 @@
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-        <Style Selector="TextBlock.header.mobile">
-            <Setter Property="FontSize" Value="20"/>
-        </Style>
-        <Style Selector="TextBlock.header.tablet">
-            <Setter Property="FontSize" Value="24"/>
-        </Style>
         <Style Selector="TextBlock.subtitle">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
+
+        <Style Selector="TextBlock.header.mobile">
+            <Setter Property="FontSize" Value="22"/>
+        </Style>
+
+        <Style Selector="TextBlock.header.tablet">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+
         <Style Selector="TextBlock.subtitle.mobile">
             <Setter Property="FontSize" Value="12"/>
-        </Style>
-        <Style Selector="TextBlock.kpi-value">
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-        <Style Selector="TextBlock.kpi-value.mobile">
-            <Setter Property="FontSize" Value="18"/>
-        </Style>
-        <Style Selector="TextBlock.kpi-value.tablet">
-            <Setter Property="FontSize" Value="20"/>
         </Style>
 
         <!-- Input Styles -->
@@ -135,20 +142,6 @@
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
 
-        <!-- Responsive Layout Classes -->
-        <Style Selector="StackPanel.main-content">
-            <Setter Property="Margin" Value="40"/>
-            <Setter Property="Spacing" Value="24"/>
-        </Style>
-        <Style Selector="StackPanel.main-content.tablet">
-            <Setter Property="Margin" Value="24"/>
-            <Setter Property="Spacing" Value="20"/>
-        </Style>
-        <Style Selector="StackPanel.main-content.mobile">
-            <Setter Property="Margin" Value="16"/>
-            <Setter Property="Spacing" Value="16"/>
-        </Style>
-
         <!-- Grade Table Styles -->
         <Style Selector="Border.table-cell">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
@@ -156,21 +149,6 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="8"/>
-        </Style>
-        <Style Selector="Border.table-cell.mobile">
-            <Setter Property="Padding" Value="6"/>
-        </Style>
-
-        <!-- Progress Bar Styles -->
-        <Style Selector="ProgressBar">
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
-        </Style>
-        <Style Selector="ProgressBar.mobile">
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="CornerRadius" Value="8"/>
         </Style>
 
         <!-- Header row background -->
@@ -180,168 +158,316 @@
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
         </Style>
 
-        <!-- Recent entry item -->
-        <Style Selector="Border.recent-entry">
-            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-        <Style Selector="Border.recent-entry:pointerover">
+        <!-- Loading indicator -->
+        <Style Selector="Border.loading">
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+
+        <!-- Enhanced Responsive Layout Classes -->
+        <Style Selector="StackPanel.main-content">
+            <Setter Property="Margin" Value="40"/>
+            <Setter Property="Spacing" Value="24"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <ThicknessTransition Property="Margin" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="StackPanel.main-content.tablet">
+            <Setter Property="Margin" Value="24"/>
+            <Setter Property="Spacing" Value="20"/>
+        </Style>
+
+        <Style Selector="StackPanel.main-content.mobile">
+            <Setter Property="Margin" Value="16"/>
+            <Setter Property="Spacing" Value="16"/>
+        </Style>
+        
+        <!-- Enhanced Card Transitions -->
+        <Style Selector="Border.card">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <ThicknessTransition Property="Margin" Duration="0:0:0.3"/>
+                    <ThicknessTransition Property="Padding" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Responsive Input Fields -->
+        <Style Selector="Grid.responsive-inputs">
+            <!-- ColumnDefinitions and RowDefinitions cannot be set in styles in Avalonia -->
+        </Style>
+        
+        <!-- Mobile responsive - stack fields vertically -->
+        <Style Selector="Grid.responsive-inputs.mobile">
+            <!-- ColumnDefinitions and RowDefinitions cannot be set in styles in Avalonia -->
+        </Style>
+        
+        <!-- Mobile: GWA field takes full width -->
+        <Style Selector="Grid.responsive-inputs.mobile StackPanel:first-child">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        
+        <!-- Mobile: Honor Status field takes full width -->
+        <Style Selector="Grid.responsive-inputs.mobile StackPanel:nth-child(2)">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        
+        <!-- Mobile: Remarks field takes full width -->
+        <Style Selector="Grid.responsive-inputs.mobile StackPanel:nth-child(3)">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="2"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+
+        <!-- Filter Grid Responsive Styles -->
+        <Style Selector="Grid.filter-grid">
+            <!-- ColumnDefinitions cannot be set in styles in Avalonia -->
+        </Style>
+        
+        <!-- Mobile: Stack filter elements vertically -->
+        <Style Selector="Grid.filter-grid.mobile">
+            <!-- ColumnDefinitions and RowDefinitions cannot be set in styles in Avalonia -->
+        </Style>
+        
+        <!-- Mobile: Grading Period Row -->
+        <Style Selector="Grid.filter-grid.mobile TextBlock:first-child">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="Grid.filter-grid.mobile ComboBox:first-child">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
+        <!-- Mobile: School Year Row -->
+        <Style Selector="Grid.filter-grid.mobile TextBlock:nth-child(3)">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="2"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="Grid.filter-grid.mobile ComboBox:nth-child(4)">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="3"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
+        <!-- Mobile: Section Info Row -->
+        <Style Selector="Grid.filter-grid.mobile StackPanel">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="4"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+
+        <!-- Header Grid Responsive Styles -->
+        <Style Selector="Grid.header-grid">
+            <!-- ColumnDefinitions cannot be set in styles in Avalonia -->
+        </Style>
+        
+        <!-- Mobile: Stack header elements vertically -->
+        <Style Selector="Grid.header-grid.mobile">
+            <!-- ColumnDefinitions and RowDefinitions cannot be set in styles in Avalonia -->
+        </Style>
+        
+        <!-- Mobile: Student info takes full width -->
+        <Style Selector="Grid.header-grid.mobile StackPanel:first-child">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        
+        <!-- Mobile: Action buttons take full width -->
+        <Style Selector="Grid.header-grid.mobile StackPanel.action-buttons">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        
+        <!-- Mobile: Buttons stack horizontally with equal width -->
+        <Style Selector="Grid.header-grid.mobile Button.save-btn">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <Style Selector="Grid.header-grid.mobile Button.delete-btn">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer x:Name="MainScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="MainStackPanel" Classes="main-content">
             <!-- Header -->
-            <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto">
+            <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto,Auto">
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Grade Entry System" Classes="header"/>
-                    <TextBlock Text="Manage student grades and assessments" Classes="subtitle"/>
+                    <TextBlock Text="GWA Entry System" Classes="header"/>
+                    <TextBlock Text="Enter final GWA for students in your advisory section" Classes="subtitle"/>
+                    <TextBlock Text="{Binding CurrentTermLabel}" Classes="subtitle" Margin="0,4,0,0"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="ExportButton" Classes="secondary-btn" Command="{Binding ExportGradesCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
-                            <TextBlock Text="Export Grades"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="SaveAllButton" Classes="action-btn" Command="{Binding SaveAllGradesCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="Save" IconSize="Size16"/>
-                            <TextBlock Text="Save All"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <Button Grid.Column="1" 
+                        Background="{DynamicResource TextSecondaryBrush}" 
+                        Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                        BorderThickness="0" 
+                        CornerRadius="6" 
+                        Padding="8,6" 
+                        Command="{Binding RefreshGradesCommand}"
+                        IsEnabled="{Binding !IsRefreshing}"
+                        Margin="0,0,8,0"
+                        ToolTip.Tip="Refresh grades (5s cooldown)">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16"/>
+                        <TextBlock Text="Refresh"/>
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Classes="action-btn" Command="{Binding SaveAllGradesCommand}" IsEnabled="{Binding HasUnsavedChanges}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                        <TextBlock Text="Save All Changes"/>
+                    </StackPanel>
+                </Button>
             </Grid>
 
-            <!-- Quick Stats -->
-            <Grid x:Name="StatsGrid" ColumnDefinitions="*,*,*,*">
-                <Border x:Name="StatsCard1" Grid.Column="0" Classes="card" Margin="0,0,12,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Pending Grades" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                        <TextBlock Text="{Binding PendingGradesCount}" Classes="kpi-value" Foreground="{DynamicResource DangerBrush}"/>
-                        <TextBlock Text="Require attention" FontSize="12" Foreground="{DynamicResource DangerBrush}"/>
+            <!-- Filters -->
+            <Border Classes="card">
+                <Grid x:Name="FilterGrid" ColumnDefinitions="Auto,*,Auto,*,*,Auto" Classes="filter-grid">
+                    <TextBlock Grid.Column="0" Text="Grading Period:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding GradingPeriods}" SelectedItem="{Binding SelectedGradingPeriod}" MinWidth="120"/>
+                    <TextBlock Grid.Column="2" Text="School Year:" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                    <ComboBox Grid.Column="3" ItemsSource="{Binding SchoolYears}" SelectedItem="{Binding SelectedSchoolYear}" MinWidth="120"/>
+                    <StackPanel Grid.Column="4" Margin="16,0,0,0">
+                        <TextBlock Text="Active Term" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding CurrentTermLabel}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                     </StackPanel>
-                </Border>
-                <Border x:Name="StatsCard2" Grid.Column="1" Classes="card" Margin="12,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Completed Today" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                        <TextBlock Text="{Binding CompletedTodayCount}" Classes="kpi-value" Foreground="{DynamicResource SuccessBrush}"/>
-                        <TextBlock Text="Grades entered" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
+                    <StackPanel Grid.Column="5" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding SectionName}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Right"/>
+                        <TextBlock Text="{Binding GradeLevel}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Right"/>
                     </StackPanel>
-                </Border>
-                <Border x:Name="StatsCard3" Grid.Column="2" Classes="card" Margin="12,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Class Average" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                        <TextBlock Text="{Binding ClassAverageGrade, StringFormat={}{0:F1}%}" Classes="kpi-value" Foreground="{DynamicResource InfoBrush}"/>
-                        <TextBlock Text="Overall performance" FontSize="12" Foreground="{DynamicResource InfoBrush}"/>
-                    </StackPanel>
-                </Border>
-                <Border x:Name="StatsCard4" Grid.Column="3" Classes="card" Margin="12,0,0,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Assignments Due" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                        <TextBlock Text="{Binding AssignmentsDueCount}" Classes="kpi-value" Foreground="{DynamicResource WarningBrush}"/>
-                        <TextBlock Text="This week" FontSize="12" Foreground="{DynamicResource WarningBrush}"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
+                </Grid>
+            </Border>
 
-            <!-- Grade Entry Section -->
-            <Grid x:Name="ContentGrid" ColumnDefinitions="*,300">
-                <!-- Grade Entry Table -->
-                <Border x:Name="GradeEntryCard" Grid.Column="0" Classes="card" Margin="0,0,12,0">
-                    <StackPanel Spacing="16">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Grade Entry" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <ComboBox Grid.Column="1" SelectedItem="{Binding SelectedClass}" ItemsSource="{Binding Classes}" MinWidth="200"/>
-                        </Grid>
-                        <!-- Grade Entry Header -->
-                        <Border x:Name="GradeTableHeader" Classes="grade-header" CornerRadius="8,8,0,0" Padding="12,8">
-                            <Grid ColumnDefinitions="200,100,100,100,100,*">
-                                <TextBlock Grid.Column="0" Text="Student Name" FontWeight="SemiBold"/>
-                                <TextBlock Grid.Column="1" Text="Quiz" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="Assignment" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Text="Exam" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="4" Text="Final" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="5" Text="Actions" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            </Grid>
-                        </Border>
+            <Border Classes="card" Background="{DynamicResource AccentSoftBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                    IsVisible="{Binding TermRestrictionMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <ic:FluentIcon Icon="LockClosed" IconSize="Size16" Foreground="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="{Binding TermRestrictionMessage}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
 
-                        <!-- Grade Entry Rows -->
-                        <ScrollViewer x:Name="GradeTableScrollViewer" MaxHeight="400" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding StudentGrades}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:StudentGradeViewModel">
-                                        <Grid ColumnDefinitions="200,100,100,100,100,*" Margin="0,0,0,8" MinHeight="40">
-                                            <Border Grid.Column="0" Classes="table-cell"><TextBlock Text="{Binding StudentName}" VerticalAlignment="Center"/></Border>
-                                            <Border Grid.Column="1" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding QuizGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
-                                            <Border Grid.Column="2" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding AssignmentGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
-                                            <Border Grid.Column="3" Classes="table-cell" Margin="4,0"><TextBox Text="{Binding ExamGrade}" HorizontalAlignment="Center" BorderThickness="0" Background="Transparent"/></Border>
-                                            <Border Grid.Column="4" Classes="table-cell" Margin="4,0"><TextBlock Text="{Binding FinalGrade, StringFormat={}{0:F1}}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="{Binding GradeColor}"/></Border>
-                                            <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
-                                                <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Save Grade" Command="{Binding SaveGradeCommand}">
-                                                    <ic:FluentIcon Icon="Save" IconSize="Size16"/>
-                                                </Button>
-                                                <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" Padding="4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Notes" Command="{Binding EditNotesCommand}">
-                                                    <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
-                                                </Button>
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </StackPanel>
-                </Border>
+            <!-- Loading Indicator -->
+            <Border Classes="loading" IsVisible="{Binding IsLoading}">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16" Foreground="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="Loading students..." Foreground="{DynamicResource TextPrimaryBrush}"/>
+                </StackPanel>
+            </Border>
 
-                <!-- Grade Summary Panel -->
-                <Border x:Name="GradeSummaryCard" Grid.Column="1" Classes="card" Margin="12,0,0,0">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="Grade Summary" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <!-- Grade Distribution Chart -->
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="Grade Distribution" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <ItemsControl ItemsSource="{Binding GradeDistribution}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:GradeDistributionItemViewModel">
-                                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
-                                            <TextBlock Grid.Column="0" Text="{Binding Grade}" FontWeight="SemiBold" MinWidth="30"/>
-                                            <ProgressBar Grid.Column="1" Value="{Binding Percentage}" Maximum="100" Foreground="{Binding Color}" Margin="8,0"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding Count}" FontWeight="SemiBold" MinWidth="30" HorizontalAlignment="Right"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                        <!-- Recent Grade Entries -->
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Recent Entries" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding RecentGradeEntries}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="vm:RecentGradeEntryViewModel">
-                                            <Border Classes="recent-entry">
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock Text="{Binding StudentName}" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <TextBlock Text="{Binding AssignmentName}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <TextBlock Grid.Column="0" Text="{Binding Grade}" FontSize="14" FontWeight="Bold" Foreground="{Binding GradeColor}"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                    </Grid>
+            <!-- Grade Entry Table -->
+            <Border Classes="card" IsVisible="{Binding !IsLoading}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Student GWA Entry" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    
+                    <!-- Grade Entry Rows -->
+                    <ScrollViewer x:Name="GradeEntriesContainer" MaxHeight="600" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding StudentGrades}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="12"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:StudentGradeViewModel">
+                                    <Border Classes="card" Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <!-- Header Row -->
+                                            <Grid ColumnDefinitions="Auto,*,Auto" Classes="header-grid">
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding StudentNumber}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding StudentName}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                 </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
+                                                
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Classes="action-buttons">
+                                                    <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                                                            Padding="8,4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Grade" 
+                                                            Command="{Binding EditGradeCommand}" IsVisible="{Binding !IsEditing}" Classes="edit-btn"
+                                                            IsEnabled="{Binding IsTermEditable}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
+                                                            <TextBlock Text="Edit"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                                                            Padding="8,4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Save Grade" 
+                                                            Command="{Binding SaveGradeCommand}" IsVisible="{Binding IsEditing}" Classes="save-btn"
+                                                            IsEnabled="{Binding IsTermEditable}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <ic:FluentIcon Icon="Save" IconSize="Size16"/>
+                                                            <TextBlock Text="Save"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                                                            Padding="8,4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Delete Entry" 
+                                                            Command="{Binding DeleteGradeCommand}" IsVisible="{Binding GwaId, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Classes="delete-btn"
+                                                            IsEnabled="{Binding IsTermEditable}">
+                                                        <ic:FluentIcon Icon="Delete" IconSize="Size16"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                            
+                                            <!-- Responsive Input Fields -->
+                                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Classes="responsive-inputs">
+                                                <!-- GWA Field -->
+                                                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,8,0">
+                                                    <TextBlock Text="GWA" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                    <TextBox Text="{Binding GwaInput}" Watermark="50.00-100.00" TextAlignment="Center" IsEnabled="{Binding IsEditing}"/>
+                                                    <TextBlock Text="{Binding GwaErrorMessage}" 
+                                                               Foreground="{DynamicResource DangerBrush}" 
+                                                               FontSize="12" 
+                                                               Margin="0,4,0,0"
+                                                               IsVisible="{Binding GwaErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                </StackPanel>
+                                                
+                                                <!-- Honor Status Field (Read-only, Auto-calculated) -->
+                                                <StackPanel Grid.Column="1" Grid.Row="0" Margin="8,0,0,0">
+                                                    <TextBlock Text="Honor Status" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                    <Border Background="{DynamicResource CardBackgroundBrush}" 
+                                                            BorderBrush="{DynamicResource BorderBrush}" 
+                                                            BorderThickness="1" 
+                                                            CornerRadius="6" 
+                                                            Padding="8">
+                                                        <TextBlock Text="{Binding HonorStatus}" 
+                                                                   FontSize="14" 
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextAlignment="Center"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                
+                                                <!-- Remarks Field - Full Width -->
+                                                <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="0,12,0,0">
+                                                    <TextBlock Text="Remarks" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                    <TextBox Text="{Binding Remarks}" Watermark="Optional remarks" IsEnabled="{Binding IsEditing}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

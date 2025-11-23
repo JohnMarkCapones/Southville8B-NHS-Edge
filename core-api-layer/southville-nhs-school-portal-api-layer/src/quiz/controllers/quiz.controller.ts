@@ -27,6 +27,7 @@ import {
   PublishQuizDto,
 } from '../dto';
 import { AssignQuizToSectionsDto } from '../dto/assign-quiz-to-sections.dto';
+import { ImportQuestionDto } from '../dto/import-question.dto';
 import { Quiz, QuizQuestion, QuizSettings } from '../entities';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -34,6 +35,8 @@ import { PoliciesGuard } from '../../auth/guards/policies.guard';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { AuthUser } from '../../auth/auth-user.decorator';
 import { SupabaseUser } from '../../auth/interfaces/supabase-user.interface';
+import { Audit } from '../../common/audit';
+import { AuditEntityType } from '../../common/audit/audit.types';
 
 @ApiTags('Quizzes')
 @ApiBearerAuth('JWT-auth')
@@ -90,6 +93,10 @@ export class QuizController {
   // ==================== QUIZ CRUD OPERATIONS ====================
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.QUIZ,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new quiz (draft status)' })
   @ApiResponse({
@@ -204,11 +211,16 @@ export class QuizController {
     @Param('id') id: string,
     @AuthUser() user: SupabaseUser,
   ): Promise<Quiz> {
-    this.logger.log(`Fetching quiz ${id}`);
-    return this.quizService.findQuizById(id);
+    this.logger.log(`Fetching quiz ${id} for user ${user.id}`);
+    // Pass user.id to filter student_attempts to current user
+    return this.quizService.findQuizById(id, user.id);
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.QUIZ,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Update a quiz (teachers can only update their own quizzes)',
@@ -234,6 +246,10 @@ export class QuizController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.QUIZ,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a quiz (soft delete by archiving)' })
   @ApiResponse({
@@ -249,10 +265,10 @@ export class QuizController {
   async deleteQuiz(
     @Param('id') id: string,
     @AuthUser() user: SupabaseUser,
-  ): Promise<{ message: string }> {
+  ) {
     this.logger.log(`Deleting quiz ${id} for teacher: ${user.id}`);
-    await this.quizService.deleteQuiz(id, user.id);
-    return { message: 'Quiz archived successfully' };
+    // Return the deleted quiz for audit logging
+    return this.quizService.deleteQuiz(id, user.id);
   }
 
   // ==================== QUIZ QUESTIONS ====================
@@ -278,6 +294,60 @@ export class QuizController {
   ): Promise<QuizQuestion> {
     this.logger.log(`Adding question to quiz ${quizId}`);
     return this.quizService.addQuestion(quizId, createQuestionDto, user.id);
+  }
+
+  @Patch(':id/questions/:questionId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update a quiz question' })
+  @ApiResponse({
+    status: 200,
+    description: 'Question updated successfully',
+    type: QuizQuestion,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - You can only update questions in your own quizzes',
+  })
+  @ApiResponse({ status: 404, description: 'Question not found' })
+  async updateQuestion(
+    @Param('id') quizId: string,
+    @Param('questionId') questionId: string,
+    @Body() updateQuestionDto: CreateQuizQuestionDto,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<QuizQuestion> {
+    this.logger.log(`Updating question ${questionId} in quiz ${quizId}`);
+    return this.quizService.updateQuestion(
+      quizId,
+      questionId,
+      updateQuestionDto,
+      user.id,
+    );
+  }
+
+  @Delete(':id/questions/:questionId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete a quiz question' })
+  @ApiResponse({
+    status: 200,
+    description: 'Question deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - You can only delete questions in your own quizzes',
+  })
+  @ApiResponse({ status: 404, description: 'Question not found' })
+  async deleteQuestion(
+    @Param('id') quizId: string,
+    @Param('questionId') questionId: string,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<{ message: string }> {
+    this.logger.log(`Deleting question ${questionId} from quiz ${quizId}`);
+    await this.quizService.deleteQuestion(quizId, questionId, user.id);
+    return { message: 'Question deleted successfully' };
   }
 
   // ==================== QUIZ SETTINGS ====================
@@ -331,6 +401,39 @@ export class QuizController {
       `Publishing quiz ${quizId} with status: ${publishDto.status}`,
     );
     return this.quizService.publishQuiz(quizId, publishDto, user.id);
+  }
+
+  @Post(':id/schedule')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Schedule a quiz for future availability' })
+  @ApiResponse({
+    status: 200,
+    description: 'Quiz scheduled successfully',
+    type: Quiz,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only schedule your own quizzes',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid dates or no sections selected',
+  })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
+  async scheduleQuiz(
+    @Param('id') quizId: string,
+    @Body()
+    scheduleDto: {
+      startDate: string;
+      endDate?: string;
+      sectionIds: string[];
+      sectionSettings?: Record<string, { timeLimit?: number }>;
+    },
+    @AuthUser() user: SupabaseUser,
+  ): Promise<Quiz> {
+    this.logger.log(`Scheduling quiz ${quizId} for ${scheduleDto.startDate}`);
+    return this.quizService.scheduleQuiz(quizId, scheduleDto, user.id);
   }
 
   // ==================== SECTION ASSIGNMENT ====================
@@ -456,5 +559,38 @@ export class QuizController {
   ) {
     this.logger.log(`Getting preview for quiz ${quizId}`);
     return this.quizService.getQuizPreview(quizId, user.id);
+  }
+
+  // ==================== QUESTION BANK IMPORT ====================
+
+  @Post(':id/import-question')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Import question from question bank to quiz' })
+  @ApiResponse({
+    status: 201,
+    description: 'Question imported successfully',
+    type: QuizQuestion,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - You can only import to your own quizzes or import your own questions',
+  })
+  @ApiResponse({ status: 404, description: 'Quiz or question not found' })
+  async importQuestionFromBank(
+    @Param('id') quizId: string,
+    @Body() dto: ImportQuestionDto,
+    @AuthUser() user: SupabaseUser,
+  ): Promise<QuizQuestion> {
+    this.logger.log(
+      `Importing question ${dto.questionBankId} to quiz ${quizId}`,
+    );
+    return this.quizService.importQuestionFromBank(
+      quizId,
+      dto.questionBankId,
+      dto.orderIndex,
+      user.id,
+    );
   }
 }

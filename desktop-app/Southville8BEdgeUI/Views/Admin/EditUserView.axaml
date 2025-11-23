@@ -1,0 +1,389 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels.Admin"
+             xmlns:ic="using:FluentIcons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Southville8BEdgeUI.Views.Admin.EditUserView"
+             x:DataType="vm:EditUserViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+    <UserControl.Styles>
+        <!-- Form Styles -->
+        <Style Selector="TextBlock.form-title">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,24"/>
+        </Style>
+
+        <Style Selector="TextBlock.form-subtitle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,20"/>
+        </Style>
+
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <Style Selector="TextBlock.required">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+        </Style>
+
+        <Style Selector="TextBox.form-input">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style Selector="ComboBox.form-combo">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style Selector="DatePicker.form-input">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style Selector="Border.error-message">
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style Selector="Border.success-message">
+            <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style Selector="Border.loading-overlay">
+            <Setter Property="Background" Value="#80000000"/>
+            <Setter Property="IsVisible" Value="{Binding IsLoading}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <ScrollViewer>
+            <Border Classes="card" Margin="40" MaxWidth="600" HorizontalAlignment="Center">
+                <StackPanel Spacing="0">
+                    <!-- Header -->
+                    <StackPanel Margin="0,0,0,32">
+                        <TextBlock Text="Edit User" Classes="form-title"/>
+                        <TextBlock Text="Update the user information below. All fields marked with * are required." Classes="form-subtitle"/>
+                    </StackPanel>
+
+                    <!-- Error Message -->
+                    <Border Classes="error-message" IsVisible="{Binding HasError}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ic:FluentIcon Icon="Warning" IconSize="Size20" Foreground="{DynamicResource DangerBrush}"/>
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Success Message -->
+                    <Border Classes="success-message" IsVisible="{Binding HasSuccess}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ic:FluentIcon Icon="CheckmarkCircle" IconSize="Size20" Foreground="{DynamicResource SuccessBrush}"/>
+                            <TextBlock Text="{Binding SuccessMessage}" Foreground="{DynamicResource SuccessBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Student Form Fields -->
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding IsStudent}">
+                        <!-- First Name -->
+                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,12,0">
+                            <TextBlock Text="First Name" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding FirstName}" Classes="form-input" Watermark="Enter first name" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Last Name -->
+                        <StackPanel Grid.Column="1" Grid.Row="0" Margin="12,0,0,0">
+                            <TextBlock Text="Last Name" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding LastName}" Classes="form-input" Watermark="Enter last name" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Middle Name -->
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,12,0">
+                            <TextBlock Text="Middle Name" Classes="field-label"/>
+                            <TextBox Text="{Binding MiddleName}" Classes="form-input" Watermark="Enter middle name (optional)" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Student ID -->
+                        <StackPanel Grid.Column="1" Grid.Row="1" Margin="12,0,0,0">
+                            <TextBlock Text="Student ID" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding StudentId}" Classes="form-input" Watermark="e.g., STU-2024-001" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- LRN ID -->
+                        <StackPanel Grid.Column="0" Grid.Row="2" Margin="0,0,12,0">
+                            <TextBlock Text="LRN ID" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding LrnId}" Classes="form-input" Watermark="e.g., 123456789012" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Birthday -->
+                        <StackPanel Grid.Column="1" Grid.Row="2" Margin="12,0,0,0">
+                            <TextBlock Text="Birthday" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <DatePicker SelectedDate="{Binding Birthday}" Classes="form-input" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Grade Level -->
+                        <StackPanel Grid.Column="0" Grid.Row="3" Margin="0,0,12,0">
+                            <TextBlock Text="Grade Level" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <ComboBox ItemsSource="{Binding GradeLevelOptions}" 
+                                      SelectedItem="{Binding GradeLevel}" 
+                                      Classes="form-combo" 
+                                      PlaceholderText="Select grade level"
+                                      IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Enrollment Year -->
+                        <StackPanel Grid.Column="1" Grid.Row="3" Margin="12,0,0,0">
+                            <TextBlock Text="Enrollment Year" Classes="field-label"/>
+                            <TextBox Text="{Binding EnrollmentYear}" Classes="form-input" Watermark="e.g., 2024" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Honor Status -->
+                        <StackPanel Grid.Column="0" Grid.Row="4" Margin="0,0,12,0">
+                            <TextBlock Text="Honor Status" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding HonorStatusOptions}" 
+                                      SelectedItem="{Binding HonorStatus}" 
+                                      Classes="form-combo" 
+                                      PlaceholderText="Select honor status (optional)"
+                                      IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Age -->
+                        <StackPanel Grid.Column="1" Grid.Row="4" Margin="12,0,0,0">
+                            <TextBlock Text="Age" Classes="field-label"/>
+                            <TextBox Text="{Binding Age}" 
+                                     Classes="form-input" 
+                                     Watermark="Auto-calculated from birthday"
+                                     IsReadOnly="True"
+                                     Background="{DynamicResource PageBackgroundBrush}"/>
+                        </StackPanel>
+
+                        <!-- Section -->
+                        <StackPanel Grid.Column="0" Grid.Row="5" Margin="0,0,12,0" Grid.ColumnSpan="2">
+                            <TextBlock Text="Section" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding AvailableSections}" 
+                                      SelectedItem="{Binding SelectedSection}" 
+                                      Classes="form-combo" 
+                                      PlaceholderText="Select section (optional)"
+                                      DisplayMemberBinding="{Binding Name}"
+                                      IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Teacher Form Fields -->
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding IsTeacher}">
+                        <!-- First Name -->
+                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,12,0">
+                            <TextBlock Text="First Name" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding FirstName}" Classes="form-input" Watermark="Enter first name" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Last Name -->
+                        <StackPanel Grid.Column="1" Grid.Row="0" Margin="12,0,0,0">
+                            <TextBlock Text="Last Name" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding LastName}" Classes="form-input" Watermark="Enter last name" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Middle Name -->
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,12,0">
+                            <TextBlock Text="Middle Name" Classes="field-label"/>
+                            <TextBox Text="{Binding MiddleName}" Classes="form-input" Watermark="Enter middle name (optional)" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Birthday -->
+                        <StackPanel Grid.Column="1" Grid.Row="1" Margin="12,0,0,0">
+                            <TextBlock Text="Birthday" Classes="field-label"/>
+                            <DatePicker SelectedDate="{Binding Birthday}" Classes="form-input" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Age -->
+                        <StackPanel Grid.Column="1" Grid.Row="2" Margin="12,0,0,0">
+                            <TextBlock Text="Age" Classes="field-label"/>
+                            <TextBox Text="{Binding Age}" 
+                                     Classes="form-input" 
+                                     Watermark="Auto-calculated from birthday"
+                                     IsReadOnly="True"
+                                     Background="{DynamicResource PageBackgroundBrush}"/>
+                        </StackPanel>
+
+                        <!-- Department -->
+                        <StackPanel Grid.Column="0" Grid.Row="3" Margin="0,0,12,0">
+                            <TextBlock Text="Department" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding Departments}" 
+                                      SelectedItem="{Binding SelectedDepartment}" 
+                                      Classes="form-combo" 
+                                      PlaceholderText="Select department (optional)"
+                                      IsEnabled="{Binding !IsLoading}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DepartmentName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Subject Specialization -->
+                        <StackPanel Grid.Column="0" Grid.Row="3" Margin="0,0,12,0">
+                            <TextBlock Text="Subject Specialization" Classes="field-label" TextWrapping="Wrap" MaxWidth="200"/>
+                            <ComboBox ItemsSource="{Binding Subjects}" 
+                                      SelectedItem="{Binding SelectedSubject}" 
+                                      Classes="form-combo" 
+                                      PlaceholderText="Select subject (optional)"
+                                      IsEnabled="{Binding !IsLoading}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding SubjectName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Advisory Section -->
+                        <StackPanel Grid.Column="1" Grid.Row="3" Margin="12,0,0,0">
+                            <TextBlock Text="Advisory Section" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding AvailableSections}" 
+                                      SelectedItem="{Binding SelectedAdvisorySection}" 
+                                      Classes="form-combo" 
+                                      PlaceholderText="Select advisory section (optional)"
+                                      DisplayMemberBinding="{Binding Name}"
+                                      IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Admin Form Fields -->
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" IsVisible="{Binding IsAdmin}">
+                        <!-- First Name -->
+                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,12,0">
+                            <TextBlock Text="First Name" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding FirstName}" Classes="form-input" Watermark="Enter first name" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Last Name -->
+                        <StackPanel Grid.Column="1" Grid.Row="0" Margin="12,0,0,0">
+                            <TextBlock Text="Last Name" Classes="field-label"/>
+                            <TextBlock Text="*" Classes="required"/>
+                            <TextBox Text="{Binding LastName}" Classes="form-input" Watermark="Enter last name" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Middle Name -->
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,12,0">
+                            <TextBlock Text="Middle Name" Classes="field-label"/>
+                            <TextBox Text="{Binding MiddleName}" Classes="form-input" Watermark="Enter middle name (optional)" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Birthday -->
+                        <StackPanel Grid.Column="1" Grid.Row="1" Margin="12,0,0,0">
+                            <TextBlock Text="Birthday" Classes="field-label"/>
+                            <DatePicker SelectedDate="{Binding Birthday}" Classes="form-input" IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+
+                        <!-- Age -->
+                        <StackPanel Grid.Column="0" Grid.Row="2" Margin="0,0,12,0">
+                            <TextBlock Text="Age" Classes="field-label"/>
+                            <TextBox Text="{Binding Age}" 
+                                     Classes="form-input" 
+                                     Watermark="Auto-calculated from birthday"
+                                     IsReadOnly="True"
+                                     Background="{DynamicResource PageBackgroundBrush}"/>
+                        </StackPanel>
+
+                        <!-- Role Description -->
+                        <StackPanel Grid.Column="1" Grid.Row="2" Margin="12,0,0,0">
+                            <TextBlock Text="Role Description" Classes="field-label"/>
+                            <TextBox Text="{Binding RoleDescription}" 
+                                     Classes="form-input" 
+                                     Watermark="Enter role description (optional)"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     MinHeight="80"
+                                     IsEnabled="{Binding !IsLoading}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Action Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,32,0,0">
+                        <Button Content="Cancel" Classes="secondary" Command="{Binding CancelCommand}" IsEnabled="{Binding !IsLoading}"/>
+                        <Button Content="Save Changes" Classes="primary" Command="{Binding SaveUserCommand}" IsEnabled="{Binding !IsLoading}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Border Classes="loading-overlay">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ic:FluentIcon Icon="ArrowSync" IconSize="Size32" Foreground="{DynamicResource AccentTextOnAccentBrush}"/>
+                <TextBlock Text="Loading user data..." 
+                           Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                           FontSize="16" 
+                           Margin="0,12,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
+

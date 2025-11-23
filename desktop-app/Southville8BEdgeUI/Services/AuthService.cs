@@ -17,7 +17,7 @@ public class AuthService : IAuthService
         _tokenStorage = tokenStorage;
     }
 
-    public async Task<LoginResponse?> LoginAsync(string email, string password)
+    public async Task<LoginResponse?> LoginAsync(string email, string password, bool rememberMe)
     {
         try
         {
@@ -45,16 +45,27 @@ public class AuthService : IAuthService
 
             if (response?.Success == true && response.Session != null && response.User != null)
             {
-                // Store tokens securely
+                // Persist tokens only if user chose to be remembered
                 var expiresAt = DateTimeOffset.FromUnixTimeSeconds(response.Session.ExpiresAt).DateTime;
-                await _tokenStorage.SaveTokensAsync(
-                    response.Session.AccessToken,
-                    response.Session.RefreshToken,
-                    expiresAt
-                );
+                if (rememberMe)
+                {
+                    await _tokenStorage.SaveTokensAsync(
+                        response.Session.AccessToken,
+                        response.Session.RefreshToken,
+                        expiresAt
+                    );
+                }
+                else
+                {
+                    // Ensure no token file remains from a previous session
+                    await _tokenStorage.ClearTokensAsync();
+                }
 
-                // Cache current user
-                _currentUser = response.User;
+                // Save login preference and email for prefill
+                await _tokenStorage.SaveLoginPreferenceAsync(rememberMe, email);
+
+                // Cache current user (convert LoginUserDto to UserDto)
+                _currentUser = ConvertLoginUserToUserDto(response.User);
 
                 System.Diagnostics.Debug.WriteLine($"Login successful for user: {response.User.Email} with role: {response.User.Role}");
                 return response;
@@ -81,6 +92,14 @@ public class AuthService : IAuthService
             
             // Clear cached user
             _currentUser = null;
+
+            // Keep last email but disable remember flag
+            try
+            {
+                var pref = await _tokenStorage.GetLoginPreferenceAsync();
+                await _tokenStorage.SaveLoginPreferenceAsync(false, pref.email ?? string.Empty);
+            }
+            catch { /* best-effort */ }
 
             // Note: In a real implementation, you might want to call a logout endpoint
             // to invalidate the token on the server side
@@ -165,5 +184,20 @@ public class AuthService : IAuthService
             System.Diagnostics.Debug.WriteLine($"Token refresh failed: {ex.Message}");
             return false;
         }
+    }
+
+    private UserDto ConvertLoginUserToUserDto(LoginUserDto loginUser)
+    {
+        return new UserDto
+        {
+            Id = loginUser.Id,
+            Email = loginUser.Email,
+            FullName = loginUser.Email, // Login API doesn't provide full name, use email as fallback
+            Role = loginUser.Role, // Role is now a string
+            Status = "Active", // Assume active for login
+            CreatedAt = loginUser.CreatedAt,
+            EmailConfirmedAt = loginUser.EmailConfirmedAt,
+            UserMetadata = loginUser.UserMetadata
+        };
     }
 }

@@ -35,8 +35,11 @@ export function EventScheduleTimeline({
   showIcons = true,
   variant = 'default'
 }: EventScheduleTimelineProps) {
+  // Safety check for undefined/null schedule
+  const safeSchedule = Array.isArray(schedule) ? schedule : [];
+
   // Sort schedule by orderIndex, then by time
-  const sortedSchedule = [...schedule].sort((a, b) => {
+  const sortedSchedule = [...safeSchedule].sort((a, b) => {
     if (a.orderIndex !== b.orderIndex) {
       return a.orderIndex - b.orderIndex;
     }

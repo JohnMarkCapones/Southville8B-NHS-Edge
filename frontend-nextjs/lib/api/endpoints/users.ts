@@ -136,10 +136,10 @@ export async function getStudentCount(): Promise<UserCountResponse> {
     });
 
     // Count active and inactive students (we'll need to fetch all for accurate counts)
-    // For better performance, we fetch with a higher limit
+    // Backend caps limit at 1000, so we use that maximum
     const fullResponse = await getUsers({
       role: 'Student',
-      limit: 10000, // Large limit to get all students in one request
+      limit: 1000, // Backend maximum limit
       page: 1,
     });
 
@@ -173,10 +173,10 @@ export async function getStudentCount(): Promise<UserCountResponse> {
  */
 export async function getTeacherCount(): Promise<UserCountResponse> {
   try {
-    // Fetch with a high limit to get all teachers
+    // Backend caps limit at 1000, so we use that maximum
     const response = await getUsers({
       role: 'Teacher',
-      limit: 10000,
+      limit: 1000,
       page: 1,
     });
 
@@ -203,9 +203,10 @@ export async function getTeacherCount(): Promise<UserCountResponse> {
  */
 export async function getAdminCount(): Promise<UserCountResponse> {
   try {
+    // Backend caps limit at 1000, so we use that maximum
     const response = await getUsers({
       role: 'Admin',
-      limit: 10000,
+      limit: 1000,
       page: 1,
     });
 
@@ -265,9 +266,9 @@ export async function getAllUsersStats(): Promise<{
   newThisMonth: number;
 }> {
   try {
-    // Fetch all users with high limit
+    // Backend caps limit at 1000, so we use that maximum
     const response = await getUsers({
-      limit: 10000,
+      limit: 1000,
       page: 1,
     });
 
@@ -298,4 +299,79 @@ export async function getAllUsersStats(): Promise<{
     console.error('[API] Error fetching all users stats:', error);
     throw error;
   }
+}
+
+/**
+ * Update user data type for PATCH requests
+ */
+export interface UpdateUserData {
+  email?: string;
+  fullName?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  // Add other fields as needed based on backend UpdateUserDto
+}
+
+/**
+ * Update a user by ID
+ *
+ * @param userId - User ID to update
+ * @param data - Partial user data to update
+ * @returns Promise with updated user data
+ *
+ * @example
+ * ```typescript
+ * const updated = await updateUser('user-id-123', {
+ *   fullName: 'John Smith',
+ *   status: 'Active'
+ * });
+ * ```
+ */
+export async function updateUser(userId: string, data: UpdateUserData): Promise<User> {
+  return apiClient.patch<User>(`/users/${userId}`, data);
+}
+
+/**
+ * Domain Role Management
+ *
+ * Note: Full domain role management has been moved to @/lib/api/endpoints/domains
+ * These functions are kept for backward compatibility
+ */
+
+/**
+ * Update user data (role and/or status)
+ *
+ * @param userId - User ID to update
+ * @param data - Data to update (role, status, etc.)
+ * @returns Promise with updated user data
+ *
+ * @example
+ * ```typescript
+ * const updated = await updateUserData('user-id-123', {
+ *   role: 'Student',
+ *   status: 'Active'
+ * });
+ * ```
+ */
+export async function updateUserData(
+  userId: string,
+  data: { role?: UserRole; status?: UserStatus }
+): Promise<User> {
+  return apiClient.patch<User>(`/users/${userId}`, data);
+}
+
+/**
+ * Get current user login streak count
+ * Returns the number of consecutive days the user has logged in
+ *
+ * @returns Promise with streak count
+ *
+ * @example
+ * ```typescript
+ * const { streak } = await getLoginStreak();
+ * console.log(`Current streak: ${streak} days`);
+ * ```
+ */
+export async function getLoginStreak(): Promise<{ streak: number }> {
+  return apiClient.get<{ streak: number }>('/users/me/streak');
 }

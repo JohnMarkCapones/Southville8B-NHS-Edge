@@ -176,6 +176,8 @@ export interface QuizSettings {
   lockdown_browser: boolean;
   anti_screenshot: boolean;
   disable_copy_paste: boolean;
+  disable_right_click: boolean;
+  require_fullscreen: boolean;
   randomize_questions: boolean;
   randomize_choices: boolean;
   one_question_at_time: boolean;
@@ -183,6 +185,7 @@ export interface QuizSettings {
 
   // Monitoring settings
   track_tab_switches: boolean;
+  track_device_changes: boolean;
   track_ip_changes: boolean;
   max_tab_switches?: number;
   require_webcam: boolean;
@@ -309,6 +312,7 @@ export interface QuizFlag {
   flag_id: string;
   attempt_id: string;
   student_id: string;
+  student_name?: string; // Added for monitoring display
   quiz_id: string;
   flag_type: string; // 'tab_switch', 'ip_change', 'copy_paste', 'screenshot', etc.
   severity: 'low' | 'medium' | 'high';
@@ -508,6 +512,35 @@ export interface StudentPerformanceResponse {
 }
 
 /**
+ * Individual student answer for results page
+ */
+export interface StudentAnswerDetail {
+  questionId: string;
+  questionNumber: number;
+  questionText: string;
+  questionType: string;
+  studentAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  pointsAwarded: number;
+  maxPoints: number;
+  timeSpent: number;
+}
+
+/**
+ * Student answers response (for results page)
+ */
+export interface StudentAnswersResponse {
+  quizId: string;
+  studentId: string;
+  attemptId: string;
+  score: number;
+  timeTaken: number;
+  submittedAt: string;
+  answers: StudentAnswerDetail[];
+}
+
+/**
  * Active participant (for monitoring)
  */
 export interface ActiveParticipant {
@@ -521,15 +554,30 @@ export interface ActiveParticipant {
   questions_answered: number;
   total_questions: number;
   progress: number;
+  current_question_index: number; // Added for question-level tracking
   tab_switches: number;
   is_active: boolean;
   device_fingerprint: string;
+  // Security tracking fields
+  initial_ip_address?: string;
+  current_ip_address?: string;
+  ip_changed?: boolean;
+  initial_user_agent?: string;
+  current_user_agent?: string;
+  // Activity tracking
+  idle_time_seconds?: number;
+  last_activity_type?: string;
 }
 
 export interface ActiveParticipantsResponse {
   quizId: string;
   activeCount: number;
+  notStartedCount: number; // ✅ NEW: Students in assigned sections who haven't started
+  totalEligible: number; // ✅ NEW: Total students in assigned sections
   participants: ActiveParticipant[];
+  total: number; // For pagination
+  page: number;
+  limit: number;
 }
 
 /**
@@ -539,6 +587,26 @@ export interface QuizFlagsResponse {
   quizId: string;
   totalFlags: number;
   flags: QuizFlag[];
+}
+
+/**
+ * Monitoring export response (for CSV/PDF reports)
+ */
+export interface MonitoringExportResponse {
+  quizId: string;
+  quizTitle: string;
+  exportedAt: string;
+  participants: ActiveParticipant[];
+  flags: QuizFlag[];
+  summary: {
+    totalParticipants: number;
+    activeCount: number;
+    completedCount: number;
+    flaggedCount: number;
+    totalFlags: number;
+    averageProgress: number;
+    averageTimeElapsed: number;
+  };
 }
 
 /**
@@ -599,29 +667,38 @@ export interface UpdateQuizDto {
   passing_score?: number;
   start_date?: string;
   end_date?: string;
+  status?: 'draft' | 'published' | 'archived' | 'scheduled';
 }
 
 /**
  * Create question DTO
+ * IMPORTANT: Uses camelCase to match backend NestJS DTO
  */
 export interface CreateQuestionDto {
-  question_text: string;
-  question_type: QuestionType;
-  points: number;
-  is_required?: boolean;
-  time_limit?: number;
-  explanation?: string;
+  questionText: string;                // Backend expects camelCase
+  questionType: QuestionType;          // Backend expects camelCase
+  description?: string;
+  orderIndex: number;                  // ⚠️ REQUIRED for question ordering
+  points?: number;
+  allowPartialCredit?: boolean;
+  timeLimitSeconds?: number;
+  isPoolQuestion?: boolean;
+  isRequired?: boolean;
+  isRandomize?: boolean;
+  sourceQuestionBankId?: string;
   choices?: CreateQuestionChoiceDto[];
-  metadata?: Partial<QuizQuestionMetadata>;
+  metadata?: any;
 }
 
 /**
  * Create question choice DTO
+ * IMPORTANT: Uses camelCase to match backend NestJS DTO
  */
 export interface CreateQuestionChoiceDto {
-  choice_text: string;
-  is_correct: boolean;
-  order_index?: number;
+  choiceText: string;       // Backend expects camelCase
+  isCorrect: boolean;       // Backend expects camelCase
+  orderIndex?: number;      // Backend expects camelCase
+  metadata?: any;
 }
 
 /**
@@ -644,7 +721,7 @@ export interface AssignQuizToSectionsDto {
  * Start quiz attempt DTO
  */
 export interface StartQuizAttemptDto {
-  device_fingerprint: string;
+  deviceFingerprint: string;
 }
 
 /**
@@ -661,9 +738,9 @@ export interface SubmitAnswerDto {
  * Heartbeat DTO
  */
 export interface HeartbeatDto {
-  device_fingerprint: string;
-  tab_switches?: number;
-  current_question_id?: string;
+  deviceFingerprint: string;
+  tabSwitches?: number;
+  currentQuestionId?: string;
 }
 
 /**

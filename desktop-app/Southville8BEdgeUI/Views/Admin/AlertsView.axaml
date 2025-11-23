@@ -302,7 +302,8 @@
 		</Style>
 	</UserControl.Styles>
 
-	<Grid x:Name="MainGrid" Classes="main-content" RowDefinitions="Auto,*" ColumnDefinitions="400,*">
+    <ScrollViewer>
+    <Grid x:Name="MainGrid" Classes="main-content" RowDefinitions="Auto,*" ColumnDefinitions="400,*">
 
 		<!-- Page Header -->
 		<Border x:Name="HeaderCard" Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,16">
@@ -340,9 +341,8 @@
 		</Border>
 
 		<!-- Create Alert Panel -->
-		<Border x:Name="CreateAlertCard" Grid.Row="1" Grid.Column="0" Classes="card" Margin="20,20,12,20">
-			<ScrollViewer VerticalScrollBarVisibility="Auto">
-				<StackPanel Spacing="0">
+        <Border x:Name="CreateAlertCard" Grid.Row="1" Grid.Column="0" Classes="card" Margin="20,20,12,20">
+                <StackPanel Spacing="0">
 					<TextBlock x:Name="CreateHeaderText" Text="Create New Alert" Classes="card-header"/>
 
 					<!-- Alert Type -->
@@ -385,14 +385,15 @@
 
 					<!-- Expiration -->
 					<TextBlock Text="EXPIRATION" Classes="section-header"/>
-					<StackPanel Spacing="8">
+				<StackPanel Spacing="8">
 						<DatePicker x:Name="ExpiresDatePicker" SelectedDate="{Binding NewExpiresDate}" HorizontalAlignment="Stretch"/>
 						<TimePicker x:Name="ExpiresTimePicker" SelectedTime="{Binding NewExpiresTime}" HorizontalAlignment="Stretch"/>
+					<TextBlock Text="Defaults to 24 hours if not specified by server policy." Classes="subtitle"/>
 					</StackPanel>
 
 					<!-- Action Buttons -->
 					<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,24,0,0">
-						<Button x:Name="PublishButton" Classes="action-btn primary" Command="{Binding CreateAlertCommand}" HorizontalAlignment="Stretch" MinWidth="120">
+						<Button x:Name="PublishButton" Classes="action-btn primary" Command="{Binding CreateAlertCommand}" HorizontalAlignment="Stretch" MinWidth="120" IsEnabled="{Binding IsNotSaving}">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<ic:FluentIcon Icon="Send" IconSize="Size16"/>
 								<TextBlock Text="Publish Alert"/>
@@ -405,13 +406,16 @@
 							</StackPanel>
 						</Button>
 					</StackPanel>
-				</StackPanel>
-			</ScrollViewer>
+
+					<!-- Inline Error Message -->
+					<TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource DangerBrush}" Margin="0,12,0,0"
+						   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
 		</Border>
 
 		<!-- Active Alerts Panel -->
-		<Border x:Name="ActiveAlertsCard" Grid.Row="1" Grid.Column="1" Classes="card" Margin="12,20,20,20">
-			<Grid RowDefinitions="Auto,*">
+        <Border x:Name="ActiveAlertsCard" Grid.Row="1" Grid.Column="1" Classes="card" Margin="12,20,20,20">
+            <Grid RowDefinitions="Auto,*">
 				<!-- Header -->
 				<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
 					<TextBlock x:Name="AlertsHeaderText" Text="Active Alerts" Classes="card-header" Margin="0"/>
@@ -420,9 +424,8 @@
 					</Border>
 				</StackPanel>
 
-				<!-- Scrollable Content (Active + Expired) -->
-				<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-					<StackPanel Spacing="0">
+                <!-- Content (no internal scroll; page scrolls) -->
+                <StackPanel Grid.Row="1" Spacing="0">
 						<!-- Active Alerts List -->
 						<ItemsControl ItemsSource="{Binding ActiveAlerts}">
 							<ItemsControl.ItemTemplate>
@@ -491,9 +494,9 @@
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
 						</StackPanel>
-					</StackPanel>
-				</ScrollViewer>
+                    </StackPanel>
 			</Grid>
 		</Border>
-	</Grid>
+    </Grid>
+    </ScrollViewer>
 </UserControl>

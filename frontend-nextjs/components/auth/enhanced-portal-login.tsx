@@ -79,7 +79,7 @@ export function EnhancedPortalLogin() {
       icon: GraduationCap,
       color: "from-green-500 to-green-600",
       gamingColor: "from-gaming-neon-green to-gaming-neon-blue",
-      features: ["Grade Management", "Lesson Planning", "Student Progress", "Parent Communication", "Resource Library"],
+      features: ["Grade Management", "Quiz Engineer", "Student Progress", "Chat System", "Resource Library"],
       placeholder: "Teacher ID (e.g., T123456)",
     },
     admin: {

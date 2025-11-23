@@ -41,10 +41,10 @@ export function SessionTimeoutWarning({
       const now = Date.now();
       const sessionDuration = now - sessionStart;
       
-      // Session timeout: 2 hours (2 * 60 * 60 * 1000 ms)
-      const SESSION_TIMEOUT = 2 * 60 * 60 * 1000;
-      // Warning threshold: 30 minutes before timeout (1.5 hours)
-      const WARNING_THRESHOLD = 1.5 * 60 * 60 * 1000;
+      // Session timeout: 3 hours (3 * 60 * 60 * 1000 ms)
+      const SESSION_TIMEOUT = 3 * 60 * 60 * 1000;
+      // Warning threshold: 30 minutes before timeout (2.5 hours)
+      const WARNING_THRESHOLD = 2.5 * 60 * 60 * 1000;
       
       const timeUntilTimeout = SESSION_TIMEOUT - sessionDuration;
       const timeUntilWarning = WARNING_THRESHOLD - sessionDuration;
@@ -102,7 +102,7 @@ export function SessionTimeoutWarning({
 
       if (response.ok) {
         // Update session start time
-        document.cookie = `sb-session-start=${Date.now()}; path=/; max-age=${2 * 60 * 60}`;
+        document.cookie = `sb-session-start=${Date.now()}; path=/; max-age=${3 * 60 * 60}`;
         setIsVisible(false);
         setTimeRemaining(null);
       } else {
@@ -141,7 +141,7 @@ export function SessionTimeoutWarning({
         <CardContent className="space-y-3">
           <div className="flex items-center text-sm text-amber-700 dark:text-amber-300">
             <Clock className="w-4 h-4 mr-2" />
-            For security, sessions automatically expire after 2 hours of inactivity
+            For security, sessions automatically expire after 3 hours of inactivity
           </div>
           
           <div className="flex gap-2">

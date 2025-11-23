@@ -17,16 +17,8 @@ export class NewsCoAuthor {
   @Column({ type: 'uuid', nullable: false })
   news_id: string;
 
-  @Column({ type: 'uuid', nullable: false })
-  user_id: string;
-
-  @Column({
-    type: 'varchar',
-    length: 100,
-    default: 'co-author',
-    nullable: false,
-  })
-  role: 'co-author' | 'editor' | 'contributor';
+  @Column({ type: 'varchar', length: 255, nullable: false })
+  co_author_name: string;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   added_at: Date;
@@ -35,6 +27,5 @@ export class NewsCoAuthor {
   added_by: string;
 
   // Virtual fields for populated data
-  user?: any;
   added_by_user?: any;
 }

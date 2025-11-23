@@ -15,7 +15,7 @@ import {
   QueryItemsDto,
   ReorderItemsDto,
 } from '../dto';
-import { GalleryStorageService } from './gallery-storage.service';
+import { CloudflareImagesService } from './cloudflare-images.service';
 
 /**
  * Gallery Items Service (Simplified - No Albums)
@@ -27,7 +27,7 @@ export class GalleryItemsService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly galleryStorageService: GalleryStorageService,
+    private readonly cloudflareImagesService: CloudflareImagesService,
   ) {}
 
   /**
@@ -43,13 +43,14 @@ export class GalleryItemsService {
     userId: string,
   ): Promise<GalleryItem> {
     try {
-      // Get or create default album
-      const defaultAlbumId = await this.getOrCreateDefaultAlbum(userId);
-
-      // Upload file to R2 (simplified - no album slug needed)
-      const uploadResult = await this.galleryStorageService.uploadGalleryItem(
+      // Upload file to Cloudflare Images
+      const uploadResult = await this.cloudflareImagesService.uploadImage(
         file,
-        userId,
+        {
+          userId: userId,
+          originalFilename: file.originalname,
+          uploadedAt: new Date().toISOString(),
+        },
       );
 
       // Create database record
@@ -57,11 +58,8 @@ export class GalleryItemsService {
         .getServiceClient()
         .from('gallery_items')
         .insert({
-          album_id: defaultAlbumId,
-          file_url: uploadResult.file_url,
-          r2_file_key: uploadResult.r2_file_key,
-          thumbnail_url: uploadResult.thumbnail_url,
-          r2_thumbnail_key: uploadResult.r2_thumbnail_key,
+          cf_image_id: uploadResult.cf_image_id,
+          cf_image_url: uploadResult.cf_image_url,
           original_filename: file.originalname,
           file_size_bytes: uploadResult.file_size_bytes,
           mime_type: uploadResult.mime_type,
@@ -84,64 +82,20 @@ export class GalleryItemsService {
 
       if (error) {
         this.logger.error('Failed to create item:', error);
-        // Cleanup: delete uploaded file from R2
-        await this.galleryStorageService.deleteGalleryItem(
-          uploadResult.r2_file_key,
+        // Cleanup: delete uploaded file from Cloudflare Images
+        await this.cloudflareImagesService.deleteImage(
+          uploadResult.cf_image_id,
         );
         throw new BadRequestException('Failed to create gallery item');
       }
 
-      this.logger.log(`Gallery item created: ${item.id}`);
+      this.logger.log(
+        `Gallery item created: ${item.id} (CF Images: ${uploadResult.cf_image_id})`,
+      );
       return item;
     } catch (error) {
       this.logger.error('Error creating gallery item:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Get or create default album for gallery items
-   */
-  private async getOrCreateDefaultAlbum(userId: string): Promise<string> {
-    try {
-      // Try to find existing default album
-      const { data: existingAlbum, error: findError } = await this.supabaseService
-        .getServiceClient()
-        .from('gallery_albums')
-        .select('id')
-        .eq('slug', 'default-gallery')
-        .eq('is_deleted', false)
-        .single();
-
-      if (existingAlbum && !findError) {
-        return existingAlbum.id;
-      }
-
-      // Create default album if it doesn't exist
-      const { data: newAlbum, error: createError } = await this.supabaseService
-        .getServiceClient()
-        .from('gallery_albums')
-        .insert({
-          title: 'Default Gallery',
-          slug: 'default-gallery',
-          description: 'Default album for gallery items',
-          category: 'other',
-          visibility: 'public',
-          is_featured: false,
-          created_by: userId,
-        })
-        .select('id')
-        .single();
-
-      if (createError || !newAlbum) {
-        this.logger.error('Failed to create default album:', createError);
-        throw new BadRequestException('Failed to create default album');
-      }
-
-      return newAlbum.id;
-    } catch (error) {
-      this.logger.error('Error getting/creating default album:', error);
-      throw new BadRequestException('Failed to get or create default album');
     }
   }
 
@@ -309,23 +263,32 @@ export class GalleryItemsService {
    */
   async findOne(id: string): Promise<GalleryItemWithDetails> {
     try {
+      this.logger.log(`Finding gallery item: ${id}`);
+
       const { data: item, error } = await this.supabaseService
-        .getClient()
+        .getServiceClient()
         .from('gallery_items')
-        .select(
-          `
-          *,
-          uploader:users!uploaded_by(id, full_name, email)
-        `,
-        )
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error || !item) {
+      if (error) {
+        this.logger.error(`Supabase error for item ${id}:`, error);
         throw new NotFoundException('Gallery item not found');
       }
 
-      return item;
+      if (!item) {
+        this.logger.warn(`No item found with ID: ${id}`);
+        throw new NotFoundException('Gallery item not found');
+      }
+
+      this.logger.log(`Found item: ${item.id}`);
+
+      // Return item with empty uploader for now (can add later if needed)
+      return {
+        ...item,
+        uploader: null,
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -348,8 +311,25 @@ export class GalleryItemsService {
     userId: string,
   ): Promise<GalleryItem> {
     try {
-      // Verify item exists
-      await this.findOne(id);
+      // Check if item exists using service client (includes deleted items)
+      const { data: existingItem, error: fetchError } =
+        await this.supabaseService
+          .getServiceClient()
+          .from('gallery_items')
+          .select('id, is_deleted')
+          .eq('id', id)
+          .single();
+
+      if (fetchError || !existingItem) {
+        throw new NotFoundException('Gallery item not found');
+      }
+
+      // Don't allow updating deleted items (except for restore operation)
+      if (existingItem.is_deleted) {
+        throw new BadRequestException(
+          'Cannot update a deleted item. Restore it first.',
+        );
+      }
 
       const updateData: any = { updated_by: userId };
 
@@ -379,7 +359,10 @@ export class GalleryItemsService {
       this.logger.log(`Gallery item updated: ${id}`);
       return item;
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       this.logger.error('Error updating item:', error);
@@ -391,11 +374,28 @@ export class GalleryItemsService {
    * Soft delete an item
    * @param id - Item ID
    * @param userId - User ID deleting
+   * @returns The deleted item (for audit logging)
    */
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(id: string, userId: string): Promise<GalleryItem> {
     try {
-      // Verify item exists
-      await this.findOne(id);
+      // Check if item exists and fetch full details for audit log
+      const { data: existingItem, error: fetchError } =
+        await this.supabaseService
+          .getServiceClient()
+          .from('gallery_items')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+      if (fetchError || !existingItem) {
+        throw new NotFoundException('Gallery item not found');
+      }
+
+      // If already deleted, return early (idempotent delete)
+      if (existingItem.is_deleted) {
+        this.logger.log(`Gallery item ${id} is already deleted`);
+        return existingItem;
+      }
 
       // Soft delete in database
       const { error } = await this.supabaseService
@@ -414,12 +414,74 @@ export class GalleryItemsService {
       }
 
       this.logger.log(`Gallery item soft deleted: ${id}`);
+
+      // Return the item for audit logging
+      return existingItem;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
       this.logger.error('Error deleting item:', error);
       throw new BadRequestException('Failed to delete gallery item');
+    }
+  }
+
+  /**
+   * Restore a soft-deleted item
+   * @param id - Item ID to restore
+   * @param userId - User ID restoring the item
+   * @returns The restored item (for audit logging)
+   */
+  async restore(id: string, userId: string): Promise<GalleryItem> {
+    try {
+      // Check if item exists (including deleted items)
+      const { data: item, error: fetchError } = await this.supabaseService
+        .getServiceClient()
+        .from('gallery_items')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !item) {
+        throw new NotFoundException('Gallery item not found');
+      }
+
+      if (!item.is_deleted && !item.deleted_at) {
+        throw new BadRequestException('Item is not deleted');
+      }
+
+      // Restore the item (undelete)
+      const { data: restoredItem, error: updateError } =
+        await this.supabaseService
+          .getServiceClient()
+          .from('gallery_items')
+          .update({
+            is_deleted: false,
+            deleted_at: null,
+            deleted_by: null,
+            updated_by: userId,
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      this.logger.log(`Gallery item ${id} restored by user ${userId}`);
+
+      // Return the restored item for audit logging
+      return restoredItem;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error('Error restoring item:', error);
+      throw new BadRequestException('Failed to restore gallery item');
     }
   }
 
@@ -455,7 +517,7 @@ export class GalleryItemsService {
   /**
    * Generate download URL for an item
    * @param id - Item ID
-   * @param expiresIn - Expiration time in seconds
+   * @param expiresIn - Expiration time in seconds (not used for CF Images)
    * @returns Download URL and expiration
    */
   async generateDownloadUrl(
@@ -465,9 +527,10 @@ export class GalleryItemsService {
     try {
       const item = await this.findOne(id);
 
-      const downloadUrl = await this.galleryStorageService.generateDownloadUrl(
-        item.r2_file_key,
-        expiresIn,
+      // For Cloudflare Images, use the 'original' variant URL
+      // No presigned URL needed since we enabled "Always allow public access"
+      const downloadUrl = this.cloudflareImagesService.getOriginalUrl(
+        item.cf_image_id,
       );
 
       const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();

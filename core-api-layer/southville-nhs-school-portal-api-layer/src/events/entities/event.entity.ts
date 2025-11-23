@@ -22,8 +22,26 @@ export class Event {
   @ApiProperty({ description: 'Organizer user ID' })
   organizerId: string;
 
+  @ApiProperty({
+    description: 'Club ID for club-specific events',
+    required: false,
+  })
+  clubId?: string;
+
   @ApiProperty({ description: 'Event image URL', required: false })
   eventImage?: string;
+
+  @ApiProperty({ description: 'Cloudflare Images ID', required: false })
+  cfImageId?: string;
+
+  @ApiProperty({ description: 'Cloudflare Images URL', required: false })
+  cfImageUrl?: string;
+
+  @ApiProperty({ description: 'Image file size in bytes', required: false })
+  imageFileSize?: number;
+
+  @ApiProperty({ description: 'Image MIME type', required: false })
+  imageMimeType?: string;
 
   @ApiProperty({
     description: 'Event status',
@@ -58,6 +76,16 @@ export class Event {
     id: string;
     fullName: string;
     email: string;
+  };
+
+  @ApiProperty({
+    description: 'Club info for club-specific events',
+    required: false,
+  })
+  club?: {
+    id: string;
+    name: string;
+    description?: string;
   };
 
   @ApiProperty({

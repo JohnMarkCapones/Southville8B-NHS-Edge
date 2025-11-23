@@ -24,10 +24,10 @@ import {
   MessageCircle,
   BookOpen,
   Zap,
-  Activity,
   Sparkles,
   FileText,
   Loader2,
+  Eye,
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUser, useStudentClubs } from "@/hooks"
@@ -38,6 +38,7 @@ export default function ClubsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [page, setPage] = useState(1)
+  const [activeTab, setActiveTab] = useState("my-clubs")
   const limit = 50
   const { data: user } = useUser()
   const studentId = user?.student?.id
@@ -53,8 +54,10 @@ export default function ClubsPage() {
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters first
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .trim()
   }
 
   const myClubs = useMemo(() => {
@@ -98,12 +101,20 @@ export default function ClubsPage() {
     }))
   }, [availableResp])
 
-  const clubStats = {
-    totalClubs: availableClubs.length,
-    activeMembers: 0,
-    upcomingEvents: 0,
-    achievements: 0,
-  }
+  const clubStats = useMemo(() => {
+    // Calculate total achievements across all clubs
+    const totalAchievements = myClubs.reduce((sum, club) => sum + (club.achievements?.length || 0), 0)
+
+    // Calculate upcoming events
+    const totalUpcomingEvents = myClubs.reduce((sum, club) => sum + (club.upcomingEvents || 0), 0)
+
+    return {
+      totalClubs: availableClubs.length,
+      myClubs: myClubs.length,
+      upcomingEvents: totalUpcomingEvents,
+      achievements: totalAchievements,
+    }
+  }, [availableClubs.length, myClubs])
 
   const categories = ["all", "Academic", "Arts", "Service", "Sports", "Technology"]
 
@@ -128,11 +139,17 @@ export default function ClubsPage() {
             interests!
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+            <Button
+              onClick={() => setActiveTab("discover")}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+            >
               <Sparkles className="w-4 h-4 mr-2" />
               Discover Clubs
             </Button>
-            <Button variant="outline">
+            <Button
+              onClick={() => setActiveTab("discover")}
+              variant="outline"
+            >
               <MessageCircle className="w-4 h-4 mr-2" />
               Get Recommendations
             </Button>
@@ -159,12 +176,12 @@ export default function ClubsPage() {
                   <div className="text-sm text-white/80">Total Clubs</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold">{clubStats.activeMembers}</div>
-                  <div className="text-sm text-white/80">Active Members</div>
+                  <div className="text-2xl font-bold">{clubStats.myClubs}</div>
+                  <div className="text-sm text-white/80">My Clubs</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold">{clubStats.upcomingEvents}</div>
-                  <div className="text-sm text-white/80">Events This Month</div>
+                  <div className="text-sm text-white/80">Upcoming Events</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold">{clubStats.achievements}</div>
@@ -175,7 +192,7 @@ export default function ClubsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="my-clubs" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
             <TabsTrigger value="my-clubs" className="flex items-center gap-2">
               <Heart className="w-4 h-4" />
@@ -192,14 +209,9 @@ export default function ClubsPage() {
           </TabsList>
 
           <TabsContent value="my-clubs" className="space-y-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
-                  What it looks like with no active clubs:
-                </h3>
-                <EmptyClubsState />
-              </div>
-
+            {myClubs.length === 0 ? (
+              <EmptyClubsState />
+            ) : (
               <div>
                 <h2 className="text-2xl font-semibold flex items-center mb-6">
                   <Heart className="w-6 h-6 mr-2 text-red-500" />
@@ -304,8 +316,8 @@ export default function ClubsPage() {
                               size="sm"
                               className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
                             >
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Schedule
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Club
                             </Button>
                           </Link>
                           <Link href={`/student/clubs/${generateSlug(club.name)}`}>
@@ -319,23 +331,12 @@ export default function ClubsPage() {
                             </Button>
                           </Link>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <Button size="sm" variant="ghost" className="hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                            Chat
-                          </Button>
-                          <Button size="sm" variant="ghost" className="hover:bg-green-50 dark:hover:bg-green-900/20">
-                            <Activity className="w-4 h-4 mr-2" />
-                            Activity
-                          </Button>
-                        </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="applications" className="space-y-6">

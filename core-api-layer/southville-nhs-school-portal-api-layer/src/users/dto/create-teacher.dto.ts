@@ -88,6 +88,14 @@ export class CreateTeacherDto extends CreateUserDto {
   departmentId?: string;
 
   @IsOptional()
+  @IsUUID()
+  @ApiProperty({
+    required: false,
+    description: 'Advisory section ID from sections table',
+  })
+  advisorySectionId?: string;
+
+  @IsOptional()
   @IsString()
   @MinLength(10)
   @MaxLength(15)

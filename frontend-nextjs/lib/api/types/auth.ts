@@ -21,7 +21,7 @@ export interface LoginResponse {
 export interface AuthUser {
   id: string;
   email: string;
-  role: 'Admin' | 'Teacher' | 'Student';
+  role: "Admin" | "Teacher" | "Student";
   created_at: string;
   email_confirmed_at?: string;
   user_metadata?: Record<string, any>;
@@ -41,3 +41,26 @@ export interface TokenVerifyResponse {
   message: string;
 }
 
+// Change Password Request
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+// Change Password Response
+export interface ChangePasswordResponse {
+  message: string;
+}
+
+// Refresh Token Response
+export interface RefreshTokenResponse {
+  success: boolean;
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number; // Unix timestamp in seconds
+    expires_in: number; // Seconds until expiry
+    token_type: string;
+  };
+  message: string;
+}

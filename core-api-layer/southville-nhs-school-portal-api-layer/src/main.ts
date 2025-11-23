@@ -62,9 +62,29 @@ async function bootstrap() {
   });
 
   // Enable CORS
+  const getAllowedOrigins = (): string[] | boolean => {
+    if (process.env.NODE_ENV !== 'production') {
+      return true; // Allow all origins in development
+    }
+
+    // In production, use ALLOWED_ORIGINS or FRONTEND_URL environment variable
+    const allowedOrigins =
+      process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL;
+
+    if (!allowedOrigins) {
+      // Fallback: allow all origins if not configured (should be set in production)
+      console.warn(
+        '⚠️  WARNING: No ALLOWED_ORIGINS or FRONTEND_URL set in production. Allowing all origins.',
+      );
+      return true;
+    }
+
+    // Support comma-separated list of origins
+    return allowedOrigins.split(',').map((origin) => origin.trim());
+  };
+
   app.enableCors({
-    origin:
-      process.env.NODE_ENV === 'production' ? ['https://yourdomain.com'] : true,
+    origin: getAllowedOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -106,7 +126,7 @@ async function bootstrap() {
   // Enable shutdown hooks for graceful shutdown
   app.enableShutdownHooks();
 
-  const port = configService.get<number>('PORT') || 3000;
+  const port = configService.get<number>('PORT') || 3004;
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);

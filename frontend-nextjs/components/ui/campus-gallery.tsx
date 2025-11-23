@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -168,11 +169,14 @@ export function CampusGallery() {
 
       {/* Featured Image */}
       <div className="relative rounded-lg overflow-hidden bg-muted">
-        <div className="aspect-[16/9] relative">
-          <img
+        <div className="aspect-[21/9] md:aspect-[2.5/1] relative">
+          <Image
             src={featuredItem.image || "/placeholder.svg"}
             alt={featuredItem.title}
-            className="w-full h-full object-cover cursor-pointer"
+            fill
+            className="object-cover cursor-pointer"
+            sizes="100vw"
+            quality={95}
             onClick={() => openLightbox(featuredItem)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -242,10 +246,13 @@ export function CampusGallery() {
             onClick={() => openLightbox(item)}
           >
             <div className="aspect-square relative">
-              <img
+              <Image
                 src={item.image || "/placeholder.svg"}
                 alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                sizes="(max-width: 1024px) 50vw, 33vw"
+                quality={95}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -281,104 +288,86 @@ export function CampusGallery() {
 
       {/* Lightbox Modal */}
       {lightboxImage && (
-        <div className="fixed inset-0 bg-white/10 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="relative max-w-5xl max-h-[95vh] w-full animate-in zoom-in-95 duration-500 ease-out">
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative max-w-5xl w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Close Button */}
             <button
               onClick={closeLightbox}
-              className="absolute -top-16 right-0 z-10 bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all duration-300 rounded-full p-3 hover:scale-110"
+              className="absolute top-4 right-4 z-10 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-2 shadow-lg transition-colors"
+              aria-label="Close"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
 
-            {/* Action Buttons */}
-            <div className="absolute -top-16 right-16 z-10 flex gap-2">
-              <button
-                onClick={toggleLike}
-                className={cn(
-                  "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300 rounded-full p-3 hover:scale-110",
-                  isLiked ? "text-red-400 bg-red-500/20" : "text-white",
-                )}
-              >
-                <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
-              </button>
-              <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all duration-300 rounded-full p-3 hover:scale-110">
-                <Share2 className="w-5 h-5" />
-              </button>
-              <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all duration-300 rounded-full p-3 hover:scale-110">
-                <ZoomIn className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Main Image Container */}
-            <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+            {/* Image Container */}
+            <div className="relative bg-gray-100 dark:bg-gray-800">
               {isLightboxLoading && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-                  <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
 
-              <img
+              <Image
                 src={lightboxImage.image || "/placeholder.svg"}
                 alt={lightboxImage.title}
-                className="w-full h-full max-h-[70vh] object-contain transition-all duration-700 hover:scale-105"
+                width={1200}
+                height={800}
+                className="w-full max-h-[70vh] object-contain"
+                quality={95}
                 onLoad={() => setIsLightboxLoading(false)}
               />
+            </div>
 
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-
-              {/* Content Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-8">
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 transform translate-y-0 transition-all duration-500">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <Badge
-                        variant="secondary"
-                        className="mb-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border-white/30 backdrop-blur-sm"
-                      >
-                        <Trophy className="w-3 h-3 mr-1" />
-                        {lightboxImage.category}
-                      </Badge>
-                      <h3 className="text-3xl font-bold text-white mb-3 bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
-                        {lightboxImage.title}
-                      </h3>
-                      <p className="text-white/90 text-lg leading-relaxed max-w-2xl">{lightboxImage.description}</p>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex flex-col items-end gap-2 text-white/70 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-4 h-4" />
-                        <span>124</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Share2 className="w-4 h-4" />
-                        <span>32</span>
-                      </div>
-                    </div>
+            {/* Info Section */}
+            <div className="p-6 bg-white dark:bg-gray-900">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {lightboxImage.category}
+                    </Badge>
                   </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                    <div className="text-white/60 text-sm">Photo by Southville 8B NHS</div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-                      >
-                        Download
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0"
-                      >
-                        View Full Gallery
-                      </Button>
-                    </div>
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                    {lightboxImage.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {lightboxImage.description}
+                  </p>
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={toggleLike}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-sm",
+                      isLiked
+                        ? "text-red-600 bg-red-50 dark:bg-red-900/20"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800",
+                    )}
+                  >
+                    <Heart className={cn("w-4 h-4", isLiked && "fill-current")} />
+                    <span>{isLiked ? "Liked" : "Like"}</span>
+                  </button>
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">
+                    <Share2 className="w-4 h-4" />
+                    <span>Share</span>
+                  </button>
+                </div>
+
+                <Link href="/guess/gallery">
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                    View Gallery
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

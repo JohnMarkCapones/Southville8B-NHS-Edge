@@ -62,7 +62,7 @@ export interface Section {
   id: string;
   name: string;
   grade_level?: string;
-  teacher_id?: string;
+  adviser_id?: string;
   room_id?: string;
   building_id?: string;
   created_at: string;

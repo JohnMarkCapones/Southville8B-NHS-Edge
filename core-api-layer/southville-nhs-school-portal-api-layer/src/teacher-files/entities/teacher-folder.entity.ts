@@ -25,6 +25,12 @@ export class TeacherFolder {
   })
   parent_id?: string;
 
+  @ApiPropertyOptional({
+    description: 'Subject ID for folder organization',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  subject_id?: string;
+
   @ApiProperty({
     description: 'Soft delete flag',
     default: false,
@@ -81,4 +87,12 @@ export class TeacherFolderWithChildren extends TeacherFolder {
     example: 5,
   })
   file_count?: number;
+
+  @ApiPropertyOptional({
+    description: 'Subject information',
+  })
+  subject?: {
+    id: string;
+    name: string;
+  };
 }

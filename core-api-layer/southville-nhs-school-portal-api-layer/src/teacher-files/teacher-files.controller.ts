@@ -45,6 +45,8 @@ import {
   TeacherFile,
   TeacherFileWithDetails,
 } from './entities/teacher-file.entity';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Teacher Files')
 @Controller('teacher-files')
@@ -81,8 +83,9 @@ export class TeacherFilesController {
   async getFolderTree(
     @Query() query: FolderQueryDto,
     @Req() request: any,
-  ): Promise<TeacherFolderWithChildren[]> {
-    return this.folderService.getFolderTree(
+  ): Promise<TeacherFolder[]> {
+    // Return flat list instead of tree for frontend to build its own tree
+    return this.folderService.findAll(
       query.includeDeleted,
       request.accessToken,
     );
@@ -109,6 +112,10 @@ export class TeacherFilesController {
   }
 
   @Post('folders')
+  @Audit({
+    entityType: AuditEntityType.TEACHER_FOLDER,
+    descriptionField: 'name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Create new folder (Admin only)',
@@ -133,6 +140,10 @@ export class TeacherFilesController {
   }
 
   @Put('folders/:id')
+  @Audit({
+    entityType: AuditEntityType.TEACHER_FOLDER,
+    descriptionField: 'name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Update folder (Admin only)',
@@ -160,6 +171,10 @@ export class TeacherFilesController {
   }
 
   @Delete('folders/:id')
+  @Audit({
+    entityType: AuditEntityType.TEACHER_FOLDER,
+    descriptionField: 'name',
+  })
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -178,7 +193,8 @@ export class TeacherFilesController {
   async deleteFolder(
     @Param('id', ParseUUIDPipe) id: string,
     @AuthUser() user: any,
-  ): Promise<void> {
+  ) {
+    // Return entity for audit logging (HTTP response still 204 due to @HttpCode)
     return this.folderService.softDelete(id, user.id);
   }
 
@@ -287,6 +303,10 @@ export class TeacherFilesController {
   }
 
   @Post('files')
+  @Audit({
+    entityType: AuditEntityType.TEACHER_FILE,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.ADMIN)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -392,6 +412,10 @@ export class TeacherFilesController {
   }
 
   @Put('files/:id')
+  @Audit({
+    entityType: AuditEntityType.TEACHER_FILE,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Update file metadata (Admin only)',
@@ -494,6 +518,10 @@ export class TeacherFilesController {
   }
 
   @Delete('files/:id')
+  @Audit({
+    entityType: AuditEntityType.TEACHER_FILE,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -511,7 +539,8 @@ export class TeacherFilesController {
   async deleteFile(
     @Param('id', ParseUUIDPipe) id: string,
     @AuthUser() user: any,
-  ): Promise<void> {
+  ) {
+    // Return entity for audit logging (HTTP response still 204 due to @HttpCode)
     return this.fileStorageService.softDelete(id, user.id);
   }
 

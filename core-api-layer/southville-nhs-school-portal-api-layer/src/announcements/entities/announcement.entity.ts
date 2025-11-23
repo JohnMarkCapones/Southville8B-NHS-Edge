@@ -55,4 +55,15 @@ export class Announcement {
     id: string;
     name: string;
   }>;
+
+  @ApiProperty({
+    description: 'Target sections',
+    type: 'array',
+    required: false,
+  })
+  sections?: Array<{
+    id: string;
+    name: string;
+    gradeLevel?: string;
+  }>;
 }

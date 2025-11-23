@@ -11,6 +11,7 @@ import { GalleryTagsController } from './controllers/gallery-tags.controller';
 import { GalleryItemsService } from './services/gallery-items.service';
 import { GalleryTagsService } from './services/gallery-tags.service';
 import { GalleryStorageService } from './services/gallery-storage.service';
+import { CloudflareImagesService } from './services/cloudflare-images.service';
 import { GalleryDownloadLoggerService } from './services/gallery-download-logger.service';
 import { GalleryViewTrackerService } from './services/gallery-view-tracker.service';
 
@@ -28,6 +29,7 @@ import { GalleryViewTrackerService } from './services/gallery-view-tracker.servi
 
     // Helper services
     GalleryStorageService,
+    CloudflareImagesService,
     GalleryDownloadLoggerService,
     GalleryViewTrackerService,
   ],
@@ -35,6 +37,7 @@ import { GalleryViewTrackerService } from './services/gallery-view-tracker.servi
     GalleryItemsService,
     GalleryTagsService,
     GalleryStorageService,
+    CloudflareImagesService,
     GalleryDownloadLoggerService,
     GalleryViewTrackerService,
   ],

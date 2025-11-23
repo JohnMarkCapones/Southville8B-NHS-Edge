@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Calendar, User, Clock, ArrowLeft, ArrowRight, Eye } from "lucide-react"
+import { Calendar, User, Clock, ArrowLeft, ArrowRight, Eye, Users, Award, Tag } from "lucide-react"
 import Link from "next/link"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { NewsArticle } from "../data-mapping"
@@ -27,44 +27,85 @@ export default function NewsArticleClient({ article }: { article: NewsArticle })
 
         {/* Article Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4 text-sm text-muted-foreground">
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 mr-1" />
-              <span>{new Date(article.date).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</span>
-            </div>
-            <div className="flex items-center">
-              <User className="w-4 h-4 mr-1" />
-              <span>{article.author.name}</span>
-            </div>
-            <div className="flex items-center">
-              <Clock className="w-4 h-4 mr-1" />
-              <span>{article.readTime}</span>
-            </div>
-            {article.views && (
-              <div className="flex items-center">
-                <Eye className="w-4 h-4 mr-1" />
-                <span>{article.views} views</span>
-              </div>
-            )}
+          {/* Category Badge */}
+          <div className="mb-4">
+            <Badge variant="default" className="text-sm px-4 py-1.5">
+              {article.category}
+            </Badge>
           </div>
-          
+
           <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
             {article.title}
           </h1>
-          
-          <p className="text-xl text-muted-foreground leading-relaxed">
+
+          <p className="text-xl text-muted-foreground leading-relaxed mb-6">
             {article.excerpt}
           </p>
 
+          {/* Article Metadata */}
+          <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
+            <div className="flex items-center">
+              <Calendar className="w-4 h-4 mr-1.5" />
+              <span>{new Date(article.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}</span>
+            </div>
+            <div className="flex items-center">
+              <User className="w-4 h-4 mr-1.5" />
+              <span className="font-medium text-foreground">{article.author.name}</span>
+            </div>
+            <div className="flex items-center">
+              <Clock className="w-4 h-4 mr-1.5" />
+              <span>{article.readTime}</span>
+            </div>
+            {article.views !== undefined && (
+              <div className="flex items-center">
+                <Eye className="w-4 h-4 mr-1.5" />
+                <span>{article.views.toLocaleString()} views</span>
+              </div>
+            )}
+          </div>
+
+          {/* Co-Authors Section */}
+          {article.coAuthors && article.coAuthors.length > 0 && (
+            <div className="mb-4 p-4 bg-muted/50 rounded-lg border border-border">
+              <div className="flex items-start gap-2">
+                <Users className="w-5 h-5 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground mb-1">Co-Authors</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {article.coAuthors.map((coAuthor, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {coAuthor}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Credits Section */}
+          {article.credits && (
+            <div className="mb-4 p-4 bg-muted/50 rounded-lg border border-border">
+              <div className="flex items-start gap-2">
+                <Award className="w-5 h-5 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground mb-1">Credits</h3>
+                  <p className="text-sm text-muted-foreground">{article.credits}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Tag className="w-4 h-4 text-muted-foreground" />
               {article.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
+                <Badge key={index} variant="outline" className="text-xs">
                   {tag}
                 </Badge>
               ))}
@@ -120,28 +161,46 @@ export default function NewsArticleClient({ article }: { article: NewsArticle })
 
         {/* Article Footer */}
         <div className="border-t pt-8">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Published on {new Date(article.date).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-sm text-muted-foreground mb-2">
+                Published on {new Date(article.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Category:</span>
+                <Badge variant="secondary" className="text-xs">
+                  {article.category}
+                </Badge>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary">
-                {article.category}
-              </Badge>
+            <div className="flex items-center gap-2">
               {article.featured && (
-                <Badge variant="default" className="bg-yellow-500 text-white">
-                  Featured
+                <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600 text-white">
+                  ⭐ Featured
                 </Badge>
               )}
               {article.trending && (
-                <Badge variant="default" className="bg-red-500 text-white">
-                  Trending
+                <Badge variant="default" className="bg-red-500 hover:bg-red-600 text-white">
+                  🔥 Trending
                 </Badge>
               )}
+            </div>
+          </div>
+
+          {/* Author Info Footer */}
+          <div className="mt-6 p-6 bg-muted/30 rounded-lg border border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Written by</p>
+                <p className="text-base font-bold text-primary">{article.author.name}</p>
+              </div>
             </div>
           </div>
         </div>

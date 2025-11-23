@@ -32,21 +32,26 @@ export interface Schedule {
   semester: Semester;
   createdAt: string;
   updatedAt: string;
+  status?: 'draft' | 'published' | 'archived';
+  is_published?: boolean;
+  published_at?: string | null;
+  recurring_rule?: string | null;
+  version?: number;
 
   // Relations
   subject?: {
     id: string;
-    subjectName: string;
+    subjectName: string; // Backend returns camelCase
     description?: string;
-    gradeLevel?: number;
-    colorHex?: string;
+    gradeLevel?: number; // Backend returns camelCase
+    colorHex?: string; // Backend returns camelCase
   };
 
   teacher?: {
     id: string;
-    firstName: string;
-    lastName: string;
-    middleName?: string;
+    firstName: string; // Backend returns camelCase
+    lastName: string; // Backend returns camelCase
+    middleName?: string; // Backend returns camelCase
     user?: {
       id: string;
       fullName: string;

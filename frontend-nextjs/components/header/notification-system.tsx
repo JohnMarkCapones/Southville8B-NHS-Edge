@@ -1,81 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { Bell, X, Check, AlertCircle, Info, Calendar, Users, BookOpen, Sparkles } from "lucide-react"
+import { Bell, X, Check, AlertCircle, Info, Calendar, Users, BookOpen, Sparkles, Loader2 } from "lucide-react"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: "info" | "success" | "warning" | "error" | "event" | "academic" | "social"
-  timestamp: Date
-  read: boolean
-  actionUrl?: string
-  priority: "low" | "medium" | "high"
-}
+import { useNotifications, type Notification } from "@/hooks/useNotifications"
 
 interface NotificationSystemProps {
   className?: string
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "Spring Musical Auditions",
-    message: "Auditions for Hamilton start next week. Sign up now!",
-    type: "event",
-    timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    read: false,
-    actionUrl: "/events/spring-musical",
-    priority: "high",
-  },
-  {
-    id: "2",
-    title: "Grade Posted",
-    message: "Your Chemistry test grade has been posted.",
-    type: "academic",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-    read: false,
-    actionUrl: "/grades",
-    priority: "medium",
-  },
-  {
-    id: "3",
-    title: "Club Meeting Reminder",
-    message: "Robotics Club meeting tomorrow at 3:30 PM in Room 205.",
-    type: "social",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: true,
-    actionUrl: "/clubs/robotics",
-    priority: "low",
-  },
-  {
-    id: "4",
-    title: "Basketball Game Tonight",
-    message: "Varsity basketball vs. Central High at 7:00 PM. Come support!",
-    type: "event",
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-    read: true,
-    actionUrl: "/athletics/basketball",
-    priority: "medium",
-  },
-  {
-    id: "5",
-    title: "Library Hours Extended",
-    message: "Library will be open until 8 PM during finals week.",
-    type: "info",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    read: true,
-    actionUrl: "/library",
-    priority: "low",
-  },
-]
 
 const getNotificationIcon = (type: Notification["type"]) => {
   switch (type) {
@@ -131,11 +68,18 @@ const formatTimestamp = (timestamp: Date) => {
 
 export function NotificationSystem({ className }: NotificationSystemProps) {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [notifications, setNotifications] = React.useState<Notification[]>(mockNotifications)
   const { toast } = useToast()
   const dropdownRef = React.useRef<HTMLDivElement>(null)
-
-  const unreadCount = notifications.filter((n) => !n.read).length
+  
+  const {
+    notifications,
+    loading,
+    error,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications()
 
   // Handle click outside to close
   React.useEffect(() => {
@@ -149,68 +93,45 @@ export function NotificationSystem({ className }: NotificationSystemProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Simulate real-time notifications
+  // Show error toast if there's an error
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      // Randomly add new notifications (for demo purposes)
-      if (Math.random() < 0.1) {
-        // 10% chance every 30 seconds
-        const newNotification: Notification = {
-          id: Date.now().toString(),
-          title: "New Announcement",
-          message: "Check out the latest school news and updates.",
-          type: "info",
-          timestamp: new Date(),
-          read: false,
-          priority: "medium",
-        }
+    if (error) {
+      toast({
+        title: "Error loading notifications",
+        description: error,
+        variant: "destructive",
+      })
+    }
+  }, [error, toast])
 
-        setNotifications((prev) => [newNotification, ...prev])
-
-        // Show toast notification
-        toast({
-          title: newNotification.title,
-          description: newNotification.message,
-          variant: "info",
-        })
-      }
-    }, 30000) // Check every 30 seconds
-
-    return () => clearInterval(interval)
-  }, [toast])
-
-  const handleNotificationClick = (notification: Notification) => {
-    // Mark as read
-    setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)))
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read if not already read
+    if (!notification.read) {
+      await markAsRead(notification.id)
+    }
 
     // Navigate to action URL if available
     if (notification.actionUrl) {
       window.location.href = notification.actionUrl
+    } else {
+      setIsOpen(false)
     }
-
-    setIsOpen(false)
   }
 
-  const handleMarkAsRead = (notificationId: string, event: React.MouseEvent) => {
+  const handleMarkAsRead = async (notificationId: string, event: React.MouseEvent) => {
     event.stopPropagation()
-    setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)))
+    await markAsRead(notificationId)
   }
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-    toast({
-      title: "All notifications marked as read",
-      variant: "success",
-    })
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
   }
 
-  const handleClearAll = () => {
-    setNotifications([])
+  const handleClearAll = async () => {
+    // Delete all notifications
+    const deletePromises = notifications.map((n) => deleteNotification(n.id))
+    await Promise.all(deletePromises)
     setIsOpen(false)
-    toast({
-      title: "All notifications cleared",
-      variant: "success",
-    })
   }
 
   return (
@@ -279,7 +200,12 @@ export function NotificationSystem({ className }: NotificationSystemProps) {
           </div>
 
           <ScrollArea className="max-h-96">
-            {notifications.length > 0 ? (
+            {loading ? (
+              <div className="p-12 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Loading notifications...</p>
+              </div>
+            ) : notifications.length > 0 ? (
               <div className="p-2">
                 {notifications.map((notification, index) => (
                   <div key={notification.id}>

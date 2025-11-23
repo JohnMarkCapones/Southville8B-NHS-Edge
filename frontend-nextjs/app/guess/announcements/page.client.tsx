@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { cn } from "@/lib/utils"
 import { Bell, Calendar, ArrowRight, AlertCircle, BookOpen, Trophy, Users, Search, Filter } from "lucide-react"
 import Link from "next/link"
@@ -79,6 +80,7 @@ export default function AnnouncementsClient({ initialItems }: { initialItems?: A
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-blue-950/20 dark:to-indigo-950/20">
+      <GuessBreadcrumb items={[{ label: "Announcements" }]} />
       <section className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10" />
         <div className="container mx-auto px-4 relative z-10">

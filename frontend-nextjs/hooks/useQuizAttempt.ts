@@ -48,6 +48,9 @@ interface UseQuizAttemptReturn {
   // Auto-save status
   lastSaved: Date | null;
   hasUnsavedChanges: boolean;
+
+  // Time tracking
+  markQuestionViewed: (questionId: string) => void;
 }
 
 /**
@@ -91,6 +94,9 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
   // Store pending answers for auto-save
   const pendingAnswers = useRef<Map<string, any>>(new Map());
 
+  // Track when each question was first viewed (for time tracking)
+  const questionStartTimes = useRef<Map<string, number>>(new Map());
+
   /**
    * Start quiz with device fingerprint (new API)
    */
@@ -103,7 +109,7 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
         // Start the attempt
         const response: StartAttemptResponse =
           await quizApi.student.startQuizAttempt(quizId, {
-            device_fingerprint: deviceFingerprint,
+            deviceFingerprint: deviceFingerprint,
           });
 
         // Store in Zustand
@@ -143,10 +149,13 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
         // Start the attempt
         const response: StartAttemptResponse =
           await quizApi.student.startQuizAttempt(quizId, {
-            device_fingerprint: fingerprint.fingerprint,
+            deviceFingerprint: fingerprint.fingerprint,
+            userAgent: navigator.userAgent, // Send user agent string
           });
 
-        // Store in Zustand
+        console.log('[useQuizAttempt] Start attempt response:', response);
+
+        // Store in Zustand with full quiz data from backend
         setAttempt(
           response.attempt,
           response.attempt.quiz!,
@@ -185,11 +194,44 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
       setIsSaving(true);
 
       try {
-        await quizApi.student.submitAnswer(attemptId, {
-          question_id: questionId,
-          student_answer: answer,
-          time_spent: 0, // TODO: Track actual time spent
-        });
+        // Helper: Check if string is a UUID
+        const isUUID = (str: string): boolean => {
+          return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+        };
+
+        // Determine answer type and map to correct field
+        let payload: any = { questionId: questionId };
+
+        if (Array.isArray(answer)) {
+          // Check if it's an array of UUIDs (checkbox) or array of strings (fill-in-blank)
+          if (answer.length > 0 && answer.every(item => typeof item === 'string' && isUUID(item))) {
+            // Multiple choice (checkboxes) - array of UUIDs
+            payload.choiceIds = answer;
+          } else {
+            // Fill-in-blank or other array answers - array of text
+            payload.answerJson = answer;
+          }
+        } else if (typeof answer === 'string' && isUUID(answer)) {
+          // Single choice (MCQ, True/False) - single UUID
+          payload.choiceId = answer;
+        } else if (typeof answer === 'string') {
+          // Text answer (short answer, essay)
+          payload.answerText = answer;
+        } else if (typeof answer === 'object' && answer !== null) {
+          // Complex answer (matching, ordering, drag-drop)
+          payload.answerJson = answer;
+        }
+
+        // Calculate time spent on this question (in seconds)
+        const startTime = questionStartTimes.current.get(questionId);
+        if (startTime) {
+          const timeSpentSeconds = Math.floor((Date.now() - startTime) / 1000);
+          payload.timeSpentSeconds = timeSpentSeconds;
+          console.log(`[QuizAttempt] Question ${questionId}: ${timeSpentSeconds}s spent`);
+        }
+
+        // Backend expects camelCase fields
+        await quizApi.student.submitAnswer(attemptId, payload);
 
         setLastSaved(new Date());
         setHasUnsavedChanges(false);
@@ -233,9 +275,11 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
           Array.from(pendingAnswers.current.entries()).map(
             ([questionId, answer]) =>
               quizApi.student.submitAnswer(attemptId, {
-                question_id: questionId,
-                student_answer: answer,
-                time_spent: 0,
+                questionId: questionId,
+                answerText: typeof answer === 'string' ? answer : undefined,
+                choiceId: typeof answer === 'number' ? answer : undefined,
+                choiceIds: Array.isArray(answer) ? answer : undefined,
+                answerJson: typeof answer === 'object' && !Array.isArray(answer) ? answer : undefined,
               })
           )
         );
@@ -245,10 +289,12 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
       // Submit the quiz
       const result = await quizApi.student.submitQuiz(attemptId);
 
+      console.log('[useQuizAttempt] Submit quiz result:', result);
+
       toast({
         title: 'Quiz Submitted',
         description: result.autoGraded
-          ? `Score: ${result.score}/${result.maxScore} (${result.percentage.toFixed(1)}%)`
+          ? `Score: ${result.score ?? 0}/${result.maxScore ?? 0} (${(result.percentage ?? 0).toFixed(1)}%)`
           : 'Your quiz has been submitted for grading',
       });
 
@@ -296,6 +342,16 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
     [toast]
   );
 
+  /**
+   * Mark when a question is first viewed (for time tracking)
+   */
+  const markQuestionViewed = useCallback((questionId: string) => {
+    if (!questionStartTimes.current.has(questionId)) {
+      questionStartTimes.current.set(questionId, Date.now());
+      console.log(`[QuizAttempt] Started tracking time for question ${questionId}`);
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -319,5 +375,6 @@ export const useQuizAttempt = (): UseQuizAttemptReturn => {
     getAttempt,
     lastSaved,
     hasUnsavedChanges,
+    markQuestionViewed,
   };
 };

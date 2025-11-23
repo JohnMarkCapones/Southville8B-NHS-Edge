@@ -21,107 +21,54 @@ import {
   MessageSquare,
   AlertCircle,
   CheckCircle,
+  Loader2,
+  Coffee,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useUser } from "@/hooks/useUser"
+import { getTeacherSections, type SectionWithStudents } from "@/lib/api/endpoints"
+import { getTeacherSchedules } from "@/lib/api/endpoints/schedules"
+import { type Schedule } from "@/lib/api/types/schedules"
+import { apiClient } from "@/lib/api/client"
 
-const classesData = [
-  {
-    id: 1,
-    section: "NEUTRON-10",
-    subject: "Advanced Mathematics",
-    room: "Room 301",
-    time: "8:00 AM - 9:30 AM",
-    students: 32,
-    present: 28,
-    avgScore: 87,
-    status: "active",
-    nextClass: "Today",
-    color: "from-blue-500 to-purple-600",
-    performance: "excellent",
-    assignments: 3,
-    announcements: 2,
-  },
-  {
-    id: 2,
-    section: "PROTON-9",
-    subject: "Physics Laboratory",
-    room: "Lab 205",
-    time: "10:00 AM - 11:30 AM",
-    students: 28,
-    present: 26,
-    avgScore: 82,
-    status: "active",
-    nextClass: "Today",
-    color: "from-green-500 to-teal-600",
-    performance: "good",
-    assignments: 2,
-    announcements: 1,
-  },
-  {
-    id: 3,
-    section: "ELECTRON-11",
-    subject: "Chemistry",
-    room: "Room 402",
-    time: "1:00 PM - 2:30 PM",
-    students: 30,
-    present: 29,
-    avgScore: 91,
-    status: "active",
-    nextClass: "Tomorrow",
-    color: "from-orange-500 to-red-600",
-    performance: "excellent",
-    assignments: 4,
-    announcements: 3,
-  },
-  {
-    id: 4,
-    section: "PHOTON-8",
-    subject: "Biology",
-    room: "Room 103",
-    time: "3:00 PM - 4:30 PM",
-    students: 25,
-    present: 23,
-    avgScore: 78,
-    status: "completed",
-    nextClass: "Monday",
-    color: "from-purple-500 to-pink-600",
-    performance: "good",
-    assignments: 1,
-    announcements: 0,
-  },
-  {
-    id: 5,
-    section: "QUARK-12",
-    subject: "English Literature",
-    room: "Room 201",
-    time: "9:00 AM - 10:30 AM",
-    students: 35,
-    present: 32,
-    avgScore: 85,
-    status: "active",
-    nextClass: "Today",
-    color: "from-indigo-500 to-blue-600",
-    performance: "good",
-    assignments: 5,
-    announcements: 1,
-  },
-  {
-    id: 6,
-    section: "ATOM-7",
-    subject: "History",
-    room: "Room 304",
-    time: "11:00 AM - 12:30 PM",
-    students: 29,
-    present: 27,
-    avgScore: 89,
-    status: "active",
-    nextClass: "Tomorrow",
-    color: "from-teal-500 to-green-600",
-    performance: "excellent",
-    assignments: 2,
-    announcements: 2,
-  },
+// Color palette for section cards
+const colorPalette = [
+  "from-blue-500 to-purple-600",
+  "from-green-500 to-teal-600",
+  "from-orange-500 to-red-600",
+  "from-purple-500 to-pink-600",
+  "from-indigo-500 to-blue-600",
+  "from-teal-500 to-green-600",
+  "from-pink-500 to-rose-600",
+  "from-cyan-500 to-blue-600",
 ]
+
+interface ClassData {
+  id: string
+  section: string
+  subject: string
+  subjectId?: string
+  room: string
+  time: string
+  students: number
+  present: number
+  avgScore: number
+  status: "active" | "completed"
+  nextClass: string
+  color: string
+  performance: "excellent" | "good" | "needs-improvement"
+  assignments: number
+  announcements: number
+  // Additional schedule information
+  schedules?: Array<{
+    id: string
+    dayOfWeek: string
+    startTime: string
+    endTime: string
+    roomNumber?: string
+    buildingName?: string
+  }>
+}
 
 export default function ClassesPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -129,6 +76,128 @@ export default function ClassesPage() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<Array<{ type: string; value: string; icon: any }>>([])
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // Fetch user and sections data
+  const { data: user, isLoading: userLoading, isError: userError, error: userErrorObj } = useUser()
+  const [classesData, setClassesData] = useState<ClassData[]>([])
+  const [sectionsLoading, setSectionsLoading] = useState(false)
+  const [schedulesLoading, setSchedulesLoading] = useState(false)
+  const [sectionsError, setSectionsError] = useState<string | null>(null)
+  const [schedulesError, setSchedulesError] = useState<string | null>(null)
+
+  // Transform combined section and schedule data to UI format
+  const transformCombinedDataToClassData = (
+    section: SectionWithStudents, 
+    schedules: Schedule[], 
+    index: number
+  ): ClassData => {
+    // Find schedules for this section
+    const sectionSchedules = schedules.filter(schedule => schedule.sectionId === section.id)
+    
+    // Get primary subject (most frequent or first)
+    const primarySubject = sectionSchedules.length > 0 
+      ? sectionSchedules[0].subject?.subjectName || 'Subject TBA'
+      : 'No Schedule Assigned'
+    
+    const primarySubjectId = sectionSchedules.length > 0 
+      ? sectionSchedules[0].subjectId
+      : undefined
+
+    // Get room info from schedule or section
+    const roomInfo = sectionSchedules.length > 0 && sectionSchedules[0].room?.roomNumber
+      ? `Room ${sectionSchedules[0].room.roomNumber}${sectionSchedules[0].room.floor?.building?.name ? ` (${sectionSchedules[0].room.floor.building.name})` : ''}`
+      : section.room_number
+        ? `Room ${section.room_number}${section.room_name ? ` (${section.room_name})` : ''}`
+        : 'Room TBA'
+
+    // Get time info from schedules
+    const timeInfo = sectionSchedules.length > 0
+      ? `${sectionSchedules[0].dayOfWeek} ${sectionSchedules[0].startTime.slice(0, 5)}-${sectionSchedules[0].endTime.slice(0, 5)}`
+      : 'Schedule Not Set'
+
+    // Get next class info
+    const nextClass = sectionSchedules.length > 0
+      ? `${sectionSchedules[0].dayOfWeek} ${sectionSchedules[0].startTime.slice(0, 5)}`
+      : 'Not Scheduled'
+
+    return {
+      id: section.id,
+      section: section.name,
+      subject: primarySubject,
+      subjectId: primarySubjectId,
+      room: roomInfo,
+      time: timeInfo,
+      students: section.students?.length || 0,
+      present: 0, // TODO: Need attendance data
+      avgScore: 0, // TODO: Need grades data
+      status: section.status === 'active' ? 'active' : 'completed',
+      nextClass: nextClass,
+      color: colorPalette[index % colorPalette.length],
+      performance: "good", // TODO: Calculate from grades
+      assignments: 0, // TODO: Need assignments count
+      announcements: 0, // TODO: Need announcements count
+      schedules: sectionSchedules.map(schedule => ({
+        id: schedule.id,
+        dayOfWeek: schedule.dayOfWeek,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        roomNumber: schedule.room?.roomNumber,
+        buildingName: schedule.room?.floor?.building?.name
+      }))
+    }
+  }
+
+  // Fetch sections and schedules when user is available
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return
+
+      try {
+        setSectionsLoading(true)
+        setSchedulesLoading(true)
+        setSectionsError(null)
+        setSchedulesError(null)
+
+        
+        // First get the user profile to get teacher ID
+        const userProfile = await apiClient.get<any>('/users/me')
+        const teacherId = userProfile.teacher?.id
+
+        if (!teacherId) {
+          throw new Error('User is not a teacher')
+        }
+
+        // Fetch both sections and schedules in parallel
+        const [sections, schedules] = await Promise.all([
+          getTeacherSections(user.id),
+          getTeacherSchedules(teacherId) // Use teacherId instead of user.id
+        ])
+
+        // Transform combined data
+        const transformedData = sections.map((section, index) =>
+          transformCombinedDataToClassData(section, schedules, index)
+        )
+
+        setClassesData(transformedData)
+      } catch (error: any) {
+        console.error('[Teacher Classes] Error loading data:', error)
+        if (error.message?.includes('sections')) {
+          setSectionsError(error?.message || 'Failed to load sections')
+        } else if (error.message?.includes('schedules')) {
+          setSchedulesError(error?.message || 'Failed to load schedules')
+        } else {
+          setSectionsError(error?.message || 'Failed to load classes')
+        }
+      } finally {
+        setSectionsLoading(false)
+        setSchedulesLoading(false)
+      }
+    }
+
+    if (user?.id) {
+      fetchData()
+    }
+  }, [user?.id])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -221,6 +290,39 @@ export default function ClassesPage() {
   const totalStudents = classesData.reduce((sum, cls) => sum + cls.students, 0)
   const activeClasses = classesData.filter((cls) => cls.status === "active").length
 
+  // Loading state
+  const isLoading = userLoading || sectionsLoading || schedulesLoading
+
+  // Error state
+  const hasError = userError || sectionsError || schedulesError
+
+  // Weekly schedule helpers
+  const getDayName = (dayIndex: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return days[dayIndex]
+  }
+
+  const getCurrentDayIndex = () => {
+    return new Date().getDay()
+  }
+
+  const isWeekday = (dayIndex: number) => {
+    return dayIndex >= 1 && dayIndex <= 5 // Monday (1) to Friday (5)
+  }
+
+  const getClassesForDay = (dayName: string) => {
+    return classesData.filter((classItem) => {
+      if (!classItem.schedules || classItem.schedules.length === 0) return false
+      return classItem.schedules.some((schedule) => 
+        schedule.dayOfWeek.toLowerCase() === dayName.toLowerCase()
+      )
+    })
+  }
+
+  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+  const currentDayIndex = getCurrentDayIndex()
+  const isTodayWeekday = isWeekday(currentDayIndex)
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -235,8 +337,50 @@ export default function ClassesPage() {
         </Button>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Error State */}
+      {hasError && (
+        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div>
+                <h3 className="font-semibold text-red-900 dark:text-red-200">Failed to load classes</h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                  {userError && `User Error: ${userErrorObj?.message || 'Could not load user data'}`}
+                  {sectionsError && !userError && `Sections Error: ${sectionsError}`}
+                  {schedulesError && !userError && !sectionsError && `Schedules Error: ${schedulesError}`}
+                  {!userError && !sectionsError && !schedulesError && 'An error occurred while loading your data. Please try refreshing the page.'}
+                </p>
+                {userError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                    Make sure you're logged in and the backend is running at http://localhost:3004
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="w-12 h-12 text-blue-500 dark:text-blue-400 animate-spin mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Loading your classes...</h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            {sectionsLoading && schedulesLoading && 'Fetching sections and schedules...'}
+            {sectionsLoading && !schedulesLoading && 'Fetching sections...'}
+            {schedulesLoading && !sectionsLoading && 'Fetching schedules...'}
+            {!sectionsLoading && !schedulesLoading && 'Please wait while we fetch your data.'}
+          </p>
+        </div>
+      )}
+
+      {/* Main Content - Only show when not loading */}
+      {!isLoading && !hasError && (
+        <>
+          {/* Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-l-4 border-l-blue-500 dark:bg-gray-800/50 dark:border-gray-700 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -261,6 +405,116 @@ export default function ClassesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Weekly Schedule View */}
+      <Card className="dark:bg-gray-800/50 dark:border-gray-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Weekly Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!isTodayWeekday ? (
+            <div className="text-center py-12">
+              <Coffee className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No class - Enjoy your weekend!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Classes resume on Monday
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {weekDays.map((day, index) => {
+                const dayClasses = getClassesForDay(day)
+                const dayIndex = index + 1 // Monday = 1, Friday = 5
+                const isToday = currentDayIndex === dayIndex
+                
+                return (
+                  <div
+                    key={day}
+                    className={`rounded-lg border-2 p-4 transition-all ${
+                      isToday
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-500'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className={`font-semibold ${isToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                        {day}
+                      </h3>
+                      {isToday && (
+                        <Badge className="bg-blue-500 text-white text-xs">Today</Badge>
+                      )}
+                    </div>
+                    
+                    {dayClasses.length === 0 ? (
+                      <div className="text-center py-6">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No classes</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {dayClasses.map((classItem) => {
+                          const daySchedule = classItem.schedules?.find(
+                            (s) => s.dayOfWeek.toLowerCase() === day.toLowerCase()
+                          )
+                          
+                          return (
+                            <div
+                              key={classItem.id}
+                              className={`p-3 rounded-lg border ${
+                                isToday
+                                  ? 'bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700'
+                                  : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                              } hover:shadow-md transition-shadow`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm text-gray-900 dark:text-white">
+                                    {classItem.section}
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                    {classItem.subject}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {daySchedule && (
+                                <div className="space-y-1 mt-2">
+                                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {daySchedule.startTime.slice(0, 5)} - {daySchedule.endTime.slice(0, 5)}
+                                  </div>
+                                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                                    <MapPin className="w-3 h-3 mr-1" />
+                                    {daySchedule.roomNumber 
+                                      ? `Room ${daySchedule.roomNumber}${daySchedule.buildingName ? ` (${daySchedule.buildingName})` : ''}`
+                                      : classItem.room
+                                    }
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center text-xs text-gray-500 dark:text-gray-500">
+                                  <Users className="w-3 h-3 mr-1" />
+                                  {classItem.students} students
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -342,7 +596,9 @@ export default function ClassesPage() {
               <div className="relative flex justify-between items-start">
                 <div>
                   <CardTitle className="text-xl font-bold drop-shadow-sm">{classItem.section}</CardTitle>
-                  <p className="text-white/90 text-sm mt-1 drop-shadow-sm">{classItem.subject}</p>
+                  <p className="text-white/90 text-sm mt-1 drop-shadow-sm">
+                    {classItem.subject}
+                  </p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -377,7 +633,14 @@ export default function ClassesPage() {
                 </div>
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <Clock className="w-4 h-4 mr-2" />
-                  {classItem.time}
+                  <div className="flex flex-col">
+                    <span>{classItem.time}</span>
+                    {classItem.schedules && classItem.schedules.length > 1 && (
+                      <span className="text-xs text-gray-500 dark:text-gray-500">
+                        +{classItem.schedules.length - 1} more schedule{classItem.schedules.length > 2 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <Badge className={getStatusColor(classItem.status)}>
@@ -425,6 +688,8 @@ export default function ClassesPage() {
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No classes found</h3>
           <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
         </div>
+      )}
+        </>
       )}
     </div>
   )

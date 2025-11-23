@@ -1,20 +1,32 @@
-"use client"
+"use client";
 
-import type React from "react"
-import StudentLayout from "@/components/student/student-layout"
+import type React from "react";
+import StudentLayout from "@/components/student/student-layout";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   User,
   Bell,
@@ -41,20 +53,45 @@ import {
   EyeOff,
   Download,
   Trash2,
-} from "lucide-react"
-import { useUser } from "@/hooks/useUser"
-import { getEmergencyContacts } from "@/lib/api/endpoints"
-import type { EmergencyContact } from "@/lib/api/types"
+} from "lucide-react";
+import { useUser } from "@/hooks/useUser";
+import { getEmergencyContacts, changePassword } from "@/lib/api/endpoints";
+import type { EmergencyContact } from "@/lib/api/types";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  changePasswordSchema,
+  type ChangePasswordInput,
+} from "@/lib/validation/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([])
-  const [loadingContacts, setLoadingContacts] = useState(false)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [emergencyContacts, setEmergencyContacts] = useState<
+    EmergencyContact[]
+  >([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Fetch current user data
-  const { data: user, isLoading } = useUser()
+  const { data: user, isLoading } = useUser();
+
+  // Toast hook
+  const { toast } = useToast();
+
+  // Password change form
+  const passwordForm = useForm<ChangePasswordInput>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
 
   // Initialize profile data from user
   const [profileData, setProfileData] = useState({
@@ -116,7 +153,7 @@ export default function ProfilePage() {
       timezone: "Asia/Manila",
       dateFormat: "MM/DD/YYYY",
     },
-  })
+  });
 
   // Update profile data when user data loads
   useEffect(() => {
@@ -131,38 +168,40 @@ export default function ProfilePage() {
         phone: user.profile?.phone_number || "",
         dateOfBirth: user.student?.birthday || "",
         address: user.profile?.address || "",
-        grade: user.student?.grade_level ? `Grade ${user.student.grade_level}` : "",
+        grade: user.student?.grade_level
+          ? `Grade ${user.student.grade_level}`
+          : "",
         section: user.student?.sections?.name || "",
         gpa: 94.5, // TODO: Get from actual GWA data
         rank: user.student?.rank || 0,
-      }))
+      }));
 
       // Set profile image if available
       if (user.profile?.avatar) {
-        setProfileImage(user.profile.avatar)
+        setProfileImage(user.profile.avatar);
       }
 
       // Fetch emergency contacts using user.id (NOT student.id)
       // The endpoint expects studentUserId which is the user_id from students table
       if (user.id) {
-        fetchEmergencyContacts(user.id)
+        fetchEmergencyContacts(user.id);
       }
     }
-  }, [user])
+  }, [user]);
 
   // Fetch emergency contacts from API
   const fetchEmergencyContacts = async (studentId: string) => {
-    setLoadingContacts(true)
+    setLoadingContacts(true);
     try {
-      const contacts = await getEmergencyContacts(studentId)
-      setEmergencyContacts(contacts)
+      const contacts = await getEmergencyContacts(studentId);
+      setEmergencyContacts(contacts);
 
       // Update profile data with emergency contacts
       if (contacts.length > 0) {
-        const primary = contacts.find(c => c.isPrimary) || contacts[0]
-        const secondary = contacts.find(c => !c.isPrimary) || contacts[1]
+        const primary = contacts.find((c) => c.isPrimary) || contacts[0];
+        const secondary = contacts.find((c) => !c.isPrimary) || contacts[1];
 
-        setProfileData(prev => ({
+        setProfileData((prev) => ({
           ...prev,
           emergencyContact1: {
             name: primary?.guardianName || "",
@@ -170,48 +209,116 @@ export default function ProfilePage() {
             phone: primary?.phoneNumber || "",
             email: primary?.email || "",
           },
-          emergencyContact2: secondary ? {
-            name: secondary.guardianName || "",
-            relationship: secondary.relationship || "",
-            phone: secondary.phoneNumber || "",
-            email: secondary.email || "",
-          } : prev.emergencyContact2,
-        }))
+          emergencyContact2: secondary
+            ? {
+                name: secondary.guardianName || "",
+                relationship: secondary.relationship || "",
+                phone: secondary.phoneNumber || "",
+                email: secondary.email || "",
+              }
+            : prev.emergencyContact2,
+        }));
       }
     } catch (error) {
-      console.error('Failed to fetch emergency contacts:', error)
+      console.error("Failed to fetch emergency contacts:", error);
     } finally {
-      setLoadingContacts(false)
+      setLoadingContacts(false);
     }
-  }
+  };
 
   const achievements = [
-    { title: "Honor Roll", description: "Achieved honor roll status for 3 consecutive quarters", date: "2024-01-15" },
-    { title: "Math Competition Winner", description: "1st place in Regional Math Competition", date: "2023-11-20" },
-    { title: "Perfect Attendance", description: "No absences for the entire semester", date: "2023-12-15" },
+    {
+      title: "Honor Roll",
+      description: "Achieved honor roll status for 3 consecutive quarters",
+      date: "2024-01-15",
+    },
+    {
+      title: "Math Competition Winner",
+      description: "1st place in Regional Math Competition",
+      date: "2023-11-20",
+    },
+    {
+      title: "Perfect Attendance",
+      description: "No absences for the entire semester",
+      date: "2023-12-15",
+    },
     {
       title: "Science Fair Champion",
       description: "Best in Show for Environmental Science project",
       date: "2023-10-10",
     },
-  ]
+  ];
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
-        setProfileImage(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
+        setProfileImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleSaveProfile = () => {
     // Mock save functionality
-    setIsEditing(false)
-    console.log("Profile saved:", profileData)
-  }
+    setIsEditing(false);
+    console.log("Profile saved:", profileData);
+  };
+
+  const handleChangePassword = async (data: ChangePasswordInput) => {
+    setIsChangingPassword(true);
+    try {
+      await changePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+
+      toast({
+        title: "Password Changed Successfully",
+        description: "Your password has been updated.",
+      });
+
+      // Reset form
+      passwordForm.reset();
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+    } catch (error: any) {
+      console.error("Failed to change password:", error);
+
+      // Handle different error types
+      // ApiError has status property directly, or check error.status
+      const status = error?.status || error?.response?.status;
+      const errorMessage =
+        error?.message || "Failed to change password. Please try again.";
+
+      // Check if it's an authentication error (401) or wrong password
+      if (
+        status === 401 ||
+        errorMessage.toLowerCase().includes("incorrect") ||
+        errorMessage.toLowerCase().includes("wrong")
+      ) {
+        toast({
+          title: "Authentication Failed",
+          description: "Current password is incorrect. Please try again.",
+          variant: "destructive",
+        });
+        passwordForm.setError("currentPassword", {
+          type: "manual",
+          message: "Current password is incorrect",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const handleUpdateNotifications = (key: string, value: boolean) => {
     setProfileData((prev) => ({
@@ -220,8 +327,8 @@ export default function ProfilePage() {
         ...prev.notifications,
         [key]: value,
       },
-    }))
-  }
+    }));
+  };
 
   const handleUpdatePrivacy = (key: string, value: boolean) => {
     setProfileData((prev) => ({
@@ -230,8 +337,8 @@ export default function ProfilePage() {
         ...prev.privacy,
         [key]: value,
       },
-    }))
-  }
+    }));
+  };
 
   const handleUpdatePreferences = (key: string, value: string) => {
     setProfileData((prev) => ({
@@ -240,8 +347,8 @@ export default function ProfilePage() {
         ...prev.preferences,
         [key]: value,
       },
-    }))
-  }
+    }));
+  };
 
   // Show loading state while user data is being fetched
   if (isLoading) {
@@ -254,7 +361,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </StudentLayout>
-    )
+    );
   }
 
   return (
@@ -265,10 +372,15 @@ export default function ProfilePage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold">Profile & Settings</h1>
-              <p className="text-muted-foreground">Manage your personal information and preferences</p>
+              <p className="text-muted-foreground">
+                Manage your personal information and preferences
+              </p>
             </div>
             <div className="flex items-center space-x-3 mt-4 md:mt-0">
-              <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(!isEditing)}
+              >
                 <Edit className="w-4 h-4 mr-2" />
                 {isEditing ? "Cancel" : "Edit Profile"}
               </Button>
@@ -287,7 +399,10 @@ export default function ProfilePage() {
               <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
                 <div className="relative">
                   <Avatar className="w-24 h-24 border-4 border-white/20">
-                    <AvatarImage src={profileImage || "/placeholder.svg"} alt="Profile" />
+                    <AvatarImage
+                      src={profileImage || "/placeholder.svg"}
+                      alt="Profile"
+                    />
                     <AvatarFallback className="text-2xl bg-white/20">
                       {profileData.firstName[0]}
                       {profileData.lastName[0]}
@@ -296,7 +411,12 @@ export default function ProfilePage() {
                   {isEditing && (
                     <label className="absolute bottom-0 right-0 bg-white text-blue-600 rounded-full p-2 cursor-pointer hover:bg-gray-100 transition-colors">
                       <Camera className="w-4 h-4" />
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
                     </label>
                   )}
                 </div>
@@ -305,22 +425,33 @@ export default function ProfilePage() {
                     {profileData.firstName} {profileData.lastName}
                   </h2>
                   <p className="text-blue-100 mb-2">
-                    {profileData.grade} • {profileData.section} • ID: {profileData.studentId}
+                    {profileData.grade} • {profileData.section} • ID:{" "}
+                    {profileData.studentId}
                   </p>
                   <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                    <Badge
+                      variant="secondary"
+                      className="bg-white/20 text-white border-white/30"
+                    >
                       GPA: {profileData.gpa}
                     </Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                    <Badge
+                      variant="secondary"
+                      className="bg-white/20 text-white border-white/30"
+                    >
                       Rank: #{profileData.rank}
                     </Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                    <Badge
+                      variant="secondary"
+                      className="bg-white/20 text-white border-white/30"
+                    >
                       Honor Roll
                     </Badge>
                   </div>
                   <div className="text-sm text-blue-100">
                     <p>
-                      Target GPA: {profileData.targetGPA} | Career Goal: {profileData.careerGoal}
+                      Target GPA: {profileData.targetGPA} | Career Goal:{" "}
+                      {profileData.careerGoal}
                     </p>
                   </div>
                 </div>
@@ -348,7 +479,9 @@ export default function ProfilePage() {
                       <User className="w-5 h-5 mr-2" />
                       Basic Information
                     </CardTitle>
-                    <CardDescription>Your personal details and contact information</CardDescription>
+                    <CardDescription>
+                      Your personal details and contact information
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -357,7 +490,12 @@ export default function ProfilePage() {
                         <Input
                           id="firstName"
                           value={profileData.firstName}
-                          onChange={(e) => setProfileData((prev) => ({ ...prev, firstName: e.target.value }))}
+                          onChange={(e) =>
+                            setProfileData((prev) => ({
+                              ...prev,
+                              firstName: e.target.value,
+                            }))
+                          }
                           disabled={!isEditing}
                         />
                       </div>
@@ -366,7 +504,12 @@ export default function ProfilePage() {
                         <Input
                           id="lastName"
                           value={profileData.lastName}
-                          onChange={(e) => setProfileData((prev) => ({ ...prev, lastName: e.target.value }))}
+                          onChange={(e) =>
+                            setProfileData((prev) => ({
+                              ...prev,
+                              lastName: e.target.value,
+                            }))
+                          }
                           disabled={!isEditing}
                         />
                       </div>
@@ -376,7 +519,12 @@ export default function ProfilePage() {
                       <Input
                         id="middleName"
                         value={profileData.middleName}
-                        onChange={(e) => setProfileData((prev) => ({ ...prev, middleName: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            middleName: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -386,7 +534,12 @@ export default function ProfilePage() {
                         id="dateOfBirth"
                         type="date"
                         value={profileData.dateOfBirth}
-                        onChange={(e) => setProfileData((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            dateOfBirth: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -395,7 +548,12 @@ export default function ProfilePage() {
                       <Textarea
                         id="address"
                         value={profileData.address}
-                        onChange={(e) => setProfileData((prev) => ({ ...prev, address: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            address: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                         className="min-h-20"
                       />
@@ -419,7 +577,12 @@ export default function ProfilePage() {
                         id="email"
                         type="email"
                         value={profileData.email}
-                        onChange={(e) => setProfileData((prev) => ({ ...prev, email: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -429,7 +592,12 @@ export default function ProfilePage() {
                         id="phone"
                         type="tel"
                         value={profileData.phone}
-                        onChange={(e) => setProfileData((prev) => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -443,7 +611,9 @@ export default function ProfilePage() {
                       <Phone className="w-5 h-5 mr-2" />
                       Emergency Contacts
                     </CardTitle>
-                    <CardDescription>People to contact in case of emergency</CardDescription>
+                    <CardDescription>
+                      People to contact in case of emergency
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid lg:grid-cols-2 gap-6">
@@ -457,7 +627,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact1: { ...prev.emergencyContact1, name: e.target.value },
+                                  emergencyContact1: {
+                                    ...prev.emergencyContact1,
+                                    name: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -470,7 +643,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact1: { ...prev.emergencyContact1, relationship: e.target.value },
+                                  emergencyContact1: {
+                                    ...prev.emergencyContact1,
+                                    relationship: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -483,7 +659,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact1: { ...prev.emergencyContact1, phone: e.target.value },
+                                  emergencyContact1: {
+                                    ...prev.emergencyContact1,
+                                    phone: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -496,7 +675,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact1: { ...prev.emergencyContact1, email: e.target.value },
+                                  emergencyContact1: {
+                                    ...prev.emergencyContact1,
+                                    email: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -514,7 +696,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact2: { ...prev.emergencyContact2, name: e.target.value },
+                                  emergencyContact2: {
+                                    ...prev.emergencyContact2,
+                                    name: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -527,7 +712,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact2: { ...prev.emergencyContact2, relationship: e.target.value },
+                                  emergencyContact2: {
+                                    ...prev.emergencyContact2,
+                                    relationship: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -540,7 +728,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact2: { ...prev.emergencyContact2, phone: e.target.value },
+                                  emergencyContact2: {
+                                    ...prev.emergencyContact2,
+                                    phone: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -553,7 +744,10 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 setProfileData((prev) => ({
                                   ...prev,
-                                  emergencyContact2: { ...prev.emergencyContact2, email: e.target.value },
+                                  emergencyContact2: {
+                                    ...prev.emergencyContact2,
+                                    email: e.target.value,
+                                  },
                                 }))
                               }
                               disabled={!isEditing}
@@ -577,7 +771,9 @@ export default function ProfilePage() {
                       <BookOpen className="w-5 h-5 mr-2" />
                       Academic Status
                     </CardTitle>
-                    <CardDescription>Your current academic standing</CardDescription>
+                    <CardDescription>
+                      Your current academic standing
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -605,7 +801,10 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <Label>Class Rank</Label>
-                        <Input value={`#${profileData.rank} of ${profileData.totalStudents}`} disabled />
+                        <Input
+                          value={`#${profileData.rank} of ${profileData.totalStudents}`}
+                          disabled
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -618,7 +817,9 @@ export default function ProfilePage() {
                       <Target className="w-5 h-5 mr-2" />
                       Academic Goals
                     </CardTitle>
-                    <CardDescription>Set and track your academic objectives</CardDescription>
+                    <CardDescription>
+                      Set and track your academic objectives
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -631,16 +832,30 @@ export default function ProfilePage() {
                         max="100"
                         value={profileData.targetGPA}
                         onChange={(e) =>
-                          setProfileData((prev) => ({ ...prev, targetGPA: Number.parseFloat(e.target.value) }))
+                          setProfileData((prev) => ({
+                            ...prev,
+                            targetGPA: Number.parseFloat(e.target.value),
+                          }))
                         }
                         disabled={!isEditing}
                       />
                       <div className="mt-2">
                         <div className="flex justify-between text-sm text-muted-foreground mb-1">
                           <span>Progress to Goal</span>
-                          <span>{((profileData.gpa / profileData.targetGPA) * 100).toFixed(1)}%</span>
+                          <span>
+                            {(
+                              (profileData.gpa / profileData.targetGPA) *
+                              100
+                            ).toFixed(1)}
+                            %
+                          </span>
                         </div>
-                        <Progress value={(profileData.gpa / profileData.targetGPA) * 100} className="h-2" />
+                        <Progress
+                          value={
+                            (profileData.gpa / profileData.targetGPA) * 100
+                          }
+                          className="h-2"
+                        />
                       </div>
                     </div>
                     <div>
@@ -648,7 +863,12 @@ export default function ProfilePage() {
                       <Input
                         id="careerGoal"
                         value={profileData.careerGoal}
-                        onChange={(e) => setProfileData((prev) => ({ ...prev, careerGoal: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            careerGoal: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -677,38 +897,52 @@ export default function ProfilePage() {
                       <Bell className="w-5 h-5 mr-2" />
                       Notifications
                     </CardTitle>
-                    <CardDescription>Choose how you want to be notified</CardDescription>
+                    <CardDescription>
+                      Choose how you want to be notified
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Email Notifications</Label>
-                          <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                          <p className="text-sm text-muted-foreground">
+                            Receive notifications via email
+                          </p>
                         </div>
                         <Switch
                           checked={profileData.notifications.email}
-                          onCheckedChange={(checked) => handleUpdateNotifications("email", checked)}
+                          onCheckedChange={(checked) =>
+                            handleUpdateNotifications("email", checked)
+                          }
                         />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>SMS Notifications</Label>
-                          <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
+                          <p className="text-sm text-muted-foreground">
+                            Receive notifications via SMS
+                          </p>
                         </div>
                         <Switch
                           checked={profileData.notifications.sms}
-                          onCheckedChange={(checked) => handleUpdateNotifications("sms", checked)}
+                          onCheckedChange={(checked) =>
+                            handleUpdateNotifications("sms", checked)
+                          }
                         />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Push Notifications</Label>
-                          <p className="text-sm text-muted-foreground">Receive push notifications</p>
+                          <p className="text-sm text-muted-foreground">
+                            Receive push notifications
+                          </p>
                         </div>
                         <Switch
                           checked={profileData.notifications.push}
-                          onCheckedChange={(checked) => handleUpdateNotifications("push", checked)}
+                          onCheckedChange={(checked) =>
+                            handleUpdateNotifications("push", checked)
+                          }
                         />
                       </div>
                     </div>
@@ -719,28 +953,39 @@ export default function ProfilePage() {
                           <Label>Assignment Reminders</Label>
                           <Switch
                             checked={profileData.notifications.assignments}
-                            onCheckedChange={(checked) => handleUpdateNotifications("assignments", checked)}
+                            onCheckedChange={(checked) =>
+                              handleUpdateNotifications("assignments", checked)
+                            }
                           />
                         </div>
                         <div className="flex items-center justify-between">
                           <Label>Grade Updates</Label>
                           <Switch
                             checked={profileData.notifications.grades}
-                            onCheckedChange={(checked) => handleUpdateNotifications("grades", checked)}
+                            onCheckedChange={(checked) =>
+                              handleUpdateNotifications("grades", checked)
+                            }
                           />
                         </div>
                         <div className="flex items-center justify-between">
                           <Label>School Events</Label>
                           <Switch
                             checked={profileData.notifications.events}
-                            onCheckedChange={(checked) => handleUpdateNotifications("events", checked)}
+                            onCheckedChange={(checked) =>
+                              handleUpdateNotifications("events", checked)
+                            }
                           />
                         </div>
                         <div className="flex items-center justify-between">
                           <Label>Announcements</Label>
                           <Switch
                             checked={profileData.notifications.announcements}
-                            onCheckedChange={(checked) => handleUpdateNotifications("announcements", checked)}
+                            onCheckedChange={(checked) =>
+                              handleUpdateNotifications(
+                                "announcements",
+                                checked
+                              )
+                            }
                           />
                         </div>
                       </div>
@@ -762,7 +1007,9 @@ export default function ProfilePage() {
                       <Label>Theme</Label>
                       <Select
                         value={profileData.preferences.theme}
-                        onValueChange={(value) => handleUpdatePreferences("theme", value)}
+                        onValueChange={(value) =>
+                          handleUpdatePreferences("theme", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -778,7 +1025,9 @@ export default function ProfilePage() {
                       <Label>Language</Label>
                       <Select
                         value={profileData.preferences.language}
-                        onValueChange={(value) => handleUpdatePreferences("language", value)}
+                        onValueChange={(value) =>
+                          handleUpdatePreferences("language", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -793,13 +1042,17 @@ export default function ProfilePage() {
                       <Label>Timezone</Label>
                       <Select
                         value={profileData.preferences.timezone}
-                        onValueChange={(value) => handleUpdatePreferences("timezone", value)}
+                        onValueChange={(value) =>
+                          handleUpdatePreferences("timezone", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Asia/Manila">Asia/Manila (GMT+8)</SelectItem>
+                          <SelectItem value="Asia/Manila">
+                            Asia/Manila (GMT+8)
+                          </SelectItem>
                           <SelectItem value="UTC">UTC (GMT+0)</SelectItem>
                         </SelectContent>
                       </Select>
@@ -808,7 +1061,9 @@ export default function ProfilePage() {
                       <Label>Date Format</Label>
                       <Select
                         value={profileData.preferences.dateFormat}
-                        onValueChange={(value) => handleUpdatePreferences("dateFormat", value)}
+                        onValueChange={(value) =>
+                          handleUpdatePreferences("dateFormat", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -830,52 +1085,169 @@ export default function ProfilePage() {
                       <Shield className="w-5 h-5 mr-2" />
                       Security Settings
                     </CardTitle>
-                    <CardDescription>Manage your account security</CardDescription>
+                    <CardDescription>
+                      Manage your account security
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid lg:grid-cols-2 gap-6">
-                      <div className="space-y-4">
+                      <form
+                        onSubmit={passwordForm.handleSubmit(
+                          handleChangePassword
+                        )}
+                        className="space-y-4"
+                      >
                         <div>
-                          <Label htmlFor="currentPassword">Current Password</Label>
+                          <Label htmlFor="currentPassword">
+                            Current Password
+                          </Label>
                           <div className="relative">
                             <Input
                               id="currentPassword"
-                              type={showPassword ? "text" : "password"}
+                              type={showCurrentPassword ? "text" : "password"}
                               placeholder="Enter current password"
+                              {...passwordForm.register("currentPassword")}
+                              className={
+                                passwordForm.formState.errors.currentPassword
+                                  ? "border-red-500"
+                                  : ""
+                              }
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               className="absolute right-2 top-1/2 -translate-y-1/2"
-                              onClick={() => setShowPassword(!showPassword)}
+                              onClick={() =>
+                                setShowCurrentPassword(!showCurrentPassword)
+                              }
                             >
-                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {showCurrentPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
                             </Button>
                           </div>
+                          {passwordForm.formState.errors.currentPassword && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {
+                                passwordForm.formState.errors.currentPassword
+                                  .message
+                              }
+                            </p>
+                          )}
                         </div>
                         <div>
                           <Label htmlFor="newPassword">New Password</Label>
-                          <Input id="newPassword" type="password" placeholder="Enter new password" />
+                          <div className="relative">
+                            <Input
+                              id="newPassword"
+                              type={showNewPassword ? "text" : "password"}
+                              placeholder="Enter new password"
+                              {...passwordForm.register("newPassword")}
+                              className={
+                                passwordForm.formState.errors.newPassword
+                                  ? "border-red-500"
+                                  : ""
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-2 top-1/2 -translate-y-1/2"
+                              onClick={() =>
+                                setShowNewPassword(!showNewPassword)
+                              }
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                          {passwordForm.formState.errors.newPassword && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {
+                                passwordForm.formState.errors.newPassword
+                                  .message
+                              }
+                            </p>
+                          )}
                         </div>
                         <div>
-                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                          <Input id="confirmPassword" type="password" placeholder="Confirm new password" />
+                          <Label htmlFor="confirmPassword">
+                            Confirm New Password
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="confirmPassword"
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm new password"
+                              {...passwordForm.register("confirmPassword")}
+                              className={
+                                passwordForm.formState.errors.confirmPassword
+                                  ? "border-red-500"
+                                  : ""
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-2 top-1/2 -translate-y-1/2"
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                          {passwordForm.formState.errors.confirmPassword && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {
+                                passwordForm.formState.errors.confirmPassword
+                                  .message
+                              }
+                            </p>
+                          )}
                         </div>
-                        <Button className="w-full">Update Password</Button>
-                      </div>
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={isChangingPassword}
+                        >
+                          {isChangingPassword
+                            ? "Updating Password..."
+                            : "Update Password"}
+                        </Button>
+                      </form>
                       <div className="space-y-4">
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Password Requirements</h4>
+                          <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                            Password Requirements
+                          </h4>
                           <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                             <li>• At least 8 characters long</li>
                             <li>• Include uppercase and lowercase letters</li>
                             <li>• Include at least one number</li>
-                            <li>• Include at least one special character</li>
+                            <li>
+                              • Include at least one special character
+                              (!@#$%^&*)
+                            </li>
                           </ul>
                         </div>
                         <div className="space-y-2">
-                          <Button variant="outline" className="w-full bg-transparent">
+                          <Button
+                            variant="outline"
+                            className="w-full bg-transparent"
+                          >
                             <Download className="w-4 h-4 mr-2" />
                             Download Account Data
                           </Button>
@@ -890,13 +1262,16 @@ export default function ProfilePage() {
                               <DialogHeader>
                                 <DialogTitle>Delete Account</DialogTitle>
                                 <DialogDescription>
-                                  This action cannot be undone. This will permanently delete your account and remove all
+                                  This action cannot be undone. This will
+                                  permanently delete your account and remove all
                                   your data from our servers.
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="flex justify-end space-x-2">
                                 <Button variant="outline">Cancel</Button>
-                                <Button variant="destructive">Delete Account</Button>
+                                <Button variant="destructive">
+                                  Delete Account
+                                </Button>
                               </div>
                             </DialogContent>
                           </Dialog>
@@ -916,38 +1291,52 @@ export default function ProfilePage() {
                     <Shield className="w-5 h-5 mr-2" />
                     Privacy Settings
                   </CardTitle>
-                  <CardDescription>Control who can see your information</CardDescription>
+                  <CardDescription>
+                    Control who can see your information
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Profile Visibility</Label>
-                        <p className="text-sm text-muted-foreground">Allow other students to see your profile</p>
+                        <p className="text-sm text-muted-foreground">
+                          Allow other students to see your profile
+                        </p>
                       </div>
                       <Switch
                         checked={profileData.privacy.profileVisible}
-                        onCheckedChange={(checked) => handleUpdatePrivacy("profileVisible", checked)}
+                        onCheckedChange={(checked) =>
+                          handleUpdatePrivacy("profileVisible", checked)
+                        }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Grades Visibility</Label>
-                        <p className="text-sm text-muted-foreground">Allow others to see your academic performance</p>
+                        <p className="text-sm text-muted-foreground">
+                          Allow others to see your academic performance
+                        </p>
                       </div>
                       <Switch
                         checked={profileData.privacy.gradesVisible}
-                        onCheckedChange={(checked) => handleUpdatePrivacy("gradesVisible", checked)}
+                        onCheckedChange={(checked) =>
+                          handleUpdatePrivacy("gradesVisible", checked)
+                        }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Contact Information Visibility</Label>
-                        <p className="text-sm text-muted-foreground">Allow others to see your contact details</p>
+                        <p className="text-sm text-muted-foreground">
+                          Allow others to see your contact details
+                        </p>
                       </div>
                       <Switch
                         checked={profileData.privacy.contactVisible}
-                        onCheckedChange={(checked) => handleUpdatePrivacy("contactVisible", checked)}
+                        onCheckedChange={(checked) =>
+                          handleUpdatePrivacy("contactVisible", checked)
+                        }
                       />
                     </div>
                   </div>
@@ -957,23 +1346,27 @@ export default function ProfilePage() {
                       <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <h5 className="font-medium mb-2">Data Collection</h5>
                         <p className="text-sm text-muted-foreground">
-                          We collect and process your academic data to provide educational services and track your
-                          progress. This includes grades, assignments, attendance, and communication records.
+                          We collect and process your academic data to provide
+                          educational services and track your progress. This
+                          includes grades, assignments, attendance, and
+                          communication records.
                         </p>
                       </div>
                       <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <h5 className="font-medium mb-2">Data Sharing</h5>
                         <p className="text-sm text-muted-foreground">
-                          Your academic data is shared with your teachers, parents/guardians, and school administrators
-                          as necessary for educational purposes. We do not share your data with third parties without
-                          consent.
+                          Your academic data is shared with your teachers,
+                          parents/guardians, and school administrators as
+                          necessary for educational purposes. We do not share
+                          your data with third parties without consent.
                         </p>
                       </div>
                       <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <h5 className="font-medium mb-2">Data Retention</h5>
                         <p className="text-sm text-muted-foreground">
-                          Your academic records are retained according to school policy and legal requirements. Personal
-                          data may be deleted upon request after graduation or withdrawal.
+                          Your academic records are retained according to school
+                          policy and legal requirements. Personal data may be
+                          deleted upon request after graduation or withdrawal.
                         </p>
                       </div>
                     </div>
@@ -990,7 +1383,9 @@ export default function ProfilePage() {
                     <Award className="w-5 h-5 mr-2" />
                     Academic Achievements
                   </CardTitle>
-                  <CardDescription>Your accomplishments and recognitions</CardDescription>
+                  <CardDescription>
+                    Your accomplishments and recognitions
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -1003,8 +1398,12 @@ export default function ProfilePage() {
                           <Award className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-blue-800 dark:text-blue-200">{achievement.title}</h4>
-                          <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200">
+                            {achievement.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {achievement.description}
+                          </p>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Calendar className="w-3 h-3 mr-1" />
                             {new Date(achievement.date).toLocaleDateString()}
@@ -1020,5 +1419,5 @@ export default function ProfilePage() {
         </div>
       </div>
     </StudentLayout>
-  )
+  );
 }

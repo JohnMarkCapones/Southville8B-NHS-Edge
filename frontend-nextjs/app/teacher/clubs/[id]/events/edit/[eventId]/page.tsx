@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, use, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   ArrowLeft,
   Plus,
@@ -24,8 +31,11 @@ import {
   Save,
   Eye,
   X,
+  Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useEventById, useUpdateEvent } from "@/hooks/useEvents"
+import Link from "next/link"
 
 interface EventHighlight {
   id: string
@@ -51,50 +61,96 @@ interface AdditionalInfo {
   content: string
 }
 
-export default function EditEventPage({ params }: { params: { id: string; eventId: string } }) {
+export default function EditEventPage({ params }: { params: Promise<{ id: string; eventId: string }> }) {
+  const { id: clubId, eventId } = use(params)
   const router = useRouter()
   const { toast } = useToast()
 
-  // Mock data - in real app, fetch based on eventId
+  // Fetch event data from API
+  const { data: event, isLoading: loadingEvent } = useEventById(eventId)
+  const updateEventMutation = useUpdateEvent()
+
+  // Form state
   const [eventData, setEventData] = useState({
-    title: "Regional Math Olympiad",
-    description: "Annual mathematics competition featuring algebra, geometry, and problem-solving challenges.",
-    date: "2024-03-15",
-    time: "09:00",
-    venue: "City Convention Center",
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    venue: "",
+    status: "draft" as "draft" | "published",
+    visibility: "public" as "public" | "private",
     image: null as File | null,
   })
 
-  const [imagePreview, setImagePreview] = useState<string | null>("/placeholder.svg?height=200&width=400")
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [highlights, setHighlights] = useState<EventHighlight[]>([])
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([])
+  const [faqs, setFaqs] = useState<FAQ[]>([])
+  const [additionalInfo, setAdditionalInfo] = useState<AdditionalInfo[]>([])
 
-  const [highlights, setHighlights] = useState<EventHighlight[]>([
-    { id: "1", text: "Individual and team categories" },
-    { id: "2", text: "Prizes for top performers" },
-    { id: "3", text: "Certificate for all participants" },
-  ])
+  // Populate form when event data loads
+  useEffect(() => {
+    if (event) {
+      setEventData({
+        title: event.title || "",
+        description: event.description || "",
+        date: event.date || "",
+        time: event.time || "",
+        venue: event.location || "",
+        status: event.status || "draft",
+        visibility: event.visibility || "public",
+        image: null,
+      })
 
-  const [schedule, setSchedule] = useState<ScheduleItem[]>([
-    { id: "1", time: "9:00 AM", activity: "Registration", description: "Check-in and team assignments" },
-    { id: "2", time: "10:00 AM", activity: "Opening Ceremony", description: "Welcome and competition rules" },
-    { id: "3", time: "10:30 AM", activity: "Competition Round 1", description: "Individual problem solving" },
-  ])
+      if (event.eventImage) {
+        setImagePreview(event.eventImage)
+      }
 
-  const [faqs, setFaqs] = useState<FAQ[]>([
-    {
-      id: "1",
-      question: "What should I bring?",
-      answer: "Bring calculators, writing materials, and a positive attitude!",
-    },
-    {
-      id: "2",
-      question: "Are there prizes?",
-      answer: "Yes! Trophies for top 3 teams and certificates for all participants.",
-    },
-  ])
+      // Map highlights
+      if (event.highlights) {
+        setHighlights(
+          event.highlights.map((h) => ({
+            id: h.id,
+            text: h.content || "",
+          }))
+        )
+      }
 
-  const [additionalInfo, setAdditionalInfo] = useState<AdditionalInfo[]>([
-    { id: "1", title: "Registration", content: "Please register at least 3 days before the event." },
-  ])
+      // Map schedule
+      if (event.schedule) {
+        setSchedule(
+          event.schedule.map((s) => ({
+            id: s.id,
+            time: s.activityTime || "",
+            activity: s.activityDescription || "",
+            description: "",
+          }))
+        )
+      }
+
+      // Map FAQs
+      if (event.faq) {
+        setFaqs(
+          event.faq.map((f) => ({
+            id: f.id,
+            question: f.question || "",
+            answer: f.answer || "",
+          }))
+        )
+      }
+
+      // Map additional info
+      if (event.additionalInfo) {
+        setAdditionalInfo(
+          event.additionalInfo.map((a) => ({
+            id: a.id,
+            title: a.title || "",
+            content: a.content || "",
+          }))
+        )
+      }
+    }
+  }, [event])
 
   const addHighlight = () => {
     const newId = (highlights.length + 1).toString()
@@ -176,22 +232,58 @@ export default function EditEventPage({ params }: { params: { id: string; eventI
     if (fileInput) fileInput.value = ""
   }
 
-  const handleSave = () => {
-    console.log("Updated Event Data:", {
-      ...eventData,
-      highlights: highlights.filter((h) => h.text.trim()),
-      schedule: schedule.filter((s) => s.time.trim() && s.activity.trim()),
-      faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()),
-      additionalInfo: additionalInfo.filter((a) => a.title.trim() && a.content.trim()),
-    })
+  const handleSave = async () => {
+    try {
+      const updateData = {
+        title: eventData.title,
+        description: eventData.description,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.venue,
+        status: eventData.status,
+        visibility: eventData.visibility,
+      }
 
-    toast({
-      title: "Event Updated",
-      description: "Your event has been successfully updated.",
-      variant: "default",
-    })
+      await updateEventMutation.mutateAsync({
+        id: eventId,
+        data: updateData,
+      })
 
-    router.push(`/teacher/clubs/${params.id}?section=events`)
+      toast({
+        title: "Event Updated",
+        description: "Your event has been successfully updated.",
+        variant: "default",
+      })
+
+      router.push(`/teacher/clubs/${clubId}?section=events`)
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error?.message || "Failed to update event. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loadingEvent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (!event) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Event not found</p>
+          <Link href={`/teacher/clubs/${clubId}`}>
+            <Button>Back to Club</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -200,15 +292,16 @@ export default function EditEventPage({ params }: { params: { id: string; eventI
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.back()}
-                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Events
-              </Button>
+              <Link href={`/teacher/clubs/${clubId}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Club
+                </Button>
+              </Link>
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Edit Event</h1>
@@ -315,6 +408,46 @@ export default function EditEventPage({ params }: { params: { id: string; eventI
                 />
               </div>
 
+              <div>
+                <Label htmlFor="status" className="text-gray-700 dark:text-gray-300 font-medium">
+                  Status *
+                </Label>
+                <Select
+                  value={eventData.status}
+                  onValueChange={(value: "draft" | "published") =>
+                    setEventData((prev) => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger className="mt-2 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="visibility" className="text-gray-700 dark:text-gray-300 font-medium">
+                  Visibility *
+                </Label>
+                <Select
+                  value={eventData.visibility}
+                  onValueChange={(value: "public" | "private") =>
+                    setEventData((prev) => ({ ...prev, visibility: value }))
+                  }
+                >
+                  <SelectTrigger className="mt-2 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100">
+                    <SelectValue placeholder="Select visibility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="private">Private</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="md:col-span-2">
                 <Label htmlFor="image" className="text-gray-700 dark:text-gray-300 font-medium flex items-center">
                   <Upload className="w-4 h-4 mr-1" />
@@ -361,268 +494,237 @@ export default function EditEventPage({ params }: { params: { id: string; eventI
         </Card>
 
         {/* Event Highlights Card */}
-        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl">
+        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl opacity-60">
           <CardHeader className="bg-gradient-to-r from-yellow-50/80 to-orange-50/80 dark:from-yellow-900/30 dark:to-orange-900/30 border-b dark:border-gray-700/50">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center">
                 <Star className="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" />
                 Event Highlights
               </CardTitle>
-              <Button
-                onClick={addHighlight}
-                size="sm"
-                variant="outline"
-                className="dark:border-gray-600 bg-transparent"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Highlight
-              </Button>
+              <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600">
+                Read Only
+              </Badge>
             </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              ℹ️ Highlights can be viewed but cannot be edited yet. Use the event creation page to manage highlights.
+            </p>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4">
-              {highlights.map((highlight, index) => (
-                <div key={highlight.id} className="flex items-center space-x-3">
-                  <Badge
-                    variant="outline"
-                    className="text-yellow-600 border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20"
-                  >
-                    {index + 1}
-                  </Badge>
-                  <Input
-                    value={highlight.text}
-                    onChange={(e) => updateHighlight(highlight.id, e.target.value)}
-                    placeholder="Enter event highlight"
-                    className="flex-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                  />
-                  {highlights.length > 1 && (
-                    <Button
-                      onClick={() => removeHighlight(highlight.id)}
-                      size="sm"
-                      variant="ghost"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              {highlights.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No highlights added yet.</p>
+              ) : (
+                highlights.map((highlight, index) => (
+                  <div key={highlight.id} className="flex items-center space-x-3">
+                    <Badge
+                      variant="outline"
+                      className="text-yellow-600 border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                      {index + 1}
+                    </Badge>
+                    <Input
+                      value={highlight.text}
+                      disabled
+                      placeholder="Enter event highlight"
+                      className="flex-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                    />
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Event Schedule Card */}
-        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl">
+        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl opacity-60">
           <CardHeader className="bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/30 dark:to-emerald-900/30 border-b dark:border-gray-700/50">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
                 Event Schedule
               </CardTitle>
-              <Button
-                onClick={addScheduleItem}
-                size="sm"
-                variant="outline"
-                className="dark:border-gray-600 bg-transparent"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Schedule Item
-              </Button>
+              <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600">
+                Read Only
+              </Badge>
             </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              ℹ️ Schedule can be viewed but cannot be edited yet. Use the event creation page to manage schedule.
+            </p>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-6">
-              {schedule.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-700/30"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge
-                      variant="outline"
-                      className="text-green-600 border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20"
-                    >
-                      Item {index + 1}
-                    </Badge>
-                    {schedule.length > 1 && (
-                      <Button
-                        onClick={() => removeScheduleItem(item.id)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              {schedule.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No schedule items added yet.</p>
+              ) : (
+                schedule.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-700/30"
+                  >
+                    <div className="flex items-center mb-4">
+                      <Badge
+                        variant="outline"
+                        className="text-green-600 border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
+                        Item {index + 1}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Time</Label>
+                        <Input
+                          value={item.time}
+                          disabled
+                          placeholder="e.g., 9:00 AM"
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Activity</Label>
+                        <Input
+                          value={item.activity}
+                          disabled
+                          placeholder="Activity name"
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Description</Label>
+                        <Input
+                          value={item.description}
+                          disabled
+                          placeholder="Brief description"
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Time</Label>
-                      <Input
-                        value={item.time}
-                        onChange={(e) => updateScheduleItem(item.id, "time", e.target.value)}
-                        placeholder="e.g., 9:00 AM"
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Activity</Label>
-                      <Input
-                        value={item.activity}
-                        onChange={(e) => updateScheduleItem(item.id, "activity", e.target.value)}
-                        placeholder="Activity name"
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Description</Label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateScheduleItem(item.id, "description", e.target.value)}
-                        placeholder="Brief description"
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* FAQs Card */}
-        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl">
+        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl opacity-60">
           <CardHeader className="bg-gradient-to-r from-purple-50/80 to-indigo-50/80 dark:from-purple-900/30 dark:to-indigo-900/30 border-b dark:border-gray-700/50">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center">
                 <HelpCircle className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
                 Frequently Asked Questions
               </CardTitle>
-              <Button onClick={addFAQ} size="sm" variant="outline" className="dark:border-gray-600 bg-transparent">
-                <Plus className="w-4 h-4 mr-1" />
-                Add FAQ
-              </Button>
+              <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600">
+                Read Only
+              </Badge>
             </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              ℹ️ FAQs can be viewed but cannot be edited yet. Use the event creation page to manage FAQs.
+            </p>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-6">
-              {faqs.map((faq, index) => (
-                <div
-                  key={faq.id}
-                  className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-700/30"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge
-                      variant="outline"
-                      className="text-purple-600 border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20"
-                    >
-                      FAQ {index + 1}
-                    </Badge>
-                    {faqs.length > 1 && (
-                      <Button
-                        onClick={() => removeFAQ(faq.id)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              {faqs.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No FAQs added yet.</p>
+              ) : (
+                faqs.map((faq, index) => (
+                  <div
+                    key={faq.id}
+                    className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-700/30"
+                  >
+                    <div className="flex items-center mb-4">
+                      <Badge
+                        variant="outline"
+                        className="text-purple-600 border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Question</Label>
-                      <Input
-                        value={faq.question}
-                        onChange={(e) => updateFAQ(faq.id, "question", e.target.value)}
-                        placeholder="Enter question"
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
+                        FAQ {index + 1}
+                      </Badge>
                     </div>
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Answer</Label>
-                      <Textarea
-                        value={faq.answer}
-                        onChange={(e) => updateFAQ(faq.id, "answer", e.target.value)}
-                        placeholder="Enter answer"
-                        rows={3}
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Question</Label>
+                        <Input
+                          value={faq.question}
+                          disabled
+                          placeholder="Enter question"
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Answer</Label>
+                        <Textarea
+                          value={faq.answer}
+                          disabled
+                          placeholder="Enter answer"
+                          rows={3}
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Additional Information Card */}
-        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl">
+        <Card className="shadow-xl border-0 dark:border dark:border-gray-700/50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl opacity-60">
           <CardHeader className="bg-gradient-to-r from-cyan-50/80 to-blue-50/80 dark:from-cyan-900/30 dark:to-blue-900/30 border-b dark:border-gray-700/50">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center">
                 <Info className="w-5 h-5 mr-2 text-cyan-600 dark:text-cyan-400" />
                 Additional Information
               </CardTitle>
-              <Button
-                onClick={addAdditionalInfo}
-                size="sm"
-                variant="outline"
-                className="dark:border-gray-600 bg-transparent"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Section
-              </Button>
+              <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600">
+                Read Only
+              </Badge>
             </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              ℹ️ Additional information can be viewed but cannot be edited yet. Use the event creation page to manage additional info.
+            </p>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-6">
-              {additionalInfo.map((info, index) => (
-                <div
-                  key={info.id}
-                  className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-700/30"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge
-                      variant="outline"
-                      className="text-cyan-600 border-cyan-300 dark:border-cyan-600 bg-cyan-50 dark:bg-cyan-900/20"
-                    >
-                      Section {index + 1}
-                    </Badge>
-                    {additionalInfo.length > 1 && (
-                      <Button
-                        onClick={() => removeAdditionalInfo(info.id)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              {additionalInfo.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No additional information added yet.</p>
+              ) : (
+                additionalInfo.map((info, index) => (
+                  <div
+                    key={info.id}
+                    className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-700/30"
+                  >
+                    <div className="flex items-center mb-4">
+                      <Badge
+                        variant="outline"
+                        className="text-cyan-600 border-cyan-300 dark:border-cyan-600 bg-cyan-50 dark:bg-cyan-900/20"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Title</Label>
-                      <Input
-                        value={info.title}
-                        onChange={(e) => updateAdditionalInfo(info.id, "title", e.target.value)}
-                        placeholder="Section title"
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
+                        Section {index + 1}
+                      </Badge>
                     </div>
-                    <div>
-                      <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Content</Label>
-                      <Textarea
-                        value={info.content}
-                        onChange={(e) => updateAdditionalInfo(info.id, "content", e.target.value)}
-                        placeholder="Section content"
-                        rows={4}
-                        className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100"
-                      />
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Title</Label>
+                        <Input
+                          value={info.title}
+                          disabled
+                          placeholder="Section title"
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Content</Label>
+                        <Textarea
+                          value={info.content}
+                          disabled
+                          placeholder="Section content"
+                          rows={4}
+                          className="mt-1 dark:bg-gray-800/50 dark:border-gray-600 dark:text-gray-100 cursor-not-allowed"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

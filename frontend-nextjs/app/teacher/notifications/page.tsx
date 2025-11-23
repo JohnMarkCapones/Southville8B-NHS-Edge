@@ -23,124 +23,68 @@ import {
   Star,
   ChevronDown,
   X,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { useNotifications, type Notification } from "@/hooks/useNotifications"
 
-interface Notification {
-  id: string
-  title: string
-  message: string
+// Teacher-specific notification display type
+interface TeacherNotificationDisplay {
   type: "assignment" | "meeting" | "deadline" | "resource" | "system" | "announcement"
-  timestamp: Date
-  read: boolean
+  icon: typeof FileText
   priority: "low" | "medium" | "high"
-  student?: string
-  subject?: string
-  actionUrl?: string
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "New assignment submitted",
-    message:
-      "John Doe submitted Math Assignment 3 - Quadratic Equations. The assignment includes detailed solutions and shows good understanding of the concepts.",
-    type: "assignment",
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    read: false,
-    priority: "high",
-    student: "John Doe",
-    subject: "Mathematics",
-    actionUrl: "/teacher/assignments/123",
-  },
-  {
-    id: "2",
-    title: "Parent meeting request",
-    message: "Mrs. Smith requested a meeting for tomorrow at 2:00 PM to discuss Emma's progress in Science class.",
-    type: "meeting",
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-    read: false,
-    priority: "medium",
-    student: "Emma Smith",
-    subject: "Science",
-    actionUrl: "/teacher/meetings/456",
-  },
-  {
-    id: "3",
-    title: "Grade deadline reminder",
-    message:
-      "Grades due for Quarter 2 in 3 days. Please ensure all assignments are graded and submitted to the system.",
-    type: "deadline",
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    read: false,
-    priority: "high",
-    subject: "All Subjects",
-    actionUrl: "/teacher/grades",
-  },
-  {
-    id: "4",
-    title: "New resource available",
-    message:
-      "Science lab equipment guide has been uploaded to the resources section. This includes safety protocols and usage instructions.",
-    type: "resource",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    read: true,
-    priority: "low",
-    subject: "Science",
-    actionUrl: "/teacher/resources/789",
-  },
-  {
-    id: "5",
-    title: "System maintenance scheduled",
-    message: "The gradebook system will be under maintenance this weekend from 10 PM Friday to 6 AM Monday.",
-    type: "system",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    read: true,
-    priority: "medium",
-    subject: "System",
-  },
-  {
-    id: "6",
-    title: "School announcement",
-    message:
-      "Parent-teacher conferences are scheduled for next week. Please check your schedule and prepare accordingly.",
-    type: "announcement",
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    read: true,
-    priority: "medium",
-    subject: "General",
-  },
-]
-
-const getNotificationIcon = (type: Notification["type"]) => {
-  switch (type) {
-    case "assignment":
-      return <FileText className="w-5 h-5" />
-    case "meeting":
-      return <Users className="w-5 h-5" />
-    case "deadline":
-      return <Clock className="w-5 h-5" />
-    case "resource":
-      return <BookOpen className="w-5 h-5" />
-    case "system":
-      return <AlertCircle className="w-5 h-5" />
-    case "announcement":
-      return <Bell className="w-5 h-5" />
-    default:
-      return <Info className="w-5 h-5" />
+// Map backend notification to teacher display type
+const mapTeacherNotificationType = (notification: Notification): TeacherNotificationDisplay => {
+  // Quiz submission (ACADEMIC category) → assignment
+  if (notification.type === 'academic' && notification.message.toLowerCase().includes('quiz')) {
+    return { type: 'assignment', icon: FileText, priority: 'high' };
   }
+  // Advisory activity (ACADEMIC category) → meeting or announcement
+  if (notification.type === 'academic' && (
+    notification.message.toLowerCase().includes('advisory') ||
+    notification.message.toLowerCase().includes('meeting')
+  )) {
+    return { type: 'meeting', icon: Users, priority: 'medium' };
+  }
+  // News approval/rejection (COMMUNICATION category) → announcement
+  if (notification.type === 'social' && notification.message.toLowerCase().includes('news')) {
+    return { type: 'announcement', icon: Bell, priority: 'medium' };
+  }
+  // Performance alerts (ACADEMIC + WARNING) → deadline
+  if (notification.type === 'academic' && notification.priority === 'high') {
+    return { type: 'deadline', icon: Clock, priority: 'high' };
+  }
+  // System notifications
+  if (notification.type === 'info' && notification.priority === 'low') {
+    return { type: 'system', icon: AlertCircle, priority: 'low' };
+  }
+  // Default based on priority
+  if (notification.priority === 'high') {
+    return { type: 'deadline', icon: Clock, priority: 'high' };
+  }
+  if (notification.priority === 'medium') {
+    return { type: 'announcement', icon: Bell, priority: 'medium' };
+  }
+  return { type: 'resource', icon: BookOpen, priority: 'low' };
 }
 
-const getNotificationColor = (type: Notification["type"], priority: Notification["priority"]) => {
-  if (priority === "high") {
+const getNotificationIcon = (displayType: TeacherNotificationDisplay) => {
+  const IconComponent = displayType.icon;
+  return <IconComponent className="w-5 h-5" />;
+}
+
+const getNotificationColor = (displayType: TeacherNotificationDisplay) => {
+  if (displayType.priority === "high") {
     return "bg-gradient-to-br from-red-500 to-pink-500"
   }
-  if (priority === "medium") {
+  if (displayType.priority === "medium") {
     return "bg-gradient-to-br from-yellow-500 to-orange-500"
   }
 
-  switch (type) {
+  switch (displayType.type) {
     case "assignment":
       return "bg-gradient-to-br from-blue-500 to-purple-500"
     case "meeting":
@@ -158,6 +102,29 @@ const getNotificationColor = (type: Notification["type"], priority: Notification
   }
 }
 
+// Build teacher-specific action URLs
+const buildTeacherActionUrl = (notification: Notification): string | undefined => {
+  if (notification.actionUrl) {
+    // If actionUrl already exists, convert student routes to teacher routes
+    if (notification.actionUrl.startsWith('/student/quiz/')) {
+      const quizId = notification.actionUrl.replace('/student/quiz/', '');
+      return `/teacher/quiz/${quizId}/grade`;
+    }
+    if (notification.actionUrl.startsWith('/student/news/')) {
+      const newsId = notification.actionUrl.replace('/student/news/', '');
+      return `/teacher/news/view/${newsId}`;
+    }
+    if (notification.actionUrl.startsWith('/student/clubs/')) {
+      const clubId = notification.actionUrl.replace('/student/clubs/', '');
+      return `/teacher/clubs/${clubId}`;
+    }
+    if (notification.actionUrl === '/student/schedule') {
+      return '/teacher/schedule';
+    }
+  }
+  return notification.actionUrl;
+}
+
 const formatTimestamp = (timestamp: Date) => {
   const now = new Date()
   const diff = now.getTime() - timestamp.getTime()
@@ -173,65 +140,56 @@ const formatTimestamp = (timestamp: Date) => {
 }
 
 export default function TeacherNotificationsPage() {
-  const [notifications, setNotifications] = React.useState<Notification[]>(mockNotifications)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterType, setFilterType] = React.useState<string>("all")
   const [filterPriority, setFilterPriority] = React.useState<string>("all")
   const [selectedNotifications, setSelectedNotifications] = React.useState<string[]>([])
   const { toast } = useToast()
+  
+  const {
+    notifications: apiNotifications,
+    loading: notificationsLoading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications()
 
-  const unreadCount = notifications.filter((n) => !n.read).length
-  const totalCount = notifications.length
+  const totalCount = apiNotifications.length
 
   // Filter notifications based on search and filters
   const filteredNotifications = React.useMemo(() => {
-    return notifications.filter((notification) => {
+    return apiNotifications.filter((notification) => {
+      const mapped = mapTeacherNotificationType(notification);
       const matchesSearch =
         notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        notification.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        notification.student?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        notification.subject?.toLowerCase().includes(searchQuery.toLowerCase())
+        notification.message.toLowerCase().includes(searchQuery.toLowerCase())
 
-      const matchesType = filterType === "all" || notification.type === filterType
-      const matchesPriority = filterPriority === "all" || notification.priority === filterPriority
+      const matchesType = filterType === "all" || mapped.type === filterType
+      const matchesPriority = filterPriority === "all" || mapped.priority === filterPriority
 
       return matchesSearch && matchesType && matchesPriority
     })
-  }, [notifications, searchQuery, filterType, filterPriority])
+  }, [apiNotifications, searchQuery, filterType, filterPriority])
 
-  const handleMarkAsRead = (notificationId: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)))
-    toast({
-      title: "Notification marked as read",
-      variant: "default",
-    })
+  const handleMarkAsRead = async (notificationId: string) => {
+    await markAsRead(notificationId)
   }
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-    toast({
-      title: "All notifications marked as read",
-      variant: "default",
-    })
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
   }
 
-  const handleClearAllNotifications = () => {
-    setNotifications([])
+  const handleClearAllNotifications = async () => {
+    const deletePromises = apiNotifications.map((n) => deleteNotification(n.id))
+    await Promise.all(deletePromises)
     setSelectedNotifications([])
-    toast({
-      title: "All notifications cleared",
-      description: "All notifications have been permanently removed.",
-      variant: "default",
-    })
   }
 
-  const handleDeleteSelected = () => {
-    setNotifications((prev) => prev.filter((n) => !selectedNotifications.includes(n.id)))
+  const handleDeleteSelected = async () => {
+    const deletePromises = selectedNotifications.map((id) => deleteNotification(id))
+    await Promise.all(deletePromises)
     setSelectedNotifications([])
-    toast({
-      title: `${selectedNotifications.length} notification(s) deleted`,
-      variant: "default",
-    })
   }
 
   const handleSelectNotification = (notificationId: string) => {
@@ -248,12 +206,13 @@ export default function TeacherNotificationsPage() {
     }
   }
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
-      handleMarkAsRead(notification.id)
+      await handleMarkAsRead(notification.id)
     }
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl
+    const actionUrl = buildTeacherActionUrl(notification)
+    if (actionUrl) {
+      window.location.href = actionUrl
     }
   }
 
@@ -381,7 +340,14 @@ export default function TeacherNotificationsPage() {
 
         {/* Notifications List */}
         <div className="space-y-4">
-          {filteredNotifications.length > 0 ? (
+          {notificationsLoading ? (
+            <Card className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+              <CardContent className="p-12 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Loading notifications...</p>
+              </CardContent>
+            </Card>
+          ) : filteredNotifications.length > 0 ? (
             <>
               {/* Select All */}
               <div className="flex items-center justify-between">
@@ -399,7 +365,10 @@ export default function TeacherNotificationsPage() {
                 </p>
               </div>
 
-              {filteredNotifications.map((notification) => (
+              {filteredNotifications.map((notification) => {
+                const mapped = mapTeacherNotificationType(notification);
+                const actionUrl = buildTeacherActionUrl(notification);
+                return (
                 <Card
                   key={notification.id}
                   className={cn(
@@ -426,10 +395,10 @@ export default function TeacherNotificationsPage() {
                       <div
                         className={cn(
                           "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg text-white",
-                          getNotificationColor(notification.type, notification.priority),
+                          getNotificationColor(mapped),
                         )}
                       >
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(mapped)}
                       </div>
 
                       {/* Content */}
@@ -445,7 +414,7 @@ export default function TeacherNotificationsPage() {
                               >
                                 {notification.title}
                               </h3>
-                              {notification.priority === "high" && (
+                              {mapped.priority === "high" && (
                                 <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-pulse" />
                               )}
                               {!notification.read && (
@@ -463,19 +432,14 @@ export default function TeacherNotificationsPage() {
                                   <Clock className="w-3 h-3 mr-1" />
                                   {formatTimestamp(notification.timestamp)}
                                 </p>
-                                {notification.student && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {notification.student}
-                                  </Badge>
-                                )}
-                                {notification.subject && (
+                                {mapped.type && (
                                   <Badge
                                     className={cn(
                                       "text-xs text-white border-0",
-                                      getNotificationColor(notification.type, notification.priority),
+                                      getNotificationColor(mapped),
                                     )}
                                   >
-                                    {notification.subject}
+                                    {mapped.type}
                                   </Badge>
                                 )}
                               </div>
@@ -486,9 +450,9 @@ export default function TeacherNotificationsPage() {
                               <AnimatedButton
                                 size="sm"
                                 variant="ghost"
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation()
-                                  handleMarkAsRead(notification.id)
+                                  await handleMarkAsRead(notification.id)
                                 }}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity"
                               >
@@ -501,7 +465,7 @@ export default function TeacherNotificationsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )})}
             </>
           ) : (
             <Card className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">

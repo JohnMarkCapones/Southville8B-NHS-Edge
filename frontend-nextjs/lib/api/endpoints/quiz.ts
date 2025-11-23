@@ -30,8 +30,10 @@ import type {
   QuizAnalyticsResponse,
   QuestionAnalyticsResponse,
   StudentPerformanceResponse,
+  StudentAnswersResponse,
   ActiveParticipantsResponse,
   QuizFlagsResponse,
+  MonitoringExportResponse,
   GenerateAccessLinkResponse,
   AccessLinkValidationResponse,
   QRCodeResponse,
@@ -107,7 +109,7 @@ export const studentQuizApi = {
    * @example
    * ```typescript
    * const attempt = await studentQuizApi.startQuizAttempt('quiz-123', {
-   *   device_fingerprint: 'abc123'
+   *   deviceFingerprint: 'abc123'
    * });
    * ```
    */
@@ -181,6 +183,22 @@ export const studentQuizApi = {
   },
 
   /**
+   * Get detailed answer review for a completed quiz attempt
+   *
+   * @param attemptId - Attempt ID
+   * @returns Review data with questions, student answers, and correct answers
+   *
+   * @example
+   * ```typescript
+   * const review = await studentQuizApi.getAttemptReview('attempt-123');
+   * console.log(`Review for ${review.questions.length} questions`);
+   * ```
+   */
+  getAttemptReview: async (attemptId: string): Promise<any> => {
+    return apiClient.get<any>(`/quiz-attempts/${attemptId}/review`);
+  },
+
+  /**
    * Send heartbeat to keep session alive
    *
    * @param attemptId - Attempt ID
@@ -190,9 +208,9 @@ export const studentQuizApi = {
    * @example
    * ```typescript
    * await studentQuizApi.sendHeartbeat('attempt-123', {
-   *   device_fingerprint: 'abc123',
-   *   tab_switches: 0,
-   *   current_question_id: 'q-456'
+   *   deviceFingerprint: 'abc123',
+   *   tabSwitches: 0,
+   *   currentQuestionId: 'q-456'
    * });
    * ```
    */
@@ -224,7 +242,67 @@ export const studentQuizApi = {
   ): Promise<{ isValid: boolean; reason?: string }> => {
     return apiClient.post<{ isValid: boolean; reason?: string }>(
       `/quiz-sessions/${attemptId}/validate`,
-      { device_fingerprint: deviceFingerprint }
+      { deviceFingerprint: deviceFingerprint }
+    );
+  },
+
+  /**
+   * Update student progress for real-time monitoring
+   *
+   * @param attemptId - Attempt ID
+   * @param data - Progress data
+   * @returns Confirmation
+   *
+   * @example
+   * ```typescript
+   * await studentQuizApi.updateProgress('attempt-123', {
+   *   currentQuestionIndex: 2,
+   *   questionsAnswered: 2,
+   *   progress: 40,
+   *   idleTimeSeconds: 0
+   * });
+   * ```
+   */
+  updateProgress: async (
+    attemptId: string,
+    data: {
+      currentQuestionIndex: number;
+      questionsAnswered: number;
+      progress: number;
+      idleTimeSeconds?: number;
+    }
+  ): Promise<{ message: string }> => {
+    return apiClient.post<{ message: string }>(
+      `/quiz-sessions/${attemptId}/progress`,
+      data
+    );
+  },
+
+  /**
+   * Submit a security flag for suspicious activity
+   *
+   * @param attemptId - Attempt ID
+   * @param data - Flag data
+   * @returns Confirmation
+   *
+   * @example
+   * ```typescript
+   * await studentQuizApi.submitFlag('attempt-123', {
+   *   flagType: 'tab_switch',
+   *   metadata: { count: 1, timestamp: '2025-01-07T12:00:00Z' }
+   * });
+   * ```
+   */
+  submitFlag: async (
+    attemptId: string,
+    data: {
+      flagType: string;
+      metadata?: any;
+    }
+  ): Promise<{ success: boolean; message: string }> => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      `/quiz-sessions/${attemptId}/flag`,
+      data
     );
   },
 };
@@ -365,6 +443,49 @@ export const teacherQuizApi = {
   },
 
   /**
+   * Update a quiz question
+   *
+   * @param quizId - Quiz ID
+   * @param questionId - Question ID
+   * @param data - Question data
+   * @returns Updated question
+   *
+   * @example
+   * ```typescript
+   * await teacherQuizApi.updateQuestion('quiz-123', 'question-456', {
+   *   questionText: 'Updated question text',
+   *   points: 5
+   * });
+   * ```
+   */
+  updateQuestion: async (
+    quizId: string,
+    questionId: string,
+    data: CreateQuestionDto
+  ): Promise<QuizQuestion> => {
+    return apiClient.patch<QuizQuestion>(`/quizzes/${quizId}/questions/${questionId}`, data);
+  },
+
+  /**
+   * Delete a quiz question
+   *
+   * @param quizId - Quiz ID
+   * @param questionId - Question ID
+   * @returns Confirmation
+   *
+   * @example
+   * ```typescript
+   * await teacherQuizApi.deleteQuestion('quiz-123', 'question-456');
+   * ```
+   */
+  deleteQuestion: async (
+    quizId: string,
+    questionId: string
+  ): Promise<{ message: string }> => {
+    return apiClient.delete<{ message: string }>(`/quizzes/${quizId}/questions/${questionId}`);
+  },
+
+  /**
    * Update quiz settings
    *
    * @param quizId - Quiz ID
@@ -390,17 +511,22 @@ export const teacherQuizApi = {
    * Publish quiz
    *
    * @param quizId - Quiz ID
+   * @param publishDto - Publish data including status and optional sectionIds
    * @returns Updated quiz
    *
    * @example
    * ```typescript
-   * await teacherQuizApi.publishQuiz('quiz-123');
+   * await teacherQuizApi.publishQuiz('quiz-123', {
+   *   status: 'published',
+   *   sectionIds: ['section-1', 'section-2']
+   * });
    * ```
    */
-  publishQuiz: async (quizId: string): Promise<Quiz> => {
-    return apiClient.post<Quiz>(`/quizzes/${quizId}/publish`, {
-      publish: true,
-    });
+  publishQuiz: async (
+    quizId: string,
+    publishDto: { status: string; sectionIds?: string[] }
+  ): Promise<Quiz> => {
+    return apiClient.post<Quiz>(`/quizzes/${quizId}/publish`, publishDto);
   },
 
   /**
@@ -419,6 +545,38 @@ export const teacherQuizApi = {
    */
   cloneQuiz: async (quizId: string, data?: CloneQuizDto): Promise<Quiz> => {
     return apiClient.post<Quiz>(`/quizzes/${quizId}/clone`, data || {});
+  },
+
+  /**
+   * Schedule quiz for future availability
+   *
+   * @param quizId - Quiz ID
+   * @param data - Schedule data with dates and sections
+   * @returns Scheduled quiz
+   *
+   * @example
+   * ```typescript
+   * const scheduled = await teacherQuizApi.scheduleQuiz('quiz-123', {
+   *   startDate: '2025-12-01T08:00:00Z',
+   *   endDate: '2025-12-15T23:59:59Z',
+   *   sectionIds: ['section-1', 'section-2'],
+   *   sectionSettings: {
+   *     'section-1': { timeLimit: 60 },
+   *     'section-2': { timeLimit: 45 }
+   *   }
+   * });
+   * ```
+   */
+  scheduleQuiz: async (
+    quizId: string,
+    data: {
+      startDate: string;
+      endDate?: string;
+      sectionIds: string[];
+      sectionSettings?: Record<string, { timeLimit?: number }>;
+    }
+  ): Promise<Quiz> => {
+    return apiClient.post<Quiz>(`/quizzes/${quizId}/schedule`, data);
   },
 
   /**
@@ -499,6 +657,31 @@ export const teacherQuizApi = {
       {
         body: { sectionIds },
       } as any
+    );
+  },
+
+  /**
+   * Import question from question bank to quiz
+   *
+   * @param quizId - Quiz ID
+   * @param data - Import question data
+   * @returns Imported quiz question
+   *
+   * @example
+   * ```typescript
+   * await teacherQuizApi.importQuestionFromBank('quiz-123', {
+   *   questionBankId: 'qb-456',
+   *   orderIndex: 5
+   * });
+   * ```
+   */
+  importQuestionFromBank: async (
+    quizId: string,
+    data: { questionBankId: string; orderIndex?: number }
+  ): Promise<QuizQuestion> => {
+    return apiClient.post<QuizQuestion>(
+      `/quizzes/${quizId}/import-question`,
+      data
     );
   },
 };
@@ -596,19 +779,28 @@ export const teacherMonitoringApi = {
    * Get active participants for quiz
    *
    * @param quizId - Quiz ID
-   * @returns List of active participants
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 50)
+   * @returns List of active participants with pagination
    *
    * @example
    * ```typescript
-   * const participants = await teacherMonitoringApi.getActiveParticipants('quiz-123');
+   * const participants = await teacherMonitoringApi.getActiveParticipants('quiz-123', 1, 50);
    * ```
    */
   getActiveParticipants: async (
-    quizId: string
+    quizId: string,
+    page?: number,
+    limit?: number
   ): Promise<ActiveParticipantsResponse> => {
-    return apiClient.get<ActiveParticipantsResponse>(
-      `/quiz-monitoring/quiz/${quizId}/participants`
-    );
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/quiz-monitoring/quiz/${quizId}/participants${queryString ? `?${queryString}` : ''}`;
+
+    return apiClient.get<ActiveParticipantsResponse>(endpoint);
   },
 
   /**
@@ -649,6 +841,25 @@ export const teacherMonitoringApi = {
     return apiClient.post<{ message: string }>(
       `/quiz-monitoring/attempt/${attemptId}/terminate`,
       data
+    );
+  },
+
+  /**
+   * Export monitoring report (for CSV/PDF generation)
+   *
+   * @param quizId - Quiz ID
+   * @returns Complete monitoring report with participants, flags, and summary
+   *
+   * @example
+   * ```typescript
+   * const report = await teacherMonitoringApi.exportReport('quiz-123');
+   * // Generate CSV from report.participants
+   * // Generate PDF with report.summary
+   * ```
+   */
+  exportReport: async (quizId: string): Promise<MonitoringExportResponse> => {
+    return apiClient.get<MonitoringExportResponse>(
+      `/quiz-monitoring/quiz/${quizId}/export`
     );
   },
 };
@@ -713,6 +924,27 @@ export const teacherAnalyticsApi = {
   ): Promise<StudentPerformanceResponse> => {
     return apiClient.get<StudentPerformanceResponse>(
       `/analytics/quiz/${quizId}/students`
+    );
+  },
+
+  /**
+   * Get detailed answers for a specific student
+   *
+   * @param quizId - Quiz ID
+   * @param studentId - Student ID
+   * @returns Student's detailed answers with question info
+   *
+   * @example
+   * ```typescript
+   * const answers = await teacherAnalyticsApi.getStudentAnswers('quiz-123', 'student-456');
+   * ```
+   */
+  getStudentAnswers: async (
+    quizId: string,
+    studentId: string
+  ): Promise<StudentAnswersResponse> => {
+    return apiClient.get<StudentAnswersResponse>(
+      `/analytics/quiz/${quizId}/students/${studentId}/answers`
     );
   },
 };

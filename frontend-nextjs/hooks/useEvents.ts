@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getEvents,
   getEventById,
+  getEventsByClubId,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -87,6 +88,41 @@ export function useEventById(id: string) {
       if (error instanceof Error && 'status' in error) {
         const status = (error as any).status
         if (status === 404) {
+          return false
+        }
+      }
+      return failureCount < 2
+    },
+    throwOnError: false,
+  })
+}
+
+/**
+ * Hook to fetch events by club ID
+ */
+export function useEventsByClubId(
+  clubId: string,
+  params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    visibility?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }
+) {
+  return useQuery({
+    queryKey: ['events', 'club', clubId, params],
+    queryFn: () => getEventsByClubId(clubId, params),
+    enabled: !!clubId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: (failureCount, error) => {
+      // Don't retry on 404 or client errors
+      if (error instanceof Error && 'status' in error) {
+        const status = (error as any).status
+        if (status >= 400 && status < 500) {
           return false
         }
       }
@@ -267,44 +303,15 @@ export function useArchiveEvent() {
 
   return useMutation({
     mutationFn: archiveEvent,
-    onMutate: async (eventId) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: eventsQueryKeys.lists() })
-
-      // Snapshot the previous value
-      const previousEvents = queryClient.getQueryData(eventsQueryKeys.lists())
-
-      // Optimistically remove from active events
-      queryClient.setQueriesData(
-        { queryKey: eventsQueryKeys.lists() },
-        (old: any) => {
-          if (!old?.data) return old
-          return {
-            ...old,
-            data: old.data.filter((event: Event) => event.id !== eventId),
-            pagination: {
-              ...old.pagination,
-              total: old.pagination.total - 1,
-            },
-          }
-        }
-      )
-
-      return { previousEvents }
-    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: eventsQueryKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: ['events', 'archived'] })
+      // Invalidate all event queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['events'] })
       toast({
         title: 'Event archived',
         description: 'The event has been moved to archived events.',
       })
     },
-    onError: (error: any, _, context) => {
-      // Rollback on error
-      if (context?.previousEvents) {
-        queryClient.setQueryData(eventsQueryKeys.lists(), context.previousEvents)
-      }
+    onError: (error: any) => {
       toast({
         title: 'Failed to archive event',
         description: error?.message || 'An error occurred while archiving the event.',
@@ -324,8 +331,8 @@ export function useDeleteEvent() {
   return useMutation({
     mutationFn: deleteEvent,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: eventsQueryKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: ['events', 'archived'] })
+      // Invalidate all event queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['events'] })
       toast({
         title: 'Event deleted',
         description: 'The event has been permanently deleted.',

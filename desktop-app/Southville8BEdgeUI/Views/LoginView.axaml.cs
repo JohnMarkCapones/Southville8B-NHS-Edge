@@ -83,7 +83,7 @@ public partial class LoginView : UserControl
             }
         }
 
-        // Null guard – if XAML name changes or control not initialized, exit safely
+        // Null guard - if XAML name changes or control not initialized, exit safely
         if (LoginCarousel is null) return;
 
         LoginCarousel.ItemsSource = slides;

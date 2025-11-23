@@ -44,7 +44,13 @@ interface UseQuizReturn {
   getQuizzes: (filters?: QuizFilters) => Promise<void>;
   updateQuiz: (quizId: string, data: UpdateQuizDto) => Promise<Quiz | null>;
   deleteQuiz: (quizId: string) => Promise<boolean>;
-  publishQuiz: (quizId: string) => Promise<boolean>;
+  publishQuiz: (quizId: string, sectionIds?: string[]) => Promise<boolean>;
+  scheduleQuiz: (quizId: string, scheduleData: {
+    startDate: string;
+    endDate?: string;
+    sectionIds: string[];
+    sectionSettings?: Record<string, { timeLimit?: number }>;
+  }) => Promise<Quiz | null>;
   cloneQuiz: (quizId: string, newTitle?: string) => Promise<Quiz | null>;
   clearQuiz: () => void;
 }
@@ -233,15 +239,23 @@ export const useQuiz = (): UseQuizReturn => {
    * Publish quiz
    */
   const publishQuiz = useCallback(
-    async (quizId: string): Promise<boolean> => {
+    async (quizId: string, sectionIds?: string[]): Promise<boolean> => {
       setIsSaving(true);
       setError(null);
 
       try {
-        await quizApi.teacher.publishQuiz(quizId);
+        await quizApi.teacher.publishQuiz(quizId, {
+          status: 'published',
+          sectionIds: sectionIds,
+        });
+
+        const sectionText = sectionIds && sectionIds.length > 0
+          ? ` and assigned to ${sectionIds.length} section(s)`
+          : '';
+
         toast({
           title: 'Success',
-          description: 'Quiz published successfully',
+          description: `Quiz published successfully${sectionText}`,
         });
         return true;
       } catch (err) {
@@ -253,6 +267,45 @@ export const useQuiz = (): UseQuizReturn => {
           variant: 'destructive',
         });
         return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [toast]
+  );
+
+  /**
+   * Schedule quiz for future availability
+   */
+  const scheduleQuiz = useCallback(
+    async (
+      quizId: string,
+      scheduleData: {
+        startDate: string;
+        endDate?: string;
+        sectionIds: string[];
+        sectionSettings?: Record<string, { timeLimit?: number }>;
+      }
+    ): Promise<Quiz | null> => {
+      setIsSaving(true);
+      setError(null);
+
+      try {
+        const scheduledQuiz = await quizApi.teacher.scheduleQuiz(quizId, scheduleData);
+        toast({
+          title: 'Success',
+          description: 'Quiz scheduled successfully',
+        });
+        return scheduledQuiz;
+      } catch (err) {
+        const error = err as Error;
+        setError(error);
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to schedule quiz',
+          variant: 'destructive',
+        });
+        return null;
       } finally {
         setIsSaving(false);
       }
@@ -315,6 +368,7 @@ export const useQuiz = (): UseQuizReturn => {
     updateQuiz,
     deleteQuiz,
     publishQuiz,
+    scheduleQuiz,
     cloneQuiz,
     clearQuiz,
   };

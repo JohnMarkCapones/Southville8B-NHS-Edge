@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -142,7 +142,11 @@ export default function ClassAssignmentsPage() {
     buildingId?: string
     floorId?: string
     name: string
+    roomCount?: number
   } | null>(null)
+
+  // Use ref to prevent race conditions when adding multiple rooms
+  const addingRoomRef = useRef<boolean>(false)
 
 
   const showNotification = (type: "success" | "error" | "info", message: string) => {
@@ -172,15 +176,18 @@ export default function ClassAssignmentsPage() {
   const handleAddBuilding = async () => {
     if (!newBuildingName.trim()) return
     setIsLoading(true)
-    
+
     try {
       const newBuilding = await addBuilding({
         buildingName: newBuildingName,
         code: newBuildingName.substring(0, 3).toUpperCase(),
         capacity: 1000
       })
-      
+
       if (newBuilding) {
+        // Refresh the buildings list to get complete data
+        await refresh()
+
         setNewBuildingName("")
         setIsAddBuildingOpen(false)
         animateItem(newBuilding.id)
@@ -238,61 +245,94 @@ export default function ClassAssignmentsPage() {
     const building = buildings.find((b) => b.id === buildingId)
     const floor = building?.floors?.find((f) => f.id === floorId)
 
-    try {
-      const success = await removeFloor(floorId)
-      if (success) {
-        setCollapsedFloors((prev) => {
-          const next = new Set(prev)
-          next.delete(floorId)
-          return next
-        })
+    if (!floor) {
+      showNotification("error", "Floor not found")
+      return
+    }
 
-        if (floor) {
-          showNotification("success", `Floor ${floor.number} deleted`)
+    // Get rooms on this floor
+    const rooms = floor.rooms || []
+    const roomCount = rooms.length
+
+    // If floor has rooms, delete them first (cascade delete)
+    if (roomCount > 0) {
+      try {
+        showNotification("info", `Deleting ${roomCount} room${roomCount > 1 ? 's' : ''}...`)
+
+        // Delete all rooms sequentially
+        for (const room of rooms) {
+          await removeRoom(room.id)
         }
-        setDeleteConfirmation(null)
-      } else {
+
+        // Now delete the floor
+        const success = await removeFloor(floorId)
+        if (success) {
+          setCollapsedFloors((prev) => {
+            const next = new Set(prev)
+            next.delete(floorId)
+            return next
+          })
+
+          showNotification(
+            "success",
+            `Successfully deleted ${roomCount} room${roomCount > 1 ? 's' : ''} and Floor ${floor.number}`
+          )
+          setDeleteConfirmation(null)
+        } else {
+          showNotification("error", "Failed to delete floor after removing rooms")
+        }
+      } catch (err) {
+        console.error("Error during cascade delete:", err)
+        showNotification("error", "Failed to delete floor and rooms")
+      }
+    } else {
+      // No rooms, just delete the floor
+      try {
+        const success = await removeFloor(floorId)
+        if (success) {
+          setCollapsedFloors((prev) => {
+            const next = new Set(prev)
+            next.delete(floorId)
+            return next
+          })
+
+          showNotification("success", `Successfully deleted Floor ${floor.number}`)
+          setDeleteConfirmation(null)
+        } else {
+          showNotification("error", "Failed to delete floor")
+        }
+      } catch (err) {
         showNotification("error", "Failed to delete floor")
       }
-    } catch (err) {
-      showNotification("error", "Failed to delete floor")
     }
   }
 
   // Add classroom to floor
   const handleAddClassroom = async (buildingId: string, floorId: string) => {
-    const building = buildings.find((b) => b.id === buildingId)
-    const floor = building?.floors?.find((f) => f.id === floorId)
-    if (!floor) return
+    // Prevent multiple clicks while room is being created - use ref for immediate protection
+    if (addingRoomRef.current) {
+      console.log('Already creating a room (ref check), ignoring click')
+      return
+    }
+
+    // Set the ref immediately to block other calls
+    addingRoomRef.current = true
 
     try {
-      // Generate unique room number by finding the highest existing number
-      const existingRoomNumbers = floor.rooms?.map(room => {
-        const num = parseInt(room.roomNumber)
-        return isNaN(num) ? 0 : num
-      }).filter(num => num > 0) || []
-      
-      // If no valid room numbers exist, start with 1, otherwise increment the highest
-      const maxRoomNumber = existingRoomNumbers.length > 0 ? Math.max(...existingRoomNumbers) : 0
-      const nextRoomNumber = maxRoomNumber + 1
-      const roomNumber = nextRoomNumber.toString()
-      
-      console.log('Room number generation:', {
-        existingRooms: floor.rooms?.length || 0,
-        existingRoomNumbers,
-        maxRoomNumber,
-        nextRoomNumber,
-        roomNumber
-      })
-      
+      console.log('Creating room on floor:', floorId)
+
+      // Let the BACKEND auto-generate the room number using the database function
+      // This is bulletproof - the database will handle race conditions
       const newRoom = await addRoom({
         floorId: floorId,
-        roomNumber: roomNumber,
-        name: `Room ${roomNumber}`,
+        // roomNumber: NOT SENT - backend will auto-generate using get_next_room_number()
+        // name: NOT SENT - backend will auto-generate as "Room {number}"
         capacity: 30,
-        status: "Available"
+        status: "Available" // Capitalized to match API expectations
       })
-    
+
+      console.log('Room created successfully:', newRoom?.roomNumber)
+
       if (newRoom) {
         const newClassroom: Classroom = {
           ...newRoom,
@@ -304,6 +344,9 @@ export default function ClassAssignmentsPage() {
       }
     } catch (err: any) {
       showNotification("error", `Failed to add classroom: ${err?.message || 'Unknown error'}`)
+    } finally {
+      // Always release the lock
+      addingRoomRef.current = false
     }
   }
 
@@ -378,73 +421,111 @@ export default function ClassAssignmentsPage() {
     setDragOverTarget(null)
   }
 
-  const handleDrop = (e: React.DragEvent, targetBuildingId: string, targetFloorId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetBuildingId: string, targetFloorId: string) => {
     e.preventDefault()
     if (!draggedClassroom) return
 
+    // Prevent dropping on the same floor
+    if (draggedClassroom.floorId === targetFloorId) {
+      setDraggedClassroom(null)
+      setDragOverTarget(null)
+      return
+    }
+
     const targetBuilding = buildings.find((b) => b.id === targetBuildingId)
-    const targetFloor = targetBuilding?.floors.find((f) => f.id === targetFloorId)
+    const targetFloor = targetBuilding?.floors?.find((f) => f.id === targetFloorId)
 
-    // Remove from original location
-    setBuildings(
-      buildings.map((building) => {
-        if (building.id === draggedClassroom.buildingId) {
-          return {
-            ...building,
-            floors: building.floors.map((floor) => {
-              if (floor.id === draggedClassroom.floorId) {
-                return {
-                  ...floor,
-                  classrooms: floor.rooms.filter((c) => c.id !== draggedClassroom.classroom.id),
-                }
-              }
-              return floor
-            }),
-          }
+    if (!targetFloor) return
+
+    try {
+      // Calculate new room number based on target floor
+      const floorNumber = targetFloor.number
+      const floorBase = floorNumber * 100 // Floor 1 = 100, Floor 2 = 200, etc.
+
+      // Find existing room numbers on target floor
+      const existingRoomNumbers = targetFloor.rooms?.map(room => {
+        const num = parseInt(room.roomNumber)
+        const roomFloorBase = Math.floor(num / 100) * 100
+        return (roomFloorBase === floorBase && !isNaN(num)) ? num : 0
+      }).filter(num => num > 0) || []
+
+      // Calculate next room number for target floor
+      let newRoomNumber: number
+      if (existingRoomNumbers.length > 0) {
+        const maxRoomNumber = Math.max(...existingRoomNumbers)
+        newRoomNumber = maxRoomNumber + 1
+      } else {
+        newRoomNumber = floorBase + 1
+      }
+
+      // Validate room number doesn't exceed floor limit
+      const roomNumberWithinFloor = newRoomNumber - floorBase
+      if (roomNumberWithinFloor > 99) {
+        showNotification("error", `Floor ${floorNumber} has reached maximum capacity (99 rooms)`)
+        setDraggedClassroom(null)
+        setDragOverTarget(null)
+        return
+      }
+
+      const oldRoomNumber = draggedClassroom.classroom.roomNumber
+      const newRoomNumberStr = newRoomNumber.toString()
+
+      // Create updated classroom with new room number
+      const updatedClassroom: Classroom = {
+        ...draggedClassroom.classroom,
+        roomNumber: newRoomNumberStr,
+        name: `Room ${newRoomNumberStr}`,
+        floorId: targetFloorId
+      }
+
+      // Update room in API
+      const success = await removeRoom(draggedClassroom.classroom.id)
+
+      if (success) {
+        const newRoom = await addRoom({
+          floorId: targetFloorId,
+          roomNumber: newRoomNumberStr,
+          name: `Room ${newRoomNumberStr}`,
+          capacity: draggedClassroom.classroom.capacity,
+          status: draggedClassroom.classroom.status
+        })
+
+        if (newRoom) {
+          animateItem(newRoom.id)
+          showNotification(
+            "success",
+            `Room ${oldRoomNumber} moved to ${targetBuilding?.buildingName} - Floor ${targetFloor?.number} and renumbered to ${newRoomNumberStr}`,
+          )
         }
-        return building
-      }),
-    )
-
-    // Add to new location
-    setBuildings((prevBuildings) =>
-      prevBuildings.map((building) => {
-        if (building.id === targetBuildingId) {
-          return {
-            ...building,
-            floors: building.floors.map((floor) => {
-              if (floor.id === targetFloorId) {
-                return {
-                  ...floor,
-                  classrooms: [...floor.rooms, draggedClassroom.classroom],
-                }
-              }
-              return floor
-            }),
-          }
-        }
-        return building
-      }),
-    )
-
-    animateItem(draggedClassroom.classroom.id)
-    showNotification(
-      "success",
-      `${draggedClassroom.classroom.name} moved to ${targetBuilding?.name} - Floor ${targetFloor?.number}`,
-    )
+      }
+    } catch (err) {
+      showNotification("error", "Failed to move room")
+    }
 
     setDraggedClassroom(null)
     setDragOverTarget(null)
   }
 
-  const getStatusColor = (status: Classroom["status"]) => {
-    switch (status) {
+  // Normalize status from backend (Available, Occupied, Maintenance) to UI format (available, in-use, maintenance)
+  const normalizeStatus = (status: string): "available" | "in-use" | "maintenance" => {
+    const normalized = status?.toLowerCase()
+    if (normalized === "available") return "available"
+    if (normalized === "occupied" || normalized === "in-use") return "in-use"
+    if (normalized === "maintenance") return "maintenance"
+    return "available" // Default to available if unknown
+  }
+
+  const getStatusColor = (status: string) => {
+    const normalized = normalizeStatus(status)
+    switch (normalized) {
       case "available":
         return "bg-emerald-500"
       case "in-use":
         return "bg-amber-500"
       case "maintenance":
         return "bg-red-500"
+      default:
+        return "bg-emerald-500"
     }
   }
 
@@ -1154,11 +1235,13 @@ export default function ClassAssignmentsPage() {
                                   const buildingRef = buildings.find((b) => b.id === building.id)
                                   const floorRef = buildingRef?.floors.find((f) => f.id === floor.id)
                                   if (floorRef) {
+                                    const roomCount = floorRef.rooms?.length || 0
                                     setDeleteConfirmation({
                                       type: "floor",
                                       id: floor.id,
                                       buildingId: building.id,
                                       name: `Floor ${floorRef.number}`,
+                                      roomCount,
                                     })
                                   }
                                 }}
@@ -1241,9 +1324,9 @@ export default function ClassAssignmentsPage() {
                                       {/* Front Face */}
                                       <div
                                         className={`absolute inset-0 rounded-lg shadow-2xl border-4 flex flex-col p-4 ${
-                                          classroom.status === "available"
+                                          normalizeStatus(classroom.status) === "available"
                                             ? "bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-800"
-                                            : classroom.status === "in-use"
+                                            : normalizeStatus(classroom.status) === "in-use"
                                               ? "bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-amber-800"
                                               : "bg-gradient-to-br from-red-400 via-red-500 to-red-600 border-red-800"
                                         }`}
@@ -1340,9 +1423,9 @@ export default function ClassAssignmentsPage() {
                                       {/* Side Face - Enhanced depth */}
                                       <div
                                         className={`absolute inset-0 rounded-lg ${
-                                          classroom.status === "available"
+                                          normalizeStatus(classroom.status) === "available"
                                             ? "bg-gradient-to-b from-emerald-500 to-emerald-800"
-                                            : classroom.status === "in-use"
+                                            : normalizeStatus(classroom.status) === "in-use"
                                               ? "bg-gradient-to-b from-amber-500 to-amber-800"
                                               : "bg-gradient-to-b from-red-500 to-red-800"
                                         }`}
@@ -1356,9 +1439,9 @@ export default function ClassAssignmentsPage() {
                                       {/* Top Face - Enhanced depth */}
                                       <div
                                         className={`absolute inset-0 rounded-lg ${
-                                          classroom.status === "available"
+                                          normalizeStatus(classroom.status) === "available"
                                             ? "bg-emerald-700"
-                                            : classroom.status === "in-use"
+                                            : normalizeStatus(classroom.status) === "in-use"
                                               ? "bg-amber-700"
                                               : "bg-red-700"
                                         }`}
@@ -1381,30 +1464,30 @@ export default function ClassAssignmentsPage() {
                                     <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
                                       <span
                                         className={`relative text-xs font-bold px-2.5 py-0.5 rounded-full shadow-md border-2 ${
-                                          classroom.status === "available"
+                                          normalizeStatus(classroom.status) === "available"
                                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                            : classroom.status === "in-use"
+                                            : normalizeStatus(classroom.status) === "in-use"
                                               ? "bg-amber-50 text-amber-700 border-amber-200"
                                               : "bg-red-50 text-red-700 border-red-200"
                                         }`}
                                       >
                                         {
                                           <>
-                                            {classroom.status === "in-use" && (
+                                            {normalizeStatus(classroom.status) === "in-use" && (
                                               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                                               </span>
                                             )}
-                                            {classroom.status === "maintenance" && (
+                                            {normalizeStatus(classroom.status) === "maintenance" && (
                                               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                               </span>
                                             )}
-                                            {classroom.status === "available"
+                                            {normalizeStatus(classroom.status) === "available"
                                               ? "Available"
-                                              : classroom.status === "in-use"
+                                              : normalizeStatus(classroom.status) === "in-use"
                                                 ? "In Use"
                                                 : "Maintenance"}
                                           </>
@@ -1511,9 +1594,9 @@ export default function ClassAssignmentsPage() {
                 )}
 
                 {(building.floors?.length || 0) === 0 && (
-                  <div className="text-center py-20 text-slate-400">
-                    <p className="text-xl">No floors yet.</p>
-                    <p>Click "Add Floor" to start building.</p>
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <p className="text-xl font-medium">No floors yet.</p>
+                    <p className="text-sm mt-1">Click "Add Floor" to start building.</p>
                   </div>
                 )}
               </div>
@@ -1883,11 +1966,13 @@ export default function ClassAssignmentsPage() {
                     const building = buildings.find((b) => b.id === contextMenu.buildingId)
                     const floor = building?.floors.find((f) => f.id === contextMenu.floorId)
                     if (floor) {
+                      const roomCount = floor.rooms?.length || 0
                       setDeleteConfirmation({
                         type: "floor",
                         id: floor.id,
                         buildingId: contextMenu.buildingId,
                         name: `Floor ${floor.number}`,
+                        roomCount,
                       })
                     }
                     setContextMenu(null)
@@ -1990,9 +2075,16 @@ export default function ClassAssignmentsPage() {
                 <>
                   Are you sure you want to delete <strong>{deleteConfirmation.name}</strong>?
                   <br />
-                  <span className="text-red-600 font-medium">
-                    This will permanently delete all classrooms on this floor.
-                  </span>
+                  {deleteConfirmation.roomCount && deleteConfirmation.roomCount > 0 ? (
+                    <span className="text-red-600 font-medium">
+                      This floor contains <strong>{deleteConfirmation.roomCount}</strong> room
+                      {deleteConfirmation.roomCount > 1 ? 's' : ''}. All rooms will be permanently deleted.
+                    </span>
+                  ) : (
+                    <span className="text-red-600 font-medium">
+                      This action cannot be undone.
+                    </span>
+                  )}
                 </>
               )}
               {deleteConfirmation?.type === "classroom" && (

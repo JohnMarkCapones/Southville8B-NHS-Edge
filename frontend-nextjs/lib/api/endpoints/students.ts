@@ -6,6 +6,17 @@ export interface StudentListItem {
   last_name: string
   student_id: string
   section_id?: string
+  user?: {
+    email: string
+    full_name: string
+    status: string
+    created_at: string
+  }
+  section?: {
+    id: string
+    name: string
+    grade_level?: string
+  }
 }
 
 export interface Student {
@@ -21,7 +32,13 @@ export interface Student {
   age?: number
   birthday?: string
   // Relations
-  sections?: {
+  user?: {
+    email: string
+    full_name: string
+    status: string
+    created_at: string
+  }
+  section?: {
     id: string
     name: string
     grade_level?: string
@@ -66,12 +83,30 @@ export async function getStudentsBySection(
   limit = 20,
   search?: string
 ): Promise<PaginatedStudents> {
+  console.log('[API CLIENT] getStudentsBySection called with:', {
+    sectionId,
+    page,
+    limit,
+    search
+  });
+  
   const params = new URLSearchParams()
   params.set('page', String(page))
   params.set('limit', String(limit))
   params.set('sectionId', sectionId)
   if (search && search.trim()) params.set('search', search.trim())
-  return apiClient.get<PaginatedStudents>(`/students?${params.toString()}`)
+  
+  const url = `/students?${params.toString()}`;
+  console.log('[API CLIENT] Making request to:', url);
+  
+  const result = await apiClient.get<PaginatedStudents>(url);
+  console.log('[API CLIENT] Response received:', {
+    hasData: !!result.data,
+    dataLength: result.data?.length || 0,
+    pagination: result.pagination
+  });
+  
+  return result;
 }
 
 /**

@@ -3,7 +3,7 @@ import { JsonLd, buildBreadcrumbListSchema } from "@/components/seo/jsonld"
 import { absoluteUrl } from "@/lib/seo"
 import { findEventBySlug, EVENTS } from "./data"
 import { getEventBySlug } from "@/lib/api/endpoints/events"
-import ClientPage from "./ui-client"
+import ClientPageEnhanced from "./ui-client-enhanced"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -113,7 +113,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           current={event ? event.title : "Event"}
         />
       </div>
-      <ClientPage params={{ slug }} />
+      <ClientPageEnhanced params={{ slug }} />
     </>
   )
 }

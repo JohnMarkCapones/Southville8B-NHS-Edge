@@ -1,0 +1,285 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" version="28.2.8">
+  <diagram name="Academic Management ERD" id="zvP_CmBTya-FS-8AFVd1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="Academic Management ERD" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontStyle=1;fontSize=24;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="350" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Legend -->
+        <mxCell id="legend-box" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="20" y="80" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="30" y="85" width="180" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-entity" value="Entity (Rectangle)" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="30" y="115" width="100" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-attr" value="Attribute" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="30" y="145" width="70" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-rel" value="Relationship" style="rhombus;whiteSpace=wrap;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="30" y="173" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_years -->
+        <mxCell id="entity-academic-years" value="&lt;b&gt;academic_years&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="280" y="250" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_years -->
+        <mxCell id="attr-years-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="150" y="230" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-years-id" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-years-id" target="entity-academic-years">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-years-name" value="year_name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="150" y="270" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-years-name" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-years-name" target="entity-academic-years">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-years-start" value="start_date" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="150" y="310" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-years-start" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-years-start" target="entity-academic-years">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-years-end" value="end_date" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="450" y="230" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-years-end" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-years-end" target="entity-academic-years">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-years-active" value="is_active" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="450" y="270" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-years-active" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-years-active" target="entity-academic-years">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_periods -->
+        <mxCell id="entity-academic-periods" value="&lt;b&gt;academic_periods&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="600" y="250" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_periods -->
+        <mxCell id="attr-periods-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="770" y="220" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-periods-id" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-periods-id" target="entity-academic-periods">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-periods-name" value="period_name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="770" y="260" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-periods-name" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-periods-name" target="entity-academic-periods">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-periods-order" value="period_order" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="770" y="300" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-periods-order" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-periods-order" target="entity-academic-periods">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Relationship: academic_years "Contains" academic_periods -->
+        <mxCell id="rel-years-periods" value="Contains" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="250" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="line-years-to-rel" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="entity-academic-years" target="rel-years-periods">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="card-years-one" value="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="425" y="255" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="line-rel-to-periods" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endFill=1;" edge="1" parent="1" source="rel-years-periods" target="entity-academic-periods">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="card-periods-many" value="N" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="570" y="255" width="20" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_calendar -->
+        <mxCell id="entity-academic-calendar" value="&lt;b&gt;academic_calendar&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="280" y="450" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_calendar -->
+        <mxCell id="attr-cal-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="150" y="430" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-cal-id" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-cal-id" target="entity-academic-calendar">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-cal-year" value="year" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="150" y="470" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-cal-year" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-cal-year" target="entity-academic-calendar">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-cal-month" value="month_name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="150" y="510" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-cal-month" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-cal-month" target="entity-academic-calendar">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-cal-term" value="term" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="450" y="430" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-cal-term" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-cal-term" target="entity-academic-calendar">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_calendar_days -->
+        <mxCell id="entity-academic-calendar-days" value="&lt;b&gt;academic_calendar_days&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="600" y="450" width="160" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_calendar_days -->
+        <mxCell id="attr-days-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="790" y="420" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-days-id" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-days-id" target="entity-academic-calendar-days">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-days-date" value="date" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="790" y="460" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-days-date" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-days-date" target="entity-academic-calendar-days">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-days-dow" value="day_of_week" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="790" y="500" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-days-dow" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-days-dow" target="entity-academic-calendar-days">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Relationship: academic_calendar "Has" academic_calendar_days -->
+        <mxCell id="rel-cal-days" value="Has" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="450" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="line-cal-to-rel-days" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="entity-academic-calendar" target="rel-cal-days">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="card-cal-one" value="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="425" y="455" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="line-rel-to-days" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endFill=1;" edge="1" parent="1" source="rel-cal-days" target="entity-academic-calendar-days">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="card-days-many" value="N" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="570" y="455" width="20" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_calendar_markers -->
+        <mxCell id="entity-academic-markers" value="&lt;b&gt;academic_calendar_markers&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="590" y="600" width="180" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_calendar_markers -->
+        <mxCell id="attr-markers-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="800" y="580" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-markers-id" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-markers-id" target="entity-academic-markers">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-markers-color" value="color" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="800" y="620" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-markers-color" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-markers-color" target="entity-academic-markers">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-markers-icon" value="icon" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="800" y="660" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-markers-icon" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-markers-icon" target="entity-academic-markers">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Relationship: academic_calendar_days "Has" markers -->
+        <mxCell id="rel-days-markers" value="Has" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="635" y="530" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="line-days-to-markers" value="" style="endArrow=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="entity-academic-calendar-days" target="rel-days-markers">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="card-days-one" value="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="685" y="505" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="line-markers-from-rel" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endFill=1;" edge="1" parent="1" source="rel-days-markers" target="entity-academic-markers">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="card-markers-many" value="N" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="685" y="575" width="20" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_year_templates -->
+        <mxCell id="entity-templates" value="&lt;b&gt;academic_year_templates&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="260" y="100" width="180" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_year_templates -->
+        <mxCell id="attr-template-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="130" y="90" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-template-id" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-template-id" target="entity-templates">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-template-name" value="template_name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="130" y="130" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-template-name" value="" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-template-name" target="entity-templates">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Entity: academic_year_settings -->
+        <mxCell id="entity-settings" value="&lt;b&gt;academic_year_settings&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="570" y="100" width="180" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Attributes for academic_year_settings -->
+        <mxCell id="attr-settings-id" value="id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="780" y="80" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-settings-id" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-settings-id" target="entity-settings">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="attr-settings-key" value="setting_key" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="780" y="120" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="line-settings-key" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="attr-settings-key" target="entity-settings">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Note about independent entities -->
+        <mxCell id="note-independent" value="Note: academic_year_templates and academic_year_settings are standalone configuration entities with no direct FK relationships to other academic entities in this domain." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#d79b00;align=left;verticalAlign=top;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="260" y="720" width="490" height="60" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

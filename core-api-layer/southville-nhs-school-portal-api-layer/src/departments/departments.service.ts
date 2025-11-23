@@ -81,6 +81,72 @@ export class DepartmentsService {
     }
   }
 
+  async getCount(): Promise<{
+    pagination: { total: number };
+    active: number;
+    inactive: number;
+  }> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      // Get total count
+      const { count: total, error: totalError } = await supabase
+        .from('departments')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false);
+
+      if (totalError) {
+        this.logger.error('Error fetching total department count:', totalError);
+        throw new InternalServerErrorException(
+          'Failed to fetch department count',
+        );
+      }
+
+      // Get active count
+      const { count: active, error: activeError } = await supabase
+        .from('departments')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false)
+        .eq('is_active', true);
+
+      if (activeError) {
+        this.logger.error(
+          'Error fetching active department count:',
+          activeError,
+        );
+        throw new InternalServerErrorException(
+          'Failed to fetch active department count',
+        );
+      }
+
+      // Get inactive count
+      const { count: inactive, error: inactiveError } = await supabase
+        .from('departments')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false)
+        .eq('is_active', false);
+
+      if (inactiveError) {
+        this.logger.error(
+          'Error fetching inactive department count:',
+          inactiveError,
+        );
+        throw new InternalServerErrorException(
+          'Failed to fetch inactive department count',
+        );
+      }
+
+      return {
+        pagination: { total: total || 0 },
+        active: active || 0,
+        inactive: inactive || 0,
+      };
+    } catch (error) {
+      this.logger.error('Error getting department counts:', error);
+      throw new InternalServerErrorException('Failed to get department counts');
+    }
+  }
+
   async findAll(query: DepartmentQueryDto): Promise<PaginatedResult> {
     try {
       const { page = 1, limit = 10, isActive, search } = query;

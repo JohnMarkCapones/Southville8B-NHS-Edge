@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { AuthModule } from '../auth/auth.module';
+import { StorageModule } from '../storage/storage.module';
+import { GalleryModule } from '../gallery/gallery.module';
+import { StudentActivitiesModule } from '../student-activities/student-activities.module';
+import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
+import { GamificationModule } from '../gamification/gamification.module';
 import { ClubsService } from './clubs.service';
 import { ClubsController } from './clubs.controller';
 import { ClubFormsService } from './services/club-forms.service';
@@ -10,9 +15,19 @@ import { ClubMembershipsService } from './services/club-memberships.service';
 import { ClubMembershipsController } from './controllers/club-memberships.controller';
 import { ClubAnnouncementsService } from './services/club-announcements.service';
 import { ClubAnnouncementsController } from './controllers/club-announcements.controller';
+import { ClubBenefitsService } from './services/club-benefits.service';
+import { ClubFaqsService } from './services/club-faqs.service';
 
 @Module({
-  imports: [SupabaseModule, AuthModule],
+  imports: [
+    SupabaseModule,
+    AuthModule,
+    StorageModule,
+    GalleryModule,
+    StudentActivitiesModule,
+    ActivityMonitoringModule,
+    GamificationModule,
+  ],
   controllers: [
     ClubsController,
     ClubFormsController,
@@ -25,6 +40,8 @@ import { ClubAnnouncementsController } from './controllers/club-announcements.co
     ClubFormResponsesService,
     ClubMembershipsService,
     ClubAnnouncementsService,
+    ClubBenefitsService,
+    ClubFaqsService,
   ],
   exports: [
     ClubsService,
@@ -32,6 +49,8 @@ import { ClubAnnouncementsController } from './controllers/club-announcements.co
     ClubFormResponsesService,
     ClubMembershipsService,
     ClubAnnouncementsService,
+    ClubBenefitsService,
+    ClubFaqsService,
   ],
 })
 export class ClubsModule {}

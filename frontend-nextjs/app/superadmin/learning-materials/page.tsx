@@ -2,8 +2,11 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { useModules } from "@/hooks/useModules"
+import { useSubjects } from "@/hooks/useSubjects"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,6 +52,7 @@ import {
   X,
   File,
   GraduationCap,
+  UserCog,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -228,17 +232,54 @@ const mockModules = [
 
 export default function LearningMaterialsPage() {
   const router = useRouter()
-  const [modules, setModules] = useState(mockModules)
-  const [searchQuery, setSearchQuery] = useState("")
+  const { toast } = useToast()
+
+  // Use the modules hook
+  const {
+    modules: modulesData,
+    loading,
+    error,
+    pagination,
+    params,
+    setSearch: setHookSearch,
+    setPage,
+    setLimit,
+    createModule: hookCreateModule,
+    updateModule: hookUpdateModule,
+    deleteModule: hookDeleteModule,
+  } = useModules({
+    initialParams: {
+      page: 1,
+      limit: 10,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+    },
+  })
+
+  // Use the subjects hook to fetch real subjects
+  const {
+    subjects: availableSubjects,
+    loading: subjectsLoading,
+  } = useSubjects({
+    limit: 1000, // Get all subjects
+  })
+
+  const [localSearchQuery, setLocalSearchQuery] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("all")
-  const [selectedType, setSelectedType] = useState("all")
-  const [selectedDifficulty, setSelectedDifficulty] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [sortBy, setSortBy] = useState("newest")
   const [itemsPerPage, setItemsPerPage] = useState("10")
-  const [selectedModules, setSelectedModules] = useState<number[]>([])
-  const [contextMenuModule, setContextMenuModule] = useState<number | null>(null)
+  const [selectedModules, setSelectedModules] = useState<string[]>([])
+  const [contextMenuModule, setContextMenuModule] = useState<string | null>(null)
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHookSearch(localSearchQuery)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [localSearchQuery, setHookSearch])
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -248,20 +289,21 @@ export default function LearningMaterialsPage() {
   const [uploadForm, setUploadForm] = useState({
     title: "",
     description: "",
-    subject: "",
+    subjectId: "",
+    isGlobal: true,
     type: "video",
     difficulty: "Beginner",
     duration: "",
   })
 
   // Confirmation modals
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; moduleId: number | null }>({
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; moduleId: string | null }>({
     open: false,
     moduleId: null,
   })
   const [statusModal, setStatusModal] = useState<{
     open: boolean
-    moduleId: number | null
+    moduleId: string | null
     newStatus: string
   }>({
     open: false,
@@ -270,7 +312,7 @@ export default function LearningMaterialsPage() {
   })
   const [visibilityModal, setVisibilityModal] = useState<{
     open: boolean
-    moduleId: number | null
+    moduleId: string | null
     newVisibility: string
   }>({
     open: false,
@@ -280,7 +322,7 @@ export default function LearningMaterialsPage() {
 
   const [gradeLevelModal, setGradeLevelModal] = useState<{
     open: boolean
-    moduleId: number | null
+    moduleId: string | null
     selectedGrades: number[]
   }>({
     open: false,
@@ -288,24 +330,42 @@ export default function LearningMaterialsPage() {
     selectedGrades: [],
   })
 
+  // Transform API modules to display format
+  const modules = useMemo(() => {
+    return modulesData.map((module) => ({
+      id: module.id,
+      title: module.title,
+      subject: module.subject?.subject_name || 'N/A',
+      author: module.uploader?.full_name || 'Unknown',
+      views: 0, // Note: views tracking not in backend yet
+      downloads: module.downloadStats?.totalDownloads || 0,
+      status: module.is_deleted ? 'archived' : 'active',
+      visibility: module.is_global ? 'public' : 'restricted',
+      gradeLevels: module.sections?.map(s => s.grade_level).filter(Boolean) as number[] || [],
+      createdDate: new Date(module.created_at).toISOString().split('T')[0],
+      file_url: module.file_url,
+      is_global: module.is_global,
+      subject_id: module.subject_id,
+    }))
+  }, [modulesData])
+
   // Calculate statistics
   const totalModules = modules.length
   const activeModules = modules.filter((m) => m.status === "active").length
   const totalDownloads = modules.reduce((sum, m) => sum + m.downloads, 0)
-  const averageRating = (modules.reduce((sum, m) => sum + m.rating, 0) / modules.length).toFixed(1)
+  const totalViews = modules.reduce((sum, m) => sum + m.views, 0)
 
   // Filter and sort modules
   const filteredModules = modules
     .filter((module) => {
       const matchesSearch =
-        module.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        module.subject.toLowerCase().includes(searchQuery.toLowerCase())
+        module.title.toLowerCase().includes(localSearchQuery.toLowerCase()) ||
+        module.subject.toLowerCase().includes(localSearchQuery.toLowerCase()) ||
+        module.author.toLowerCase().includes(localSearchQuery.toLowerCase())
       const matchesSubject = selectedSubject === "all" || module.subject === selectedSubject
-      const matchesType = selectedType === "all" || module.type === selectedType
-      const matchesDifficulty = selectedDifficulty === "all" || module.difficulty === selectedDifficulty
       const matchesStatus = selectedStatus === "all" || module.status === selectedStatus
 
-      return matchesSearch && matchesSubject && matchesType && matchesDifficulty && matchesStatus
+      return matchesSearch && matchesSubject && matchesStatus
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -317,8 +377,8 @@ export default function LearningMaterialsPage() {
           return a.title.localeCompare(b.title)
         case "views":
           return b.views - a.views
-        case "rating":
-          return b.rating - a.rating
+        case "downloads":
+          return b.downloads - a.downloads
         default:
           return 0
       }
@@ -329,43 +389,66 @@ export default function LearningMaterialsPage() {
     setUploadModalOpen(true)
   }
 
-  const handleViewModule = (id: number) => {
+  const handleViewModule = (id: string) => {
     router.push(`/superadmin/learning-materials/${id}`)
   }
 
-  const handleEditModule = (id: number) => {
+  const handleEditModule = (id: string) => {
     router.push(`/superadmin/learning-materials/${id}/edit`)
   }
 
-  const handleDuplicateModule = (id: number) => {
+  const handleDuplicateModule = async (id: string) => {
     const moduleToDuplicate = modules.find((m) => m.id === id)
-    if (moduleToDuplicate) {
-      const newModule = {
-        ...moduleToDuplicate,
-        id: Math.max(...modules.map((m) => m.id)) + 1,
-        title: `${moduleToDuplicate.title} (Copy)`,
-        createdDate: new Date().toISOString().split("T")[0],
+    if (!moduleToDuplicate || !uploadedFile) {
+      toast({
+        title: "Error",
+        description: "Duplicate functionality requires file handling - feature coming soon",
+        variant: "destructive",
+      })
+      return
+    }
+    // TODO: Implement file duplication via API
+  }
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      // For now, status change is via soft delete
+      if (newStatus === 'archived') {
+        await hookDeleteFile(id)
       }
-      setModules([...modules, newModule])
+      setStatusModal({ open: false, moduleId: null, newStatus: "" })
+    } catch (error) {
+      // Error handled by hook's toast
     }
   }
 
-  const handleStatusChange = (id: number, newStatus: string) => {
-    setModules(modules.map((m) => (m.id === id ? { ...m, status: newStatus } : m)))
-    setStatusModal({ open: false, moduleId: null, newStatus: "" })
-  }
-
-  const handleVisibilityChange = (id: number, newVisibility: string) => {
-    setModules(modules.map((m) => (m.id === id ? { ...m, visibility: newVisibility } : m)))
+  const handleVisibilityChange = (id: string, newVisibility: string) => {
+    // TODO: Add visibility field to backend
+    toast({
+      title: "Info",
+      description: "Visibility feature coming soon - requires backend update",
+    })
     setVisibilityModal({ open: false, moduleId: null, newVisibility: "" })
   }
 
-  const handleDeleteModule = (id: number) => {
-    setModules(modules.filter((m) => m.id !== id))
-    setDeleteModal({ open: false, moduleId: null })
+  const handleDeleteModule = async (id: string) => {
+    try {
+      await hookDeleteModule(id)
+      setDeleteModal({ open: false, moduleId: null })
+      toast({
+        title: "Success",
+        description: "Module deleted successfully",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete module",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleAssignGradeLevel = (id: number) => {
+  const handleAssignGradeLevel = (id: string) => {
     const module = modules.find((m) => m.id === id)
     if (module) {
       setGradeLevelModal({
@@ -389,14 +472,12 @@ export default function LearningMaterialsPage() {
   }
 
   const handleSaveGradeLevels = () => {
-    if (gradeLevelModal.moduleId) {
-      setModules(
-        modules.map((m) =>
-          m.id === gradeLevelModal.moduleId ? { ...m, gradeLevels: gradeLevelModal.selectedGrades } : m,
-        ),
-      )
-      setGradeLevelModal({ open: false, moduleId: null, selectedGrades: [] })
-    }
+    // TODO: Add grade levels to backend
+    toast({
+      title: "Info",
+      description: "Grade level assignment coming soon - requires backend update",
+    })
+    setGradeLevelModal({ open: false, moduleId: null, selectedGrades: [] })
   }
 
   const handleSelectAll = (checked: boolean) => {
@@ -407,7 +488,7 @@ export default function LearningMaterialsPage() {
     }
   }
 
-  const handleSelectModule = (id: number, checked: boolean) => {
+  const handleSelectModule = (id: string, checked: boolean) => {
     if (checked) {
       setSelectedModules([...selectedModules, id])
     } else {
@@ -415,7 +496,7 @@ export default function LearningMaterialsPage() {
     }
   }
 
-  const handleContextMenu = (e: React.MouseEvent, moduleId: number) => {
+  const handleContextMenu = (e: React.MouseEvent, moduleId: string) => {
     e.preventDefault()
     setContextMenuModule(moduleId)
     setContextMenuPosition({ x: e.clientX, y: e.clientY })
@@ -513,38 +594,48 @@ export default function LearningMaterialsPage() {
     }
   }
 
-  const handleUploadSubmit = () => {
-    // TODO: Integrate with database
-    const newModule = {
-      id: Math.max(...modules.map((m) => m.id)) + 1,
-      title: uploadForm.title,
-      subject: uploadForm.subject,
-      subjectId: 1,
-      type: uploadForm.type,
-      difficulty: uploadForm.difficulty,
-      duration: uploadForm.duration,
-      views: 0,
-      downloads: 0,
-      rating: 0,
-      status: "draft",
-      visibility: "restricted",
-      createdDate: new Date().toISOString().split("T")[0],
-      author: "Admin",
-      gradeLevels: [],
+  const handleUploadSubmit = async () => {
+    if (!uploadedFile || !uploadForm.subjectId) {
+      toast({
+        title: "Error",
+        description: "Please select a subject and upload a file",
+        variant: "destructive",
+      })
+      return
     }
-    setModules([newModule, ...modules])
 
-    // Reset form
-    setUploadModalOpen(false)
-    setUploadedFile(null)
-    setUploadForm({
-      title: "",
-      description: "",
-      subject: "",
-      type: "video",
-      difficulty: "Beginner",
-      duration: "",
-    })
+    try {
+      await hookCreateModule({
+        title: uploadForm.title,
+        description: uploadForm.description,
+        isGlobal: uploadForm.isGlobal,
+        subjectId: uploadForm.subjectId,
+      }, uploadedFile)
+
+      // Reset form
+      setUploadModalOpen(false)
+      setUploadedFile(null)
+      setUploadForm({
+        title: "",
+        description: "",
+        subjectId: "",
+        isGlobal: true,
+        type: "video",
+        difficulty: "Beginner",
+        duration: "",
+      })
+
+      toast({
+        title: "Success",
+        description: "Module uploaded successfully",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to upload module",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -600,14 +691,14 @@ export default function LearningMaterialsPage() {
 
         <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-orange-100">Average Rating</CardTitle>
+            <CardTitle className="text-sm font-medium text-orange-100">Total Views</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-3xl font-bold">{averageRating}</div>
-              <Star className="w-8 h-8 text-orange-200 fill-current" />
+              <div className="text-3xl font-bold">{totalViews.toLocaleString()}</div>
+              <Eye className="w-8 h-8 text-orange-200" />
             </div>
-            <p className="text-xs text-orange-100 mt-2">Out of 5.0</p>
+            <p className="text-xs text-orange-100 mt-2">Across all modules</p>
           </CardContent>
         </Card>
       </div>
@@ -620,9 +711,9 @@ export default function LearningMaterialsPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
-                  placeholder="Search by title or subject..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title, subject, or author..."
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -633,7 +724,7 @@ export default function LearningMaterialsPage() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             <Select value={selectedSubject} onValueChange={setSelectedSubject}>
               <SelectTrigger>
                 <SelectValue placeholder="Subject" />
@@ -647,32 +738,6 @@ export default function LearningMaterialsPage() {
                 <SelectItem value="TLE">TLE</SelectItem>
                 <SelectItem value="MAPEH">MAPEH</SelectItem>
                 <SelectItem value="Araling Panlipunan">Araling Panlipunan</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="video">Video</SelectItem>
-                <SelectItem value="interactive">Interactive</SelectItem>
-                <SelectItem value="simulation">Simulation</SelectItem>
-                <SelectItem value="case-study">Case Study</SelectItem>
-                <SelectItem value="document">Document/PDF</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-              <SelectTrigger>
-                <SelectValue placeholder="Difficulty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="Beginner">Beginner</SelectItem>
-                <SelectItem value="Intermediate">Intermediate</SelectItem>
-                <SelectItem value="Advanced">Advanced</SelectItem>
               </SelectContent>
             </Select>
 
@@ -697,7 +762,7 @@ export default function LearningMaterialsPage() {
                 <SelectItem value="oldest">Oldest First</SelectItem>
                 <SelectItem value="title">Title (A-Z)</SelectItem>
                 <SelectItem value="views">Most Views</SelectItem>
-                <SelectItem value="rating">Highest Rating</SelectItem>
+                <SelectItem value="downloads">Most Downloads</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -736,23 +801,32 @@ export default function LearningMaterialsPage() {
                     />
                   </TableHead>
                   <TableHead>Module Title</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Difficulty</TableHead>
-                  <TableHead>Duration</TableHead>
+                  <TableHead>Subject Name</TableHead>
+                  <TableHead>Uploaded By</TableHead>
                   <TableHead>Grade Levels</TableHead>
                   <TableHead>Views</TableHead>
                   <TableHead>Downloads</TableHead>
-                  <TableHead>Rating</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Visibility</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredModules.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-red-500">
+                      Error: {error.message}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredModules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                       No modules found
                     </TableCell>
                   </TableRow>
@@ -770,20 +844,13 @@ export default function LearningMaterialsPage() {
                         />
                       </TableCell>
                       <TableCell className="font-medium">{module.title}</TableCell>
-                      <TableCell>{module.subject}</TableCell>
+                      <TableCell>
+                        <span className="text-slate-900 dark:text-slate-100">{module.subject}</span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getTypeIcon(module.type)}
-                          <span className="capitalize">{module.type}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getDifficultyColor(module.difficulty)}>{module.difficulty}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
-                          <Clock className="w-4 h-4" />
-                          {module.duration}
+                          <UserCog className="w-4 h-4 text-slate-500" />
+                          <span className="text-slate-700 dark:text-slate-300">{module.author}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -821,12 +888,6 @@ export default function LearningMaterialsPage() {
                         <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
                           <Download className="w-4 h-4" />
                           {module.downloads.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-current text-yellow-500" />
-                          <span className="font-medium">{module.rating}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1039,77 +1100,53 @@ export default function LearningMaterialsPage() {
               />
             </div>
 
-            {/* Subject and Type */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="subject">Subject *</Label>
-                <Select
-                  value={uploadForm.subject}
-                  onValueChange={(value) => setUploadForm({ ...uploadForm, subject: value })}
-                >
-                  <SelectTrigger id="subject">
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mathematics">Mathematics</SelectItem>
-                    <SelectItem value="Science">Science</SelectItem>
-                    <SelectItem value="English">English</SelectItem>
-                    <SelectItem value="Filipino">Filipino</SelectItem>
-                    <SelectItem value="TLE">TLE</SelectItem>
-                    <SelectItem value="MAPEH">MAPEH</SelectItem>
-                    <SelectItem value="Araling Panlipunan">Araling Panlipunan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="type">Module Type *</Label>
-                <Select
-                  value={uploadForm.type}
-                  onValueChange={(value) => setUploadForm({ ...uploadForm, type: value })}
-                >
-                  <SelectTrigger id="type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="video">Video</SelectItem>
-                    <SelectItem value="interactive">Interactive</SelectItem>
-                    <SelectItem value="simulation">Simulation</SelectItem>
-                    <SelectItem value="case-study">Case Study</SelectItem>
-                    <SelectItem value="document">Document/PDF</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Subject Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject *</Label>
+              <Select
+                value={uploadForm.subjectId}
+                onValueChange={(value) => setUploadForm({ ...uploadForm, subjectId: value })}
+                disabled={subjectsLoading}
+              >
+                <SelectTrigger id="subject">
+                  <SelectValue placeholder={subjectsLoading ? "Loading subjects..." : "Select subject"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSubjects.length > 0 ? (
+                    availableSubjects
+                      .filter(subject => subject.status === 'active')
+                      .map(subject => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.subject_name}
+                        </SelectItem>
+                      ))
+                  ) : (
+                    <SelectItem value="no-subjects" disabled>
+                      No subjects available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Module will be accessible to all teachers of this subject
+              </p>
             </div>
 
-            {/* Difficulty and Duration */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="difficulty">Difficulty Level *</Label>
-                <Select
-                  value={uploadForm.difficulty}
-                  onValueChange={(value) => setUploadForm({ ...uploadForm, difficulty: value })}
-                >
-                  <SelectTrigger id="difficulty">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duration *</Label>
-                <Input
-                  id="duration"
-                  placeholder="e.g., 45 min"
-                  value={uploadForm.duration}
-                  onChange={(e) => setUploadForm({ ...uploadForm, duration: e.target.value })}
-                />
-              </div>
+            {/* Module Type */}
+            <div className="space-y-2">
+              <Label htmlFor="is-global">Visibility</Label>
+              <Select
+                value={uploadForm.isGlobal ? "global" : "sections"}
+                onValueChange={(value) => setUploadForm({ ...uploadForm, isGlobal: value === "global" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">Global (All teachers in subject)</SelectItem>
+                  <SelectItem value="sections">Section-specific</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -1123,12 +1160,12 @@ export default function LearningMaterialsPage() {
                 !uploadedFile ||
                 !uploadForm.title ||
                 !uploadForm.description ||
-                !uploadForm.subject ||
-                !uploadForm.duration
+                !uploadForm.subjectId ||
+                loading
               }
             >
               <Upload className="w-4 h-4 mr-2" />
-              Upload Module
+              {loading ? "Uploading..." : "Upload Module"}
             </Button>
           </DialogFooter>
         </DialogContent>

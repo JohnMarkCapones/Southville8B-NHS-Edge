@@ -40,6 +40,9 @@ export class Club {
   @Column({ type: 'varchar', length: 300, nullable: true })
   mission_statement: string;
 
+  @Column({ type: 'text', nullable: true })
+  club_logo: string;
+
   @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at: Date;
 

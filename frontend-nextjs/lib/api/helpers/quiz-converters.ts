@@ -66,6 +66,15 @@ export interface UIQuestion {
   timeLimit?: number;
   randomizeOptions?: boolean;
   estimatedTime?: number;
+  // ✅ Image support (Cloudflare Images)
+  question_image_url?: string;
+  question_image_id?: string;
+  question_image_file_size?: number;
+  question_image_mime_type?: string;
+  questionImageUrl?: string;
+  questionImageId?: string;
+  questionImageFileSize?: number;
+  questionImageMimeType?: string;
 }
 
 /**
@@ -242,6 +251,9 @@ export function convertUIQuestionToAPI(
     questionType: questionType,
     orderIndex: orderIndex,
     points: question.points,
+    description: question.description || undefined,
+    isRequired: question.required ?? false,
+    isRandomize: question.randomizeOptions ?? false,
     timeLimitSeconds: question.timeLimit,
     choices: convertChoicesToAPI(question),
     metadata: convertQuestionMetadata(question),
@@ -341,7 +353,7 @@ export function convertAPIQuestionToUI(apiQuestion: QuizQuestion): UIQuestion {
     id: apiQuestion.question_id,
     type: uiType,
     title: apiQuestion.question_text,
-    description: apiQuestion.explanation,
+    description: apiQuestion.description,
     options,
     correctAnswer,
     correctAnswers,
@@ -356,8 +368,17 @@ export function convertAPIQuestionToUI(apiQuestion: QuizQuestion): UIQuestion {
     scaleMax: metadata?.scale_max,
     scaleLabels: metadata?.scale_labels,
     gradingRubric: metadata?.grading_rubric,
-    randomizeOptions: metadata?.randomize_options,
-  };
+    randomizeOptions: apiQuestion.is_randomize ?? metadata?.randomize_options,
+    // ✅ ADD: Image support fields (pass through from API)
+    question_image_url: (apiQuestion as any).question_image_url,
+    question_image_id: (apiQuestion as any).question_image_id,
+    question_image_file_size: (apiQuestion as any).question_image_file_size,
+    question_image_mime_type: (apiQuestion as any).question_image_mime_type,
+    questionImageUrl: (apiQuestion as any).questionImageUrl,
+    questionImageId: (apiQuestion as any).questionImageId,
+    questionImageFileSize: (apiQuestion as any).questionImageFileSize,
+    questionImageMimeType: (apiQuestion as any).questionImageMimeType,
+  } as any;
 }
 
 /**

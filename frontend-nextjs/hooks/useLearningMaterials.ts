@@ -427,15 +427,21 @@ export function useLearningMaterials(options: UseLearningMaterialsOptions = {}):
     return folders.find(folder => folder.id === currentFolderId) || null;
   }, [folders, currentFolderId]);
 
-  // Initial fetch
+  // Initial fetch folders on mount
   useEffect(() => {
-    fetchFolders();
-  }, [fetchFolders]);
+    if (enabled) {
+      fetchFolders();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]); // Only run on mount and when enabled changes
 
   // Fetch files when params change
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+    if (enabled) {
+      fetchFiles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, fileParams.page, fileParams.limit, fileParams.folderId, fileParams.search, fileParams.mimeType]); // Run when specific params change
 
   // Auto-refetch interval (optional)
   useEffect(() => {

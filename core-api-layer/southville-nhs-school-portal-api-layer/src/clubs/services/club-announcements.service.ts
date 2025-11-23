@@ -6,6 +6,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { NotificationService } from '../../common/services/notification.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 import { CreateClubAnnouncementDto } from '../dto/create-club-announcement.dto';
 import { UpdateClubAnnouncementDto } from '../dto/update-club-announcement.dto';
 import {
@@ -17,7 +19,10 @@ import {
 export class ClubAnnouncementsService {
   private readonly logger = new Logger(ClubAnnouncementsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   /**
    * Creates a new club announcement
@@ -68,6 +73,48 @@ export class ClubAnnouncementsService {
       this.logger.log(
         `Created announcement "${data.title}" for club ${club.name} (${club.id})`,
       );
+
+      // ✅ NEW: Notify all club members about new announcement
+      try {
+        // Get all active club members
+        const { data: memberships } = await supabase
+          .from('student_club_memberships')
+          .select('student_id')
+          .eq('club_id', createDto.club_id)
+          .eq('is_active', true);
+
+        if (memberships && memberships.length > 0) {
+          // Get student user_ids
+          const studentIds = memberships.map((m) => m.student_id);
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .in('id', studentIds);
+
+          if (students && students.length > 0) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter(Boolean);
+
+            if (studentUserIds.length > 0) {
+              await this.notificationService.notifyUsers(
+                studentUserIds,
+                `New Announcement: ${club.name}`,
+                `${data.title}`,
+                NotificationType.INFO,
+                userId,
+                { expiresInDays: 7 },
+              );
+              this.logger.log(
+                `📢 Notified ${studentUserIds.length} members about announcement: ${data.title}`,
+              );
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to notify members about announcement:', error);
+      }
+
       return data;
     } catch (error) {
       if (
@@ -88,7 +135,7 @@ export class ClubAnnouncementsService {
    */
   async findByClub(clubId: string): Promise<ClubAnnouncementWithAuthor[]> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getServiceClient();
 
       const { data, error } = await supabase
         .from('club_announcements')
@@ -123,7 +170,7 @@ export class ClubAnnouncementsService {
    */
   async findOne(id: string): Promise<ClubAnnouncementWithAuthor> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getServiceClient();
 
       const { data, error } = await supabase
         .from('club_announcements')
@@ -188,6 +235,62 @@ export class ClubAnnouncementsService {
       }
 
       this.logger.log(`Updated announcement: ${data.title} (ID: ${data.id})`);
+
+      // Notify club members about announcement update
+      try {
+        const supabase = this.supabaseService.getServiceClient();
+
+        // Get active club members
+        const { data: memberships } = await supabase
+          .from('student_club_memberships')
+          .select('student_id')
+          .eq('club_id', existing.club_id)
+          .eq('is_active', true);
+
+        if (memberships && memberships.length > 0) {
+          const studentIds = memberships.map((m) => m.student_id);
+
+          // Get user IDs for these students
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .in('id', studentIds);
+
+          if (students && students.length > 0) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter(Boolean);
+
+            if (studentUserIds.length > 0) {
+              // Get club name
+              const { data: club } = await supabase
+                .from('clubs')
+                .select('name')
+                .eq('id', existing.club_id)
+                .single();
+
+              await this.notificationService.notifyUsers(
+                studentUserIds,
+                `Announcement Updated: ${club?.name || 'Club'}`,
+                data.title,
+                NotificationType.INFO,
+                userId,
+                { expiresInDays: 7 },
+              );
+
+              this.logger.log(
+                `📢 Notified ${studentUserIds.length} club members about announcement update`,
+              );
+            }
+          }
+        }
+      } catch (notificationError) {
+        this.logger.warn(
+          'Failed to create notifications for club announcement update:',
+          notificationError,
+        );
+      }
+
       return data;
     } catch (error) {
       if (

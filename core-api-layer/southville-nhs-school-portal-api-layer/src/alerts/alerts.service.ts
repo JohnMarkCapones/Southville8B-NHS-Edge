@@ -156,6 +156,35 @@ export class AlertsService {
   }
 
   /**
+   * Get read alert IDs for a specific user
+   */
+  async getReadAlertIds(userId: string): Promise<string[]> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      const { data, error } = await supabase
+        .from('alert_reads')
+        .select('alert_id')
+        .eq('user_id', userId);
+
+      if (error) {
+        this.logger.error('Error fetching read alert IDs:', error);
+        throw new InternalServerErrorException(
+          'Failed to fetch read alert IDs',
+        );
+      }
+
+      return (data ?? []).map((row: { alert_id: string }) => row.alert_id);
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      this.logger.error('Unexpected error fetching read alert IDs:', error);
+      throw new InternalServerErrorException('Failed to fetch read alert IDs');
+    }
+  }
+
+  /**
    * Get a single alert by ID
    */
   async findOne(
@@ -267,6 +296,68 @@ export class AlertsService {
       }
       this.logger.error('Unexpected error deleting alert:', error);
       throw new InternalServerErrorException('Failed to delete alert');
+    }
+  }
+
+  /**
+   * Mark an alert as read for a specific user
+   * Creates or updates a record in alert_reads table
+   */
+  async markAsRead(
+    alertId: string,
+    userId: string,
+  ): Promise<{ success: boolean }> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // Verify alert exists and user has access to it
+      // User can read alerts if: alert is global (recipient_id is null) OR alert is targeted to them
+      const { data: alert, error: alertError } = await supabase
+        .from('alerts')
+        .select('id, recipient_id')
+        .eq('id', alertId)
+        .or(`recipient_id.is.null,recipient_id.eq.${userId}`)
+        .single();
+
+      if (alertError || !alert) {
+        this.logger.error(
+          `Alert ${alertId} not found or user ${userId} does not have access:`,
+          alertError,
+        );
+        throw new NotFoundException(`Alert with ID ${alertId} not found`);
+      }
+
+      // Upsert into alert_reads table (create if doesn't exist, update read_at if exists)
+      const { error } = await supabase.from('alert_reads').upsert(
+        {
+          alert_id: alertId,
+          user_id: userId,
+          read_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'alert_id,user_id',
+        },
+      );
+
+      if (error) {
+        this.logger.error(
+          `Error marking alert ${alertId} as read for user ${userId}:`,
+          error,
+        );
+        throw new InternalServerErrorException('Failed to mark alert as read');
+      }
+
+      this.logger.log(`Alert ${alertId} marked as read by user ${userId}`);
+      return { success: true };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error('Unexpected error marking alert as read:', error);
+      throw new InternalServerErrorException('Failed to mark alert as read');
     }
   }
 }

@@ -23,10 +23,21 @@ public class RoleValidationService : IRoleValidationService
     public bool IsRoleAllowed(string role)
     {
         if (string.IsNullOrEmpty(role))
+        {
+            System.Diagnostics.Debug.WriteLine($"[RoleValidation] Role is null or empty, denying access");
             return false;
+        }
 
         var allowedRoles = _configuration.GetSection("AccessControl:AllowedRoles").Get<string[]>() ?? Array.Empty<string>();
-        return allowedRoles.Any(r => string.Equals(r, role, StringComparison.OrdinalIgnoreCase));
+        
+        System.Diagnostics.Debug.WriteLine($"[RoleValidation] Checking role: '{role}'");
+        System.Diagnostics.Debug.WriteLine($"[RoleValidation] Allowed roles: [{string.Join(", ", allowedRoles)}]");
+        
+        var isAllowed = allowedRoles.Any(r => string.Equals(r, role, StringComparison.OrdinalIgnoreCase));
+        
+        System.Diagnostics.Debug.WriteLine($"[RoleValidation] Is role allowed: {isAllowed}");
+        
+        return isAllowed;
     }
 
     public string GetAccessDeniedMessage(string role)

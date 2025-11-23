@@ -24,8 +24,14 @@ export class News {
   @Column({ type: 'uuid', nullable: false })
   author_id: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  author_name?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  credits?: string | null;
+
   @Column({ type: 'uuid', nullable: true })
-  domain_id: string;
+  domain_id?: string | null;
 
   // Tiptap dual storage
   @Column({ type: 'jsonb', nullable: true })
@@ -42,7 +48,7 @@ export class News {
   featured_image_url: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
-  r2_featured_image_key: string; // For R2 deletion
+  r2_featured_image_key?: string | null; // For R2 deletion
 
   @Column({ type: 'uuid', nullable: true })
   category_id: string;
@@ -69,11 +75,26 @@ export class News {
   })
   visibility: 'public' | 'students' | 'teachers' | 'private';
 
+  // Review status for article review workflow
+  @Column({
+    type: 'varchar',
+    length: 50,
+    default: 'pending',
+    nullable: true,
+  })
+  review_status?:
+    | 'pending'
+    | 'in_review'
+    | 'approved'
+    | 'rejected'
+    | 'needs_revision'
+    | null;
+
   @Column({ type: 'timestamp with time zone', nullable: true })
   published_date: Date;
 
   @Column({ type: 'timestamp with time zone', nullable: true })
-  scheduled_date: Date;
+  scheduled_date?: Date | null;
 
   @Column({ type: 'integer', default: 0, nullable: false })
   views: number;

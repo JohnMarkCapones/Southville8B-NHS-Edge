@@ -24,6 +24,7 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
+  Minus,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useCallback } from "react"
@@ -33,7 +34,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 
 interface TiptapEditorProps {
   content: string
-  onChange?: (content: string) => void // Made onChange optional for read-only mode
+  onChange?: (html: string, json: object) => void // Updated to return both HTML and JSON
   editable?: boolean // Added editable prop to control read-only mode
 }
 
@@ -61,13 +62,13 @@ export function TiptapEditor({ content, onChange, editable = true }: TiptapEdito
     immediatelyRender: false, // Fix SSR hydration issues
     onUpdate: ({ editor }) => {
       if (onChange) {
-        onChange(editor.getHTML())
+        onChange(editor.getHTML(), editor.getJSON())
       }
     },
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl dark:prose-invert mx-auto focus:outline-none min-h-[300px] p-4 dark:text-gray-200 break-words overflow-wrap-anywhere max-w-full",
+          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl dark:prose-invert mx-auto focus:outline-none min-h-[300px] p-4 dark:text-gray-200 break-words overflow-wrap-anywhere max-w-full [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-4 [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_h4]:text-xl [&_h4]:font-bold [&_h4]:mt-3 [&_h4]:mb-2 [&_h5]:text-lg [&_h5]:font-bold [&_h5]:mt-2 [&_h5]:mb-1 [&_h6]:text-base [&_h6]:font-bold [&_h6]:mt-2 [&_h6]:mb-1 [&_p]:text-base [&_p]:leading-7 [&_p]:my-4",
       },
       handleDrop: (view, event, slice, moved) => {
         if (!editable) return false
@@ -156,22 +157,44 @@ export function TiptapEditor({ content, onChange, editable = true }: TiptapEdito
           border-radius: 0.5rem;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-        
+
         .ProseMirror img {
           transition: all 0.2s ease;
         }
-        
+
         .ProseMirror img:hover {
           transform: scale(1.01);
         }
-        
+
+        /* Horizontal Rule Styling */
+        .ProseMirror hr {
+          border: none;
+          border-top: 3px solid #e5e7eb;
+          margin: 2rem 0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .dark .ProseMirror hr {
+          border-top-color: #374151;
+        }
+
+        .ProseMirror hr:hover {
+          border-top-color: #3b82f6;
+        }
+
+        .ProseMirror hr.ProseMirror-selectednode {
+          border-top-color: #3b82f6;
+          border-top-width: 4px;
+        }
+
         /* Added CSS to force word breaking for long strings */
         .ProseMirror {
           word-break: break-word;
           overflow-wrap: break-word;
           max-width: 100%;
         }
-        
+
         .ProseMirror * {
           max-width: 100%;
           overflow-wrap: break-word;
@@ -259,6 +282,13 @@ export function TiptapEditor({ content, onChange, editable = true }: TiptapEdito
               shortcut="Ctrl+Shift+B"
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
               isActive={editor.isActive("blockquote")}
+            />
+            <TooltipButton
+              icon={Minus}
+              label="Horizontal Line"
+              shortcut="Ctrl+Alt+H"
+              onClick={() => editor.chain().focus().setHorizontalRule().run()}
+              isActive={false}
             />
 
             <Separator orientation="vertical" className="h-6 dark:bg-slate-700" />

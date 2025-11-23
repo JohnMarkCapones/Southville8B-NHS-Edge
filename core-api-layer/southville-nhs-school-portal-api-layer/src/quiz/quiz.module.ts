@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AuthModule } from '../auth/auth.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
+import { GamificationModule } from '../gamification/gamification.module';
 
 // Controllers
 import { QuizController } from './controllers/quiz.controller';
@@ -12,6 +14,7 @@ import { GradingController } from './controllers/grading.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 import { SessionManagementController } from './controllers/session-management.controller';
 import { AccessControlController } from './controllers/access-control.controller';
+import { QuizImagesController } from './controllers/quiz-images.controller';
 
 // Services
 import { QuizService } from './services/quiz.service';
@@ -24,11 +27,14 @@ import { AutoGradingService } from './services/auto-grading.service';
 import { SessionManagementService } from './services/session-management.service';
 import { AccessControlService } from './services/access-control.service';
 import { QuizCacheService } from './services/quiz-cache.service';
+import { QuizAnalyticsService } from './services/quiz-analytics.service';
 
 @Module({
   imports: [
     AuthModule, // Import AuthModule to access AuthService and SupabaseAuthGuard
     SupabaseModule, // Import SupabaseModule to access SupabaseService
+    ActivityMonitoringModule,
+    GamificationModule, // Import GamificationModule for points awards
     CacheModule.register({
       ttl: 300000, // 5 minutes default TTL
       max: 100, // Maximum number of items in cache
@@ -43,6 +49,7 @@ import { QuizCacheService } from './services/quiz-cache.service';
     AnalyticsController,
     SessionManagementController,
     AccessControlController,
+    QuizImagesController,
   ],
   providers: [
     QuizService,
@@ -55,6 +62,7 @@ import { QuizCacheService } from './services/quiz-cache.service';
     SessionManagementService,
     AccessControlService,
     QuizCacheService,
+    QuizAnalyticsService,
   ],
   exports: [
     QuizService,

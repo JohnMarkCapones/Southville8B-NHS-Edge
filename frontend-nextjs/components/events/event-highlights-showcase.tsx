@@ -43,11 +43,14 @@ export function EventHighlightsShowcase({
   variant = 'default',
   maxItems
 }: EventHighlightsShowcaseProps) {
+  // Safety check for undefined/null highlights
+  const safeHighlights = Array.isArray(highlights) ? highlights : [];
+
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
 
   // Sort highlights by orderIndex
-  const sortedHighlights = [...highlights].sort((a, b) => a.orderIndex - b.orderIndex);
+  const sortedHighlights = [...safeHighlights].sort((a, b) => a.orderIndex - b.orderIndex);
   
   // Limit items if maxItems is specified
   const displayedHighlights = maxItems && !showAll 

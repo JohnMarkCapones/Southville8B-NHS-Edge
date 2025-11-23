@@ -117,7 +117,10 @@ export interface AssignModuleDto {
  * Download URL response
  */
 export interface DownloadUrlResponse {
-  url: string;
+  downloadUrl?: string; // For PDFs
+  slideUrls?: string[]; // For PPTX files
+  fileType: 'pdf' | 'pptx';
+  expiresAt: string;
 }
 
 // ========================================
@@ -322,8 +325,8 @@ export async function deleteModule(id: string): Promise<void> {
  *
  * @example
  * ```typescript
- * const { url } = await getModuleDownloadUrl('module-id');
- * window.open(url, '_blank');
+ * const { downloadUrl } = await getModuleDownloadUrl('module-id');
+ * window.open(downloadUrl, '_blank');
  * ```
  */
 export async function getModuleDownloadUrl(id: string): Promise<DownloadUrlResponse> {

@@ -9,7 +9,6 @@ import {
   Users,
   BookOpen,
   Calendar,
-  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -20,6 +19,7 @@ import {
   Upload,
   FileText,
   UserCog,
+  MessageSquare,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -49,9 +49,15 @@ const sidebarItems = [
   },
   {
     title: "Schedule",
-    href: "/teacher/schedule",
+    href: "/teacher/class-schedule",
     icon: Calendar,
     id: "schedule",
+  },
+  {
+    title: "Chat",
+    href: "/teacher/chat",
+    icon: MessageSquare,
+    id: "chat",
   },
   {
     title: "Subjects",
@@ -88,12 +94,6 @@ const sidebarItems = [
     href: "/teacher/news-team",
     icon: UserCog,
     id: "news-team",
-  },
-  {
-    title: "Analytics",
-    href: "/teacher/analytics",
-    icon: BarChart3,
-    id: "analytics",
   },
   {
     title: "Settings",

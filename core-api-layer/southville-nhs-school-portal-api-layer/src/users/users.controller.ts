@@ -34,10 +34,15 @@ import { CreateAdminDto } from './dto/create-admin.dto';
 import { CreateStudentRequestDto } from './dto/create-student.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
+import { ImportStudentsCsvDto } from './dto/import-students-csv.dto';
+import { ImportTeachersCsvDto } from './dto/import-teachers-csv.dto';
 import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
+import { AssignDomainRoleDto } from './dto/assign-domain-role.dto';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Users')
 @Controller('users')
@@ -47,6 +52,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('teacher')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new teacher (Admin only)' })
   @ApiResponse({ status: 201, description: 'Teacher created successfully' })
@@ -63,6 +72,10 @@ export class UsersController {
   }
 
   @Post('admin')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new admin (Admin only)' })
   @ApiResponse({ status: 201, description: 'Admin created successfully' })
@@ -79,6 +92,10 @@ export class UsersController {
   }
 
   @Post('student')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new student (Admin only)' })
   @ApiResponse({ status: 201, description: 'Student created successfully' })
@@ -103,6 +120,30 @@ export class UsersController {
     @AuthUser() user: SupabaseUser,
   ) {
     return this.usersService.createBulkUsers(bulkCreateDto, user.id);
+  }
+
+  @Post('import-students-csv')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Import students from CSV (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Students imported successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid CSV data' })
+  async importStudentsCsv(
+    @Body() importDto: ImportStudentsCsvDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    return this.usersService.importStudentsFromCsv(importDto, user.id);
+  }
+
+  @Post('import-teachers-csv')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Import teachers from CSV (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Teachers imported successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid CSV data' })
+  async importTeachersCsv(
+    @Body() importDto: ImportTeachersCsvDto,
+    @AuthUser() user: SupabaseUser,
+  ) {
+    return this.usersService.importTeachersFromCsv(importDto, user.id);
   }
 
   @Get()
@@ -130,7 +171,7 @@ export class UsersController {
   async findAll(
     @AuthUser() user: SupabaseUser,
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 100,
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
@@ -181,6 +222,41 @@ export class UsersController {
     return this.usersService.findOne(user.id);
   }
 
+  @Post('me/record-login')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a daily login for current user',
+    description:
+      'Records that the current user logged in today. Safe to call multiple times per day (idempotent).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login recorded successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async recordLogin(@AuthUser() user: SupabaseUser) {
+    await this.usersService.recordLogin(user.id);
+    return { success: true };
+  }
+
+  @Get('me/streak')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get current user login streak count',
+    description:
+      'Returns the number of consecutive days the user has logged in. Streak resets to 0 if a day is missed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login streak retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getLoginStreak(@AuthUser() user: SupabaseUser) {
+    const streak = await this.usersService.getLoginStreak(user.id);
+    return { streak };
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get a specific user' })
@@ -195,6 +271,10 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Update a user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
@@ -208,6 +288,10 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a user (Admin only)' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
@@ -248,10 +332,72 @@ export class UsersController {
     @Param('id') id: string,
     @AuthUser() user: SupabaseUser,
   ) {
-    // Students can only view their own profile
-    if (user.role === 'Student' && user.id !== id) {
-      throw new ForbiddenException('Students can only view their own profile');
-    }
+    // Students can view any user's profile (read-only access for displaying names, etc.)
+    // No restrictions needed - they can see teacher/student names in the UI
     return this.usersService.findOne(id);
+  }
+
+  // ===== Domain Role Management Endpoints =====
+
+  @Get(':id/domain-roles')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Get all domain roles assigned to a user',
+    description:
+      'Retrieves all domain role assignments for a specific user, including role details and domain information',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Domain roles retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getUserDomainRoles(@Param('id') userId: string) {
+    return this.usersService.getUserDomainRoles(userId);
+  }
+
+  @Post(':id/domain-roles')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Assign a domain role to a user',
+    description:
+      'Assigns a specific domain role to a user. The user can have multiple domain roles across different domains.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Domain role assigned successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'User or domain role not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async assignDomainRole(
+    @Param('id') userId: string,
+    @Body() assignDto: AssignDomainRoleDto,
+  ) {
+    return this.usersService.assignDomainRole(userId, assignDto.domain_role_id);
+  }
+
+  @Delete(':id/domain-roles/:assignmentId')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Remove a domain role assignment from a user',
+    description:
+      'Removes a specific domain role assignment. Use the assignment ID from user_domain_roles table.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Domain role assignment removed successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async removeDomainRole(
+    @Param('id') userId: string,
+    @Param('assignmentId') assignmentId: string,
+  ) {
+    return this.usersService.removeDomainRole(userId, assignmentId);
   }
 }

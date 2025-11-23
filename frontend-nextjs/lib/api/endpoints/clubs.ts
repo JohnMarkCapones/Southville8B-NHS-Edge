@@ -133,62 +133,82 @@ export async function deleteClub(id: string): Promise<void> {
 // ========================================
 
 /**
- * Get all club forms with optional filtering
+ * Get all club forms for a specific club
+ * Backend uses path parameters: /clubs/{clubId}/forms
+ * Requires authentication (STUDENT, TEACHER, or ADMIN role)
+ * Backend returns array directly, not wrapped in {data: [...]}
  */
 export async function getClubForms(
-  params?: ClubFormQueryParams
-): Promise<ClubFormListResponse> {
-  const queryParams = new URLSearchParams();
-  
-  if (params?.club_id) queryParams.append('club_id', params.club_id);
-  if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
-
-  const queryString = queryParams.toString();
-  const endpoint = `/clubs/forms${queryString ? `?${queryString}` : ''}`;
-
-  return apiClient.get<ClubFormListResponse>(endpoint, { requiresAuth: false });
+  clubId: string
+): Promise<ClubForm[]> {
+  const endpoint = `/clubs/${clubId}/forms`;
+  return apiClient.get<ClubForm[]>(endpoint, { requiresAuth: true });
 }
 
 /**
  * Get a specific club form by ID
+ * Backend uses path parameters: /clubs/{clubId}/forms/{formId}
+ * Requires authentication (STUDENT, TEACHER, or ADMIN role)
+ * Backend returns form directly, not wrapped in {data: ...}
  */
-export async function getClubFormById(id: string): Promise<ClubFormResponse> {
-  return apiClient.get<ClubFormResponse>(`/clubs/forms/${id}`, { requiresAuth: false });
+export async function getClubFormById(clubId: string, formId: string): Promise<ClubForm> {
+  return apiClient.get<ClubForm>(`/clubs/${clubId}/forms/${formId}`, { requiresAuth: true });
 }
 
 /**
  * Create a new club form (Admin/Teacher only)
+ * Backend uses path parameters: /clubs/{clubId}/forms
+ * Backend returns form directly
  */
-export async function createClubForm(formData: CreateClubFormDto): Promise<ClubFormResponse> {
-  return apiClient.post<ClubFormResponse>('/clubs/forms', formData, { requiresAuth: true });
+export async function createClubForm(clubId: string, formData: Omit<CreateClubFormDto, 'club_id'>): Promise<ClubForm> {
+  return apiClient.post<ClubForm>(`/clubs/${clubId}/forms`, formData, { requiresAuth: true });
 }
 
 /**
  * Submit a club form response (Student application)
+ * Backend uses path parameters: /clubs/{clubId}/forms/{formId}/responses
+ *
+ * Answer types:
+ * - text/textarea: use answer_text
+ * - radio/select/checkbox: use answer_value
+ *
+ * Backend validates:
+ * - All required questions must be answered
+ * - No duplicate question_ids
+ * - Dropdown/radio values must match options
+ * - Checkbox values must be JSON array or comma-separated
  */
 export async function submitClubFormResponse(
-  responseData: SubmitClubFormResponseDto
+  clubId: string,
+  formId: string,
+  answers: { question_id: string; answer_text?: string; answer_value?: string }[]
 ): Promise<ClubFormResponseType> {
-  return apiClient.post<ClubFormResponseType>('/clubs/forms/responses', responseData, { requiresAuth: true });
+  return apiClient.post<ClubFormResponseType>(`/clubs/${clubId}/forms/${formId}/responses`, { answers }, { requiresAuth: true });
 }
 
 /**
  * Get club form responses for a specific form (Admin/Teacher only)
+ * Backend uses path parameters: /clubs/{clubId}/forms/{formId}/responses
+ * Backend returns array directly
  */
-export async function getClubFormResponses(formId: string): Promise<{ data: ClubFormResponseType[] }> {
-  return apiClient.get<{ data: ClubFormResponseType[] }>(`/clubs/forms/${formId}/responses`, { requiresAuth: true });
+export async function getClubFormResponses(clubId: string, formId: string): Promise<ClubFormResponseType[]> {
+  return apiClient.get<ClubFormResponseType[]>(`/clubs/${clubId}/forms/${formId}/responses`, { requiresAuth: true });
 }
 
 /**
  * Update club form response status (Admin/Teacher only)
+ * Backend uses path parameters: /clubs/{clubId}/forms/{formId}/responses/{responseId}/review
  */
 export async function updateClubFormResponseStatus(
+  clubId: string,
+  formId: string,
   responseId: string,
-  status: 'approved' | 'rejected'
+  status: 'approved' | 'rejected',
+  reviewNotes?: string
 ): Promise<ClubFormResponseType> {
   return apiClient.patch<ClubFormResponseType>(
-    `/clubs/forms/responses/${responseId}/status`,
-    { status },
+    `/clubs/${clubId}/forms/${formId}/responses/${responseId}/review`,
+    { status, review_notes: reviewNotes },
     { requiresAuth: true }
   );
 }
@@ -212,17 +232,31 @@ export async function searchClubs(query: string): Promise<Club[]> {
 }
 
 /**
- * Get active club forms for a specific club
+ * Get all forms for a specific club (including active and inactive)
+ * Backend returns all forms as array, frontend can filter by is_active if needed
  */
-export async function getActiveClubForms(clubId: string): Promise<ClubFormListResponse> {
-  return getClubForms({ club_id: clubId, is_active: true });
+export async function getActiveClubForms(clubId: string): Promise<ClubForm[]> {
+  const forms = await getClubForms(clubId);
+  // Filter for active forms only
+  return forms.filter(form => form.is_active);
 }
 
 /**
- * Get user's club form responses
+ * Get user's club form responses (their applications)
+ * Returns array directly from backend
+ * Endpoint: GET /clubs/my-applications
  */
-export async function getUserClubFormResponses(): Promise<{ data: ClubFormResponseType[] }> {
-  return apiClient.get<{ data: ClubFormResponseType[] }>('/clubs/forms/responses/my', { requiresAuth: true });
+export async function getUserClubFormResponses(): Promise<ClubFormResponseType[]> {
+  return apiClient.get<ClubFormResponseType[]>('/clubs/my-applications', { requiresAuth: true });
+}
+
+/**
+ * Withdraw a club application
+ * Soft deletes by updating status to 'withdrawn'
+ * Endpoint: PATCH /clubs/my-applications/:responseId/withdraw
+ */
+export async function withdrawClubApplication(responseId: string): Promise<ClubFormResponseType> {
+  return apiClient.patch<ClubFormResponseType>(`/clubs/my-applications/${responseId}/withdraw`, {}, { requiresAuth: true });
 }
 
 // ========================================
@@ -494,20 +528,19 @@ export async function deleteClubAnnouncement(id: string): Promise<void> {
 /**
  * Get all form responses for a specific club form
  * Used for viewing pending applications
+ * (This is an alias for getClubFormResponses for backward compatibility)
  */
 export async function getClubFormResponsesByFormId(
   clubId: string,
   formId: string
 ): Promise<ClubFormResponse[]> {
-  return apiClient.get<ClubFormResponse[]>(
-    `/clubs/${clubId}/forms/${formId}/responses`,
-    { requiresAuth: true }
-  );
+  return getClubFormResponses(clubId, formId) as unknown as ClubFormResponse[];
 }
 
 /**
  * Review a form response (approve or reject)
  * Used by teachers to approve/reject student applications
+ * (This is an alias for updateClubFormResponseStatus)
  */
 export async function reviewClubFormResponse(
   clubId: string,
@@ -516,14 +549,7 @@ export async function reviewClubFormResponse(
   status: 'approved' | 'rejected',
   reviewNotes?: string
 ): Promise<ClubFormResponse> {
-  return apiClient.patch<ClubFormResponse>(
-    `/clubs/${clubId}/forms/${formId}/responses/${responseId}/review`,
-    {
-      status,
-      review_notes: reviewNotes,
-    },
-    { requiresAuth: true }
-  );
+  return updateClubFormResponseStatus(clubId, formId, responseId, status, reviewNotes) as Promise<ClubFormResponse>;
 }
 
 /**
@@ -548,4 +574,181 @@ export async function rejectClubApplication(
   notes?: string
 ): Promise<ClubFormResponse> {
   return reviewClubFormResponse(clubId, formId, responseId, 'rejected', notes);
+}
+
+// ========================================
+// CLUB BENEFITS CRUD
+// ========================================
+
+import type { ClubBenefitData } from '../types/clubs';
+
+export interface CreateClubBenefitDto {
+  title: string;
+  description: string;
+  order_index: number;
+}
+
+export interface UpdateClubBenefitDto {
+  title?: string;
+  description?: string;
+  order_index?: number;
+}
+
+/**
+ * Get all benefits for a club (Public)
+ */
+export async function getClubBenefits(clubId: string): Promise<ClubBenefitData[]> {
+  return apiClient.get<ClubBenefitData[]>(`/clubs/${clubId}/benefits`, {
+    requiresAuth: false,
+  });
+}
+
+/**
+ * Get a single benefit by ID (Public)
+ */
+export async function getClubBenefitById(
+  clubId: string,
+  benefitId: string
+): Promise<ClubBenefitData> {
+  return apiClient.get<ClubBenefitData>(`/clubs/${clubId}/benefits/${benefitId}`, {
+    requiresAuth: false,
+  });
+}
+
+/**
+ * Create a new benefit for a club (Teachers/Admins only)
+ */
+export async function createClubBenefit(
+  clubId: string,
+  data: CreateClubBenefitDto
+): Promise<ClubBenefitData> {
+  return apiClient.post<ClubBenefitData>(`/clubs/${clubId}/benefits`, data, {
+    requiresAuth: true,
+  });
+}
+
+/**
+ * Update a benefit (Teachers/Admins only)
+ */
+export async function updateClubBenefit(
+  clubId: string,
+  benefitId: string,
+  data: UpdateClubBenefitDto
+): Promise<ClubBenefitData> {
+  return apiClient.patch<ClubBenefitData>(`/clubs/${clubId}/benefits/${benefitId}`, data, {
+    requiresAuth: true,
+  });
+}
+
+/**
+ * Delete a benefit (Teachers/Admins only)
+ */
+export async function deleteClubBenefit(clubId: string, benefitId: string): Promise<void> {
+  return apiClient.delete(`/clubs/${clubId}/benefits/${benefitId}`, {
+    requiresAuth: true,
+  });
+}
+
+// ========================================
+// CLUB FAQS CRUD
+// ========================================
+
+import type { ClubFaqData } from '../types/clubs';
+
+export interface CreateClubFaqDto {
+  question: string;
+  answer: string;
+  order_index: number;
+}
+
+export interface UpdateClubFaqDto {
+  question?: string;
+  answer?: string;
+  order_index?: number;
+}
+
+/**
+ * Get all FAQs for a club (Public)
+ */
+export async function getClubFaqs(clubId: string): Promise<ClubFaqData[]> {
+  return apiClient.get<ClubFaqData[]>(`/clubs/${clubId}/faqs`, {
+    requiresAuth: false,
+  });
+}
+
+/**
+ * Get a single FAQ by ID (Public)
+ */
+export async function getClubFaqById(
+  clubId: string,
+  faqId: string
+): Promise<ClubFaqData> {
+  return apiClient.get<ClubFaqData>(`/clubs/${clubId}/faqs/${faqId}`, {
+    requiresAuth: false,
+  });
+}
+
+/**
+ * Create a new FAQ for a club (Teachers/Admins only)
+ */
+export async function createClubFaq(
+  clubId: string,
+  data: CreateClubFaqDto
+): Promise<ClubFaqData> {
+  return apiClient.post<ClubFaqData>(`/clubs/${clubId}/faqs`, data, {
+    requiresAuth: true,
+  });
+}
+
+/**
+ * Update a FAQ (Teachers/Admins only)
+ */
+export async function updateClubFaq(
+  clubId: string,
+  faqId: string,
+  data: UpdateClubFaqDto
+): Promise<ClubFaqData> {
+  return apiClient.patch<ClubFaqData>(`/clubs/${clubId}/faqs/${faqId}`, data, {
+    requiresAuth: true,
+  });
+}
+
+/**
+ * Delete a FAQ (Teachers/Admins only)
+ */
+export async function deleteClubFaq(clubId: string, faqId: string): Promise<void> {
+  return apiClient.delete(`/clubs/${clubId}/faqs/${faqId}`, {
+    requiresAuth: true,
+  });
+}
+
+/**
+ * Upload club image to Cloudflare Images
+ *
+ * **Permissions**: Admin, Teacher only
+ *
+ * @param file - Image file to upload
+ * @returns Upload result with Cloudflare Images URL
+ *
+ * @example
+ * ```ts
+ * const result = await uploadClubImage(imageFile);
+ * console.log(result.url); // Cloudflare Images URL
+ * ```
+ */
+export async function uploadClubImage(
+  file: File
+): Promise<{ url: string; cf_image_id: string; cf_image_url: string; fileName: string; fileSize: number; mimeType: string }> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await apiClient.request<any>('/clubs/upload-image', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      // Don't set Content-Type - let browser set it with boundary for multipart/form-data
+    },
+  });
+
+  return response;
 }

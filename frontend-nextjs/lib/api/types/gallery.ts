@@ -56,10 +56,12 @@ export interface GalleryUploader {
 
 export interface GalleryItem {
   id: string;
-  file_url: string;
-  r2_file_key: string;
-  thumbnail_url?: string;
-  r2_thumbnail_key?: string;
+
+  // Cloudflare Images fields
+  cf_image_id: string;
+  cf_image_url: string;
+
+  // File metadata
   original_filename: string;
   file_size_bytes: number;
   mime_type: string;
@@ -195,7 +197,7 @@ export type GalleryItemWithDetails = GalleryItem & {
 };
 
 export type GalleryItemSummary = Pick<GalleryItem,
-  'id' | 'file_url' | 'thumbnail_url' | 'title' | 'caption' | 'media_type' | 'is_featured'
+  'id' | 'cf_image_id' | 'cf_image_url' | 'title' | 'caption' | 'media_type' | 'is_featured'
 > & {
   tags?: Pick<GalleryTag, 'id' | 'name' | 'color'>[];
 };

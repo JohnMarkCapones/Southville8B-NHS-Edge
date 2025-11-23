@@ -25,7 +25,7 @@ const PREFETCH_ROUTES = {
     '/teacher/students',
     '/teacher/classes',
     '/teacher/quiz',
-    '/teacher/schedule',
+    '/teacher/class-schedule',
   ],
 } as const
 

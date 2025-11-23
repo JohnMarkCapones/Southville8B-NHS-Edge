@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import {
   Phone,
   MailIcon,
@@ -154,6 +155,7 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen">
+      <GuessBreadcrumb items={[{ label: "Contact" }]} />
       <section className="relative overflow-hidden py-20 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-400">
         {/* Floating decorative elements */}
         <div className="absolute inset-0 overflow-hidden">

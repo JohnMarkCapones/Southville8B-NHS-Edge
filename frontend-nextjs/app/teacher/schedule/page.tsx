@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { useAcademicCalendar } from "@/hooks/useAcademicCalendar"
+import { getCalendarCategory } from "@/lib/api/endpoints/events"
 import {
   Calendar,
   Plus,
@@ -36,6 +38,7 @@ import {
   Sparkles,
   Star,
   Bell,
+  Loader2,
 } from "lucide-react"
 
 const initialScheduleData = [
@@ -268,8 +271,18 @@ const getPriorityColor = (priority: string) => {
 }
 
 export default function SchedulePage() {
+  // Use real API data from Academic Calendar
+  const {
+    year,
+    month,
+    events: apiEvents,
+    loading,
+    previousMonth,
+    nextMonth,
+    goToToday,
+  } = useAcademicCalendar()
+
   const [activeTab, setActiveTab] = useState("calendar")
-  const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState("month")
@@ -281,6 +294,46 @@ export default function SchedulePage() {
 
   const [scheduleData, setScheduleData] = useState(initialScheduleData)
   const { toast } = useToast()
+
+  // Transform API events to match teacher schedule format
+  const transformedApiEvents = useMemo(() => {
+    return apiEvents.map((event) => {
+      const category = getCalendarCategory(event)
+
+      // Map calendar categories to teacher schedule categories
+      let teacherCategory: "academic" | "meeting" | "sports" | "arts" | "workshop" = "academic"
+      if (category === 'holiday') teacherCategory = 'meeting'
+      else if (category === 'academic') teacherCategory = 'academic'
+      else if (category === 'school-event') teacherCategory = 'meeting'
+      else if (category === 'professional') teacherCategory = 'workshop'
+
+      return {
+        id: event.id,
+        title: event.title,
+        subject: "General",
+        grade: "All Grades",
+        section: "All",
+        time: event.time || '9:00 AM - 10:00 AM',
+        room: event.location || "TBA",
+        students: 0,
+        type: "meeting" as const,
+        status: "scheduled" as const,
+        date: new Date(event.date).toISOString().split('T')[0],
+        recurring: "none" as const,
+        description: event.description || "",
+        category: teacherCategory,
+        color: eventCategories[teacherCategory]?.color || "bg-gradient-to-r from-gray-500 to-gray-600",
+        priority: 'medium' as const,
+      }
+    })
+  }, [apiEvents])
+
+  // Merge API events with local schedule data
+  const allEvents = useMemo(() => {
+    return [...transformedApiEvents, ...scheduleData]
+  }, [transformedApiEvents, scheduleData])
+
+  const currentDate = new Date(year, month - 1)
 
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -306,7 +359,7 @@ export default function SchedulePage() {
     { id: "analytics", label: "Time Analytics", icon: Timer },
   ]
 
-  const filteredEvents = scheduleData.filter(
+  const filteredEvents = allEvents.filter(
     (event) => selectedCategory === "all" || event.category === selectedCategory,
   )
 
@@ -1080,7 +1133,7 @@ export default function SchedulePage() {
                     variant="ghost"
                     size="sm"
                     className="hover:bg-blue-100 transition-colors duration-200 dark:hover:bg-blue-900/30"
-                    onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
+                    onClick={previousMonth}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
@@ -1091,7 +1144,7 @@ export default function SchedulePage() {
                     variant="ghost"
                     size="sm"
                     className="hover:bg-blue-100 transition-colors duration-200 dark:hover:bg-blue-900/30"
-                    onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
+                    onClick={nextMonth}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -1180,11 +1233,13 @@ export default function SchedulePage() {
                     className="hover:bg-blue-50 transition-colors duration-200 bg-transparent dark:hover:bg-blue-900/30"
                     onClick={() => {
                       if (viewMode === "month") {
-                        setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))
+                        previousMonth()
                       } else if (viewMode === "week") {
-                        setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))
+                        // Week navigation - use API navigation
+                        previousMonth()
                       } else {
-                        setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 1)))
+                        // Day navigation - local state
+                        setSelectedDate(new Date(selectedDate.setDate(selectedDate.getDate() - 1)))
                       }
                     }}
                   >
@@ -1210,11 +1265,13 @@ export default function SchedulePage() {
                     className="hover:bg-blue-50 transition-colors duration-200 bg-transparent dark:hover:bg-blue-900/30"
                     onClick={() => {
                       if (viewMode === "month") {
-                        setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))
+                        nextMonth()
                       } else if (viewMode === "week") {
-                        setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))
+                        // Week navigation - use API navigation
+                        nextMonth()
                       } else {
-                        setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 1)))
+                        // Day navigation - local state
+                        setSelectedDate(new Date(selectedDate.setDate(selectedDate.getDate() + 1)))
                       }
                     }}
                   >
@@ -1273,7 +1330,17 @@ export default function SchedulePage() {
                         </div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-7">{renderMonthCalendar()}</div>
+                    <div className="relative">
+                      {loading && (
+                        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                          <div className="flex items-center gap-2 bg-card p-3 rounded-lg shadow-lg border">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            <span className="text-sm text-muted-foreground">Loading events...</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-7">{renderMonthCalendar()}</div>
+                    </div>
                   </>
                 )}
 

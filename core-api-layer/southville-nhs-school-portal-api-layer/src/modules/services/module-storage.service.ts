@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { R2StorageService } from '../../storage/r2-storage/r2-storage.service';
 import { ModuleAccessService } from './module-access.service';
+import { PPTXImageConverterService } from './pptx-image-converter.service';
 import * as crypto from 'crypto';
 import * as path from 'path';
 
@@ -18,7 +19,9 @@ export interface ModuleFileDownload {
   moduleId: string;
   fileName: string;
   filePath: string;
-  downloadUrl: string;
+  downloadUrl?: string; // For PDFs
+  slideUrls?: string[]; // For PPTX files - array of slide image URLs
+  fileType: 'pdf' | 'pptx';
   expiresAt: string;
 }
 
@@ -29,6 +32,7 @@ export class ModuleStorageService {
   constructor(
     private readonly r2StorageService: R2StorageService,
     private readonly moduleAccessService: ModuleAccessService,
+    private readonly pptxImageConverterService: PPTXImageConverterService,
   ) {}
 
   /**
@@ -81,36 +85,183 @@ export class ModuleStorageService {
    */
   async generateDownloadUrl(
     moduleId: string,
-    fileName: string,
+    r2FileKey: string,
     userId: string,
   ): Promise<ModuleFileDownload> {
     try {
-      // Check if user can access this module
-      const accessResult =
-        await this.moduleAccessService.canStudentAccessModule(userId, moduleId);
+      // Determine file type from extension
+      const fileType = this.getFileType(r2FileKey);
 
-      if (!accessResult.canAccess) {
-        throw new BadRequestException(
-          accessResult.reason || 'Access denied to this module',
+      if (fileType === 'pptx') {
+        this.logger.log(
+          `[ModuleStorage] Processing PPTX file for module ${moduleId}`,
         );
+
+        // Check if slide images already exist in database
+        // TODO: Query database for slide_image_keys column
+        // For now, we'll assume slide images need to be generated
+
+        try {
+          // Download original PPTX file
+          const pptxBuffer = await this.downloadFileFromR2(r2FileKey);
+
+          // Convert PPTX to slide images
+          const slideImages =
+            await this.pptxImageConverterService.convertPPTXToImages(
+              pptxBuffer,
+              moduleId,
+            );
+
+          // Upload slide images to R2
+          const slideKeys = await this.uploadPPTXSlideImages(
+            moduleId,
+            slideImages,
+          );
+
+          // Generate presigned URLs for all slide images
+          const slideUrls: string[] = [];
+          for (const slideKey of slideKeys) {
+            const slideUrl = await this.r2StorageService.generatePresignedUrl(
+              slideKey,
+              'getObject',
+            );
+            slideUrls.push(slideUrl);
+          }
+
+          this.logger.log(
+            `[ModuleStorage] ✅ Generated ${slideUrls.length} slide URLs for PPTX`,
+          );
+
+          return {
+            moduleId,
+            fileName: r2FileKey.split('/').pop() || 'module.pptx',
+            filePath: r2FileKey,
+            slideUrls,
+            fileType: 'pptx',
+            expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
+          };
+        } catch (conversionError) {
+          this.logger.error(
+            `[ModuleStorage] PPTX conversion failed, falling back to download:`,
+            conversionError,
+          );
+
+          // Fallback to original PPTX download
+          const downloadUrl = await this.r2StorageService.generatePresignedUrl(
+            r2FileKey,
+            'getObject',
+          );
+
+          return {
+            moduleId,
+            fileName: r2FileKey.split('/').pop() || 'module.pptx',
+            filePath: r2FileKey,
+            downloadUrl,
+            fileType: 'pptx',
+            expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
+          };
+        }
+      } else {
+        // Default PDF handling
+        this.logger.log(
+          `[ModuleStorage] Processing PDF file for module ${moduleId}`,
+        );
+
+        const filePath = r2FileKey;
+        const downloadUrl = await this.r2StorageService.generatePresignedUrl(
+          filePath,
+          'getObject',
+        );
+
+        return {
+          moduleId,
+          fileName: r2FileKey.split('/').pop() || 'module.pdf',
+          filePath,
+          downloadUrl,
+          fileType: 'pdf',
+          expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
+        };
       }
-
-      const filePath = `modules/${moduleId}/${fileName}`;
-      const downloadUrl = await this.r2StorageService.generatePresignedUrl(
-        filePath,
-        'getObject',
-      );
-
-      return {
-        moduleId,
-        fileName,
-        filePath,
-        downloadUrl,
-        expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
-      };
     } catch (error) {
       this.logger.error('Error generating download URL:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Download file from R2
+   * @param r2Key - R2 key of the file to download
+   * @returns Buffer containing file data
+   */
+  private async downloadFileFromR2(r2Key: string): Promise<Buffer> {
+    try {
+      return await this.r2StorageService.downloadFile(r2Key);
+    } catch (error) {
+      this.logger.error(
+        `[ModuleStorage] Failed to download file from R2:`,
+        error,
+      );
+      throw new Error(`Failed to download file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Upload PPTX slide images to R2
+   * @param moduleId - Module ID
+   * @param imageBuffers - Array of image buffers (one per slide)
+   * @returns Array of R2 keys for uploaded slide images
+   */
+  async uploadPPTXSlideImages(
+    moduleId: string,
+    imageBuffers: Buffer[],
+  ): Promise<string[]> {
+    this.logger.log(
+      `[ModuleStorage] Uploading ${imageBuffers.length} slide images for module ${moduleId}`,
+    );
+
+    const slideKeys: string[] = [];
+
+    for (let i = 0; i < imageBuffers.length; i++) {
+      const slideKey = `modules/slides/${moduleId}/slide-${i + 1}.png`;
+
+      try {
+        await this.r2StorageService.uploadFile(
+          slideKey,
+          imageBuffers[i],
+          'image/png',
+        );
+
+        slideKeys.push(slideKey);
+        this.logger.log(
+          `[ModuleStorage] Uploaded slide ${i + 1}/${imageBuffers.length} to R2`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `[ModuleStorage] Failed to upload slide ${i + 1}:`,
+          error,
+        );
+        throw new Error(`Failed to upload slide ${i + 1}: ${error.message}`);
+      }
+    }
+
+    this.logger.log(
+      `[ModuleStorage] ✅ Uploaded ${slideKeys.length} slide images to R2`,
+    );
+    return slideKeys;
+  }
+
+  /**
+   * Get file type from filename
+   */
+  private getFileType(fileName: string): 'pdf' | 'pptx' | 'other' {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return 'pdf';
+      case 'pptx':
+        return 'pptx';
+      default:
+        return 'other';
     }
   }
 

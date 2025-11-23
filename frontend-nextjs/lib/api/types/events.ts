@@ -84,6 +84,7 @@ export interface Event {
   time: string;
   location: string;
   organizerId: string;
+  clubId?: string; // Optional club ID for club-specific events
   eventImage?: string;
   status: EventStatus;
   visibility: EventVisibility;
@@ -95,6 +96,11 @@ export interface Event {
 
   // Relations
   organizer?: EventOrganizer;
+  club?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
   tags?: EventTag[];
   additionalInfo?: EventAdditionalInfo[];
   highlights?: EventHighlight[];
@@ -168,6 +174,11 @@ export interface CreateEventRequest {
   location: string;
   organizerId: string;
   eventImage?: string;
+  // Cloudflare Images metadata
+  cfImageId?: string;
+  cfImageUrl?: string;
+  imageFileSize?: number;
+  imageMimeType?: string;
   status: EventStatus;
   visibility: EventVisibility;
   tagIds?: string[];
@@ -184,6 +195,11 @@ export interface UpdateEventRequest {
   time?: string;
   location?: string;
   eventImage?: string;
+  // Cloudflare Images metadata
+  cfImageId?: string;
+  cfImageUrl?: string;
+  imageFileSize?: number;
+  imageMimeType?: string;
   status?: EventStatus;
   visibility?: EventVisibility;
   tagIds?: string[];

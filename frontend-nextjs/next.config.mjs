@@ -42,6 +42,18 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'imagedelivery.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'a9f924050e1f1ee11d51659b08634fc4.r2.cloudflarestorage.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
     // Allow local images (required from Next.js 16)
     localPatterns: [
@@ -71,6 +83,34 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     // Improve bundling performance (PPR disabled - requires Next.js canary)
     optimizeServerReact: true,
+  },
+  // Webpack configuration for react-pdf-viewer
+  webpack: (config, { isServer }) => {
+    // Handle PDF.js worker
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.mjs',
+    }
+    
+    // Handle canvas and other Node.js modules for server-side rendering
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        canvas: false,
+        fs: false,
+        net: false,
+        tls: false,
+      }
+    }
+    
+    // Handle PDF.js modules
+    config.module.rules.push({
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: 'javascript/auto',
+    })
+    
+    return config
   },
   // Use default output on Vercel (no standalone)
   async redirects() {

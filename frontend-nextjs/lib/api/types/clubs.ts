@@ -54,6 +54,14 @@ export interface Club {
   co_advisor_id?: string;
   domain_id?: string;
   mission_statement?: string;
+  mission_title?: string;
+  mission_description?: string;
+  email?: string;
+  championship_wins?: number;
+  benefits_title?: string;
+  benefits_description?: string;
+  club_image?: string; // Cloudflare Images URL for header background
+  club_logo?: string; // Cloudflare Images URL for logo next to title
   created_at: string;
   updated_at: string;
 
@@ -166,17 +174,16 @@ export interface ClubListResponse extends Array<Club> {
   // Backend returns clubs directly as an array
 }
 
-export interface ClubResponse {
-  data: Club;
-}
-
-export interface ClubFormResponse {
-  data: ClubForm;
-}
-
-export interface ClubFormListResponse {
-  data: ClubForm[];
-}
+// Note: API wrapper types are no longer used
+// Backend returns data directly, not wrapped in {data: ...}
+// - getClubs() returns: Club[]
+// - getClubById() returns: Club
+// - getClubForms() returns: ClubForm[]
+// - getClubFormById() returns: ClubForm
+// - getClubFormResponses() returns: ClubFormResponse[] (entity, not wrapper)
+//
+// IMPORTANT: ClubFormResponse at line 120 is an entity (student's form submission),
+// not an API response wrapper type
 
 // ========================================
 // CREATE/UPDATE DTOs
@@ -192,6 +199,12 @@ export interface CreateClubDto {
   co_advisor_id?: string;
   domain_id?: string;
   mission_statement?: string;
+  email?: string;
+  championship_wins?: number;
+  benefits_title?: string;
+  benefits_description?: string;
+  club_image?: string;
+  club_logo?: string;
   goals?: Array<{
     goal_text: string;
     order_index: number;
@@ -217,6 +230,15 @@ export interface UpdateClubDto {
   advisor_id?: string;
   co_advisor_id?: string;
   domain_id?: string;
+  mission_statement?: string;
+  mission_title?: string;
+  mission_description?: string;
+  email?: string;
+  championship_wins?: number;
+  benefits_title?: string;
+  benefits_description?: string;
+  club_image?: string;
+  club_logo?: string;
 }
 
 export interface CreateClubFormDto {
@@ -234,8 +256,10 @@ export interface CreateClubFormQuestionDto {
   order_index?: number;
 }
 
+// Note: SubmitClubFormResponseDto structure updated
+// Backend uses path parameters: /clubs/{clubId}/forms/{formId}/responses
+// Only the answers array is sent in the request body
 export interface SubmitClubFormResponseDto {
-  form_id: string;
   answers: {
     question_id: string;
     answer_text: string;
@@ -253,10 +277,8 @@ export interface ClubQueryParams {
   search?: string;
 }
 
-export interface ClubFormQueryParams {
-  club_id?: string;
-  is_active?: boolean;
-}
+// Note: ClubFormQueryParams removed - backend uses path parameters instead of query params
+// Use clubId as path parameter: /clubs/{clubId}/forms
 
 // ========================================
 // FRONTEND-SPECIFIC TYPES

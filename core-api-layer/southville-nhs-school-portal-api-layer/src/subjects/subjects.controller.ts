@@ -18,7 +18,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { SubjectsService } from './subjects.service';
+import { SubjectsService, PaginatedResult } from './subjects.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 // import { Subject } from './entities/subject.entity';
@@ -60,7 +60,7 @@ export class SubjectsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all subjects with pagination and filtering' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -95,7 +95,7 @@ export class SubjectsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get subject by ID' })
   @ApiResponse({ status: 200, description: 'Subject retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -146,5 +146,61 @@ export class SubjectsController {
     console.log(`Deleting subject ${id} for user: ${user.email} (${user.id})`);
     await this.subjectsService.remove(id);
     return { message: 'Subject deleted successfully' };
+  }
+
+  @Get('validate/code/:code')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Check if subject code exists' })
+  @ApiQuery({
+    name: 'excludeId',
+    required: false,
+    type: String,
+    description: 'Subject ID to exclude from check',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Validation result returned',
+    schema: { type: 'object', properties: { exists: { type: 'boolean' } } },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async checkCode(
+    @Param('code') code: string,
+    @Query('excludeId') excludeId?: string,
+    @AuthUser() _user?: SupabaseUser,
+  ) {
+    const exists = await this.subjectsService.checkCodeExists(code, excludeId);
+    return { exists };
+  }
+
+  @Get('validate/name/:name')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Check if subject name exists' })
+  @ApiQuery({
+    name: 'excludeId',
+    required: false,
+    type: String,
+    description: 'Subject ID to exclude from check',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Validation result returned',
+    schema: { type: 'object', properties: { exists: { type: 'boolean' } } },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async checkName(
+    @Param('name') name: string,
+    @Query('excludeId') excludeId?: string,
+    @AuthUser() _user?: SupabaseUser,
+  ) {
+    const exists = await this.subjectsService.checkNameExists(name, excludeId);
+    return { exists };
   }
 }

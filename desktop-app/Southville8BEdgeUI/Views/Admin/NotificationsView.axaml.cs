@@ -15,10 +15,6 @@ public partial class NotificationsView : UserControl
     public NotificationsView()
     {
         InitializeComponent();
-        DataContext = new NotificationsViewModel();
-        DataContextChanged += (_, _) =>
-        {
-            // Force reevaluation of ElementName bindings if required (no-op)
-        };
+        // DataContext is set by AdminShellViewModel via ContentControl binding
     }
 }

@@ -12,4 +12,6 @@ public interface ITokenStorageService
     Task ClearTokensAsync();
     Task<bool> IsTokenExpiredAsync();
     Task<DateTime?> GetTokenExpirationAsync();
+    Task SaveLoginPreferenceAsync(bool rememberMe, string email);
+    Task<(bool rememberMe, string? email)> GetLoginPreferenceAsync();
 }

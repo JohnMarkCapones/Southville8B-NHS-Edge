@@ -204,20 +204,7 @@
                     <TextBlock Text="My Announcements" Classes="header"/>
                     <TextBlock Text="Create and manage announcements for your classes" Classes="subtitle"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="NewAnnouncementButton" Classes="action-btn" Command="{Binding CreateAnnouncementCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="Notepad" IconSize="Size16"/>
-                            <TextBlock Text="New Announcement"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="AnalyticsButton" Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" BorderThickness="0" CornerRadius="8" Padding="12,8" FontWeight="SemiBold" Command="{Binding ViewAnalyticsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="DataBarVertical" IconSize="Size16"/>
-                            <TextBlock Text="Analytics"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <!-- Buttons removed -->
             </Grid>
 
             <!-- Announcement Statistics -->
@@ -236,7 +223,7 @@
                         <TextBlock Text="Currently visible" FontSize="12" Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border x:Name="StatsCard3" Grid.Column="2" Classes="card" Margin="12,0">
+                <!-- <Border x:Name="StatsCard3" Grid.Column="2" Classes="card" Margin="12,0">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Total Views" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
                         <TextBlock Text="{Binding TotalViewsCount}" Classes="kpi-value" Foreground="{DynamicResource WarningBrush}"/>
@@ -249,7 +236,7 @@
                         <TextBlock Text="{Binding EngagementRate, StringFormat={}{0:F1}%}" Classes="kpi-value" Foreground="{DynamicResource AccentBrush}"/>
                         <TextBlock Text="Student interaction" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
-                </Border>
+                </Border> -->
             </Grid>
 
             <!-- Announcements Management -->
@@ -257,12 +244,27 @@
                 <!-- Announcements List -->
                 <Border x:Name="AnnouncementsListCard" Grid.Column="0" Classes="card" Margin="0,0,12,0">
                     <StackPanel Spacing="16">
-                        <Grid ColumnDefinitions="*,Auto">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
                             <TextBlock Grid.Column="0" Text="Recent Announcements" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <ComboBox x:Name="FilterSelector" Grid.Column="1" SelectedItem="{Binding SelectedFilter}" ItemsSource="{Binding FilterOptions}" MinWidth="120"/>
+                            <Button Grid.Column="1" 
+                                    Background="{DynamicResource TextSecondaryBrush}" 
+                                    Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                                    BorderThickness="0" 
+                                    CornerRadius="6" 
+                                    Padding="8,6" 
+                                    Command="{Binding RefreshAnnouncementsCommand}"
+                                    IsEnabled="{Binding !IsRefreshing}"
+                                    Margin="0,0,8,0"
+                                    ToolTip.Tip="Refresh announcements (5s cooldown)">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16"/>
+                                    <TextBlock Text="Refresh"/>
+                                </StackPanel>
+                            </Button>
+                            <ComboBox Grid.Column="2" x:Name="FilterSelector" SelectedItem="{Binding SelectedFilter}" ItemsSource="{Binding FilterOptions}" MinWidth="120"/>
                         </Grid>
                         <ScrollViewer x:Name="AnnouncementsListScrollViewer" MaxHeight="600" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl x:Name="AnnouncementListItems" ItemsSource="{Binding Announcements}">
+                            <ItemsControl x:Name="AnnouncementListItems" ItemsSource="{Binding FilteredAnnouncements}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:AnnouncementItemViewModel">
                                         <Border Classes="announcement-card">
@@ -297,21 +299,9 @@
                                                 <TextBlock Text="{Binding ContentPreview}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" MaxLines="2"/>
                                                 <!-- Announcement Footer -->
                                                 <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <ic:FluentIcon Icon="Eye" IconSize="Size12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                            <TextBlock Text="{Binding ViewCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <ic:FluentIcon Icon="Chat" IconSize="Size12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                            <TextBlock Text="{Binding CommentCount}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <ic:FluentIcon Icon="Calendar" IconSize="Size12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                            <TextBlock Text="{Binding PostedDate}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                        </StackPanel>
+                                                    <StackPanel Grid.Column="0">
+                                                        <!-- Empty space where icons used to be -->
                                                     </StackPanel>
-                                                    <TextBlock Grid.Column="1" Text="{Binding LastModified}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </Grid>
                                             </StackPanel>
                                         </Border>
@@ -333,8 +323,21 @@
                                 <TextBox Text="{Binding NewAnnouncementTitle}" Watermark="Enter announcement title..."/>
                             </StackPanel>
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Target Class" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <ComboBox SelectedItem="{Binding NewAnnouncementClass}" ItemsSource="{Binding AvailableClasses}" HorizontalAlignment="Stretch"/>
+                                <TextBlock Text="Target Sections" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding SelectedSectionsDisplay}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Background="{DynamicResource CardBackgroundBrush}" MaxHeight="150">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding AvailableClassesWithSelection}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="8,4" Background="Transparent" Cursor="Hand">
+                                                        <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
                             </StackPanel>
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Priority" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>

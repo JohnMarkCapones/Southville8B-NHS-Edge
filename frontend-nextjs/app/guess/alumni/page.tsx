@@ -4,6 +4,7 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { MOCK_ALUMNI } from "@/lib/constants"
 import Image from "next/image"
 import { GraduationCap, Award, Users, Heart } from "lucide-react"
@@ -11,6 +12,7 @@ import { GraduationCap, Award, Users, Heart } from "lucide-react"
 export default function AlumniPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+      <GuessBreadcrumb items={[{ label: "Alumni" }]} />
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-vibrant-purple via-vibrant-pink to-vibrant-orange text-white">
         <div className="container mx-auto px-4 text-center">

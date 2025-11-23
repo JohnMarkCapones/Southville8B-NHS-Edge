@@ -5,6 +5,7 @@ import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { VIRTUAL_TOUR_LOCATIONS } from "@/lib/constants"
 import Image from "next/image"
 import { MapPin, Camera, Navigation, Eye, Maximize2 } from "lucide-react"
@@ -15,6 +16,7 @@ export default function VirtualTourClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+      <GuessBreadcrumb items={[{ label: "Virtual Tour" }]} />
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-vibrant-cyan via-vibrant-emerald to-school-green text-white">
         <div className="container mx-auto px-4 text-center">

@@ -2,7 +2,7 @@
 import { useParams, useRouter } from "next/navigation"
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -62,6 +62,11 @@ import {
   Link2,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { getStudentsBySection } from "@/lib/api/endpoints/students"
+import { getSectionById } from "@/lib/api/endpoints/sections"
+import { getTeacherSchedules } from "@/lib/api/endpoints/schedules"
+import { getModules, createModule, assignModuleToSections, updateModule, deleteModule, updateModuleSectionVisibility, getModuleDownloadUrl, type Module, type ModuleQueryParams } from "@/lib/api/endpoints/modules"
+import { apiClient } from "@/lib/api/client"
 
 // Mock data - in real app, this would come from API
 const classesData = [
@@ -276,78 +281,59 @@ const assignmentsData = [
   },
 ]
 
-const resourcesData = [
-  {
-    id: 1,
-    title: "Lesson Plan - Week 1",
-    type: "pdf",
-    size: "2.4 MB",
-    uploadDate: "2024-01-10",
-    downloads: 28,
-    category: "lesson-plan",
-    description: "Comprehensive lesson plan covering quadratic equations and basic calculus concepts",
-  },
-  {
-    id: 2,
-    title: "Study Materials",
-    type: "zip",
-    size: "15.2 MB",
-    uploadDate: "2024-01-08",
-    downloads: 32,
-    category: "study-material",
-    description: "Complete study materials including worksheets, examples, and practice problems",
-  },
-  {
-    id: 3,
-    title: "Practice Exercises",
-    type: "pdf",
-    size: "1.8 MB",
-    uploadDate: "2024-01-05",
-    downloads: 25,
-    category: "exercise",
-    description: "Practice exercises for students to reinforce learning concepts",
-  },
-  {
-    id: 4,
-    title: "Video Tutorial - Calculus Basics",
-    type: "mp4",
-    size: "45.6 MB",
-    uploadDate: "2024-01-12",
-    downloads: 18,
-    category: "video",
-    description: "Step-by-step video tutorial explaining calculus fundamentals",
-  },
-  {
-    id: 5,
-    title: "Interactive Presentation",
-    type: "pptx",
-    size: "8.3 MB",
-    uploadDate: "2024-01-15",
-    downloads: 22,
-    category: "presentation",
-    description: "Interactive PowerPoint presentation with animations and examples",
-  },
-  {
-    id: 6,
-    title: "Assessment Rubric",
-    type: "docx",
-    size: "0.5 MB",
-    uploadDate: "2024-01-03",
-    downloads: 15,
-    category: "assessment",
-    description: "Detailed rubric for evaluating student performance and assignments",
-  },
-]
+// Helper function to get file type from mime type
+const getFileTypeFromMime = (mimeType?: string): string => {
+  if (!mimeType) return 'file'
+  
+  if (mimeType.includes('pdf')) return 'pdf'
+  if (mimeType.includes('word') || mimeType.includes('document')) return 'docx'
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'pptx'
+  if (mimeType.includes('video')) return 'mp4'
+  if (mimeType.includes('audio')) return 'mp3'
+  if (mimeType.includes('image')) return 'jpg'
+  if (mimeType.includes('zip') || mimeType.includes('compressed')) return 'zip'
+  
+  return 'file'
+}
+
+// Helper function to format file size
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return '0 B'
+  
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
+}
+
+// Helper function to get category from file type
+const getCategoryFromFileType = (fileType: string): string => {
+  switch (fileType) {
+    case 'pdf': return 'study-material'
+    case 'docx': return 'lesson-plan'
+    case 'pptx': return 'presentation'
+    case 'mp4': return 'video'
+    case 'mp3': return 'audio'
+    case 'jpg': case 'png': return 'image'
+    case 'zip': return 'archive'
+    default: return 'study-material'
+  }
+}
 
 export default function ClassDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const classId = Number.parseInt(params.id as string)
+  const sectionId = params.id as string
   const { toast } = useToast()
+
+  // Real data state
+  const [sectionData, setSectionData] = useState<any>(null)
+  const [studentsData, setStudentsData] = useState<any[]>([])
+  const [schedulesData, setSchedulesData] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [behaviorFilter, setBehaviorFilter] = useState("all")
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [currentPage, setCurrentPage] = useState(1)
@@ -373,23 +359,120 @@ export default function ClassDetailsPage() {
   const [editDescription, setEditDescription] = useState("")
   const [editCategory, setEditCategory] = useState("")
 
-  // Find the class data
-  const classData = classesData.find((cls) => cls.id === classId)
+  // Modules state
+  const [modulesData, setModulesData] = useState<Module[]>([])
+  const [modulesLoading, setModulesLoading] = useState(false)
+  const [modulesError, setModulesError] = useState<string | null>(null)
+  const [uploadingModule, setUploadingModule] = useState(false)
+  const [downloadingModule, setDownloadingModule] = useState<string | null>(null)
 
-  const getGWAColor = (gwa: number) => {
-    if (gwa <= 1.5) return "text-green-600 dark:text-green-400"
-    if (gwa <= 2.0) return "text-blue-600 dark:text-blue-400"
-    if (gwa <= 2.5) return "text-yellow-600 dark:text-yellow-400"
-    return "text-red-600 dark:text-red-400"
-  }
+  // Transform modules data to resources format
+  const resourcesData = useMemo(() => {
+    return modulesData.map((module) => {
+      const fileType = getFileTypeFromMime(module.mime_type)
+      const category = getCategoryFromFileType(fileType)
+      
+      return {
+        id: module.id,
+        title: module.title,
+        type: fileType,
+        size: formatFileSize(module.file_size_bytes),
+        uploadDate: new Date(module.created_at).toISOString().split('T')[0],
+        downloads: module.downloadStats?.totalDownloads || 0,
+        category,
+        description: module.description || 'No description provided',
+        module: module, // Keep reference to original module data
+      }
+    })
+  }, [modulesData])
 
-  const getGWAStatus = (gwa: number) => {
-    if (gwa <= 1.5) return "Excellent"
-    if (gwa <= 2.0) return "Very Good"
-    if (gwa <= 2.5) return "Good"
-    if (gwa <= 3.0) return "Fair"
-    return "Needs Improvement"
-  }
+  // Fetch real data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // Get user profile to get teacher ID
+        const userProfile = await apiClient.get<any>('/users/me')
+        const teacherId = userProfile.teacher?.id
+
+        if (!teacherId) {
+          throw new Error('User is not a teacher')
+        }
+
+        // Fetch section details, students, schedules, and modules in parallel
+        console.log('[FRONTEND] About to fetch data for sectionId:', sectionId);
+        console.log('[FRONTEND] Teacher ID:', teacherId);
+        
+        const [section, students, schedules, modules] = await Promise.all([
+          apiClient.get(`/sections/${sectionId}`), // Try direct API call
+          getStudentsBySection(sectionId, 1, 100), // Get all students
+          getTeacherSchedules(teacherId),
+          getModules({ sectionId, limit: 100 }) // Get modules for this section
+        ])
+
+        console.log('[FRONTEND] Section response:', section);
+        console.log('[FRONTEND] Students response:', students);
+        console.log('[FRONTEND] Students data:', students.data);
+        console.log('[FRONTEND] Students count:', students.data?.length || 0);
+        console.log('[FRONTEND] Schedules response:', schedules);
+        console.log('[FRONTEND] Modules response:', modules);
+
+        setSectionData(section.data || section) // Handle both direct API response and wrapped response
+        setStudentsData(students.data || [])
+        
+        // Filter schedules for this section
+        const sectionSchedules = schedules.filter(schedule => schedule.sectionId === sectionId)
+        setSchedulesData(sectionSchedules)
+        
+        // Set modules data
+        setModulesData(modules.modules || [])
+
+      } catch (err: any) {
+        console.error('Error fetching class data:', err)
+        setError(err.message || 'Failed to load class data')
+        setModulesError(err.message || 'Failed to load modules')
+        toast({
+          title: "Error",
+          description: err.message || 'Failed to load class data',
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+        setModulesLoading(false)
+      }
+    }
+
+    if (sectionId) {
+      fetchData()
+    }
+  }, [sectionId, toast])
+
+  // Transform real data to match the expected format
+  const classData = sectionData ? {
+    id: sectionData.id,
+    section: sectionData.name,
+    subject: schedulesData.length > 0 ? schedulesData[0].subject?.subjectName || 'Subject TBA' : 'No Schedule Assigned',
+    room: schedulesData.length > 0 && schedulesData[0].room?.roomNumber
+      ? `Room ${schedulesData[0].room.roomNumber}${schedulesData[0].room.floor?.building?.name ? ` (${schedulesData[0].room.floor.building.name})` : ''}`
+      : sectionData.room_name ? `Room ${sectionData.room_name}` : 'Room TBA',
+    time: schedulesData.length > 0 ? `${schedulesData[0].dayOfWeek} ${schedulesData[0].startTime?.slice(0, 5)}-${schedulesData[0].endTime?.slice(0, 5)}` : 'Schedule Not Set',
+    students: studentsData.length,
+    present: studentsData.length, // For now, assume all are present
+    avgScore: 85, // Mock data for now
+    status: "active",
+    nextClass: schedulesData.length > 0 ? schedulesData[0].dayOfWeek : 'Not Scheduled',
+    color: "from-blue-500 to-purple-600",
+    performance: "excellent",
+    assignments: 3, // Mock data
+    announcements: 2, // Mock data
+    description: `Class for ${sectionData.name} students.`,
+    schedule: schedulesData.map(schedule => ({
+      day: schedule.dayOfWeek,
+      time: `${schedule.startTime?.slice(0, 5)} - ${schedule.endTime?.slice(0, 5)}`
+    }))
+  } : null
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -401,20 +484,6 @@ export default function ClassDetailsPage() {
         return "text-orange-600 dark:text-orange-400"
       default:
         return "text-gray-600 dark:text-gray-400"
-    }
-  }
-
-  const getBehaviorColor = (behavior: string) => {
-    switch (behavior) {
-      case "exemplary":
-      case "excellent":
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-      case "good":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-      case "fair":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
     }
   }
 
@@ -511,8 +580,8 @@ export default function ClassDetailsPage() {
     setEditModalOpen(true)
   }
 
-  const handleSaveEdit = () => {
-    if (!editTitle.trim()) {
+  const handleSaveEdit = async () => {
+    if (!editTitle.trim() || !selectedResource) {
       toast({
         title: "Validation Error",
         description: "Resource title is required.",
@@ -521,15 +590,35 @@ export default function ClassDetailsPage() {
       return
     }
 
-    // Simulate save
-    setTimeout(() => {
+    try {
+      // Update the module using the API
+      await updateModule(selectedResource.id, {
+        title: editTitle,
+        description: editDescription || undefined,
+      })
+
+      // Refresh modules data
+      const updatedModules = await getModules({ sectionId, limit: 100 })
+      setModulesData(updatedModules.modules || [])
+
       toast({
         title: "Resource Updated!",
         description: `"${editTitle}" has been updated successfully.`,
         variant: "default",
       })
+      
       setEditModalOpen(false)
-    }, 500)
+      setSelectedResource(null)
+
+    } catch (error: any) {
+      console.error('[EDIT] Error updating module:', error)
+      
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update resource. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleDeleteResource = (resource: (typeof resourcesData)[0]) => {
@@ -537,17 +626,111 @@ export default function ClassDetailsPage() {
     setDeleteModalOpen(true)
   }
 
-  const confirmDelete = () => {
-    // Simulate delete
-    setTimeout(() => {
+  const confirmDelete = async () => {
+    if (!selectedResource) return
+
+    try {
+      // Delete the module using the API
+      await deleteModule(selectedResource.id)
+
+      // Refresh modules data
+      const updatedModules = await getModules({ sectionId, limit: 100 })
+      setModulesData(updatedModules.modules || [])
+
       toast({
         title: "Resource Deleted",
-        description: `"${selectedResource?.title}" has been permanently deleted.`,
+        description: `"${selectedResource.title}" has been permanently deleted.`,
         variant: "default",
       })
+      
       setDeleteModalOpen(false)
       setSelectedResource(null)
-    }, 500)
+
+    } catch (error: any) {
+      console.error('[DELETE] Error deleting module:', error)
+      
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete resource. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleToggleVisibility = async (resource: (typeof resourcesData)[0]) => {
+    try {
+      // Get the current module data
+      const module = resource.module as Module
+      if (!module) return
+
+      // Toggle visibility for this section
+      const newVisibility = !module.sections?.find(s => s.id === sectionId)?.visible ?? true
+      
+      await updateModuleSectionVisibility(module.id, sectionId, newVisibility)
+
+      // Refresh modules data
+      const updatedModules = await getModules({ sectionId, limit: 100 })
+      setModulesData(updatedModules.modules || [])
+
+      toast({
+        title: "Visibility Updated",
+        description: `"${resource.title}" is now ${newVisibility ? 'visible' : 'hidden'} to students.`,
+        variant: "default",
+      })
+
+    } catch (error: any) {
+      console.error('[VISIBILITY] Error toggling module visibility:', error)
+      
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update visibility. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDownload = async (resource: (typeof resourcesData)[0]) => {
+    try {
+      const module = resource.module as Module
+      if (!module) {
+        throw new Error('Module data not available')
+      }
+
+      setDownloadingModule(module.id)
+      console.log('[DOWNLOAD] Starting download for module:', module.id)
+
+      // Get the download URL from the API
+      const downloadResponse = await getModuleDownloadUrl(module.id)
+      console.log('[DOWNLOAD] Download URL received:', downloadResponse)
+
+      // Create a temporary link and trigger download
+      const link = document.createElement('a')
+      link.href = downloadResponse.url
+      link.download = `${module.title}.${resource.type}`
+      link.target = '_blank'
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast({
+        title: "Download Started",
+        description: `"${resource.title}" is being downloaded.`,
+        variant: "default",
+      })
+
+    } catch (error: any) {
+      console.error('[DOWNLOAD] Error downloading module:', error)
+      
+      toast({
+        title: "Download Failed",
+        description: error.message || "Failed to download resource. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setDownloadingModule(null)
+    }
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -594,7 +777,7 @@ export default function ClassDetailsPage() {
     }
   }
 
-  const handleUploadResource = () => {
+  const handleUploadResource = async () => {
     if (!uploadTitle.trim() || !uploadFile) {
       toast({
         title: "Upload Failed",
@@ -604,8 +787,52 @@ export default function ClassDetailsPage() {
       return
     }
 
-    // Simulate upload process
-    setTimeout(() => {
+    try {
+      setUploadingModule(true)
+
+      // Get user profile to get teacher ID and subject information
+      const userProfile = await apiClient.get<any>('/users/me')
+      const teacherId = userProfile.teacher?.id
+
+      if (!teacherId) {
+        throw new Error('User is not a teacher')
+      }
+
+      // Get the subject ID from the current section's schedules
+      const sectionSchedules = schedulesData.filter(schedule => schedule.sectionId === sectionId)
+      const subjectId = sectionSchedules[0]?.subjectId
+
+      if (!subjectId) {
+        throw new Error('No subject found for this section. Please ensure the section has a schedule assigned.')
+      }
+
+      console.log('[UPLOAD] Creating module with:', {
+        title: uploadTitle,
+        description: uploadDescription,
+        file: uploadFile.name,
+        subjectId,
+        sectionId,
+        teacherId
+      })
+
+      // Create the module using the API
+      const newModule = await createModule(
+        {
+          title: uploadTitle,
+          description: uploadDescription || undefined,
+          isGlobal: false, // Section-specific module
+          sectionIds: [sectionId], // Assign to current section
+          subjectId: subjectId
+        },
+        uploadFile
+      )
+
+      console.log('[UPLOAD] Module created successfully:', newModule)
+
+      // Refresh modules data
+      const updatedModules = await getModules({ sectionId, limit: 100 })
+      setModulesData(updatedModules.modules || [])
+
       toast({
         title: "Resource Uploaded Successfully!",
         description: `"${uploadTitle}" has been uploaded and is now available to students.`,
@@ -618,7 +845,18 @@ export default function ClassDetailsPage() {
       setUploadDescription("")
       setUploadCategory("study-material")
       setUploadModalOpen(false)
-    }, 1000)
+
+    } catch (error: any) {
+      console.error('[UPLOAD] Error uploading module:', error)
+      
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload resource. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingModule(false)
+    }
   }
 
   const filteredResources = resourcesData.filter((resource) => {
@@ -629,16 +867,65 @@ export default function ClassDetailsPage() {
     return matchesSearch && matchesCategory
   })
 
+  // Transform real student data to match expected format
+  const transformedStudents = useMemo(() => {
+    console.log('[FRONTEND] Transforming students data:', {
+      studentsDataLength: studentsData.length,
+      firstStudent: studentsData[0] || null,
+      firstStudentStructure: studentsData[0] ? {
+        id: studentsData[0].id,
+        first_name: studentsData[0].first_name,
+        last_name: studentsData[0].last_name,
+        student_id: studentsData[0].student_id,
+        user: studentsData[0].user,
+        hasEmail: !!studentsData[0].user?.email,
+        emailValue: studentsData[0].user?.email
+      } : null,
+      sectionData: sectionData?.name || 'Unknown'
+    });
+    
+    const transformed = studentsData.map((student, index) => ({
+      id: student.id,
+      name: `${student.first_name} ${student.last_name}`,
+      email: student.user?.email || `${student.student_id}@student.edu`,
+      phone: "+63 912 345 6789", // Mock data
+      avatar: "/placeholder.svg?height=40&width=40",
+      attendance: 85 + (index % 15), // Mock data
+      status: index % 3 === 0 ? "excellent" : index % 3 === 1 ? "good" : "needs-improvement",
+      lastActive: index % 2 === 0 ? "2 hours ago" : "1 day ago",
+      assignments: { completed: 8, total: 10 }, // Mock data
+      section: sectionData?.name || "Unknown",
+      year: `Grade ${sectionData?.grade_level || "Unknown"}`,
+    }));
+    
+    console.log('[FRONTEND] Transformed students:', {
+      transformedLength: transformed.length,
+      firstTransformed: transformed[0] || null
+    });
+    
+    return transformed;
+  }, [studentsData, sectionData])
+
   const filteredAndSortedStudents = useMemo(() => {
-    const filtered = studentsData.filter((student) => {
+    console.log('[FRONTEND] Filtering students:', {
+      transformedStudentsLength: transformedStudents.length,
+      searchTerm,
+      statusFilter
+    });
+    
+    const filtered = transformedStudents.filter((student) => {
       const matchesSearch =
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesStatus = statusFilter === "all" || student.status === statusFilter
-      const matchesBehavior = behaviorFilter === "all" || student.behavior === behaviorFilter
 
-      return matchesSearch && matchesStatus && matchesBehavior
+      return matchesSearch && matchesStatus
     })
+
+    console.log('[FRONTEND] After filtering:', {
+      filteredLength: filtered.length,
+      firstFiltered: filtered[0] || null
+    });
 
     if (sortField) {
       filtered.sort((a, b) => {
@@ -658,8 +945,13 @@ export default function ClassDetailsPage() {
       })
     }
 
+    console.log('[FRONTEND] Final filtered students:', {
+      finalLength: filtered.length,
+      firstFinal: filtered[0] || null
+    });
+
     return filtered
-  }, [searchTerm, statusFilter, behaviorFilter, sortField, sortDirection])
+  }, [transformedStudents, searchTerm, statusFilter, sortField, sortDirection])
 
   const totalPages = Math.ceil(filteredAndSortedStudents.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -677,16 +969,30 @@ export default function ClassDetailsPage() {
   const clearFilters = () => {
     setSearchTerm("")
     setStatusFilter("all")
-    setBehaviorFilter("all")
     setSortField(null)
     setSortDirection("asc")
     setCurrentPage(1)
   }
 
-  if (!classData) {
+  if (isLoading) {
     return (
       <div className="p-6 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Class Not Found</h1>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Loading Class Details...</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Please wait while we fetch the data</p>
+      </div>
+    )
+  }
+
+  if (error || !classData) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {error ? 'Error Loading Class' : 'Class Not Found'}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
+          {error || 'The requested class could not be found.'}
+        </p>
         <Button onClick={() => router.back()} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Go Back
@@ -755,7 +1061,7 @@ export default function ClassDetailsPage() {
         className={`bg-gradient-to-r ${classData.color} text-white border-0 shadow-2xl dark:shadow-3xl hover:shadow-3xl transition-all duration-300`}
       >
         <CardContent className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="flex items-center gap-4 group">
               <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors duration-200">
                 <Users className="w-8 h-8" />
@@ -763,15 +1069,6 @@ export default function ClassDetailsPage() {
               <div>
                 <p className="text-white/80 text-sm font-medium">Total Students</p>
                 <p className="text-3xl font-bold">{classData.students}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 group">
-              <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors duration-200">
-                <UserCheck className="w-8 h-8" />
-              </div>
-              <div>
-                <p className="text-white/80 text-sm font-medium">Present Today</p>
-                <p className="text-3xl font-bold">{classData.present}</p>
               </div>
             </div>
             <div className="flex items-center gap-4 group">
@@ -867,19 +1164,6 @@ export default function ClassDetailsPage() {
                     </SelectContent>
                   </Select>
 
-                  <Select value={behaviorFilter} onValueChange={setBehaviorFilter}>
-                    <SelectTrigger className="w-40 dark:bg-gray-700/50 bg-white/50 backdrop-blur-sm">
-                      <SelectValue placeholder="Behavior" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Behavior</SelectItem>
-                      <SelectItem value="exemplary">Exemplary</SelectItem>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="fair">Fair</SelectItem>
-                    </SelectContent>
-                  </Select>
-
                   <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
                     <SelectTrigger className="w-20 dark:bg-gray-700/50 bg-white/50 backdrop-blur-sm">
                       <SelectValue />
@@ -892,7 +1176,7 @@ export default function ClassDetailsPage() {
                     </SelectContent>
                   </Select>
 
-                  {(searchTerm || statusFilter !== "all" || behaviorFilter !== "all" || sortField) && (
+                  {(searchTerm || statusFilter !== "all" || sortField) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -935,34 +1219,6 @@ export default function ClassDetailsPage() {
                         </div>
                       </TableHead>
                       <TableHead className="font-semibold text-gray-900 dark:text-white">Contact</TableHead>
-                      <TableHead
-                        className="font-semibold text-gray-900 dark:text-white text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                        onClick={() => handleSort("gwa")}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          GWA
-                          {sortField === "gwa" &&
-                            (sortDirection === "asc" ? (
-                              <SortAsc className="w-4 h-4" />
-                            ) : (
-                              <SortDesc className="w-4 h-4" />
-                            ))}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="font-semibold text-gray-900 dark:text-white text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                        onClick={() => handleSort("behavior")}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          Behavior
-                          {sortField === "behavior" &&
-                            (sortDirection === "asc" ? (
-                              <SortAsc className="w-4 h-4" />
-                            ) : (
-                              <SortDesc className="w-4 h-4" />
-                            ))}
-                        </div>
-                      </TableHead>
                       <TableHead className="font-semibold text-gray-900 dark:text-white text-center">Status</TableHead>
                       <TableHead className="font-semibold text-gray-900 dark:text-white text-center">Actions</TableHead>
                     </TableRow>
@@ -1006,28 +1262,6 @@ export default function ClassDetailsPage() {
                               <span>{student.phone}</span>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className={`font-bold text-lg ${getGWAColor(student.gwa)}`}>
-                              {student.gwa.toFixed(2)}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {getGWAStatus(student.gwa)}
-                              </span>
-                              {student.gwa <= 1.5 && <Star className="w-3 h-3 text-yellow-500" />}
-                              {student.gwa > 1.5 && student.gwa <= 2.0 && (
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                              )}
-                              {student.gwa > 2.5 && <AlertCircle className="w-3 h-3 text-orange-500" />}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge className={`${getBehaviorColor(student.behavior)} font-medium`}>
-                            {student.behavior}
-                          </Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge className={`${getStatusBadge(student.status)} font-medium`}>
@@ -1384,11 +1618,20 @@ export default function ClassDetailsPage() {
                   </Button>
                   <Button
                     onClick={handleUploadResource}
-                    disabled={!uploadTitle.trim() || !uploadFile}
+                    disabled={!uploadTitle.trim() || !uploadFile || uploadingModule}
                     className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Resource
+                    {uploadingModule ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Resource
+                      </>
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -1422,7 +1665,71 @@ export default function ClassDetailsPage() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Loading State */}
+          {modulesLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                <p className="text-gray-600 dark:text-gray-400">Loading resources...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {modulesError && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="p-4 bg-red-100 dark:bg-red-900/20 rounded-full">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Failed to Load Resources
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    {modulesError}
+                  </p>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!modulesLoading && !modulesError && filteredResources.length === 0 && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full">
+                  <FolderOpen className="w-8 h-8 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No Resources Yet
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Upload your first learning material to get started
+                  </p>
+                  <Button
+                    onClick={() => setUploadModalOpen(true)}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Resource
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resources Grid */}
+          {!modulesLoading && !modulesError && filteredResources.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredResources.map((resource) => (
               <Card
                 key={resource.id}
@@ -1444,6 +1751,16 @@ export default function ClassDetailsPage() {
                         <Badge className={`${getCategoryColor(resource.category)} text-xs`}>
                           {resource.category.replace("-", " ")}
                         </Badge>
+                        <Badge 
+                          variant={resource.module?.sections?.find(s => s.id === sectionId)?.visible ? "default" : "secondary"}
+                          className={`text-xs ${
+                            resource.module?.sections?.find(s => s.id === sectionId)?.visible 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                          }`}
+                        >
+                          {resource.module?.sections?.find(s => s.id === sectionId)?.visible ? 'Visible' : 'Hidden'}
+                        </Badge>
                         <span className="text-xs text-gray-500 dark:text-gray-400">{resource.downloads} downloads</span>
                       </div>
                     </div>
@@ -1462,9 +1779,20 @@ export default function ClassDetailsPage() {
                       size="sm"
                       variant="outline"
                       className="flex-1 dark:border-gray-600 dark:text-gray-300 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 hover:scale-105 transition-all duration-200"
+                      onClick={() => handleDownload(resource)}
+                      disabled={downloadingModule === resource.module?.id}
                     >
-                      <Download className="w-3 h-3 mr-1" />
-                      Download
+                      {downloadingModule === resource.module?.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1"></div>
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3 h-3 mr-1" />
+                          Download
+                        </>
+                      )}
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1481,6 +1809,23 @@ export default function ClassDetailsPage() {
                           <Eye className="w-4 h-4 mr-2" />
                           Preview
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDownload(resource)} 
+                          className="dark:hover:bg-gray-700"
+                          disabled={downloadingModule === resource.module?.id}
+                        >
+                          {downloadingModule === resource.module?.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </>
+                          )}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleShareLink(resource)} className="dark:hover:bg-gray-700">
                           <Share2 className="w-4 h-4 mr-2" />
                           Share Link
@@ -1491,6 +1836,13 @@ export default function ClassDetailsPage() {
                         >
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleToggleVisibility(resource)}
+                          className="dark:hover:bg-gray-700"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          {resource.module?.sections?.find(s => s.id === sectionId)?.visible ? 'Hide from Students' : 'Show to Students'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDeleteResource(resource)}
@@ -1505,28 +1857,6 @@ export default function ClassDetailsPage() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-
-          {filteredResources.length === 0 && (
-            <div className="text-center py-12">
-              <BookOpen className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {resourceSearchTerm || resourceCategoryFilter !== "all" ? "No resources found" : "No resources yet"}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {resourceSearchTerm || resourceCategoryFilter !== "all"
-                  ? "Try adjusting your search or filter criteria."
-                  : "Upload your first resource to get started."}
-              </p>
-              {!resourceSearchTerm && resourceCategoryFilter === "all" && (
-                <Button
-                  onClick={() => setUploadModalOpen(true)}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Resource
-                </Button>
-              )}
             </div>
           )}
         </TabsContent>
@@ -1568,9 +1898,22 @@ export default function ClassDetailsPage() {
             <Button variant="outline" onClick={() => setPreviewModalOpen(false)}>
               Close
             </Button>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-              <Download className="w-4 h-4 mr-2" />
-              Download
+            <Button 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              onClick={() => selectedResource && handleDownload(selectedResource)}
+              disabled={selectedResource && downloadingModule === selectedResource.module?.id}
+            >
+              {selectedResource && downloadingModule === selectedResource.module?.id ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

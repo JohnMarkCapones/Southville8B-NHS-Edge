@@ -7,6 +7,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { NotificationService } from '../../common/services/notification.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 import { SubmitFormResponseDto } from '../dto/submit-form-response.dto';
 import { ReviewFormResponseDto } from '../dto/review-form-response.dto';
 
@@ -14,7 +16,10 @@ import { ReviewFormResponseDto } from '../dto/review-form-response.dto';
 export class ClubFormResponsesService {
   private readonly logger = new Logger(ClubFormResponsesService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   /**
    * Submits a form response
@@ -36,54 +41,96 @@ export class ClubFormResponsesService {
       // Verify form exists and is active
       const form = await this.verifyFormAccess(clubId, formId);
 
-      // Check if user already submitted a response
+      // Check if user already has a response
       const { data: existingResponse } = await supabase
         .from('club_form_responses')
-        .select('id')
+        .select('id, status')
         .eq('form_id', formId)
         .eq('user_id', userId)
         .single();
 
-      if (existingResponse) {
-        throw new ConflictException(
-          'You have already submitted a response to this form',
-        );
-      }
-
       // Validate answers against form questions
       await this.validateAnswers(formId, submitResponseDto.answers);
 
-      // Create response
-      const { data: response, error: responseError } = await supabase
-        .from('club_form_responses')
-        .insert({
-          form_id: formId,
-          user_id: userId,
-          status: form.auto_approve ? 'approved' : 'pending',
-        })
-        .select(
-          `
-          *,
-          user:user_id(id, full_name, email),
-          form:form_id(id, name, auto_approve)
-        `,
-        )
-        .single();
+      let response;
+      let responseError;
 
-      if (responseError) {
-        this.logger.error('Error creating form response:', responseError);
-        // 23505 = unique_violation (Postgres) — Supabase exposes in error.code
-        if ((responseError as any).code === '23505') {
+      if (existingResponse) {
+        // If there's a pending application, prevent resubmission
+        if (existingResponse.status === 'pending') {
           throw new ConflictException(
-            'You have already submitted a response to this form',
+            'You already have a pending application for this club. Please wait for it to be reviewed.',
           );
         }
+
+        // If withdrawn/rejected/approved, update the existing record
+        const { data: updatedResponse, error: updateError } = await supabase
+          .from('club_form_responses')
+          .update({
+            status: form.auto_approve ? 'approved' : 'pending',
+            review_notes: null, // Clear any previous review notes
+            reviewed_by: null, // Clear previous reviewer
+            reviewed_at: null, // Clear previous review date
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingResponse.id)
+          .select(
+            `
+            *,
+            user:user_id(id, full_name, email),
+            form:form_id(id, name, auto_approve)
+          `,
+          )
+          .single();
+
+        response = updatedResponse;
+        responseError = updateError;
+      } else {
+        // No existing response, create new one
+        const { data: newResponse, error: insertError } = await supabase
+          .from('club_form_responses')
+          .insert({
+            form_id: formId,
+            user_id: userId,
+            status: form.auto_approve ? 'approved' : 'pending',
+          })
+          .select(
+            `
+            *,
+            user:user_id(id, full_name, email),
+            form:form_id(id, name, auto_approve)
+          `,
+          )
+          .single();
+
+        response = newResponse;
+        responseError = insertError;
+      }
+
+      if (responseError) {
+        this.logger.error('Error processing form response:', responseError);
         throw new BadRequestException(
           `Failed to submit response: ${responseError.message}`,
         );
       }
 
-      // Create answers
+      // Handle answers - delete existing and insert new ones
+      if (existingResponse) {
+        // Delete existing answers for this response
+        const { error: deleteError } = await supabase
+          .from('club_form_answers')
+          .delete()
+          .eq('response_id', response.id);
+
+        if (deleteError) {
+          this.logger.error('Error deleting existing answers:', deleteError);
+          throw new BadRequestException(
+            `Failed to clear previous answers: ${deleteError.message}`,
+          );
+        }
+      }
+
+      // Create new answers
       const answersData = submitResponseDto.answers.map((answer) => ({
         response_id: response.id,
         question_id: answer.question_id,
@@ -97,13 +144,15 @@ export class ClubFormResponsesService {
 
       if (answersError) {
         this.logger.error('Error creating form answers:', answersError);
-        // Rollback response creation
-        await supabase
-          .from('club_form_responses')
-          .delete()
-          .eq('id', response.id);
+        // Only rollback if this was a new response (not an update)
+        if (!existingResponse) {
+          await supabase
+            .from('club_form_responses')
+            .delete()
+            .eq('id', response.id);
+        }
         throw new BadRequestException(
-          `Failed to submit response: ${answersError.message}`,
+          `Failed to save answers: ${answersError.message}`,
         );
       }
 
@@ -134,6 +183,80 @@ export class ClubFormResponsesService {
       this.logger.log(
         `Submitted response to form ${formId} by user ${userId} (Status: ${response.status})`,
       );
+
+      // Notify student about successful form submission
+      try {
+        const formName = completeResponse.form?.name || 'club form';
+        const { data: clubData } = await supabase
+          .from('clubs')
+          .select('name')
+          .eq('id', clubId)
+          .single();
+
+        await this.notificationService.notifyUser(
+          userId,
+          'Application Submitted',
+          `Your application for "${formName}" to ${clubData?.name || 'the club'} has been submitted successfully. ${response.status === 'approved' ? 'You have been automatically approved!' : 'Please wait for review.'}`,
+          response.status === 'approved'
+            ? NotificationType.SUCCESS
+            : NotificationType.INFO,
+          userId,
+          { expiresInDays: 14 },
+        );
+        this.logger.log(`✅ Sent confirmation notification to user ${userId}`);
+      } catch (confirmError) {
+        this.logger.warn(
+          'Failed to create confirmation notification:',
+          confirmError,
+        );
+      }
+
+      // Notify club advisors about form submission (if not auto-approved)
+      try {
+        if (!form.auto_approve && response.status === 'pending') {
+          const { data: clubData } = await supabase
+            .from('clubs')
+            .select('advisor_id, co_advisor_id, name')
+            .eq('id', clubId)
+            .single();
+
+          if (clubData) {
+            const advisorIds: string[] = [];
+            if (clubData.advisor_id) advisorIds.push(clubData.advisor_id);
+            if (clubData.co_advisor_id) advisorIds.push(clubData.co_advisor_id);
+
+            if (advisorIds.length > 0) {
+              const { data: teachers } = await supabase
+                .from('teachers')
+                .select('user_id')
+                .in('id', advisorIds);
+
+              if (teachers) {
+                const teacherUserIds = teachers
+                  .map((t) => t.user_id)
+                  .filter((id) => id);
+                if (teacherUserIds.length > 0) {
+                  const formName = completeResponse.form?.name || 'club form';
+                  await this.notificationService.notifyUsers(
+                    teacherUserIds,
+                    'New Form Submission',
+                    `A new submission for "${formName}" in "${clubData.name}" requires your review.`,
+                    NotificationType.INFO,
+                    userId,
+                    { expiresInDays: 7 },
+                  );
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to create notifications for form submission:',
+          error,
+        );
+      }
+
       return completeResponse;
     } catch (error) {
       if (
@@ -354,9 +477,42 @@ export class ClubFormResponsesService {
         );
       }
 
+      // If approved, add student as club member
+      if (reviewDto.status === 'approved' && data) {
+        await this.addStudentToClub(clubId, data.user_id, supabase);
+      }
+
       this.logger.log(
         `Reviewed response ${responseId}: ${reviewDto.status} by user ${userId}`,
       );
+
+      // Notify student about approval/rejection
+      try {
+        if (data?.user_id) {
+          const formName = data.form?.name || 'club form';
+          const clubName = data.form?.club?.name || 'the club';
+          const statusText =
+            reviewDto.status === 'approved' ? 'approved' : 'rejected';
+          const message =
+            reviewDto.status === 'approved'
+              ? `Your application for "${formName}" in "${clubName}" has been approved!`
+              : `Your application for "${formName}" in "${clubName}" has been rejected.`;
+
+          await this.notificationService.notifyApprovalStatus(
+            data.user_id,
+            'Club Application',
+            statusText,
+            message,
+            userId,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to create notification for form review:',
+          error,
+        );
+      }
+
       return data;
     } catch (error) {
       if (
@@ -401,6 +557,165 @@ export class ClubFormResponsesService {
     }
 
     return form;
+  }
+
+  /**
+   * Get all form responses for the current user (their applications)
+   * @param userId - User ID
+   * @returns Promise<any[]> - User's form responses
+   */
+  async findUserResponses(userId: string): Promise<any[]> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      const { data, error } = await supabase
+        .from('club_form_responses')
+        .select(
+          `
+          *,
+          form:form_id(
+            id,
+            name,
+            club:club_id(
+              id,
+              name,
+              advisor:advisor_id(id, full_name, email)
+            )
+          ),
+          reviewed_by_user:reviewed_by(id, full_name, email),
+          answers:club_form_answers(
+            id,
+            question_id,
+            answer_text,
+            answer_value,
+            question:question_id(
+              id,
+              question_text,
+              question_type
+            )
+          )
+        `,
+        )
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching user form responses:', error);
+        throw new BadRequestException(
+          `Failed to fetch user responses: ${error.message}`,
+        );
+      }
+
+      return data || [];
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      this.logger.error('Error in findUserResponses:', error);
+      throw new BadRequestException(
+        'An error occurred while fetching user responses',
+      );
+    }
+  }
+
+  /**
+   * Withdraw a form response (soft delete by updating status)
+   * @param responseId - Response ID
+   * @param userId - User ID (must be the owner of the response)
+   * @returns Promise<any> - Updated response
+   */
+  async withdrawResponse(responseId: string, userId: string): Promise<any> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      // First, verify the response exists and belongs to the user
+      const { data: existingResponse, error: fetchError } = await supabase
+        .from('club_form_responses')
+        .select('id, user_id, status')
+        .eq('id', responseId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError || !existingResponse) {
+        throw new NotFoundException(
+          'Application not found or you do not have permission to withdraw it',
+        );
+      }
+
+      // Check if application can be withdrawn (only pending applications)
+      if (existingResponse.status !== 'pending') {
+        throw new BadRequestException(
+          'Only pending applications can be withdrawn',
+        );
+      }
+
+      // Update the response status to rejected (withdrawn)
+      // Using 'rejected' status since 'withdrawn' is not in the database constraint
+      // We'll use review_notes to indicate it was withdrawn by the user
+      const { data, error } = await supabase
+        .from('club_form_responses')
+        .update({
+          status: 'rejected',
+          review_notes: 'Application withdrawn by student',
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', responseId)
+        .eq('user_id', userId)
+        .select(
+          `
+          *,
+          form:form_id(
+            id,
+            name,
+            club:club_id(
+              id,
+              name,
+              advisor:advisor_id(id, full_name, email)
+            )
+          ),
+          reviewed_by_user:reviewed_by(id, full_name, email),
+          answers:club_form_answers(
+            id,
+            question_id,
+            answer_text,
+            answer_value,
+            question:question_id(
+              id,
+              question_text,
+              question_type
+            )
+          )
+        `,
+        )
+        .single();
+
+      if (error) {
+        this.logger.error('Error withdrawing application:', error);
+        throw new BadRequestException(
+          `Failed to withdraw application: ${error.message}`,
+        );
+      }
+
+      this.logger.log(`Application ${responseId} withdrawn by user ${userId}`);
+      return data;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      this.logger.error('Error in withdrawResponse:', error);
+      throw new BadRequestException(
+        'An error occurred while withdrawing the application',
+      );
+    }
   }
 
   /**
@@ -576,6 +891,109 @@ export class ClubFormResponsesService {
             `Unknown question type: ${question.question_type}`,
           );
       }
+    }
+  }
+
+  /**
+   * Adds a student to a club as a member when their application is approved
+   * @param clubId - Club ID
+   * @param userId - User ID to add as member
+   * @param supabase - Supabase client
+   */
+  private async addStudentToClub(
+    clubId: string,
+    userId: string,
+    supabase: any,
+  ): Promise<void> {
+    try {
+      // First, get the student record from the user_id
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (studentError || !student) {
+        this.logger.error(
+          `Student record not found for user ${userId}:`,
+          studentError,
+        );
+        return;
+      }
+
+      const studentId = student.id;
+
+      // Get the default "Member" position
+      const { data: memberPosition } = await supabase
+        .from('club_positions')
+        .select('id')
+        .eq('name', 'Member')
+        .single();
+
+      if (!memberPosition) {
+        this.logger.error('Default "Member" position not found');
+        return;
+      }
+
+      // Check if student is already a member
+      const { data: existingMembership } = await supabase
+        .from('student_club_memberships')
+        .select('id, is_active')
+        .eq('student_id', studentId)
+        .eq('club_id', clubId)
+        .maybeSingle();
+
+      if (existingMembership) {
+        // If membership exists but is inactive, reactivate it
+        if (!existingMembership.is_active) {
+          const { error: updateError } = await supabase
+            .from('student_club_memberships')
+            .update({
+              is_active: true,
+              joined_at: new Date().toISOString(),
+            })
+            .eq('id', existingMembership.id);
+
+          if (updateError) {
+            this.logger.error('Error reactivating membership:', updateError);
+          } else {
+            this.logger.log(
+              `Reactivated membership for student ${studentId} (user ${userId}) in club ${clubId}`,
+            );
+          }
+        } else {
+          this.logger.log(
+            `Student ${studentId} (user ${userId}) is already an active member of club ${clubId}`,
+          );
+        }
+        return;
+      }
+
+      // Create new membership
+      const { error: insertError } = await supabase
+        .from('student_club_memberships')
+        .insert({
+          student_id: studentId,
+          club_id: clubId,
+          position_id: memberPosition.id,
+          joined_at: new Date().toISOString(),
+          is_active: true,
+        });
+
+      if (insertError) {
+        this.logger.error('Error adding student to club:', insertError);
+        throw new BadRequestException(
+          `Failed to add student to club: ${insertError.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Successfully added student ${studentId} (user ${userId}) as member of club ${clubId}`,
+      );
+    } catch (error) {
+      this.logger.error('Error in addStudentToClub:', error);
+      // Don't throw error - we don't want to fail the approval if membership creation fails
+      // The approval itself should succeed even if membership creation fails
     }
   }
 }

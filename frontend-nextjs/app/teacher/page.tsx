@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/hooks/useUser"
-import { useTeacherAdvisory } from "@/hooks"
+import { useTeacherAdvisory, useTeacherSchedules } from "@/hooks"
 import {
   ChartContainer,
   ChartTooltip,
@@ -285,21 +285,65 @@ export default function TeacherDashboard() {
 
   // Teacher context
   const teacherId = user?.teacher?.user_id ?? user?.id
-  const { data: advisory } = useTeacherAdvisory(teacherId)
+  console.log('[TEACHER DASHBOARD] teacherId:', teacherId)
 
-  // Compute unique student count across advisory sections
-  const totalAdvisoryStudents = useMemo(() => {
+  const { data: advisory } = useTeacherAdvisory(teacherId)
+  console.log('[TEACHER DASHBOARD] advisory data:', advisory)
+
+  const { data: schedules } = useTeacherSchedules(teacherId)
+  console.log('[TEACHER DASHBOARD] schedules data:', schedules)
+
+  // Compute unique student count across both advisory sections AND subject schedules
+  const totalStudents = useMemo(() => {
+    console.log('[TOTAL STUDENTS CALC] Starting calculation...')
+    console.log('[TOTAL STUDENTS CALC] advisory:', advisory)
+    console.log('[TOTAL STUDENTS CALC] schedules:', schedules)
+
     const ids = new Set<string>()
-    if (!advisory) return 0
-    for (const section of advisory) {
-      for (const student of section.students ?? []) {
-        // Prefer stable UUID if present, fallback to student_id
-        const key = (student.id as string) || (student.student_id as unknown as string)
-        if (key) ids.add(key)
+
+    // Add students from advisory sections
+    if (advisory) {
+      console.log('[TOTAL STUDENTS CALC] Processing advisory sections:', advisory.length)
+      for (const section of advisory) {
+        console.log('[TOTAL STUDENTS CALC] Section:', section.name, 'students:', section.students)
+        for (const student of section.students ?? []) {
+          // Prefer stable UUID if present, fallback to student_id
+          const key = (student.id as string) || (student.student_id as unknown as string)
+          console.log('[TOTAL STUDENTS CALC] Student:', student, 'key:', key)
+          if (key) {
+            ids.add(key)
+            console.log('[TOTAL STUDENTS CALC] Added student, ids.size now:', ids.size)
+          }
+        }
+      }
+    } else {
+      console.log('[TOTAL STUDENTS CALC] No advisory data')
+    }
+
+    // Add students from subject schedules (if schedule has student roster)
+    if (schedules) {
+      console.log('[TOTAL STUDENTS CALC] Processing schedules:', schedules.length)
+      for (const schedule of schedules) {
+        // If schedule has students array, add them
+        if (schedule.students) {
+          for (const student of schedule.students) {
+            const key = (student.id as string) || (student.student_id as unknown as string)
+            if (key) ids.add(key)
+          }
+        }
+        // If schedule has section with students, add them
+        if (schedule.section?.students) {
+          for (const student of schedule.section.students) {
+            const key = (student.id as string) || (student.student_id as unknown as string)
+            if (key) ids.add(key)
+          }
+        }
       }
     }
+
+    console.log('[TOTAL STUDENTS CALC] Final ids.size:', ids.size)
     return ids.size
-  }, [advisory])
+  }, [advisory, schedules])
 
   // Extract teacher data with fallbacks
   const teacherData = {
@@ -429,10 +473,10 @@ export default function TeacherDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mb-1">{totalAdvisoryStudents}</div>
+                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mb-1">{totalStudents}</div>
                 <p className="text-xs text-green-600 flex items-center">
                   <TrendingUp className="w-3 h-3 mr-1" />
-                  +5 from last month
+                  Advisory + Subjects
                 </p>
               </CardContent>
             </Card>

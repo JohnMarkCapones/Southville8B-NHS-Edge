@@ -3,135 +3,83 @@ import {
   Logger,
   InternalServerErrorException,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 import { Subject } from './entities/subject.entity';
+import { SubjectQueryDto } from './dto/subject-query.dto';
+
+export interface PaginatedResult {
+  data: Subject[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 @Injectable()
 export class SubjectsService {
   private readonly logger = new Logger(SubjectsService.name);
-  private supabase: SupabaseClient;
 
-  constructor(private configService: ConfigService) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
-  private getSupabaseClient(): SupabaseClient {
-    if (!this.supabase) {
-      const supabaseUrl = this.configService.get<string>('supabase.url');
-      const supabaseServiceKey = this.configService.get<string>(
-        'supabase.serviceRoleKey',
-      );
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase configuration is missing');
-      }
-
-      this.supabase = createClient(
-        supabaseUrl,
-        supabaseServiceKey,
-      ) as SupabaseClient;
-    }
-    return this.supabase;
+  private getSupabaseClient() {
+    return this.supabaseService.getServiceClient();
   }
 
-  async create(createSubjectDto: CreateSubjectDto): Promise<Subject> {
+  async findAll(query: SubjectQueryDto): Promise<PaginatedResult> {
     try {
-      const supabase = this.getSupabaseClient();
-
-      // Check if subject code already exists
-      const { data: existingSubject } = await supabase
-        .from('subjects')
-        .select('id')
-        .eq('code', createSubjectDto.code)
-        .single();
-
-      if (existingSubject) {
-        throw new ConflictException('Subject code already exists');
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { data: subject, error } = await supabase
-        .from('subjects')
-        .insert({
-          code: createSubjectDto.code,
-          subject_name: createSubjectDto.subject_name,
-          description: createSubjectDto.description,
-          department_id: createSubjectDto.department_id,
-          grade_levels: createSubjectDto.grade_levels,
-          status: createSubjectDto.status || 'inactive',
-          visibility: createSubjectDto.visibility || 'public',
-        })
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error('Error creating subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to create subject: ${error.message}`,
-        );
-      }
-
-      return subject as Subject;
-    } catch (error) {
-      this.handleError(error, 'create subject');
-    }
-  }
-
-  async findAll(params: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ data: Subject[]; pagination: any }> {
-    try {
-      const supabase = this.getSupabaseClient();
       const {
         page = 1,
         limit = 10,
         search,
-        sortBy = 'created_at',
-        sortOrder = 'desc',
-      } = params;
+        status,
+        departmentId,
+        department_id,
+      } = query;
+      const supabase = this.getSupabaseClient();
 
-      let query = supabase.from('subjects').select('*', { count: 'exact' });
+      let queryBuilder = supabase
+        .from('subjects')
+        .select('*', { count: 'exact' });
 
-      // Apply search filter
       if (search) {
-        query = query.or(
-          `code.ilike.%${search}%,subject_name.ilike.%${search}%,description.ilike.%${search}%`,
+        queryBuilder = queryBuilder.or(
+          `subject_name.ilike.%${search}%,code.ilike.%${search}%`,
         );
       }
 
-      // Apply sorting
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+      if (status) {
+        queryBuilder = queryBuilder.eq('status', status);
+      }
 
-      // Apply pagination
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
-      query = query.range(from, to);
+      if (departmentId || department_id) {
+        queryBuilder = queryBuilder.eq(
+          'department_id',
+          departmentId || department_id,
+        );
+      }
 
-      const { data: subjects, error, count } = await query;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit - 1;
+
+      const { data, error, count } = await queryBuilder
+        .order('created_at', { ascending: false })
+        .range(startIndex, endIndex);
 
       if (error) {
         this.logger.error('Error fetching subjects:', error);
-        throw new InternalServerErrorException(
-          `Failed to fetch subjects: ${error.message}`,
-        );
+        throw new InternalServerErrorException('Failed to fetch subjects');
       }
 
       return {
-        data: (subjects || []) as Subject[],
-        pagination: {
-          page,
-          limit,
-          total: count || 0,
-          pages: Math.ceil((count || 0) / limit),
-        },
+        data: (data || []) as Subject[],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
       this.handleError(error, 'fetch subjects');
@@ -141,9 +89,7 @@ export class SubjectsService {
   async findOne(id: string): Promise<Subject> {
     try {
       const supabase = this.getSupabaseClient();
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { data: subject, error } = await supabase
+      const { data, error } = await supabase
         .from('subjects')
         .select('*')
         .eq('id', id)
@@ -151,17 +97,37 @@ export class SubjectsService {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          throw new NotFoundException('Subject not found');
+          this.logger.warn(`Subject with id ${id} not found`);
+          throw new NotFoundException(`Subject with ID ${id} not found`);
         }
         this.logger.error('Error fetching subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to fetch subject: ${error.message}`,
-        );
+        throw new InternalServerErrorException('Failed to fetch subject');
       }
 
-      return subject as Subject;
+      return data;
     } catch (error) {
       this.handleError(error, 'fetch subject');
+    }
+  }
+
+  async create(createSubjectDto: CreateSubjectDto): Promise<Subject> {
+    try {
+      const supabase = this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from('subjects')
+        .insert(createSubjectDto)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Error creating subject:', error);
+        throw new InternalServerErrorException('Failed to create subject');
+      }
+
+      this.logger.log(`Subject created with ID: ${data.id}`);
+      return data;
+    } catch (error) {
+      this.handleError(error, 'create subject');
     }
   }
 
@@ -171,49 +137,23 @@ export class SubjectsService {
   ): Promise<Subject> {
     try {
       const supabase = this.getSupabaseClient();
-
-      // Check if subject exists
-      const existingSubject = await this.findOne(id);
-      if (!existingSubject) {
-        throw new NotFoundException('Subject not found');
-      }
-
-      // Check if code is being updated and if it already exists
-      if (
-        updateSubjectDto.code &&
-        updateSubjectDto.code !== existingSubject.code
-      ) {
-        const { data: codeExists } = await supabase
-          .from('subjects')
-          .select('id')
-          .eq('code', updateSubjectDto.code)
-          .neq('id', id)
-          .single();
-
-        if (codeExists) {
-          throw new ConflictException('Subject code already exists');
-        }
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { data: subject, error } = await supabase
+      const { data, error } = await supabase
         .from('subjects')
-        .update({
-          ...updateSubjectDto,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateSubjectDto)
         .eq('id', id)
         .select()
         .single();
 
       if (error) {
+        if (error.code === 'PGRST116') {
+          throw new NotFoundException(`Subject with ID ${id} not found`);
+        }
         this.logger.error('Error updating subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to update subject: ${error.message}`,
-        );
+        throw new InternalServerErrorException('Failed to update subject');
       }
 
-      return subject as Subject;
+      this.logger.log(`Subject updated with ID: ${id}`);
+      return data;
     } catch (error) {
       this.handleError(error, 'update subject');
     }
@@ -222,35 +162,85 @@ export class SubjectsService {
   async remove(id: string): Promise<void> {
     try {
       const supabase = this.getSupabaseClient();
-
-      // Check if subject exists
-      await this.findOne(id);
-
-      const { error } = await supabase.from('subjects').delete().eq('id', id);
+      const { error } = await supabase
+        .from('subjects')
+        .update({ status: 'inactive' })
+        .eq('id', id);
 
       if (error) {
         this.logger.error('Error deleting subject:', error);
-        throw new InternalServerErrorException(
-          `Failed to delete subject: ${error.message}`,
-        );
+        throw new InternalServerErrorException('Failed to delete subject');
       }
+
+      this.logger.log(`Subject soft deleted with ID: ${id}`);
     } catch (error) {
       this.handleError(error, 'delete subject');
+    }
+  }
+
+  async checkCodeExists(code: string, excludeId?: string): Promise<boolean> {
+    try {
+      const supabase = this.getSupabaseClient();
+      let query = supabase
+        .from('subjects')
+        .select('id, code')
+        .eq('is_deleted', false)
+        .ilike('code', code);
+
+      if (excludeId) {
+        query = query.neq('id', excludeId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        this.logger.error('Error checking subject code:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      this.logger.error('Error checking subject code existence:', error);
+      return false;
+    }
+  }
+
+  async checkNameExists(name: string, excludeId?: string): Promise<boolean> {
+    try {
+      const supabase = this.getSupabaseClient();
+      let query = supabase
+        .from('subjects')
+        .select('id, subject_name')
+        .eq('is_deleted', false)
+        .ilike('subject_name', name);
+
+      if (excludeId) {
+        query = query.neq('id', excludeId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        this.logger.error('Error checking subject name:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      this.logger.error('Error checking subject name existence:', error);
+      return false;
     }
   }
 
   private handleError(error: any, operation: string): never {
     if (
       error instanceof NotFoundException ||
-      error instanceof ConflictException ||
       error instanceof BadRequestException
     ) {
       throw error;
     }
 
-    this.logger.error(`Error in ${operation}:`, error);
-    throw new InternalServerErrorException(
-      `An error occurred while ${operation}`,
-    );
+    this.logger.error(`Error during ${operation}:`, error);
+    throw new InternalServerErrorException(`Failed to ${operation}`);
   }
 }

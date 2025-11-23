@@ -6,7 +6,10 @@ export interface NewsArticle {
   excerpt?: string
   author: string | { id: string; email: string; full_name: string; name?: string; avatar?: string }
   authorImage?: string
+  authorAvatar?: string
+  authorType?: string
   date: string
+  submittedDate?: string
   category: string | { id: string; name: string; slug: string }
   image?: string
   views: number
@@ -20,6 +23,17 @@ export interface NewsArticle {
   initialLikes: number
   avgRating: number
   totalRatings: number
+  // Admin/backend fields
+  status?: string
+  visibility?: string
+  reviewStatus?: string
+  publishedDate?: string
+  deletedAt?: string | null
+  deletedBy?: string | null
+  // Co-authors and credits
+  coAuthors?: string[]
+  credits?: string
+  articleJson?: any
 }
 
 export interface NewsCategory {

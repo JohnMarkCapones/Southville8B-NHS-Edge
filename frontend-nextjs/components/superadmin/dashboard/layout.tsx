@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Search, Activity, Settings, Sun, Moon, HelpCircle } from "lucide-react"
 import { primaryNavItems } from "@/components/superadmin/data/navigation-data"
 import { HelpSupportDialog } from "@/components/superadmin/help-support-dialog"
+import { BotChat } from "@/components/chat/bot-chat"
 
 // Loading components
 const DashboardSkeleton = () => (
@@ -132,43 +133,143 @@ export const DashboardLayout = ({ activeSection, activeSubSection, children }: D
         onClose={() => setHelpDialogOpen(false)}
         currentPage={pathname}
       />
+
+      {/* AI Chat Widget */}
+      <div className="fixed bottom-28 right-8 z-50">
+        <BotChat />
+      </div>
     </div>
   )
 }
 
 // Academic Quarter Component
 const AcademicQuarter = () => {
-  // Get current date to determine which quarter we're in
-  const getCurrentQuarter = () => {
-    const now = new Date()
-    const month = now.getMonth() + 1 // getMonth() returns 0-11, so add 1
+  const [activeYear, setActiveYear] = useState<any>(null)
+  const [periods, setPeriods] = useState<any[]>([])
+  const [currentQuarter, setCurrentQuarter] = useState<string>("")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-    // School year typically runs August-July
-    // 1st Quarter: August-October
-    // 2nd Quarter: November-January
-    // 3rd Quarter: February-April
-    // 4th Quarter: May-July
+  // Function to determine current quarter based on today's date and periods
+  const getCurrentQuarter = (periods: any[]) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to start of day for accurate comparison
 
-    if (month >= 8 || month <= 10) {
-      if (month >= 8) {
-        return { quarter: "1st Quarter", academicYear: `${now.getFullYear()}-${now.getFullYear() + 1}` }
-      } else {
-        return { quarter: "2nd Quarter", academicYear: `${now.getFullYear() - 1}-${now.getFullYear()}` }
+    // Sort periods by start_date to ensure correct order
+    const sortedPeriods = periods.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+
+    for (const period of sortedPeriods) {
+      const startDate = new Date(period.start_date)
+      const endDate = new Date(period.end_date)
+      
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setHours(23, 59, 59, 999) // End of day
+
+      if (today >= startDate && today <= endDate) {
+        return period.period_name
       }
-    } else if (month >= 11 || month <= 1) {
-      if (month >= 11) {
-        return { quarter: "2nd Quarter", academicYear: `${now.getFullYear()}-${now.getFullYear() + 1}` }
-      } else {
-        return { quarter: "2nd Quarter", academicYear: `${now.getFullYear() - 1}-${now.getFullYear()}` }
-      }
-    } else if (month >= 2 && month <= 4) {
-      return { quarter: "3rd Quarter", academicYear: `${now.getFullYear() - 1}-${now.getFullYear()}` }
-    } else {
-      return { quarter: "4th Quarter", academicYear: `${now.getFullYear() - 1}-${now.getFullYear()}` }
     }
+
+    // If no current period found, find the closest upcoming period
+    const upcomingPeriods = sortedPeriods.filter(period => new Date(period.start_date) > today)
+    if (upcomingPeriods.length > 0) {
+      return `Upcoming: ${upcomingPeriods[0].period_name}`
+    }
+
+    // If no upcoming periods, find the most recent past period
+    const pastPeriods = sortedPeriods.filter(period => new Date(period.end_date) < today)
+    if (pastPeriods.length > 0) {
+      return `Past: ${pastPeriods[pastPeriods.length - 1].period_name}`
+    }
+
+    return "No Periods"
   }
 
-  const { quarter, academicYear } = getCurrentQuarter()
+  useEffect(() => {
+    const loadAcademicData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Import the API client dynamically to avoid SSR issues
+        const { academicYearsApi } = await import('@/lib/api/endpoints/academic-years')
+        
+        // Load active academic year
+        const year = await academicYearsApi.getActive()
+        setActiveYear(year)
+
+        if (year) {
+          // Load periods for the active academic year
+          try {
+            const yearPeriods = await academicYearsApi.getPeriods(year.id)
+            setPeriods(yearPeriods)
+            
+            // Determine current quarter
+            const quarter = getCurrentQuarter(yearPeriods)
+            setCurrentQuarter(quarter)
+          } catch (periodError) {
+            console.warn('Could not load periods:', periodError)
+            setCurrentQuarter("No Periods")
+          }
+        }
+      } catch (err) {
+        console.error('Error loading academic data:', err)
+        setError('Failed to load academic data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAcademicData()
+  }, [])
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/20 dark:to-gray-700/20 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center shadow-lg animate-pulse">
+          <Activity className="h-4 w-4 text-white" />
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-bold text-gray-600 dark:text-gray-400 animate-pulse">Loading...</div>
+          <div className="text-xs text-gray-500 dark:text-gray-500 animate-pulse">Academic Year</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border border-red-200 dark:border-red-800">
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg">
+          <Activity className="h-4 w-4 text-white" />
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-bold text-red-800 dark:text-red-200">No Active Year</div>
+          <div className="text-xs text-red-600 dark:text-red-400">Setup Required</div>
+        </div>
+      </div>
+    )
+  }
+
+  // No active academic year
+  if (!activeYear) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+          <Activity className="h-4 w-4 text-white" />
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-bold text-amber-800 dark:text-amber-200">No Active Year</div>
+          <div className="text-xs text-amber-600 dark:text-amber-400">Setup Academic Year</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Active academic year with current quarter
+  const academicYearName = activeYear.year_name
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
@@ -176,8 +277,8 @@ const AcademicQuarter = () => {
         <Activity className="h-4 w-4 text-white" />
       </div>
       <div className="text-right">
-        <div className="text-sm font-bold text-cyan-800 dark:text-cyan-200">{quarter}</div>
-        <div className="text-xs text-cyan-600 dark:text-cyan-400">Academic Year {academicYear}</div>
+        <div className="text-sm font-bold text-cyan-800 dark:text-cyan-200">{currentQuarter}</div>
+        <div className="text-xs text-cyan-600 dark:text-cyan-400">Academic Year {academicYearName}</div>
       </div>
     </div>
   )
@@ -359,12 +460,14 @@ const SecondarySidebar = ({
       "Learning Materials/Modules": "/superadmin/learning-materials",
       "Progress Tracking": "/superadmin/reports",
       "Honors & Awards": "/superadmin/grading",
-      "Top Performers": "/superadmin/students",
+      "Top Performers": "/superadmin/top-performers",
       "Performance Goals": "/superadmin/reports",
 
       // Schedule Management section
       "Academic Calendar": "/superadmin/academic-calendar",
+      "Schedule Management": "/superadmin/schedule",
       "Class Schedules": "/superadmin/timetable",
+      "Schedule Wizard": "/superadmin/schedule/wizard",
       Holidays: "/superadmin/academic-calendar",
 
       // Classroom Management section
@@ -377,6 +480,7 @@ const SecondarySidebar = ({
 
       // Settings section
       "System Config": "/superadmin/system-settings",
+      "Audit Logs": "/superadmin/audit-logs",
       Themes: "/superadmin/system-settings",
       Integrations: "/superadmin/integrations",
       Backup: "/superadmin/backups",

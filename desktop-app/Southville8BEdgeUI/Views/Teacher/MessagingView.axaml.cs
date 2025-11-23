@@ -56,6 +56,9 @@ public partial class MessagingView : UserControl
     // Simplified scroll handling
     private bool _isScrolling = false;
 
+    // Track attached ViewModel for proper event cleanup
+    private MessagingViewModel? _attachedViewModel = null;
+
     // Visibility state tracking for efficient cache management
     private bool _lastConversationsCardVisible = false;
     private bool _lastChatCardVisible = false;
@@ -80,10 +83,25 @@ public partial class MessagingView : UserControl
         // Set up message text box event handlers
         SetupMessageTextBoxEvents();
 
-        // Subscribe to conversation selection changes for mobile navigation
-        if (DataContext is MessagingViewModel viewModel)
+        // Subscribe to DataContext changes to properly handle ViewModel attachment/detachment
+        this.DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        // Unsubscribe from previous ViewModel if exists
+        if (_attachedViewModel != null)
         {
-            viewModel.PropertyChanged += ViewModel_PropertyChanged;
+            _attachedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _attachedViewModel = null;
+        }
+
+        // Subscribe to new ViewModel if it's a MessagingViewModel
+        if (DataContext is MessagingViewModel vm)
+        {
+            vm.PropertyChanged += ViewModel_PropertyChanged;
+            _attachedViewModel = vm;
+            System.Diagnostics.Debug.WriteLine("[MessagingView] DataContext changed, attached to MessagingViewModel");
         }
     }
 
@@ -132,56 +150,90 @@ public partial class MessagingView : UserControl
         // Remove focus restoration code completely
     }
 
-    // Simplified and immediate scroll method
+    // Scroll last chat item into view using ListBox internal ScrollViewer
     private void ScrollToBottomOfMessages()
     {
-        if (MessagesScrollViewer != null && !_isScrolling)
-        {
-            _isScrolling = true;
+        if (MessagesListBox == null)
+            return;
 
-            try
-            {
-                // Immediate scroll without dispatcher delays
-                MessagesScrollViewer.ScrollToEnd();
-            }
-            finally
-            {
-                // Reset flag after a minimal delay
-                Dispatcher.UIThread.Post(() => _isScrolling = false, DispatcherPriority.Normal);
-            }
+        if (DataContext is MessagingViewModel vm && vm.SelectedConversation?.Messages is { Count: > 0 } msgs)
+        {
+            var last = msgs[^1];
+            Dispatcher.UIThread.Post(() => MessagesListBox.ScrollIntoView(last), DispatcherPriority.Render);
         }
     }
 
     // Update the ViewModel_PropertyChanged method to handle message subscriptions and mobile navigation
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        // Handle message collection subscription changes properly to prevent memory leaks
-        if (e.PropertyName == nameof(MessagingViewModel.SelectedConversation) && DataContext is MessagingViewModel vm)
+        if (DataContext is MessagingViewModel vm)
         {
-            // Unsubscribe from previous conversation's messages with null safety
-            if (_currentSubscribedConversation?.Messages != null)
+            // Handle HasSelectedConversation changes to force UI visibility update
+            if (e.PropertyName == nameof(MessagingViewModel.HasSelectedConversation))
             {
-                _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
-            }
-
-            // Subscribe to new conversation's messages with null safety
-            if (vm.SelectedConversation?.Messages != null)
-            {
-                vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
-                _currentSubscribedConversation = vm.SelectedConversation;
-
-                // Immediate scroll to bottom when conversation changes
-                ScrollToBottomOfMessages();
-
-                // Handle mobile navigation when conversation is selected
-                if ((_lastSizeClass == MobileClass || _lastSizeClass == TabletClass) && vm.SelectedConversation != null)
+                System.Diagnostics.Debug.WriteLine($"[MessagingView] HasSelectedConversation changed to: {vm.HasSelectedConversation}");
+                
+                // Force UI visibility update directly
+                Dispatcher.UIThread.Post(() =>
                 {
-                    NavigateToChat();
-                }
+                    // Only update visibility if ChatCard is visible (sidebars must be closed)
+                    if (ChatCard != null && ChatCard.IsVisible)
+                    {
+                        if (ChatGrid != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[MessagingView] Setting ChatGrid visibility to: {vm.HasSelectedConversation}");
+                            ChatGrid.IsVisible = vm.HasSelectedConversation;
+                        }
+                        
+                        if (EmptyStatePanel != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[MessagingView] Setting EmptyStatePanel visibility to: {!vm.HasSelectedConversation}");
+                            EmptyStatePanel.IsVisible = !vm.HasSelectedConversation;
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MessagingView] ChatCard is not visible (sidebars likely open), skipping visibility update");
+                    }
+                    
+                    // Force UI update
+                    InvalidateVisual();
+                    InvalidateArrange();
+                    InvalidateMeasure();
+                }, DispatcherPriority.Render);
             }
-            else
+            
+            // Handle message collection subscription changes properly to prevent memory leaks
+            if (e.PropertyName == nameof(MessagingViewModel.SelectedConversation))
             {
-                _currentSubscribedConversation = null;
+                // Unsubscribe from previous conversation's messages with null safety
+                if (_currentSubscribedConversation?.Messages != null)
+                {
+                    _currentSubscribedConversation.Messages.CollectionChanged -= Messages_CollectionChanged;
+                }
+
+                // Subscribe to new conversation's messages with null safety
+                if (vm.SelectedConversation?.Messages != null)
+                {
+                    vm.SelectedConversation.Messages.CollectionChanged += Messages_CollectionChanged;
+                    _currentSubscribedConversation = vm.SelectedConversation;
+
+                    // Immediate scroll to bottom when conversation changes
+                    Dispatcher.UIThread.Post(ScrollToBottomOfMessages, DispatcherPriority.Render);
+
+                    // Handle mobile navigation when conversation is selected
+                    if ((_lastSizeClass == MobileClass || _lastSizeClass == TabletClass) && vm.SelectedConversation != null)
+                    {
+                        NavigateToChat();
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"[MessagingView] SelectedConversation changed - Messages count: {vm.SelectedConversation.Messages.Count}");
+                }
+                else
+                {
+                    _currentSubscribedConversation = null;
+                    System.Diagnostics.Debug.WriteLine("[MessagingView] SelectedConversation changed to null");
+                }
             }
         }
     }
@@ -328,6 +380,7 @@ public partial class MessagingView : UserControl
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine($"[MessagingView] Size changed to: {e.NewSize.Width} x {e.NewSize.Height}");
         UpdateResponsiveClasses(e.NewSize.Width);
     }
 
@@ -533,11 +586,54 @@ public partial class MessagingView : UserControl
         }
         else
         {
-            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(360)));
+            // Desktop layout - check available width to determine if sidebars are open
+            var availableWidth = GetEffectiveWidth();
+            
+            // Threshold: if width is less than ~1200px, assume sidebars are open
+            // This is approximate - adjust based on actual sidebar widths
+            // Sidebar widths: Left ~250px, Right ~300px, so total ~550px reduction when both open
+            // Full width is typically ~1920px (or window width), so threshold of 1200px should work
+            const double SidebarOpenThreshold = 1200;
+            bool sidebarsLikelyOpen = availableWidth < SidebarOpenThreshold;
+            
+            // Use responsive column with MinWidth/MaxWidth constraints
+            var conversationsColumn = new ColumnDefinition
+            {
+                MinWidth = 280,
+                MaxWidth = 420,
+                Width = new GridLength(1, GridUnitType.Star)
+            };
+            MainGrid.ColumnDefinitions.Add(conversationsColumn);
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
 
             ConversationsCard.IsVisible = true;
-            ChatCard.IsVisible = true;
+            
+            // ChatCard visibility logic matching sidebar-responsive behavior:
+            // - When sidebars are OPEN: Hide ChatCard (only show conversation list)
+            // - When sidebars are CLOSED: Show ChatCard (inner Grid binding controls content visibility)
+            if (sidebarsLikelyOpen)
+            {
+                // Sidebars open: only show conversation list
+                ChatCard.IsVisible = false;
+                System.Diagnostics.Debug.WriteLine($"[MessagingView] Sidebars likely open (width: {availableWidth} < {SidebarOpenThreshold}), hiding ChatCard");
+            }
+            else
+            {
+                // Sidebars closed: show ChatCard
+                // The inner Grid (ChatGrid) visibility is controlled by HasSelectedConversation binding
+                ChatCard.IsVisible = true;
+                System.Diagnostics.Debug.WriteLine($"[MessagingView] Sidebars likely closed (width: {availableWidth} >= {SidebarOpenThreshold}), showing ChatCard");
+                
+                // Force the inner Grid to respect the binding by re-evaluating it
+                if (DataContext is MessagingViewModel vm && ChatGrid != null)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        ChatGrid.IsVisible = vm.HasSelectedConversation;
+                        EmptyStatePanel.IsVisible = !vm.HasSelectedConversation;
+                    }, DispatcherPriority.Render);
+                }
+            }
 
             Grid.SetColumn(ConversationsCard, 0);
             Grid.SetColumn(ChatCard, 1);
@@ -758,9 +854,11 @@ public partial class MessagingView : UserControl
             MessageTextBox.GotFocus -= MessageTextBox_GotFocus;
         }
 
-        if (DataContext is MessagingViewModel viewModel)
+        // Detach from ViewModel (single source of truth)
+        if (_attachedViewModel != null)
         {
-            viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _attachedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _attachedViewModel = null;
         }
 
         // Clean up message collection subscription to prevent memory leaks

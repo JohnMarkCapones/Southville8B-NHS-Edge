@@ -3,16 +3,16 @@
  * EVENTS API ENDPOINTS
  * ========================================
  * API client functions for interacting with the Events backend.
- * 
+ *
  * Backend Source: core-api-layer/.../src/events/events.controller.ts
  * Base URL: http://localhost:3004/api/v1/events
- * 
+ *
  * Authentication: Most endpoints require JWT token
  * Permissions:
  * - GET endpoints: All authenticated users (some public)
  * - POST: Admin, Teacher only
  * - PATCH: Admin, Teacher (owner) only
- * - DELETE: Admin only
+ * - DELETE: Admin, Teacher only
  */
 
 import { apiClient } from '../client';
@@ -58,15 +58,17 @@ function transformBackendEventToFrontend(backendEvent: any): Event {
     date: backendEvent.date,
     time: backendEvent.time,
     location: backendEvent.location,
-    organizerId: backendEvent.organizer_id,
-    eventImage: backendEvent.event_image,
+    organizerId: backendEvent.organizer_id || backendEvent.organizerId,
+    clubId: backendEvent.club_id || backendEvent.clubId,
+    // Backend uses camelCase for eventImage, not snake_case
+    eventImage: backendEvent.eventImage || backendEvent.event_image,
     status: backendEvent.status,
     visibility: backendEvent.visibility,
-    is_featured: backendEvent.is_featured,
-    createdAt: backendEvent.created_at,
-    updatedAt: backendEvent.updated_at,
-    deletedAt: backendEvent.deleted_at,
-    deletedBy: backendEvent.deleted_by,
+    is_featured: backendEvent.is_featured || backendEvent.isFeatured,
+    createdAt: backendEvent.created_at || backendEvent.createdAt,
+    updatedAt: backendEvent.updated_at || backendEvent.updatedAt,
+    deletedAt: backendEvent.deleted_at || backendEvent.deletedAt,
+    deletedBy: backendEvent.deleted_by || backendEvent.deletedBy,
     
     // Transform organizer data
     organizer: backendEvent.organizer ? {
@@ -164,24 +166,71 @@ export async function getEvents(
   const queryString = queryParams.toString();
   const endpoint = `/events${queryString ? `?${queryString}` : ''}`;
 
-  const backendResponse = await apiClient.get<any>(endpoint, { requiresAuth: false });
-  return transformBackendEventListToFrontend(backendResponse);
+  // Use direct fetch for server-side compatibility
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004'
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1${endpoint}`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      console.error('Failed to fetch events:', response.statusText)
+      return { data: [], total: 0, page: 1, limit: params?.limit || 10, totalPages: 0 }
+    }
+
+    const backendResponse = await response.json()
+    return transformBackendEventListToFrontend(backendResponse)
+  } catch (error) {
+    console.error('Error fetching events:', error)
+    return { data: [], total: 0, page: 1, limit: params?.limit || 10, totalPages: 0 }
+  }
 }
 
 /**
  * Get upcoming events (no authentication required)
- * 
+ *
  * @returns List of upcoming published events
- * 
+ *
  * @example
  * ```ts
  * const upcomingEvents = await getUpcomingEvents();
  * ```
  */
 export async function getUpcomingEvents(): Promise<Event[]> {
-  return apiClient.get<Event[]>('/events/upcoming', {
-    requiresAuth: false, // Public endpoint
-  });
+  // Use direct fetch for server-side compatibility
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004'
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/events/upcoming`, {
+      cache: 'no-store', // Always get fresh data
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      console.error('Failed to fetch upcoming events:', response.statusText)
+      return []
+    }
+
+    const backendResponse = await response.json()
+
+    // Handle both array response and object with data property
+    if (Array.isArray(backendResponse)) {
+      return backendResponse.map(transformBackendEventToFrontend)
+    } else if (backendResponse && Array.isArray(backendResponse.data)) {
+      return backendResponse.data.map(transformBackendEventToFrontend)
+    }
+
+    return []
+  } catch (error) {
+    console.error('Error fetching upcoming events:', error)
+    return []
+  }
 }
 
 /**
@@ -210,6 +259,51 @@ export async function getEventsByOrganizer(
 
   const queryString = queryParams.toString();
   const endpoint = `/events/organizer/${organizerId}${queryString ? `?${queryString}` : ''}`;
+
+  const backendResponse = await apiClient.get<any>(endpoint);
+  return transformBackendEventListToFrontend(backendResponse);
+}
+
+/**
+ * Get events by club ID
+ * 
+ * @param clubId - Club ID
+ * @param params - Pagination and filter parameters
+ * @returns Paginated list of club events
+ * 
+ * @example
+ * ```ts
+ * const clubEvents = await getEventsByClubId('club-uuid-123', {
+ *   page: 1,
+ *   limit: 10,
+ *   status: 'published'
+ * });
+ * ```
+ */
+export async function getEventsByClubId(
+  clubId: string,
+  params?: { 
+    page?: number; 
+    limit?: number;
+    status?: string;
+    visibility?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }
+): Promise<EventListResponse> {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.visibility) queryParams.append('visibility', params.visibility);
+  if (params?.startDate) queryParams.append('startDate', params.startDate);
+  if (params?.endDate) queryParams.append('endDate', params.endDate);
+  if (params?.search) queryParams.append('search', params.search);
+
+  const queryString = queryParams.toString();
+  const endpoint = `/events/club/${clubId}${queryString ? `?${queryString}` : ''}`;
 
   const backendResponse = await apiClient.get<any>(endpoint);
   return transformBackendEventListToFrontend(backendResponse);
@@ -358,7 +452,7 @@ export async function updateEvent(
 /**
  * Delete an event (PERMANENT - use for archived events only)
  *
- * **Permissions**: Admin only
+ * **Permissions**: Admin, Teacher only
  *
  * @param id - Event UUID
  * @returns Success message
@@ -376,7 +470,7 @@ export async function deleteEvent(id: string): Promise<DeleteResponse> {
 /**
  * Archive an event (soft delete - moves to archived)
  *
- * **Permissions**: Admin only
+ * **Permissions**: Admin, Teacher only
  *
  * @param id - Event UUID
  * @returns Success message
@@ -951,6 +1045,37 @@ export function getCategoryColor(event: Event): string {
  * @param event - Event object
  * @returns Category name
  */
+/**
+ * Upload event image to Cloudflare Images
+ *
+ * **Permissions**: Admin, Teacher only
+ *
+ * @param file - Image file to upload
+ * @returns Upload result with Cloudflare Images URL
+ *
+ * @example
+ * ```ts
+ * const result = await uploadEventImage(imageFile);
+ * console.log(result.url); // Cloudflare Images URL
+ * ```
+ */
+export async function uploadEventImage(
+  file: File
+): Promise<{ url: string; cf_image_id: string; cf_image_url: string; fileName: string; fileSize: number; mimeType: string }> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await apiClient.request<any>('/events/upload-image', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      // Don't set Content-Type - let browser set it with boundary for multipart/form-data
+    },
+  });
+
+  return response;
+}
+
 export function getCategoryName(event: Event): string {
   const tagNames = event.tags?.map(t => t.name.toLowerCase()) || []
 
@@ -968,4 +1093,176 @@ export function getCategoryName(event: Event): string {
   }
 
   return 'Special Event'
+}
+
+// ========================================
+// ACADEMIC CALENDAR SPECIFIC FUNCTIONS
+// ========================================
+
+/**
+ * Get events for a specific month (for academic calendar display)
+ *
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @returns List of events for that month
+ *
+ * @example
+ * ```ts
+ * const novemberEvents = await getEventsForMonth(2025, 11);
+ * ```
+ */
+export async function getEventsForMonth(
+  year: number,
+  month: number
+): Promise<Event[]> {
+  // Calculate first and last day of month
+  const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+
+  const result = await getEvents({
+    startDate,
+    endDate,
+    status: 'published',
+    limit: 100, // Get all events for the month
+  });
+
+  return result.data;
+}
+
+/**
+ * Get events for a specific date (for calendar day cell display)
+ *
+ * @param date - Date object
+ * @returns List of events on that date
+ *
+ * @example
+ * ```ts
+ * const todayEvents = await getEventsForDate(new Date());
+ * ```
+ */
+export async function getEventsForDate(date: Date): Promise<Event[]> {
+  const dateStr = date.toISOString().split('T')[0];
+
+  const result = await getEvents({
+    startDate: dateStr,
+    endDate: dateStr,
+    status: 'published',
+    limit: 50,
+  });
+
+  return result.data;
+}
+
+/**
+ * Map calendar event category to tag name
+ *
+ * @param category - Calendar category ('holiday', 'academic', 'school-event', etc.)
+ * @returns Tag name
+ */
+export function mapCategoryToTagName(
+  category: 'holiday' | 'academic' | 'school-event' | 'professional' | 'no-class' | 'deadline'
+): string {
+  const mapping = {
+    'holiday': 'School Holiday',
+    'academic': 'Academic Event',
+    'school-event': 'School Event',
+    'professional': 'Professional Development',
+    'no-class': 'No Class Day',
+    'deadline': 'Important Deadline',
+  };
+  return mapping[category];
+}
+
+/**
+ * Map tag name back to calendar category
+ *
+ * @param tagName - Tag name
+ * @returns Calendar category or null if not a calendar tag
+ */
+export function mapTagNameToCategory(
+  tagName: string
+): 'holiday' | 'academic' | 'school-event' | 'professional' | 'no-class' | 'deadline' | null {
+  const mapping: Record<string, 'holiday' | 'academic' | 'school-event' | 'professional' | 'no-class' | 'deadline'> = {
+    'School Holiday': 'holiday',
+    'Academic Event': 'academic',
+    'School Event': 'school-event',
+    'Professional Development': 'professional',
+    'No Class Day': 'no-class',
+    'Important Deadline': 'deadline',
+  };
+  return mapping[tagName] || null;
+}
+
+/**
+ * Get calendar category from event tags
+ *
+ * @param event - Event object
+ * @returns Calendar category or null
+ */
+export function getCalendarCategory(event: Event): string | null {
+  if (!event.tags || event.tags.length === 0) return null;
+
+  for (const tag of event.tags) {
+    const category = mapTagNameToCategory(tag.name);
+    if (category) return category;
+  }
+
+  return null;
+}
+
+/**
+ * Get calendar category style (colors) for UI display
+ *
+ * @param category - Calendar category
+ * @returns Style object with bg, border, text, and icon color classes
+ */
+export function getCalendarCategoryStyle(
+  category: 'holiday' | 'academic' | 'school-event' | 'professional' | 'no-class' | 'deadline'
+): { bg: string; border: string; text: string; icon: string } {
+  const styles: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+    holiday: {
+      bg: 'bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950/30 dark:to-red-900/20',
+      border: 'border-red-200 dark:border-red-800/50',
+      text: 'text-red-900 dark:text-red-100',
+      icon: 'text-red-600 dark:text-red-400',
+    },
+    academic: {
+      bg: 'bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20',
+      border: 'border-green-200 dark:border-green-800/50',
+      text: 'text-green-900 dark:text-green-100',
+      icon: 'text-green-600 dark:text-green-400',
+    },
+    'school-event': {
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20',
+      border: 'border-blue-200 dark:border-blue-800/50',
+      text: 'text-blue-900 dark:text-blue-100',
+      icon: 'text-blue-600 dark:text-blue-400',
+    },
+    professional: {
+      bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100/50 dark:from-yellow-950/30 dark:to-yellow-900/20',
+      border: 'border-yellow-200 dark:border-yellow-800/50',
+      text: 'text-yellow-900 dark:text-yellow-100',
+      icon: 'text-yellow-600 dark:text-yellow-400',
+    },
+    'no-class': {
+      bg: 'bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20',
+      border: 'border-purple-200 dark:border-purple-800/50',
+      text: 'text-purple-900 dark:text-purple-100',
+      icon: 'text-purple-600 dark:text-purple-400',
+    },
+    deadline: {
+      bg: 'bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20',
+      border: 'border-orange-200 dark:border-orange-800/50',
+      text: 'text-orange-900 dark:text-orange-100',
+      icon: 'text-orange-600 dark:text-orange-400',
+    },
+  };
+
+  return styles[category] || {
+    bg: 'bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-950/30 dark:to-gray-900/20',
+    border: 'border-gray-200 dark:border-gray-800/50',
+    text: 'text-gray-900 dark:text-gray-100',
+    icon: 'text-gray-600 dark:text-gray-400',
+  };
 }

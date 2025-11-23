@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -15,10 +16,13 @@ import { BuildingsModule } from './buildings/buildings.module';
 import { FloorsModule } from './floors/floors.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { BannerNotificationsModule } from './banner-notifications/banner-notifications.module';
 import { EventsModule } from './events/events.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { GwaModule } from './gwa/gwa.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ActivityMonitoringModule } from './activity-monitoring/activity-monitoring.module';
 import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
 import { CampusFacilitiesModule } from './campus-facilities/campus-facilities.module';
 import { FaqModule } from './faq/faq.module';
@@ -31,19 +35,32 @@ import { R2ConfigModule } from './config/r2-config/r2-config.module';
 import { StorageModule } from './storage/storage.module';
 import { ModulesModule } from './modules/modules.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { DesktopSidebarModule } from './desktop-sidebar/desktop-sidebar.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { DesktopTeacherDashboardModule } from './desktop-teacher-dashboard/desktop-teacher-dashboard.module';
+import { SubjectsModule } from './subjects/subjects.module';
 import { TeacherFilesModule } from './teacher-files/teacher-files.module';
+import { TeacherActivityModule } from './teacher-activity/teacher-activity.module';
 import { QuizModule } from './quiz/quiz.module';
 import { NewsModule } from './news/news.module';
 import { GalleryModule } from './gallery/gallery.module';
-import { SubjectsModule } from './subjects/subjects.module';
+import { SearchModule } from './search/search.module';
+import { AcademicYearsModule } from './academic-years/academic-years.module';
+import { TopPerformersModule } from './top-performers/top-performers.module';
+import { StudentActivitiesModule } from './student-activities/student-activities.module';
+import { GamificationModule } from './gamification/gamification.module';
+import { AuditModule } from './common/audit/audit.module';
+import { AuditInterceptor } from './common/audit/audit.interceptor';
+import { StudentAssistantModule } from './student-assistant/student-assistant.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
+import cloudflareImagesConfig from './config/cloudflare-images.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [supabaseConfig, r2Config],
+      load: [supabaseConfig, r2Config, cloudflareImagesConfig],
     }),
     ThrottlerModule.forRoot([
       {
@@ -63,14 +80,18 @@ import r2Config from './config/r2.config';
     FloorsModule,
     RoomsModule,
     AnnouncementsModule,
+    BannerNotificationsModule,
     EventsModule,
     SchedulesModule,
     GwaModule,
     AlertsModule,
+    NotificationsModule,
+    ActivityMonitoringModule,
     AcademicCalendarModule,
     CampusFacilitiesModule,
     FaqModule,
     CommonModule,
+    AuditModule,
     LocationsModule,
     HotspotsModule,
     DepartmentsInformationModule,
@@ -78,13 +99,31 @@ import r2Config from './config/r2.config';
     StorageModule,
     ModulesModule,
     DepartmentsModule,
+    DesktopSidebarModule,
+    AdminDashboardModule,
+    DesktopTeacherDashboardModule,
+    SubjectsModule,
     TeacherFilesModule,
+    TeacherActivityModule,
     QuizModule,
     NewsModule,
     GalleryModule,
     SubjectsModule,
+    SearchModule,
+    AcademicYearsModule,
+    TopPerformersModule,
+    StudentActivitiesModule,
+    GamificationModule,
+    StudentAssistantModule,
   ],
   controllers: [AppController],
-  providers: [AppService, R2ConfigValidationService],
+  providers: [
+    AppService,
+    R2ConfigValidationService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+  ],
 })
 export class AppModule {}

@@ -13,6 +13,8 @@ import {
   DefaultValuePipe,
   ParseBoolPipe,
   Logger,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,6 +36,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/dto/create-user.dto';
 import { AuthUser } from '../auth/auth-user.decorator';
 import { AuditInterceptor } from './audit.interceptor';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Announcements')
 @Controller('announcements')
@@ -44,6 +48,10 @@ export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.ANNOUNCEMENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -107,6 +115,18 @@ export class AnnouncementsController {
     type: Boolean,
     description: 'Include expired announcements (default: false)',
   })
+  @ApiQuery({
+    name: 'teacherId',
+    required: false,
+    type: String,
+    description: 'Filter by teacher ID (user_id)',
+  })
+  @ApiQuery({
+    name: 'sectionId',
+    required: false,
+    type: String,
+    description: 'Filter by section ID',
+  })
   @ApiResponse({
     status: 200,
     description: 'Announcements retrieved successfully',
@@ -118,6 +138,8 @@ export class AnnouncementsController {
     @Query('visibility') visibility?: string,
     @Query('type') type?: string,
     @Query('roleId') roleId?: string,
+    @Query('teacherId') teacherId?: string,
+    @Query('sectionId') sectionId?: string,
     @Query('includeExpired', new DefaultValuePipe(false), ParseBoolPipe)
     includeExpired?: boolean,
   ): Promise<{ data: Announcement[]; pagination: any }> {
@@ -127,6 +149,8 @@ export class AnnouncementsController {
       visibility,
       type,
       roleId,
+      teacherId,
+      sectionId,
       includeExpired,
     };
     return this.announcementsService.findAll(filters);
@@ -181,6 +205,26 @@ export class AnnouncementsController {
     );
   }
 
+  @Get('stats')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get announcement statistics for teacher' })
+  @ApiQuery({
+    name: 'teacherId',
+    required: true,
+    type: String,
+    description: 'Teacher ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getStats(@Query('teacherId') teacherId: string): Promise<any> {
+    return this.announcementsService.getStats(teacherId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get announcement by ID' })
   @ApiResponse({
@@ -195,6 +239,10 @@ export class AnnouncementsController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.ANNOUNCEMENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -226,21 +274,32 @@ export class AnnouncementsController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.ANNOUNCEMENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Delete announcement (Admin only)' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete announcement (Admin or Teacher if owner)' })
   @ApiResponse({
-    status: 200,
+    status: 204,
     description: 'Announcement deleted successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Can only delete own announcements',
+  })
   @ApiResponse({ status: 404, description: 'Announcement not found' })
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
-    this.logger.log(`Deleting announcement ${id}`);
-    await this.announcementsService.remove(id);
-    return { message: 'Announcement deleted successfully' };
+  async remove(
+    @Param('id') id: string,
+    @AuthUser() user: any,
+  ): Promise<Announcement> {
+    this.logger.log(`Deleting announcement ${id} by user ${user.id}`);
+    // Return entity for audit logging, but HTTP response will be 204 No Content
+    return this.announcementsService.remove(id, user.id, user.role);
   }
 
   // Tag management endpoints

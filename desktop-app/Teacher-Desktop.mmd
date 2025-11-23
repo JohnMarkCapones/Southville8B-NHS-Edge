@@ -1,0 +1,321 @@
+```mermaid
+flowchart TD
+    Start([Start]) --> AppLaunches[App Launches]
+    AppLaunches --> LoadServices[Load Required Services]
+    LoadServices --> OpenMainWindow[Open Main Window]
+    OpenMainWindow --> ShowLoginScreen[/"Show Login Screen"/]
+    
+    ShowLoginScreen --> RememberMe{Remember Me?}
+    RememberMe -->|no| InputCredentials[/"Input Email & Password"/]
+    RememberMe -->|yes| CheckToken{Check if valid token exists}
+    CheckToken -->|yes| ExtractRole[Extract role from token]
+    ExtractRole --> CheckRole{Check user role}
+    CheckToken -->|no| InputCredentials
+    
+    InputCredentials --> ValidateInput[Validate input not empty]
+    ValidateInput --> AttemptLogin[Attempt login]
+    AttemptLogin --> LoginSuccess{Login successful?}
+    LoginSuccess -->|no| ShowLoginScreen
+    LoginSuccess -->|yes| CheckRole
+    
+    CheckRole --> IsTeacher{Teacher?}
+    IsTeacher -->|no| STD[STD]
+    IsTeacher -->|yes| LoadTeacherDashboard[Load Teacher Dashboard]
+    
+    LoadTeacherDashboard --> ShowTeacherDashboard[/"Show Teacher Dashboard"/]
+    ShowTeacherDashboard --> DashboardNav{User Action?}
+    
+    DashboardNav -->|Schedule Planner| VSP[VSP]
+    DashboardNav -->|Grade Entry| VGE[VGE]
+    DashboardNav -->|Student Management| VSM[VSM]
+    DashboardNav -->|My Announcements| VMA[VMA]
+    DashboardNav -->|Messaging| VMS[VMS]
+    DashboardNav -->|Profile| PRO[PRO]
+    DashboardNav -->|Settings| SET[SET]
+    DashboardNav -->|Notifications| NOT[NOT]
+    DashboardNav -->|Help Guide| HEL[HEL]
+    DashboardNav -->|Logout| LogoutCheck{Logout?}
+    
+    %% Schedule Planner Flow
+    VSP --> LoadSchedulePlanner[Load Schedule Planner View]
+    LoadSchedulePlanner --> ShowSchedulePlanner[/"Show Schedule Planner"/]
+    ShowSchedulePlanner --> FilterWeek{Filter by Week?}
+    FilterWeek -->|yes| LoadFilteredSchedules[Load Filtered Schedules]
+    LoadFilteredSchedules --> ShowFilteredSchedules[/"Show Filtered Schedules"/]
+    FilterWeek -->|no| ViewScheduleDetails{View Schedule Details?}
+    ShowFilteredSchedules --> ViewScheduleDetails
+    ViewScheduleDetails -->|yes| ShowScheduleDetails[/"Display Schedule Details View"/]
+    ViewScheduleDetails -->|no| BackSchedule{Back?}
+    ShowScheduleDetails --> BackSchedule
+    BackSchedule -->|yes| STD[STD]
+    BackSchedule -->|no| ShowSchedulePlanner
+    
+    %% Grade Entry Flow
+    VGE --> LoadGradeEntry[Load Grade Entry View]
+    LoadGradeEntry --> ShowGradeEntry[/"Show Grade Entry"/]
+    ShowGradeEntry --> SelectPeriod{Select Grading Period/School Year?}
+    SelectPeriod -->|yes| LoadStudents[Load Students with GWA]
+    LoadStudents --> DisplayStudentGrades[/"Display Student Grades"/]
+    SelectPeriod -->|no| EditGrades{Edit Grades?}
+    DisplayStudentGrades --> EditGrades
+    EditGrades -->|yes| UpdateGrade[Update Grade Value]
+    UpdateGrade --> MarkDirty[Mark as Dirty]
+    MarkDirty --> SaveAllGrades{Save All Grades?}
+    SaveAllGrades -->|yes| ValidateGrades[Validate Grades Range]
+    ValidateGrades --> SaveGrades{Create or Update?}
+    SaveGrades -->|Create| CreateGwaEntry[Create GWA Entry]
+    SaveGrades -->|Update| UpdateGwaEntry[Update GWA Entry]
+    CreateGwaEntry --> ShowSuccessGrades[/"Show Success Modal"/]
+    UpdateGwaEntry --> ShowSuccessGrades
+    SaveAllGrades -->|no| EditGrades
+    EditGrades -->|no| BackGrade{Back?}
+    ShowSuccessGrades --> STD[STD]
+    BackGrade -->|yes| STD[STD]
+    BackGrade -->|no| ShowGradeEntry
+    
+    %% Student Management Flow
+    VSM --> LoadStudentManagement[Load Student Management View]
+    LoadStudentManagement --> ShowStudentManagement[/"Show Student Management"/]
+    ShowStudentManagement --> SearchStudents{Search Students?}
+    SearchStudents -->|yes| InputSearch[/"Input Search Query"/]
+    InputSearch --> FilterStudents[Filter Students]
+    FilterStudents --> DisplayFiltered[/"Display Filtered Students"/]
+    SearchStudents -->|no| SelectStudent{Select Student?}
+    DisplayFiltered --> SelectStudent
+    SelectStudent -->|yes| ViewStudentDetails[/"Show Student Details"/]
+    SelectStudent -->|no| BackStudent{Back?}
+    ViewStudentDetails --> BackStudent
+    BackStudent -->|yes| STD[STD]
+    BackStudent -->|no| ShowStudentManagement
+    
+    %% My Announcements Flow
+    VMA --> LoadMyAnnouncements[Load My Announcements View]
+    LoadMyAnnouncements --> ShowMyAnnouncements[/"Show My Announcements"/]
+    ShowMyAnnouncements --> AnnouncementAction{Action?}
+    AnnouncementAction -->|Create| CreateAnnouncement{Create Announcement?}
+    AnnouncementAction -->|Edit| EditAnnouncement{Edit Announcement?}
+    AnnouncementAction -->|Delete| DeleteAnnouncement{Delete Announcement?}
+    AnnouncementAction -->|Filter| FilterAnnouncements{Filter Announcements?}
+    AnnouncementAction -->|View| ViewAnnouncement{View Announcement Details?}
+    AnnouncementAction -->|Refresh| RefreshAnnouncements{Refresh Announcements?}
+    AnnouncementAction -->|Back| BackAnnouncement{Back?}
+    
+    CreateAnnouncement -->|yes| LoadNewAnnouncementView[Load New Announcement View]
+    LoadNewAnnouncementView --> ShowNewAnnouncementView[/"Show New Announcement View"/]
+    ShowNewAnnouncementView --> InputAnnouncementDetails[/"Input Announcement Details"/]
+    InputAnnouncementDetails --> PublishAnnouncement{Publish?}
+    PublishAnnouncement -->|yes| CreateAnnouncementAPI[Create Announcement via API]
+    CreateAnnouncementAPI --> ShowSuccessAnnouncement[/"Show Success Modal"/]
+    ShowSuccessAnnouncement --> STD[STD]
+    PublishAnnouncement -->|no| BackNewAnnouncement{Back?}
+    BackNewAnnouncement -->|yes| STD[STD]
+    BackNewAnnouncement -->|no| ShowNewAnnouncementView
+    CreateAnnouncement -->|no| ShowMyAnnouncements
+    
+    EditAnnouncement -->|yes| LoadEditView[Load Edit Announcement View]
+    LoadEditView --> ShowEditView[/"Show Edit Announcement View"/]
+    ShowEditView --> PopulateForm[Populate Form with Existing Data]
+    PopulateForm --> UpdateAnnouncementFields[Update Announcement Fields]
+    UpdateAnnouncementFields --> SaveAnnouncement{Save?}
+    SaveAnnouncement -->|yes| UpdateAnnouncementAPI[Update Announcement via API]
+    UpdateAnnouncementAPI --> ShowSuccessEdit[/"Show Success Modal"/]
+    ShowSuccessEdit --> STD[STD]
+    SaveAnnouncement -->|no| BackEdit{Back?}
+    BackEdit -->|yes| STD[STD]
+    BackEdit -->|no| ShowEditView
+    EditAnnouncement -->|no| ShowMyAnnouncements
+    
+    DeleteAnnouncement -->|yes| ShowDeleteModal[/"Show Delete Confirmation Modal"/]
+    ShowDeleteModal --> ConfirmDelete{Are You Sure?}
+    ConfirmDelete -->|yes| DeleteAnnouncementAPI[Delete Announcement via API]
+    DeleteAnnouncementAPI --> ShowSuccessDelete[/"Show Success Modal"/]
+    ShowSuccessDelete --> STD[STD]
+    ConfirmDelete -->|no| STD[STD]
+    DeleteAnnouncement -->|no| ShowMyAnnouncements
+    
+    FilterAnnouncements -->|yes| SelectFilterOptions[/"Select Filter Options"/]
+    SelectFilterOptions --> ApplyFilter[Apply Filter]
+    ApplyFilter --> DisplayFilteredAnnouncements[/"Display Filtered Announcements"/]
+    DisplayFilteredAnnouncements --> STD[STD]
+    FilterAnnouncements -->|no| ShowMyAnnouncements
+    
+    ViewAnnouncement -->|yes| ShowAnnouncementDetails[/"Show Announcement Details Dialog"/]
+    ShowAnnouncementDetails --> STD[STD]
+    ViewAnnouncement -->|no| ShowMyAnnouncements
+    
+    RefreshAnnouncements -->|yes| CheckRateLimit{Rate Limit OK?}
+    CheckRateLimit -->|yes| ReloadAnnouncements[Reload Announcements Data]
+    ReloadAnnouncements --> ShowMyAnnouncements
+    CheckRateLimit -->|no| ShowMyAnnouncements
+    RefreshAnnouncements -->|no| ShowMyAnnouncements
+    
+    BackAnnouncement -->|yes| STD[STD]
+    BackAnnouncement -->|no| ShowMyAnnouncements
+    
+    %% Messaging Flow
+    VMS --> LoadMessaging[Load Messaging View]
+    LoadMessaging --> ShowMessaging[/"Show Messaging View"/]
+    ShowMessaging --> MessagingAction{Action?}
+    MessagingAction -->|New Chat| NewChat{New Chat?}
+    MessagingAction -->|Search| SearchConversation{Search Conversation?}
+    MessagingAction -->|Filter| FilterChat{Filter Chat?}
+    MessagingAction -->|Select| SelectConversation{Select Conversation?}
+    MessagingAction -->|Back| BackMessaging{Back?}
+    
+    NewChat -->|yes| LoadNewChatView[Load New Chat View]
+    LoadNewChatView --> ShowNewChatView[/"Show New Chat View"/]
+    ShowNewChatView --> InputChatInfo[/"Input Basic Chat Information"/]
+    InputChatInfo --> CreateChat{Create Chat?}
+    CreateChat -->|yes| SavingInfo[Saving Information]
+    SavingInfo --> CreateChatAPI[Create Chat via API]
+    CreateChatAPI --> SuccessCreatingChat[/"Success Creating Chat"/]
+    SuccessCreatingChat --> STD[STD]
+    CreateChat -->|no| BackNewChat{Back?}
+    BackNewChat -->|yes| STD[STD]
+    BackNewChat -->|no| ShowNewChatView
+    
+    SearchConversation -->|yes| InputConversation[/"Input Conversation Search"/]
+    InputConversation --> LoadingQuery[Loading Query]
+    LoadingQuery --> DisplayConversation[/"Display Conversation"/]
+    DisplayConversation --> STD[STD]
+    SearchConversation -->|no| FilterChat
+    
+    FilterChat -->|yes| SelectFilterOptionsChat[/"Select Filter Options"/]
+    SelectFilterOptionsChat --> LoadFilterChat[Load Filter]
+    LoadFilterChat --> DisplayFilteredChat[/"Display Filtered Chat"/]
+    DisplayFilteredChat --> STD[STD]
+    FilterChat -->|no| SelectConversation
+    
+    SelectConversation -->|yes| LoadMessages[Load Messages for Conversation]
+    LoadMessages --> DisplayMessageArea[/"Display Message Area"/]
+    DisplayMessageArea --> TypeMessage{Type a message?}
+    TypeMessage -->|yes| SendMessage[Send Message]
+    SendMessage --> OptimisticAdd[Add Optimistic Message]
+    OptimisticAdd --> SendMessageAPI[Send Message via API]
+    SendMessageAPI --> SuccessCheck{Success?}
+    SuccessCheck -->|yes| UpdateMessageStatus[Update Message Status to Sent]
+    SuccessCheck -->|no| RemoveOptimistic[Remove Optimistic Message]
+    UpdateMessageStatus --> STD[STD]
+    RemoveOptimistic --> STD[STD]
+    TypeMessage -->|no| ChatInfo{Chat info?}
+    ChatInfo -->|yes| ShowContactInfo[/"Show Contact Info Modal"/]
+    ShowContactInfo --> DeleteConversation{Delete Conversation?}
+    DeleteConversation -->|yes| ShowDeleteChatModal[/"Show Delete Chat Modal"/]
+    ShowDeleteChatModal --> ConfirmDeleteChat{Are You Sure?}
+    ConfirmDeleteChat -->|yes| DeleteChatAPI[Delete Chat via API]
+    DeleteChatAPI --> SuccessDeletion[/"Success Deletion"/]
+    SuccessDeletion --> STD[STD]
+    ConfirmDeleteChat -->|no| STD[STD]
+    DeleteConversation -->|no| STD[STD]
+    ChatInfo -->|no| STD[STD]
+    SelectConversation -->|no| ShowMessaging
+    
+    BackMessaging -->|yes| STD[STD]
+    BackMessaging -->|no| ShowMessaging
+    
+    %% Profile Flow
+    PRO --> LoadProfile[Load Profile View]
+    LoadProfile --> ShowProfile[/"Display Profile View"/]
+    ShowProfile --> ChangePassword{Change Password?}
+    ChangePassword -->|yes| LoadChangePasswordView[Load Change Password View]
+    LoadChangePasswordView --> ShowChangePasswordModal[/"Show Change Password Modal"/]
+    ShowChangePasswordModal --> InputCurrentPassword[/"Input Current Password"/]
+    InputCurrentPassword --> InputNewPassword[/"Input New Password"/]
+    InputNewPassword --> InputConfirmPassword[/"Input Confirm Password"/]
+    InputConfirmPassword --> ValidatePassword{Validate Password?}
+    ValidatePassword -->|yes| UpdatePassword{Update Password?}
+    ValidatePassword -->|no| ShowValidationError[/"Show Validation Error"/]
+    ShowValidationError --> ShowChangePasswordModal
+    UpdatePassword -->|yes| Processing[Processing Password Change]
+    Processing --> ChangePasswordAPI[Change Password via API]
+    ChangePasswordAPI --> SuccessUpdatingPassword[/"Success Updating Password"/]
+    SuccessUpdatingPassword --> STD[STD]
+    UpdatePassword -->|no| BackChangePassword{Back?}
+    BackChangePassword -->|yes| STD[STD]
+    BackChangePassword -->|no| ShowChangePasswordModal
+    ChangePassword -->|no| STD[STD]
+    
+    %% Settings Flow
+    SET --> LoadSettings[Load Settings View]
+    LoadSettings --> ShowSettings[/"Show Settings View"/]
+    ShowSettings --> UpdateSettings{Update Settings?}
+    UpdateSettings -->|yes| ModifySettings[/"Modify Settings"/]
+    ModifySettings --> SaveSettings[Save Settings]
+    SaveSettings --> ShowSuccessUpdatedSettings[/"Show Success Updated Settings"/]
+    ShowSuccessUpdatedSettings --> STD[STD]
+    UpdateSettings -->|no| STD[STD]
+    
+    %% Notifications Flow
+    NOT --> LoadNotifications[Load Notification View]
+    LoadNotifications --> ShowNotifications[/"Show Notifications View"/]
+    ShowNotifications --> NotificationAction{Action?}
+    NotificationAction -->|Mark All Read| MarkAllRead{Mark All Read?}
+    NotificationAction -->|Clear All| ClearAll{Clear All?}
+    NotificationAction -->|Mark One| MarkOne{Mark one notification?}
+    NotificationAction -->|Delete One| DeleteOne{Delete one notification?}
+    NotificationAction -->|Back| BackNotification{Back?}
+    
+    MarkAllRead -->|yes| MarkAllNotificationRead[Mark All Notification Read]
+    MarkAllNotificationRead --> SuccessMark[/"Success Mark"/]
+    SuccessMark --> STD[STD]
+    MarkAllRead -->|no| ClearAll
+    
+    ClearAll -->|yes| ShowConfirmationModal[/"Show Confirmation Modal"/]
+    ShowConfirmationModal --> AreYouSure{Are you sure?}
+    AreYouSure -->|yes| ClearAllNotifications[Clear all Notifications]
+    AreYouSure -->|no| STD[STD]
+    ClearAllNotifications --> STD[STD]
+    ClearAll -->|no| MarkOne
+    
+    MarkOne -->|yes| MarkNotificationRead[Mark Notification Read]
+    MarkNotificationRead --> SuccessMarkOne[/"Success Mark"/]
+    SuccessMarkOne --> STD[STD]
+    MarkOne -->|no| DeleteOne
+    
+    DeleteOne -->|yes| DeleteNotification[Delete Notification]
+    DeleteNotification --> SuccessDeletionNotif[/"Success Deletion"/]
+    SuccessDeletionNotif --> STD[STD]
+    DeleteOne -->|no| BackNotification
+    
+    BackNotification -->|yes| STD[STD]
+    BackNotification -->|no| ShowNotifications
+    
+    %% Help Guide Flow
+    HEL --> LoadHelp[Load Help View]
+    LoadHelp --> ShowHelp[/"Show Help View"/]
+    ShowHelp --> SearchHelp{Search?}
+    SearchHelp -->|yes| QuerySearch[Query Search]
+    QuerySearch --> DisplaySearchHelp[/"Display Search Help"/]
+    DisplaySearchHelp --> STD[STD]
+    SearchHelp -->|no| OpenHelpCard{Open Help Card?}
+    OpenHelpCard -->|yes| LoadHelpCard[Load Help Card]
+    LoadHelpCard --> DisplaySpecificHelp[/"Display Specific Help Card"/]
+    DisplaySpecificHelp --> STD[STD]
+    OpenHelpCard -->|no| STD[STD]
+    
+    %% Logout Flow
+    LogoutCheck -->|yes| ClearCachedViewModels[Clear Cached ViewModels]
+    ClearCachedViewModels --> ResetCurrentContent[Reset Current Content]
+    ResetCurrentContent --> CallAuthServiceLogout[Call AuthService Logout]
+    CallAuthServiceLogout --> ResetTheme[Reset Theme to Light Mode]
+    ResetTheme --> ShowSuccessLogout[/"Show Success Toast"/]
+    ShowSuccessLogout --> NavigateToLogin[Navigate to Login]
+    NavigateToLogin --> ShowLoginScreen
+    LogoutCheck -->|no| ShowTeacherDashboard
+    
+    %% Connector Definitions - Return to Dashboard
+    STD[STD] --> ShowTeacherDashboard
+    
+    %% Styling
+    classDef startEnd fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef process fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef decision fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef inputOutput fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef connector fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    
+    class Start,STD startEnd
+    class AppLaunches,LoadServices,OpenMainWindow,AttemptLogin,CheckRole,LoadTeacherDashboard,LoadSchedulePlanner,LoadFilteredSchedules,LoadGradeEntry,LoadStudents,UpdateGrade,MarkDirty,ValidateGrades,CreateGwaEntry,UpdateGwaEntry,LoadStudentManagement,FilterStudents,LoadMyAnnouncements,LoadNewAnnouncementView,CreateAnnouncementAPI,LoadEditView,PopulateForm,UpdateAnnouncementFields,UpdateAnnouncementAPI,DeleteAnnouncementAPI,ApplyFilter,ReloadAnnouncements,LoadMessaging,LoadNewChatView,SavingInfo,CreateChatAPI,LoadingQuery,LoadFilterChat,LoadMessages,OptimisticAdd,SendMessageAPI,UpdateMessageStatus,RemoveOptimistic,DeleteChatAPI,LoadProfile,LoadChangePasswordView,Processing,ChangePasswordAPI,LoadSettings,SaveSettings,LoadNotifications,MarkAllNotificationRead,ClearAllNotifications,MarkNotificationRead,DeleteNotification,LoadHelp,QuerySearch,LoadHelpCard,ClearCachedViewModels,ResetCurrentContent,CallAuthServiceLogout,ResetTheme,NavigateToLogin process
+    class RememberMe,CheckToken,LoginSuccess,IsTeacher,DashboardNav,FilterWeek,ViewScheduleDetails,BackSchedule,SelectPeriod,EditGrades,SaveAllGrades,SaveGrades,BackGrade,SearchStudents,SelectStudent,BackStudent,CreateAnnouncement,PublishAnnouncement,BackNewAnnouncement,EditAnnouncement,SaveAnnouncement,BackEdit,DeleteAnnouncement,ConfirmDelete,FilterAnnouncements,ViewAnnouncement,RefreshAnnouncements,CheckRateLimit,BackAnnouncement,NewChat,CreateChat,BackNewChat,SearchConversation,FilterChat,SelectConversation,TypeMessage,SuccessCheck,ChatInfo,DeleteConversation,ConfirmDeleteChat,BackMessaging,ChangePassword,ValidatePassword,UpdatePassword,BackChangePassword,UpdateSettings,MarkAllRead,ClearAll,AreYouSure,MarkOne,DeleteOne,BackNotification,SearchHelp,OpenHelpCard,LogoutCheck decision
+    class ShowLoginScreen,InputCredentials,ShowTeacherDashboard,ShowSchedulePlanner,ShowFilteredSchedules,ShowScheduleDetails,ShowGradeEntry,DisplayStudentGrades,ShowSuccessGrades,ShowStudentManagement,DisplayFiltered,ViewStudentDetails,ShowMyAnnouncements,ShowNewAnnouncementView,InputAnnouncementDetails,ShowSuccessAnnouncement,ShowEditView,ShowSuccessEdit,ShowDeleteModal,ShowSuccessDelete,DisplayFilteredAnnouncements,ShowAnnouncementDetails,ShowMessaging,ShowNewChatView,InputChatInfo,SuccessCreatingChat,InputConversation,DisplayConversation,DisplayFilteredChat,DisplayMessageArea,DeliveredChat,ShowContactInfo,ShowDeleteChatModal,SuccessDeletion,ShowProfile,ShowChangePasswordModal,InputCurrentPassword,InputNewPassword,InputConfirmPassword,ShowValidationError,SuccessUpdatingPassword,ShowSettings,ModifySettings,ShowSuccessUpdatedSettings,ShowNotifications,SuccessMark,ShowConfirmationModal,SuccessMarkOne,SuccessDeletionNotif,ShowHelp,DisplaySearchHelp,DisplaySpecificHelp,ShowSuccessLogout inputOutput
+    class VSP,VGE,VSM,VMA,VMS,PRO,SET,NOT,HEL connector
+```

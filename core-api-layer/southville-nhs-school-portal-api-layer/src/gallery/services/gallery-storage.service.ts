@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { R2StorageService } from '../../storage/r2-storage/r2-storage.service';
+import { CloudflareImagesService } from './cloudflare-images.service';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import {
@@ -17,26 +18,31 @@ const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 
 /**
  * Gallery Storage Service
- * Handles R2 file operations for gallery items
+ * Handles file operations for gallery items using Cloudflare Images for images and R2 for videos
  */
 @Injectable()
 export class GalleryStorageService {
   private readonly logger = new Logger(GalleryStorageService.name);
 
-  constructor(private readonly r2StorageService: R2StorageService) {}
+  constructor(
+    private readonly r2StorageService: R2StorageService,
+    private readonly cloudflareImagesService: CloudflareImagesService,
+  ) {}
 
   /**
-   * Upload a gallery item file to R2 (Simplified - no album needed)
+   * Upload a gallery item file using Cloudflare Images for images and R2 for videos
    * @param file - File buffer and metadata
    * @param uploadedBy - User ID who is uploading
-   * @returns Upload result with R2 keys and URLs
+   * @returns Upload result with appropriate keys and URLs
    */
   async uploadGalleryItem(
     file: Express.Multer.File,
     uploadedBy: string,
   ): Promise<{
-    r2_file_key: string;
-    file_url: string;
+    cf_image_id?: string;
+    cf_image_url?: string;
+    r2_file_key?: string;
+    file_url?: string;
     thumbnail_url?: string;
     r2_thumbnail_key?: string;
     file_size_bytes: number;
@@ -51,7 +57,7 @@ export class GalleryStorageService {
       );
     }
 
-    // Validate file size
+    // Validate file size and determine media type
     const mediaType = getMediaTypeFromMimeType(file.mimetype);
     if (!mediaType) {
       throw new BadRequestException('Invalid media type');
@@ -68,6 +74,63 @@ export class GalleryStorageService {
       );
     }
 
+    // Route to appropriate storage service
+    if (mediaType === 'image') {
+      // Use Cloudflare Images for images
+      this.logger.log(
+        `Uploading image to Cloudflare Images: ${file.originalname}`,
+      );
+
+      try {
+        const uploadResult = await this.cloudflareImagesService.uploadImage(
+          file,
+          {
+            uploadedBy,
+            originalFilename: file.originalname,
+          },
+        );
+
+        this.logger.log(
+          `Successfully uploaded to Cloudflare Images: ${uploadResult.cf_image_id}`,
+        );
+
+        return {
+          cf_image_id: uploadResult.cf_image_id,
+          cf_image_url: uploadResult.cf_image_url,
+          file_size_bytes: uploadResult.file_size_bytes,
+          mime_type: uploadResult.mime_type,
+          media_type: uploadResult.media_type,
+        };
+      } catch (error) {
+        this.logger.error(
+          'Cloudflare Images upload failed, falling back to R2:',
+          error,
+        );
+
+        // Fallback to R2 if Cloudflare Images fails
+        return this.uploadToR2(file, uploadedBy);
+      }
+    } else {
+      // Use R2 for videos and other media
+      return this.uploadToR2(file, uploadedBy);
+    }
+  }
+
+  /**
+   * Upload to R2 (fallback for videos and when Cloudflare Images fails)
+   */
+  private async uploadToR2(
+    file: Express.Multer.File,
+    uploadedBy: string,
+  ): Promise<{
+    r2_file_key: string;
+    file_url: string;
+    thumbnail_url?: string;
+    r2_thumbnail_key?: string;
+    file_size_bytes: number;
+    mime_type: string;
+    media_type: 'image' | 'video';
+  }> {
     // Generate R2 key (simplified - flat structure)
     const r2Key = this.generateR2Key(file.originalname);
 
@@ -88,39 +151,51 @@ export class GalleryStorageService {
       throw new BadRequestException('Failed to upload file to storage');
     }
 
-    this.logger.log(`Successfully uploaded: ${r2Key}`);
+    this.logger.log(`Successfully uploaded to R2: ${r2Key}`);
 
     return {
       r2_file_key: r2Key,
       file_url: uploadResult.publicUrl || '',
       file_size_bytes: file.size,
       mime_type: file.mimetype,
-      media_type: mediaType,
+      media_type: getMediaTypeFromMimeType(file.mimetype) || 'image',
     };
   }
 
   /**
-   * Delete a gallery item file from R2
-   * @param r2FileKey - R2 key to delete
+   * Delete a gallery item file from storage (Cloudflare Images or R2)
+   * @param storageKey - Storage key to delete (cf_image_id or r2_file_key)
+   * @param storageType - Type of storage ('cloudflare_images' or 'r2')
    * @returns Delete result
    */
-  async deleteGalleryItem(r2FileKey: string): Promise<void> {
+  async deleteGalleryItem(
+    storageKey: string,
+    storageType: 'cloudflare_images' | 'r2',
+  ): Promise<boolean> {
     try {
-      this.logger.log(`Deleting gallery item from R2: ${r2FileKey}`);
-      const deleteResult = await this.r2StorageService.deleteFile(r2FileKey);
-
-      if (!deleteResult.success) {
-        this.logger.warn(
-          `Failed to delete R2 file: ${r2FileKey}`,
-          deleteResult.error,
+      if (storageType === 'cloudflare_images') {
+        this.logger.log(
+          `Deleting gallery item from Cloudflare Images: ${storageKey}`,
         );
-        // Don't throw - file might already be deleted or not exist
+        return await this.cloudflareImagesService.deleteImage(storageKey);
       } else {
-        this.logger.log(`Successfully deleted: ${r2FileKey}`);
+        this.logger.log(`Deleting gallery item from R2: ${storageKey}`);
+        const deleteResult = await this.r2StorageService.deleteFile(storageKey);
+
+        if (!deleteResult.success) {
+          this.logger.warn(
+            `Failed to delete R2 file: ${storageKey}`,
+            deleteResult.error,
+          );
+          return false;
+        } else {
+          this.logger.log(`Successfully deleted from R2: ${storageKey}`);
+          return true;
+        }
       }
     } catch (error) {
-      this.logger.error(`Error deleting R2 file: ${r2FileKey}`, error);
-      // Don't throw - allow database cleanup to proceed
+      this.logger.error(`Error deleting from ${storageType}:`, error);
+      return false;
     }
   }
 

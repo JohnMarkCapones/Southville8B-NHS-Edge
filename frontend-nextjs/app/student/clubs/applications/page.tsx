@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useState, useEffect, useMemo } from "react"
-import { getUserClubFormResponses, generateClubSlug } from "@/lib/api/endpoints/clubs"
+import { getUserClubFormResponses, withdrawClubApplication, generateClubSlug } from "@/lib/api/endpoints/clubs"
 import type { ClubFormResponse } from "@/lib/api/types/clubs"
 import { useToast } from "@/hooks/use-toast"
 
@@ -40,14 +40,16 @@ export default function MyApplicationsPage() {
   const { toast } = useToast()
   const [myApplications, setMyApplications] = useState<ClubFormResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
+  const [selectedApplication, setSelectedApplication] = useState<number | null>(null)
 
   // Fetch applications
   useEffect(() => {
     const fetchApplications = async () => {
       setLoading(true)
       try {
-        const response = await getUserClubFormResponses()
-        setMyApplications(response.data || [])
+        const responses = await getUserClubFormResponses()
+        setMyApplications(responses || [])
       } catch (error) {
         console.error('Error fetching applications:', error)
         toast({
@@ -63,12 +65,79 @@ export default function MyApplicationsPage() {
     fetchApplications()
   }, [toast])
 
-  const stats = useMemo(() => ({
-    total: myApplications.length,
-    pending: myApplications.filter((app) => app.status === "pending").length,
-    approved: myApplications.filter((app) => app.status === "approved").length,
-    rejected: myApplications.filter((app) => app.status === "rejected").length,
-  }), [myApplications])
+  const stats = useMemo(() => {
+    const withdrawnCount = myApplications.filter((app) => 
+      app.status === 'rejected' && app.review_notes === 'Application withdrawn by student'
+    ).length;
+    
+    return {
+      total: myApplications.length,
+      pending: myApplications.filter((app) => app.status === "pending").length,
+      approved: myApplications.filter((app) => app.status === "approved").length,
+      rejected: myApplications.filter((app) => 
+        app.status === "rejected" && app.review_notes !== 'Application withdrawn by student'
+      ).length,
+      withdrawn: withdrawnCount,
+    }
+  }, [myApplications])
+
+  // Transform backend data to display format
+  const displayApplications = useMemo(() => {
+    return myApplications.map((app: any) => {
+      // Check if application was withdrawn by student
+      const isWithdrawn = app.status === 'rejected' && 
+        app.review_notes === 'Application withdrawn by student';
+      
+      return {
+        id: app.id,
+        clubName: app.form?.club?.name || 'Unknown Club',
+        clubId: app.form?.club?.id,
+        clubSlug: app.form?.club?.name ? generateClubSlug(app.form.club.name) : '',
+        formName: app.form?.name || 'Application Form',
+        appliedDate: app.created_at,
+        status: isWithdrawn ? 'withdrawn' : app.status,
+        advisor: app.form?.club?.advisor?.full_name || 'N/A',
+        advisorEmail: app.form?.club?.advisor?.email,
+        lastUpdated: app.updated_at,
+        reviewedDate: app.reviewed_at,
+        reviewedBy: app.reviewed_by_user?.full_name,
+        reviewNotes: app.review_notes,
+        answers: app.answers || [],
+      }
+    })
+  }, [myApplications])
+
+  const handleWithdrawClick = (applicationId: number) => {
+    setSelectedApplication(applicationId)
+    setWithdrawDialogOpen(true)
+  }
+
+  const handleWithdrawConfirm = async () => {
+    if (selectedApplication) {
+      try {
+        await withdrawClubApplication(selectedApplication.toString())
+        
+        // Refresh applications list
+        const responses = await getUserClubFormResponses()
+        setMyApplications(responses || [])
+        
+        toast({
+          title: "Application Withdrawn",
+          description: "Your club application has been successfully withdrawn.",
+        })
+      } catch (error) {
+        console.error('Error withdrawing application:', error)
+        toast({
+          title: "Error",
+          description: "Failed to withdraw application. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setWithdrawDialogOpen(false)
+        setSelectedApplication(null)
+      }
+    }
+  }
 
   // Loading state
   if (loading) {
@@ -177,34 +246,18 @@ export default function MyApplicationsPage() {
             Interview Scheduled
           </Badge>
         )
+      case "withdrawn":
+        return (
+          <Badge className="bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-900/30 dark:text-gray-300">
+            <XCircle className="w-3 h-3 mr-1" />
+            Withdrawn
+          </Badge>
+        )
       default:
         return null
     }
   }
 
-  const stats = {
-    total: myApplications.length,
-    pending: myApplications.filter((app) => app.status === "pending").length,
-    approved: myApplications.filter((app) => app.status === "approved").length,
-    rejected: myApplications.filter((app) => app.status === "rejected").length,
-  }
-
-  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
-  const [selectedApplication, setSelectedApplication] = useState<number | null>(null)
-
-  const handleWithdrawClick = (applicationId: number) => {
-    setSelectedApplication(applicationId)
-    setWithdrawDialogOpen(true)
-  }
-
-  const handleWithdrawConfirm = () => {
-    if (selectedApplication) {
-      console.log("[v0] Withdrawing application:", selectedApplication)
-      // TODO: Connect to backend API
-      setWithdrawDialogOpen(false)
-      setSelectedApplication(null)
-    }
-  }
 
   return (
     <StudentLayout>
@@ -218,7 +271,7 @@ export default function MyApplicationsPage() {
                 <h1 className="text-4xl font-bold mb-2">My Club Applications</h1>
                 <p className="text-white/90 text-lg">Track the status of your club membership applications</p>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold">{stats.total}</div>
                   <div className="text-sm text-white/80">Total</div>
@@ -235,14 +288,19 @@ export default function MyApplicationsPage() {
                   <div className="text-2xl font-bold">{stats.rejected}</div>
                   <div className="text-sm text-white/80">Rejected</div>
                 </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold">{stats.withdrawn}</div>
+                  <div className="text-sm text-white/80">Withdrawn</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Applications List */}
-        <div className="space-y-6">
-          {myApplications.map((application) => (
+        {/* Applications List or Empty State */}
+        {displayApplications.length > 0 ? (
+          <div className="space-y-6">
+            {displayApplications.map((application) => (
             <Card
               key={application.id}
               className="border-2 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50"
@@ -258,7 +316,7 @@ export default function MyApplicationsPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         {getStatusBadge(application.status)}
                         <Badge variant="outline" className="text-xs">
-                          {application.clubCategory}
+                          {application.formName}
                         </Badge>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           Applied: {new Date(application.appliedDate).toLocaleDateString()}
@@ -281,11 +339,11 @@ export default function MyApplicationsPage() {
                   <Progress
                     value={
                       application.status === "pending"
-                        ? 33
-                        : application.status === "interview"
-                          ? 66
-                          : application.status === "approved"
-                            ? 100
+                        ? 50
+                        : application.status === "approved"
+                          ? 100
+                          : application.status === "withdrawn"
+                            ? 0
                             : 0
                     }
                     className="h-2"
@@ -307,8 +365,7 @@ export default function MyApplicationsPage() {
                           Application Under Review
                         </p>
                         <p className="text-sm text-amber-600 dark:text-amber-400">
-                          Your application is being reviewed by {application.advisor}. Estimated review time:{" "}
-                          {application.estimatedReview}
+                          Your application is being reviewed by {application.advisor}. You will be notified once a decision is made.
                         </p>
                       </div>
                     </div>
@@ -323,14 +380,16 @@ export default function MyApplicationsPage() {
                         <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-1">
                           Congratulations! Application Approved
                         </p>
-                        <p className="text-sm text-green-600 dark:text-green-400 mb-2">
-                          Approved by {application.approvedBy} on{" "}
-                          {new Date(application.reviewedDate!).toLocaleDateString()}
-                        </p>
-                        {application.nextSteps && (
+                        {application.reviewedDate && (
+                          <p className="text-sm text-green-600 dark:text-green-400 mb-2">
+                            Approved {application.reviewedBy ? `by ${application.reviewedBy}` : ''} on{" "}
+                            {new Date(application.reviewedDate).toLocaleDateString()}
+                          </p>
+                        )}
+                        {application.reviewNotes && (
                           <div className="bg-white dark:bg-gray-800 p-3 rounded-lg mt-2">
-                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Next Steps:</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{application.nextSteps}</p>
+                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Feedback:</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{application.reviewNotes}</p>
                           </div>
                         )}
                       </div>
@@ -346,19 +405,15 @@ export default function MyApplicationsPage() {
                         <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-1">
                           Application Not Approved
                         </p>
-                        <p className="text-sm text-red-600 dark:text-red-400 mb-2">
-                          Reviewed on {new Date(application.reviewedDate!).toLocaleDateString()}
-                        </p>
-                        {application.rejectionReason && (
+                        {application.reviewedDate && (
+                          <p className="text-sm text-red-600 dark:text-red-400 mb-2">
+                            Reviewed on {new Date(application.reviewedDate).toLocaleDateString()}
+                          </p>
+                        )}
+                        {application.reviewNotes && (
                           <div className="bg-white dark:bg-gray-800 p-3 rounded-lg mt-2">
                             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Feedback:</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{application.rejectionReason}</p>
-                          </div>
-                        )}
-                        {application.canReapply && (
-                          <div className="mt-3 flex items-center text-sm text-blue-600 dark:text-blue-400">
-                            <RefreshCw className="w-4 h-4 mr-1" />
-                            You can reapply starting {new Date(application.reapplyDate!).toLocaleDateString()}
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{application.reviewNotes}</p>
                           </div>
                         )}
                       </div>
@@ -366,26 +421,17 @@ export default function MyApplicationsPage() {
                   </div>
                 )}
 
-                {application.status === "interview" && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                {application.status === "withdrawn" && (
+                  <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg">
                     <div className="flex items-start space-x-3">
-                      <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <XCircle className="w-5 h-5 text-gray-600 dark:text-gray-400 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1">
-                          Interview Scheduled
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                          Application Withdrawn
                         </p>
-                        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg mt-2 space-y-2">
-                          <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
-                            <Calendar className="w-4 h-4 mr-2 text-blue-500" />
-                            <span className="font-medium">
-                              {new Date(application.interviewDate!).toLocaleDateString()} at {application.interviewTime}
-                            </span>
-                          </div>
-                          <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
-                            <AlertCircle className="w-4 h-4 mr-2 text-blue-500" />
-                            <span>Location: {application.interviewLocation}</span>
-                          </div>
-                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          You have withdrawn this application. You can reapply to this club in the future if you change your mind.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -398,8 +444,8 @@ export default function MyApplicationsPage() {
                     <p className="text-sm text-gray-600 dark:text-gray-400">{application.advisor}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Your Experience</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{application.experience}</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Application Form</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{application.formName}</p>
                   </div>
                 </div>
 
@@ -432,22 +478,23 @@ export default function MyApplicationsPage() {
                       Withdraw
                     </Button>
                   )}
-                  {application.status === "rejected" && application.canReapply && (
-                    <Link href={`/student/clubs/${application.clubSlug}/join`}>
-                      <Button className="bg-indigo-600 hover:bg-indigo-700">
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Reapply
-                      </Button>
-                    </Link>
+                  {application.status === "withdrawn" && (
+                    <Button
+                      variant="outline"
+                      className="border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-900/20 bg-transparent"
+                      disabled
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Withdrawn
+                    </Button>
                   )}
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {myApplications.length === 0 && (
+            ))}
+          </div>
+        ) : (
+          // Empty State
           <Card className="border-dashed border-2">
             <CardContent className="p-12 text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">

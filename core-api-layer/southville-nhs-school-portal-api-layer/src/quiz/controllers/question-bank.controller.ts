@@ -99,6 +99,18 @@ export class QuestionBankController {
     description: 'Filter by question type',
   })
   @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search in question text (case-insensitive)',
+  })
+  @ApiQuery({
+    name: 'tags',
+    required: false,
+    type: String,
+    description: 'Filter by tags (comma-separated, e.g., "math,algebra")',
+  })
+  @ApiQuery({
     name: 'sortBy',
     required: false,
     enum: ['created_at', 'question_text', 'difficulty'],
@@ -123,10 +135,21 @@ export class QuestionBankController {
     @Query('topic') topic?: string,
     @Query('difficulty') difficulty?: string,
     @Query('questionType') questionType?: string,
+    @Query('search') search?: string,
+    @Query('tags') tags?: string,
     @Query('sortBy') sortBy: string = 'created_at',
     @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
   ) {
     this.logger.log('Fetching question bank');
+
+    // Parse tags from comma-separated string to array
+    const tagsArray = tags
+      ? tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0)
+      : undefined;
+
     return this.questionBankService.findAll({
       page,
       limit,
@@ -135,6 +158,8 @@ export class QuestionBankController {
       topic,
       difficulty,
       questionType,
+      search,
+      tags: tagsArray,
       sortBy,
       sortOrder,
     });
@@ -205,5 +230,40 @@ export class QuestionBankController {
     this.logger.log(`Deleting question ${id}`);
     await this.questionBankService.remove(id, user.id);
     return { message: 'Question deleted successfully' };
+  }
+
+  @Get(':id/usage')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get usage statistics for a question' })
+  @ApiResponse({
+    status: 200,
+    description: 'Usage statistics retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        usage_count: { type: 'number', example: 5 },
+        quizzes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              quiz_id: { type: 'string', format: 'uuid' },
+              title: { type: 'string' },
+              status: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only view usage for your own questions',
+  })
+  @ApiResponse({ status: 404, description: 'Question not found' })
+  async getUsageStats(@Param('id') id: string, @AuthUser() user: SupabaseUser) {
+    this.logger.log(`Getting usage statistics for question ${id}`);
+    return this.questionBankService.getUsageStats(id, user.id);
   }
 }
