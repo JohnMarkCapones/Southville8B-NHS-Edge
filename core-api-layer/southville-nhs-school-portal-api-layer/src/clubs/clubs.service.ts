@@ -637,6 +637,8 @@ export class ClubsService {
           'Failed to create notifications for club join:',
           error,
         );
+      }
+
       // 🎯 Award points for joining a club
       try {
         await this.pointsService.awardPoints({
