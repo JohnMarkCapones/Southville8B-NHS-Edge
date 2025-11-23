@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "npm exec -- nest build",
+    "build": "./node_modules/.bin/nest build || npx @nestjs/cli build || npm run build:tsc",
+    "build:tsc": "tsc -p tsconfig.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
