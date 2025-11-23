@@ -410,7 +410,7 @@ export class ModulesService {
           sections:section_modules(
             section:sections!section_modules_section_id_fkey(id, name, grade_level)
           )
-        `);
+        `, { count: 'exact' });
 
       // Apply filters
       if (!includeDeleted) {

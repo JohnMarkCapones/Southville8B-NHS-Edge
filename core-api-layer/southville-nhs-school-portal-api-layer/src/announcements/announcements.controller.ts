@@ -13,6 +13,8 @@ import {
   DefaultValuePipe,
   ParseBoolPipe,
   Logger,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,6 +36,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/dto/create-user.dto';
 import { AuthUser } from '../auth/auth-user.decorator';
 import { AuditInterceptor } from './audit.interceptor';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Announcements')
 @Controller('announcements')
@@ -44,6 +48,10 @@ export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.ANNOUNCEMENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -231,6 +239,10 @@ export class AnnouncementsController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.ANNOUNCEMENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -262,12 +274,17 @@ export class AnnouncementsController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.ANNOUNCEMENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete announcement (Admin or Teacher if owner)' })
   @ApiResponse({
-    status: 200,
+    status: 204,
     description: 'Announcement deleted successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -279,10 +296,10 @@ export class AnnouncementsController {
   async remove(
     @Param('id') id: string,
     @AuthUser() user: any,
-  ): Promise<{ message: string }> {
+  ): Promise<Announcement> {
     this.logger.log(`Deleting announcement ${id} by user ${user.id}`);
-    await this.announcementsService.remove(id, user.id, user.role);
-    return { message: 'Announcement deleted successfully' };
+    // Return entity for audit logging, but HTTP response will be 204 No Content
+    return this.announcementsService.remove(id, user.id, user.role);
   }
 
   // Tag management endpoints

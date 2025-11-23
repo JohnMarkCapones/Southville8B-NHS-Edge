@@ -1181,20 +1181,20 @@ export function AllUsersManagementSection() {
 
   const filteredUsers = displayUsers.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === "all" || user.role.toLowerCase() === roleFilter
-    const matchesStatus = statusFilter === "all" || user.status.toLowerCase() === statusFilter
-    const matchesSubRole = subRoleFilter === "all" || user.subRole.toLowerCase().includes(subRoleFilter.toLowerCase())
+      (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesRole = roleFilter === "all" || (user.role || '').toLowerCase() === roleFilter
+    const matchesStatus = statusFilter === "all" || (user.status || '').toLowerCase() === statusFilter
+    const matchesSubRole = subRoleFilter === "all" || (user.subRole || '').toLowerCase().includes(subRoleFilter.toLowerCase())
 
     return matchesSearch && matchesRole && matchesStatus && matchesSubRole
   })
 
   const filteredArchivedUsers = archivedUsers.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(archivedSearchTerm.toLowerCase())
-    const matchesRole = archivedRoleFilter === "all" || user.role.toLowerCase() === archivedRoleFilter
+      (user.name || '').toLowerCase().includes(archivedSearchTerm.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(archivedSearchTerm.toLowerCase())
+    const matchesRole = archivedRoleFilter === "all" || (user.role || '').toLowerCase() === archivedRoleFilter
 
     return matchesSearch && matchesRole
   })

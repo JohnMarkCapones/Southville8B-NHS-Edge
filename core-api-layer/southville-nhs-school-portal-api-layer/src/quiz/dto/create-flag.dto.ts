@@ -11,6 +11,7 @@ export enum FlagType {
   IP_CHANGE = 'ip_change',
   MULTIPLE_SESSIONS = 'multiple_sessions',
   SUSPICIOUS_TIMING = 'suspicious_timing',
+  SCREENSHOT_ATTEMPT = 'screenshot_attempt',
   OTHER = 'other',
 }
 

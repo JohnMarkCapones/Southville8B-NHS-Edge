@@ -17,6 +17,23 @@ import { useEvents } from "@/hooks/useEvents"
 import { EventStatus } from "@/lib/api/types/events"
 import { useStudentActivities } from "@/hooks/useStudentActivities"
 import {
+  PointsCounter,
+  LevelProgressBar,
+  BadgeShowcaseCompact,
+  LeaderboardWidget,
+  StreakCalendar,
+} from "@/components/gamification"
+import {
+  getMyProfile,
+  getMyBadges,
+  getLeaderboard,
+  formatPoints,
+  getLevelTitle,
+  type GamificationProfile,
+  type MyBadgesResponse,
+  type LeaderboardResponse,
+} from "@/lib/api/endpoints/gamification"
+import {
   BookOpen,
   CalendarIcon,
   Clock,
@@ -40,6 +57,8 @@ import {
   CheckSquare,
   Coffee,
   BarChart3,
+  Zap,
+  Star,
 } from "lucide-react"
 
 // Separate component for live clock to prevent parent re-renders
@@ -78,6 +97,12 @@ export default function StudentDashboard() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [activeProductivityTool, setActiveProductivityTool] = useState<string | null>(null)
 
+  // Gamification state
+  const [gamificationProfile, setGamificationProfile] = useState<GamificationProfile | null>(null)
+  const [badgesData, setBadgesData] = useState<MyBadgesResponse | null>(null)
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardResponse | null>(null)
+  const [isLoadingGamification, setIsLoadingGamification] = useState(true)
+
   // Fetch current user data
   const { data: user, isLoading, isError} = useUser()
 
@@ -97,6 +122,29 @@ export default function StudentDashboard() {
     limit: 10,
     page: 1,
   })
+
+  // Fetch gamification data
+  useEffect(() => {
+    const fetchGamificationData = async () => {
+      setIsLoadingGamification(true)
+      try {
+        const [profile, badges, leaderboard] = await Promise.all([
+          getMyProfile(),
+          getMyBadges('all'),
+          getLeaderboard({ scope: 'global', limit: 10 }),
+        ])
+        setGamificationProfile(profile)
+        setBadgesData(badges)
+        setLeaderboardData(leaderboard)
+      } catch (error) {
+        console.error('Error fetching gamification data:', error)
+      } finally {
+        setIsLoadingGamification(false)
+      }
+    }
+
+    fetchGamificationData()
+  }, [])
 
   const sampleAnnouncements: AnnouncementData[] = [
     {
@@ -586,9 +634,9 @@ export default function StudentDashboard() {
               </div>
               <div className="hidden md:block ml-6">
                 <img
-                  src="/images/design-mode/memphis-studying-geography-with-a-globe%281%29(1).png"
+                  src="/images/design-mode/memphis-studying-geography-with-a-globe(1).png"
                   alt="Educational globe with graduation cap"
-                  className="w-36 h-36 object-contain transform hover:scale-110 transition-transform duration-300"
+                  className="w-44 h-44 object-contain transform hover:scale-110 transition-transform duration-300"
                 />
               </div>
             </div>
@@ -608,10 +656,63 @@ export default function StudentDashboard() {
           ))}
         </div>
 
-        {/* Enhanced Stats Grid */}
+        {/* Enhanced Stats Grid - Gamification */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {/* Points Card */}
           <Card
-            className="bg-gradient-to-br from-green-500 to-emerald-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            className="bg-gradient-to-br from-yellow-500 to-amber-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            onMouseEnter={() => setHoveredCard("points")}
+            onMouseLeave={() => setHoveredCard(null)}
+            onClick={() => router.push("/student/ranking")}
+          >
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <CardContent className="p-4 sm:p-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-yellow-100 text-xs sm:text-sm">Total Points</p>
+                  <p className="text-2xl sm:text-3xl font-bold">
+                    {isLoadingGamification ? "..." : formatPoints(gamificationProfile?.points.total || 0)}
+                  </p>
+                  <p className="text-xs text-yellow-200 mt-1">
+                    Rank #{gamificationProfile?.ranks.global || "-"}
+                  </p>
+                </div>
+                <Zap
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-yellow-200 transition-transform duration-300 ${hoveredCard === "points" ? "rotate-12 scale-110" : ""}`}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Level Card */}
+          <Card
+            className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            onMouseEnter={() => setHoveredCard("level")}
+            onMouseLeave={() => setHoveredCard(null)}
+            onClick={() => router.push("/student/achievements")}
+          >
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <CardContent className="p-4 sm:p-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-xs sm:text-sm">Level</p>
+                  <p className="text-2xl sm:text-3xl font-bold">
+                    {isLoadingGamification ? "..." : gamificationProfile?.level.current || 1}
+                  </p>
+                  <p className="text-xs text-purple-200 mt-1">
+                    {gamificationProfile ? getLevelTitle(gamificationProfile.level.current) : "Novice"}
+                  </p>
+                </div>
+                <Trophy
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-purple-200 transition-transform duration-300 ${hoveredCard === "level" ? "rotate-12 scale-110" : ""}`}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Streak Card */}
+          <Card
+            className="bg-gradient-to-br from-orange-500 to-red-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
             onMouseEnter={() => setHoveredCard("streak")}
             onMouseLeave={() => setHoveredCard(null)}
           >
@@ -619,12 +720,42 @@ export default function StudentDashboard() {
             <CardContent className="p-4 sm:p-6 relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-100 text-xs sm:text-sm">Study Streak</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{studyStreak.current} days</p>
-                  <p className="text-xs text-green-200 mt-1">Best: {studyStreak.best} days</p>
+                  <p className="text-orange-100 text-xs sm:text-sm">Activity Streak</p>
+                  <p className="text-2xl sm:text-3xl font-bold">
+                    {isLoadingGamification ? "..." : gamificationProfile?.streak.current || 0} days
+                  </p>
+                  <p className="text-xs text-orange-200 mt-1">
+                    Best: {gamificationProfile?.streak.longest || 0} days
+                  </p>
                 </div>
                 <Flame
-                  className={`w-6 h-6 sm:w-8 sm:h-8 text-orange-300 transition-transform duration-300 ${hoveredCard === "streak" ? "rotate-12 scale-110" : ""}`}
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-orange-200 transition-transform duration-300 ${hoveredCard === "streak" ? "rotate-12 scale-110" : ""}`}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Badges Card */}
+          <Card
+            className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white transform transition-all duration-300 hover:scale-105 cursor-pointer relative overflow-hidden touch-manipulation"
+            onMouseEnter={() => setHoveredCard("badges")}
+            onMouseLeave={() => setHoveredCard(null)}
+            onClick={() => router.push("/student/achievements")}
+          >
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <CardContent className="p-4 sm:p-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-xs sm:text-sm">Badges Earned</p>
+                  <p className="text-2xl sm:text-3xl font-bold">
+                    {isLoadingGamification ? "..." : gamificationProfile?.badges.total || 0}
+                  </p>
+                  <p className="text-xs text-blue-200 mt-1">
+                    {badgesData ? `${badgesData.earned.length}/${badgesData.earned.length + badgesData.unearned.length} collected` : "Loading..."}
+                  </p>
+                </div>
+                <Star
+                  className={`w-6 h-6 sm:w-8 sm:h-8 text-blue-200 transition-transform duration-300 ${hoveredCard === "badges" ? "rotate-12 scale-110" : ""}`}
                 />
               </div>
             </CardContent>
@@ -1158,6 +1289,129 @@ export default function StudentDashboard() {
             </Card>
           </div>
         </div>
+
+        {/* Gamification Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Level Progress */}
+          <Card className="lg:col-span-1 hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center text-base">
+                <Trophy className="w-5 h-5 mr-2 text-purple-600" />
+                Your Progress
+              </CardTitle>
+              <CardDescription>Level up by earning points and completing activities</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingGamification ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-20 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              ) : gamificationProfile ? (
+                <LevelProgressBar
+                  level={gamificationProfile.level.current}
+                  currentXP={gamificationProfile.level.currentXP}
+                  nextLevelXP={gamificationProfile.level.nextLevelXP}
+                  progress={gamificationProfile.level.progress}
+                  title={gamificationProfile.level.title}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">No data available</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Badges */}
+          <Card className="lg:col-span-2 hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center text-base">
+                    <Star className="w-5 h-5 mr-2 text-blue-600" />
+                    Recent Badges
+                  </CardTitle>
+                  <CardDescription>Your latest achievements</CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/student/achievements")}
+                >
+                  View All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingGamification ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-32 bg-gray-200 rounded animate-pulse"></div>
+                  ))}
+                </div>
+              ) : badgesData && badgesData.earned.length > 0 ? (
+                <BadgeShowcaseCompact
+                  badges={[...badgesData.earned, ...badgesData.unearned]}
+                  maxDisplay={6}
+                  onViewAll={() => router.push("/student/achievements")}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Star className="w-12 h-12 text-gray-300 mb-3" />
+                  <p className="text-sm text-muted-foreground mb-1">No badges earned yet</p>
+                  <p className="text-xs text-muted-foreground">Complete activities to earn your first badge!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Leaderboard Widget */}
+        <Card className="hover:shadow-lg transition-shadow duration-300">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center text-base">
+                  <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
+                  Top Performers
+                </CardTitle>
+                <CardDescription>See how you rank among your peers</CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/student/ranking")}
+              >
+                View Full Rankings
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingGamification ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-100 rounded animate-pulse">
+                    <div className="h-8 w-8 bg-gray-300 rounded-full"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : leaderboardData && leaderboardData.entries.length > 0 ? (
+              <LeaderboardWidget
+                entries={leaderboardData.entries}
+                maxEntries={5}
+                onViewAll={() => router.push("/student/ranking")}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <Trophy className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                <p className="text-sm text-muted-foreground">No rankings available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </StudentLayout>
   )

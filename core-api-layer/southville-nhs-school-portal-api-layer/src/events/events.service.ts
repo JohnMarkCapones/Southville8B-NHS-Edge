@@ -1023,11 +1023,20 @@ export class EventsService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<Event> {
     const supabase = this.getSupabaseClient();
 
     try {
-      await this.findOne(id); // Verify event exists
+      // Fetch full event details to return for audit logging
+      const { data: event, error: fetchError} = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !event) {
+        throw new NotFoundException(`Event with ID ${id} not found`);
+      }
 
       const { error } = await supabase.from('events').delete().eq('id', id);
 
@@ -1041,6 +1050,9 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event deleted successfully: ${id}`);
+
+      // Return the entity so audit interceptor can capture the title
+      return event;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -1050,12 +1062,14 @@ export class EventsService {
     }
   }
 
-  async softDelete(id: string, userId: string, reason?: string): Promise<void> {
+  async softDelete(id: string, userId: string, reason?: string): Promise<Event> {
     const supabase = this.getSupabaseClient();
 
     try {
       // Get event data before soft-deleting
       const eventData = await this.findOne(id);
+      // Fetch event data for audit logging
+      const event = await this.findOne(id);
 
       const { error } = await supabase
         .from('events')
@@ -1095,6 +1109,8 @@ export class EventsService {
           `Created notifications for ${targetUserIds.length} users about event cancellation: ${eventData.title}`,
         );
       }
+      // Return the event for audit logging
+      return event;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

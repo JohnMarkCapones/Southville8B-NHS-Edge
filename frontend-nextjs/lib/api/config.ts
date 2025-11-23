@@ -86,7 +86,7 @@ export const apiConfig: ApiConfig = {
 
 /**
  * Helper to build full API URL with versioning
- * 
+ *
  * @param endpoint - API endpoint path (e.g., "/users/me")
  * @returns Full URL (e.g., "http://localhost:3004/api/v1/users/me")
  */

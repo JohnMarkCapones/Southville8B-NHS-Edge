@@ -318,14 +318,14 @@ export class StudentsService {
 
       return {
         success: true,
-        user: {
-          id: authUser.user.id,
-          email: email,
-          fullName: `${createStudentDto.firstName} ${createStudentDto.lastName}`,
-          role: 'Student',
-          userType: 'student',
-          status: 'Active',
-        },
+        // Include student_id at top level for audit logging
+        student_id: student.student_id,
+        id: authUser.user.id,
+        email: email,
+        fullName: `${createStudentDto.firstName} ${createStudentDto.lastName}`,
+        role: 'Student',
+        userType: 'student',
+        status: 'Active',
         specificRecord: student,
         message: 'Student created successfully',
       };
@@ -532,13 +532,13 @@ export class StudentsService {
     return student;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<any> {
     const supabase = this.supabaseService.getServiceClient();
 
-    // Get student to find user_id
+    // Get full student data for audit logging
     const { data: student } = await supabase
       .from('students')
-      .select('user_id')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -559,6 +559,9 @@ export class StudentsService {
       this.logger.error('Error removing student:', error);
       throw new InternalServerErrorException('Failed to remove student');
     }
+
+    // Return the student for audit logging
+    return student;
   }
 
   // Snake to camel case mapper for emergency contacts

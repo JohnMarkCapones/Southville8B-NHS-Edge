@@ -1152,7 +1152,7 @@ export default function TeacherQuizPage() {
 
   const copyQuizLink = () => {
     if (shareQuiz) {
-      const quizLink = `${window.location.origin}/quiz/${shareQuiz.id}`
+      const quizLink = `${window.location.origin}/student/quiz/${shareQuiz.id}`
       navigator.clipboard.writeText(quizLink)
       console.log("[v0] Copy button clicked, showing toast") // Added debug log
       toast({
@@ -1166,7 +1166,7 @@ export default function TeacherQuizPage() {
 
   const getQRCodeUrl = () => {
     if (shareQuiz) {
-      const quizLink = `${window.location.origin}/quiz/${shareQuiz.id}`
+      const quizLink = `${window.location.origin}/student/quiz/${shareQuiz.id}`
       return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(quizLink)}`
     }
     return ""
@@ -3864,7 +3864,7 @@ export default function TeacherQuizPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={shareQuiz ? `${window.location.origin}/quiz/${shareQuiz.id}` : ""}
+                  value={shareQuiz ? `${window.location.origin}/student/quiz/${shareQuiz.id}` : ""}
                   readOnly
                   className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-slate-900 dark:text-white"
                 />

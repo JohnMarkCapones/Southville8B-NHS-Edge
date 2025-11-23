@@ -223,7 +223,11 @@ export function HybridModeRenderer({
                     {question.required && <span className="text-red-500 text-sm">*</span>}
                     {responses[question.id] && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                   </div>
-                  <CardTitle className="text-lg">{question.title}</CardTitle>
+                  <CardTitle className="text-lg">
+                    {question.type === 'fill_in_blank' 
+                      ? question.title.replace(/{{blank_\d+}}/g, '__________')
+                      : question.title}
+                  </CardTitle>
                   {question.description && <p className="text-sm text-muted-foreground mt-1">{question.description}</p>}
                 </div>
               </div>

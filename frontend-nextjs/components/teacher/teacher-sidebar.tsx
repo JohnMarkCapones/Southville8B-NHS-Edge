@@ -9,7 +9,6 @@ import {
   Users,
   BookOpen,
   Calendar,
-  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -50,7 +49,7 @@ const sidebarItems = [
   },
   {
     title: "Schedule",
-    href: "/teacher/schedule",
+    href: "/teacher/class-schedule",
     icon: Calendar,
     id: "schedule",
   },
@@ -95,12 +94,6 @@ const sidebarItems = [
     href: "/teacher/news-team",
     icon: UserCog,
     id: "news-team",
-  },
-  {
-    title: "Analytics",
-    href: "/teacher/analytics",
-    icon: BarChart3,
-    id: "analytics",
   },
   {
     title: "Settings",

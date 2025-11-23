@@ -19,18 +19,57 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   const path = `/guess/news/${article.slug}`
-  const title = `${article.title} | News`
+  const fullUrl = absoluteUrl(path)
+  const title = `${article.title} | Southville 8B NHS News`
   const description = article.excerpt || article.content.replace(/<[^>]*>/g, '').substring(0, 160) + '...'
-  const ogImage = `/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(
-    `Published: ${new Date(article.date).toLocaleDateString()}`,
-  )}`
+  
+  // Use article image if available, otherwise use OG image generator
+  const imageUrl = article.image 
+    ? absoluteUrl(article.image)
+    : absoluteUrl(`/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(
+      `Published: ${new Date(article.date).toLocaleDateString()}`,
+    )}`)
+
+  // Get author name
+  const authorName = typeof article.author === 'string' 
+    ? article.author 
+    : article.author?.name || 'Southville 8B NHS'
+
+  // Get category
+  const category = typeof article.category === 'string' 
+    ? article.category 
+    : article.category?.name || 'News'
 
   return {
     title,
     description,
-    alternates: { canonical: path },
-    openGraph: { title, description, url: path, images: [{ url: ogImage }] },
-    twitter: { card: "summary_large_image", title, description, images: [ogImage] },
+    alternates: { canonical: fullUrl },
+    openGraph: {
+      type: 'article',
+      title,
+      description,
+      url: fullUrl,
+      siteName: 'Southville 8B National High School',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: article.title,
+        }
+      ],
+      publishedTime: article.date,
+      authors: [authorName],
+      section: category,
+      tags: article.tags || [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+      creator: authorName,
+    },
   }
 }
 

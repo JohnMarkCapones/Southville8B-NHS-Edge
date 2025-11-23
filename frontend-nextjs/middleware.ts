@@ -154,10 +154,12 @@ export async function middleware(request: NextRequest) {
     // 1. Next.js internal routes (/_next)
     // 2. Next.js Server Actions (have built-in protection)
     // 3. Auth endpoints that handle their own CSRF
-    const skipCSRF = pathname.startsWith('/_next') || 
+    // 4. Public API routes (bug-report, etc.)
+    const skipCSRF = pathname.startsWith('/_next') ||
                      isServerAction ||
                      pathname.startsWith('/api/auth/login') ||
-                     pathname === '/api/auth/callback';
+                     pathname === '/api/auth/callback' ||
+                     pathname === '/api/bug-report';
 
     if (!skipCSRF) {
       if (!csrfCookie || !csrfHeader) {
@@ -272,6 +274,7 @@ export async function middleware(request: NextRequest) {
     '/api/test-academic-calendar', // Academic Calendar API test endpoint
     '/api/test-student-rankings', // Student Rankings API test endpoint
     '/api/test-public-rankings', // Public Rankings API test endpoint
+    '/api/bug-report',  // Public bug report endpoint
     '/favicon.ico',     // Favicon
     '/api/announcements', // Public announcements (if any)
     '/videos',          // Public video files
@@ -332,7 +335,7 @@ export async function middleware(request: NextRequest) {
       if (expiryTimestamp <= now) {
         console.log(`[Middleware] ❌ Token expired for ${pathname}`);
         
-        // Token expired - redirect to login
+        // Token expired - redirect to portal with role parameter
         if (pathname.startsWith('/api/')) {
           return NextResponse.json(
             { 
@@ -343,10 +346,19 @@ export async function middleware(request: NextRequest) {
           );
         }
 
-        const loginUrl = new URL('/guess/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        loginUrl.searchParams.set('session_expired', '1');
-        return NextResponse.redirect(loginUrl);
+        // For page routes, redirect to portal with role parameter
+        const portalUrl = new URL('/guess/portal', request.url);
+        
+        // Determine role based on the path being accessed
+        let role = 'student'; // default
+        if (pathname.startsWith('/teacher')) {
+          role = 'teacher';
+        } else if (pathname.startsWith('/admin') || pathname.startsWith('/superadmin')) {
+          role = 'admin';
+        }
+        
+        portalUrl.searchParams.set('role', role);
+        return NextResponse.redirect(portalUrl);
       }
 
       // Token is valid but will expire soon (within 5 minutes)

@@ -43,6 +43,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  RefreshCw,
 } from "lucide-react"
 
 const NewsPage = () => {
@@ -599,24 +600,12 @@ const NewsPage = () => {
 
   const confirmPermanentDeleteArticle = () => {
     if (permanentDeleteConfirmation.article) {
-      setArchivedArticles((prev) => prev.filter((a) => a.id !== permanentDeleteConfirmation.article.id))
-
+      // TODO: Implement permanent delete API endpoint
       toast({
-        title: "✅ Article Permanently Deleted",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              {permanentDeleteConfirmation.article.title} has been permanently removed.
-            </p>
-            <div className="flex items-center gap-1 text-xs text-red-600 bg-red-500/10 px-2 py-1 rounded-md w-fit">
-              <AlertTriangle className="w-3 h-3" />
-              <span>This action cannot be undone</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
+        title: "Not Implemented",
+        description: "Permanent delete functionality is not yet available. Please contact the development team.",
+        variant: "destructive",
         duration: 4000,
-        className: "border-red-500/20 bg-red-500/5 backdrop-blur-md",
       })
 
       setPermanentDeleteConfirmation({ isOpen: false, article: null })
@@ -1304,24 +1293,36 @@ const NewsPage = () => {
                 </CardDescription>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowArchivedSection(!showArchivedSection)}
-              className="border-border"
-            >
-              {showArchivedSection ? (
-                <>
-                  <ChevronUp className="w-4 h-4 mr-2" />
-                  Hide Archived
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4 mr-2" />
-                  Show Archived
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchArchived()}
+                className="border-border"
+                disabled={archivedLoading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${archivedLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowArchivedSection(!showArchivedSection)}
+                className="border-border"
+              >
+                {showArchivedSection ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-2" />
+                    Hide Archived
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-2" />
+                    Show Archived
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -1482,11 +1483,11 @@ const NewsPage = () => {
                         <TableCell className="text-muted-foreground">
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(article.deletedDate).toLocaleDateString()}
+                            {article.deletedAt ? new Date(article.deletedAt).toLocaleDateString() : 'N/A'}
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{article.deletedBy}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{article.deletionReason}</TableCell>
+                        <TableCell className="text-muted-foreground">{article.deletedBy || 'N/A'}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">-</TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1957,7 +1958,7 @@ const NewsPage = () => {
                       <p className="text-sm text-muted-foreground">by {restoreConfirmation.article.author}</p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Archive className="w-4 h-4" />
-                        <span>Archived: {new Date(restoreConfirmation.article.deletedDate).toLocaleDateString()}</span>
+                        <span>Archived: {restoreConfirmation.article.deletedAt ? new Date(restoreConfirmation.article.deletedAt).toLocaleDateString() : 'N/A'}</span>
                       </div>
                     </div>
                   </div>

@@ -3,6 +3,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { AuthModule } from '../auth/auth.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
+import { GamificationModule } from '../gamification/gamification.module';
 
 // Controllers
 import { QuizController } from './controllers/quiz.controller';
@@ -33,6 +34,7 @@ import { QuizAnalyticsService } from './services/quiz-analytics.service';
     AuthModule, // Import AuthModule to access AuthService and SupabaseAuthGuard
     SupabaseModule, // Import SupabaseModule to access SupabaseService
     ActivityMonitoringModule,
+    GamificationModule, // Import GamificationModule for points awards
     CacheModule.register({
       ttl: 300000, // 5 minutes default TTL
       max: 100, // Maximum number of items in cache

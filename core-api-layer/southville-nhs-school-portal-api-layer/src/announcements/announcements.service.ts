@@ -617,13 +617,13 @@ export class AnnouncementsService {
     }
   }
 
-  async remove(id: string, userId: string, userRole: string): Promise<void> {
+  async remove(id: string, userId: string, userRole: string): Promise<Announcement> {
     const supabase = this.getSupabaseClient();
 
-    // Fetch the announcement to check ownership
+    // Fetch the full announcement to check ownership AND to return for audit log
     const { data: announcement, error: fetchError } = await supabase
       .from('announcements')
-      .select('user_id')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -631,8 +631,11 @@ export class AnnouncementsService {
       throw new NotFoundException(`Announcement with ID ${id} not found`);
     }
 
-    // Check ownership: Teachers can only delete their own, Admins can delete any
-    if (userRole !== 'Admin' && announcement.user_id !== userId) {
+    // Check ownership: Teachers can only delete their own, Admins/SuperAdmins can delete any
+    this.logger.log(`Delete permission check - userRole: "${userRole}", userId: ${userId}, announcement.user_id: ${announcement.user_id}`);
+    const isAdmin = userRole === 'Admin' || userRole === 'SuperAdmin';
+    if (!isAdmin && announcement.user_id !== userId) {
+      this.logger.warn(`Delete forbidden - isAdmin: ${isAdmin}, userRole: "${userRole}"`);
       throw new ForbiddenException(
         'You can only delete your own announcements',
       );
@@ -656,6 +659,9 @@ export class AnnouncementsService {
     await this.cacheManager.del(`announcement:${id}`);
 
     this.logger.log(`Announcement deleted successfully: ${id}`);
+
+    // Return the entity so audit interceptor can capture the title
+    return announcement;
   }
 
   async getAnnouncementsForUser(

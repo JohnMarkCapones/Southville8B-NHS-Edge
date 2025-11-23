@@ -11,6 +11,7 @@ import type {
   UserProfileResponse,
   ChangePasswordRequest,
   ChangePasswordResponse,
+  RefreshTokenResponse,
 } from "../types";
 
 /**
@@ -61,6 +62,20 @@ export async function changePassword(
   data: ChangePasswordRequest
 ): Promise<ChangePasswordResponse> {
   return apiClient.post<ChangePasswordResponse>("/auth/change-password", data);
+}
+
+/**
+ * Refresh access token using refresh token
+ * Called by server action to get new tokens
+ */
+export async function refreshToken(
+  refresh_token: string
+): Promise<RefreshTokenResponse> {
+  return apiClient.post<RefreshTokenResponse>(
+    "/auth/refresh",
+    { refresh_token },
+    { requiresAuth: false } // Refresh doesn't require auth (token is expired)
+  );
 }
 
 /**

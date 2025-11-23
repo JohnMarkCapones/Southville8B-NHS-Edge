@@ -666,11 +666,12 @@ export class QuizService {
 
   /**
    * Delete a quiz (soft delete by archiving)
+   * @returns The deleted quiz (for audit logging)
    */
-  async deleteQuiz(quizId: string, teacherId: string): Promise<void> {
+  async deleteQuiz(quizId: string, teacherId: string): Promise<Quiz> {
     const supabase = this.supabaseService.getServiceClient();
 
-    // Verify ownership
+    // Verify ownership and get quiz details for audit log
     const quiz = await this.findQuizById(quizId);
     if (quiz.teacher_id !== teacherId) {
       throw new ForbiddenException('You can only delete your own quizzes');
@@ -693,6 +694,9 @@ export class QuizService {
     }
 
     this.logger.log(`Quiz archived successfully: ${quizId}`);
+
+    // Return the quiz for audit logging
+    return quiz;
   }
 
   /**

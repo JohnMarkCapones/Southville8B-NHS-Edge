@@ -38,6 +38,35 @@ export function NotificationBanner({
     return () => cancelAnimationFrame(id)
   }, [])
 
+  // Get colors based on type
+  const getTypeStyles = () => {
+    switch (type) {
+      case "info":
+        return {
+          bg: "bg-blue-600",
+          gradient: "linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%), radial-gradient(1.5px 1.5px at 8px 8px, rgba(255,255,255,0.14) 1px, transparent 1.6px)",
+        }
+      case "success":
+        return {
+          bg: "bg-green-600",
+          gradient: "linear-gradient(180deg, #16a34a 0%, #15803d 100%), radial-gradient(1.5px 1.5px at 8px 8px, rgba(255,255,255,0.14) 1px, transparent 1.6px)",
+        }
+      case "warning":
+        return {
+          bg: "bg-orange-500",
+          gradient: "linear-gradient(180deg, #f97316 0%, #ea580c 100%), radial-gradient(1.5px 1.5px at 8px 8px, rgba(255,255,255,0.14) 1px, transparent 1.6px)",
+        }
+      case "destructive":
+      default:
+        return {
+          bg: "bg-red-600",
+          gradient: "linear-gradient(180deg, #dc2626 0%, #b91c1c 100%), radial-gradient(1.5px 1.5px at 8px 8px, rgba(255,255,255,0.14) 1px, transparent 1.6px)",
+        }
+    }
+  }
+
+  const typeStyles = getTypeStyles()
+
   if (!rendered) return null
 
   return (
@@ -51,7 +80,7 @@ export function NotificationBanner({
         // Height
         "px-3 sm:px-4 py-3 md:py-4",
         // Background
-        "bg-[#dc2626]",
+        typeStyles.bg,
         // Slide + fade transitions
         "transition-all duration-300",
         visible ? "ease-out opacity-100 translate-y-0" : "ease-in opacity-0 -translate-y-full",
@@ -62,8 +91,7 @@ export function NotificationBanner({
         className,
       )}
       style={{
-        backgroundImage:
-          "linear-gradient(180deg, #dc2626 0%, #b91c1c 100%), radial-gradient(1.5px 1.5px at 8px 8px, rgba(255,255,255,0.14) 1px, transparent 1.6px)",
+        backgroundImage: typeStyles.gradient,
         backgroundSize: "auto, 24px 24px",
         backgroundRepeat: "no-repeat, repeat",
       }}

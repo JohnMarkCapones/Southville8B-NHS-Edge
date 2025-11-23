@@ -121,10 +121,7 @@ export class BannerNotificationsService {
     const { page = 1, limit = 10, isActive, type } = filters;
 
     let query = supabase.from('banner_notifications').select(
-      `
-        *,
-        creator:users!banner_notifications_created_by_fkey(id, full_name, email)
-      `,
+      `*`,
       { count: 'exact' },
     );
 
@@ -251,12 +248,7 @@ export class BannerNotificationsService {
 
     const { data, error } = await supabase
       .from('banner_notifications')
-      .select(
-        `
-        *,
-        creator:users!banner_notifications_created_by_fkey(id, full_name, email)
-      `,
-      )
+      .select(`*`)
       .eq('id', id)
       .single();
 
@@ -288,12 +280,12 @@ export class BannerNotificationsService {
     return banner;
   }
 
-  async update(id: string, dto: UpdateBannerDto): Promise<BannerNotification> {
+  async update(id: string, dto: UpdateBannerDto): Promise<{ before: BannerNotification; after: BannerNotification }> {
     const supabase = this.getSupabaseClient();
 
     try {
-      // Check if banner exists
-      await this.findOne(id);
+      // Get the banner before update (for audit logging)
+      const beforeState = await this.findOne(id);
 
       // Validate date range if both dates are provided
       if (dto.startDate && dto.endDate) {
@@ -346,7 +338,10 @@ export class BannerNotificationsService {
       await this.cacheManager.del(`banner:${id}`);
 
       this.logger.log(`Banner updated successfully: ${id}`);
-      return await this.findOne(id);
+      const afterState = await this.findOne(id);
+
+      // Return before and after states for audit logging
+      return { before: beforeState, after: afterState };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -360,16 +355,16 @@ export class BannerNotificationsService {
     }
   }
 
-  async toggleActive(id: string): Promise<BannerNotification> {
+  async toggleActive(id: string): Promise<{ before: BannerNotification; after: BannerNotification }> {
     const banner = await this.findOne(id);
     return this.update(id, { isActive: !banner.isActive });
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<BannerNotification> {
     const supabase = this.getSupabaseClient();
 
-    // Check if banner exists
-    await this.findOne(id);
+    // Get banner before deleting (for audit logging)
+    const banner = await this.findOne(id);
 
     const { error } = await supabase
       .from('banner_notifications')
@@ -386,6 +381,9 @@ export class BannerNotificationsService {
     await this.cacheManager.del(`banner:${id}`);
 
     this.logger.log(`Banner deleted successfully: ${id}`);
+
+    // Return the deleted banner for audit logging
+    return banner;
   }
 
   private async invalidateBannerCaches(): Promise<void> {

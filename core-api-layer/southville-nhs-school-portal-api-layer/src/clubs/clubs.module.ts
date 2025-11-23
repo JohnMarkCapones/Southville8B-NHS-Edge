@@ -5,6 +5,7 @@ import { StorageModule } from '../storage/storage.module';
 import { GalleryModule } from '../gallery/gallery.module';
 import { StudentActivitiesModule } from '../student-activities/student-activities.module';
 import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
+import { GamificationModule } from '../gamification/gamification.module';
 import { ClubsService } from './clubs.service';
 import { ClubsController } from './clubs.controller';
 import { ClubFormsService } from './services/club-forms.service';
@@ -25,6 +26,7 @@ import { ClubFaqsService } from './services/club-faqs.service';
     GalleryModule,
     StudentActivitiesModule,
     ActivityMonitoringModule,
+    GamificationModule,
   ],
   controllers: [
     ClubsController,

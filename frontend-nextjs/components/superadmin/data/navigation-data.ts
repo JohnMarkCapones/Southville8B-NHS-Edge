@@ -30,6 +30,8 @@ import {
   CalendarDays,
   FolderOpen,
   Sparkles,
+  FileText,
+  Activity,
 } from "lucide-react"
 
 export const primaryNavItems = [
@@ -100,6 +102,7 @@ export const primaryNavItems = [
     label: "Customization & Settings",
     content: [
       { icon: Settings, label: "System Config", description: "System configuration" },
+      { icon: Activity, label: "Audit Logs", description: "System-wide audit trail and compliance tracking" },
       { icon: Palette, label: "Themes", description: "Theme customization" },
       { icon: Plug, label: "Integrations", description: "Third-party integrations" },
       { icon: HardDriveIcon, label: "Backup", description: "Data backup settings" },

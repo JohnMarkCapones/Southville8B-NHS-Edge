@@ -253,11 +253,12 @@ export class FolderService {
 
   /**
    * Soft delete folder
+   * @returns The deleted folder (for audit logging)
    */
-  async softDelete(id: string, userId: string): Promise<void> {
+  async softDelete(id: string, userId: string): Promise<TeacherFolder> {
     try {
-      // Check folder exists
-      await this.findOne(id);
+      // Check folder exists and get details for audit log
+      const folder = await this.findOne(id);
 
       // Check if folder has children
       const { data: children } = await this.supabaseService
@@ -289,6 +290,9 @@ export class FolderService {
           'Failed to delete folder: ' + error.message,
         );
       }
+
+      // Return the folder for audit logging
+      return folder;
     } catch (error) {
       this.logger.error('Error in softDelete:', error);
       throw error;

@@ -26,6 +26,7 @@ import {
   Smartphone,
   Apple,
   Play,
+  Bug,
 } from "lucide-react"
 
 export function Footer() {
@@ -344,15 +345,17 @@ export function Footer() {
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start space-x-3 xs:space-x-4 sm:space-x-6 text-xs xs:text-sm">
                 {[
-                  { href: "/privacy", label: "Privacy Policy" },
-                  { href: "/terms", label: "Terms of Service" },
-                  { href: "/accessibility", label: "Accessibility" },
+                  { href: "/guess/privacy", label: "Privacy Policy" },
+                  { href: "/guess/terms", label: "Terms of Service" },
+                  { href: "/guess/accessibility", label: "Accessibility" },
+                  { href: "/guess/bug-report", label: "Report a Bug", icon: Bug },
                 ].map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
-                    className="text-gray-300 hover:text-school-gold transition-all duration-300 touch-manipulation py-1 hover:scale-105"
+                    className="text-gray-300 hover:text-school-gold transition-all duration-300 touch-manipulation py-1 hover:scale-105 flex items-center gap-1"
                   >
+                    {'icon' in link && link.icon && <link.icon className="w-3 h-3" />}
                     {link.label}
                   </Link>
                 ))}
