@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,7 +33,8 @@ import {
 import { useGallery } from "@/hooks/useGallery"
 import { GalleryItem } from "@/lib/api/types/gallery"
 import { useToast } from "@/hooks/use-toast"
-import { getThumbnailUrl, getCardUrl, getImageAltText } from "@/lib/utils/gallery-images"
+import { getThumbnailUrl, getCardUrl, getImageAltText, needsUnoptimized } from "@/lib/utils/gallery-images"
+import { GalleryLightbox } from "@/components/superadmin/gallery-lightbox"
 
 export default function GalleryPage() {
   const router = useRouter()
@@ -65,6 +67,8 @@ export default function GalleryPage() {
   const [archivedItems, setArchivedItems] = useState<GalleryItem[]>([])
   const [loadingArchive, setLoadingArchive] = useState(false)
   const [restoring, setRestoring] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   // Load items on component mount
   useEffect(() => {
@@ -224,6 +228,23 @@ export default function GalleryPage() {
       // Remove from archive list and refresh main gallery
       setArchivedItems(prev => prev.filter(item => item.id !== itemId))
     }
+  }
+
+  const handleImageClick = (index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }
+
+  const handleLightboxEdit = (item: GalleryItem) => {
+    router.push(`/superadmin/gallery/edit/${item.id}`)
+  }
+
+  const handleLightboxDelete = (item: GalleryItem) => {
+    handleDelete(item.id)
+  }
+
+  const handleLightboxDownload = async (item: GalleryItem) => {
+    await handleDownload(item.id)
   }
 
   return (
@@ -389,22 +410,23 @@ export default function GalleryPage() {
               {/* Grid View */}
               {viewMode === "grid" ? (
                 <div className="grid grid-cols-4 gap-4">
-                  {paginatedItems.map((item) => {
+                  {paginatedItems.map((item, index) => {
                     const category = determineCategoryFromTags(item.tags || [])
                     return (
                       <div
                         key={item.id}
-                        className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                        className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg cursor-pointer"
                         onContextMenu={(e) => handleContextMenu(e, item.id)}
+                        onClick={() => handleImageClick(index)}
                       >
-                        <div className="absolute top-2 left-2 z-10">
+                        <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedItems.includes(item.id)}
                             onCheckedChange={() => handleSelectItem(item.id)}
                             className="bg-white dark:bg-gray-900 border-2"
                           />
                         </div>
-                        <div className="absolute top-2 right-2 z-10">
+                        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -465,10 +487,13 @@ export default function GalleryPage() {
                         </div>
 
                         <div className="aspect-[4/3] relative overflow-hidden bg-muted">
-                          <img
+                          <Image
                             src={getThumbnailUrl(item)}
                             alt={getImageAltText(item)}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            unoptimized={needsUnoptimized(item)}
                           />
                           {item.is_featured && (
                             <div className="absolute bottom-2 left-2">
@@ -527,10 +552,13 @@ export default function GalleryPage() {
                           onCheckedChange={() => handleSelectItem(item.id)}
                         />
                         <div className="w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
-                          <img
+                          <Image
                             src={getThumbnailUrl(item)}
                             alt={getImageAltText(item)}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            sizes="96px"
+                            unoptimized={needsUnoptimized(item)}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -723,10 +751,13 @@ export default function GalleryPage() {
                       className="flex items-center gap-4 p-4 border rounded-lg bg-muted/30"
                     >
                       <div className="w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative opacity-60">
-                        <img
+                        <Image
                           src={getThumbnailUrl(item)}
                           alt={getImageAltText(item)}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          sizes="96px"
+                          unoptimized={needsUnoptimized(item)}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -806,9 +837,26 @@ export default function GalleryPage() {
           </div>
         </div>
       )}
+
+      {/* Lightbox Modal */}
+      <GalleryLightbox
+        items={paginatedItems}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        onEdit={handleLightboxEdit}
+        onDelete={handleLightboxDelete}
+        onDownload={handleLightboxDownload}
+      />
     </div>
   )
 }
+
+
+
+
+
+
 
 
 

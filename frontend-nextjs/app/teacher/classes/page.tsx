@@ -22,6 +22,7 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  Coffee,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useUser } from "@/hooks/useUser"
@@ -295,6 +296,33 @@ export default function ClassesPage() {
   // Error state
   const hasError = userError || sectionsError || schedulesError
 
+  // Weekly schedule helpers
+  const getDayName = (dayIndex: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return days[dayIndex]
+  }
+
+  const getCurrentDayIndex = () => {
+    return new Date().getDay()
+  }
+
+  const isWeekday = (dayIndex: number) => {
+    return dayIndex >= 1 && dayIndex <= 5 // Monday (1) to Friday (5)
+  }
+
+  const getClassesForDay = (dayName: string) => {
+    return classesData.filter((classItem) => {
+      if (!classItem.schedules || classItem.schedules.length === 0) return false
+      return classItem.schedules.some((schedule) => 
+        schedule.dayOfWeek.toLowerCase() === dayName.toLowerCase()
+      )
+    })
+  }
+
+  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+  const currentDayIndex = getCurrentDayIndex()
+  const isTodayWeekday = isWeekday(currentDayIndex)
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -378,6 +406,116 @@ export default function ClassesPage() {
         </Card>
       </div>
 
+      {/* Weekly Schedule View */}
+      <Card className="dark:bg-gray-800/50 dark:border-gray-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Weekly Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!isTodayWeekday ? (
+            <div className="text-center py-12">
+              <Coffee className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No class - Enjoy your weekend!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Classes resume on Monday
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {weekDays.map((day, index) => {
+                const dayClasses = getClassesForDay(day)
+                const dayIndex = index + 1 // Monday = 1, Friday = 5
+                const isToday = currentDayIndex === dayIndex
+                
+                return (
+                  <div
+                    key={day}
+                    className={`rounded-lg border-2 p-4 transition-all ${
+                      isToday
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-500'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className={`font-semibold ${isToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                        {day}
+                      </h3>
+                      {isToday && (
+                        <Badge className="bg-blue-500 text-white text-xs">Today</Badge>
+                      )}
+                    </div>
+                    
+                    {dayClasses.length === 0 ? (
+                      <div className="text-center py-6">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No classes</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {dayClasses.map((classItem) => {
+                          const daySchedule = classItem.schedules?.find(
+                            (s) => s.dayOfWeek.toLowerCase() === day.toLowerCase()
+                          )
+                          
+                          return (
+                            <div
+                              key={classItem.id}
+                              className={`p-3 rounded-lg border ${
+                                isToday
+                                  ? 'bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700'
+                                  : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                              } hover:shadow-md transition-shadow`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm text-gray-900 dark:text-white">
+                                    {classItem.section}
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                    {classItem.subject}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {daySchedule && (
+                                <div className="space-y-1 mt-2">
+                                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {daySchedule.startTime.slice(0, 5)} - {daySchedule.endTime.slice(0, 5)}
+                                  </div>
+                                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                                    <MapPin className="w-3 h-3 mr-1" />
+                                    {daySchedule.roomNumber 
+                                      ? `Room ${daySchedule.roomNumber}${daySchedule.buildingName ? ` (${daySchedule.buildingName})` : ''}`
+                                      : classItem.room
+                                    }
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center text-xs text-gray-500 dark:text-gray-500">
+                                  <Users className="w-3 h-3 mr-1" />
+                                  {classItem.students} students
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1" ref={searchRef}>
@@ -460,9 +598,6 @@ export default function ClassesPage() {
                   <CardTitle className="text-xl font-bold drop-shadow-sm">{classItem.section}</CardTitle>
                   <p className="text-white/90 text-sm mt-1 drop-shadow-sm">
                     {classItem.subject}
-                    {classItem.subjectId && (
-                      <span className="text-white/70 text-xs ml-2">({classItem.subjectId})</span>
-                    )}
                   </p>
                 </div>
                 <DropdownMenu>

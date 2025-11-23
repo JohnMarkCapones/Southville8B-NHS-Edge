@@ -115,7 +115,6 @@ export default function HomePage() {
   const [extracurricularRef, extracurricularInView] = useIntersectionObserver({ threshold: 0.1 })
   const [eventsRef, eventsInView] = useIntersectionObserver({ threshold: 0.1 })
   const [achievementsRef, achievementsInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [testimonialsRef, testimonialsInView] = useIntersectionObserver({ threshold: 0.1 })
   const [ctaRef, ctaInView] = useIntersectionObserver({ threshold: 0.1 })
 
   const achievements = [
@@ -233,32 +232,6 @@ export default function HomePage() {
     return colors[index % colors.length]
   }
 
-  const testimonials = [
-    {
-      name: "Sarah Johnson",
-      role: "Class of 2023",
-      content:
-        "Southville 8B NHS provided me with the foundation I needed to succeed in college. The teachers truly care about each student's success.",
-      image: "/placeholder.svg?height=80&width=80&text=SJ",
-      rating: 5,
-    },
-    {
-      name: "Michael Chen",
-      role: "Current Student",
-      content:
-        "The variety of clubs and activities here is amazing. I've been able to explore my interests and develop leadership skills.",
-      image: "/placeholder.svg?height=80&width=80&text=MC",
-      rating: 5,
-    },
-    {
-      name: "Dr. Emily Rodriguez",
-      role: "Parent",
-      content:
-        "As a parent, I'm impressed by the school's commitment to academic excellence and character development. My daughter thrives here.",
-      image: "/placeholder.svg?height=80&width=80&text=ER",
-      rating: 5,
-    },
-  ]
 
   const announcementItems = [
     {
@@ -577,56 +550,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section ref={testimonialsRef} className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className={cn("text-center mb-16", testimonialsInView && "animate-fadeIn")}>            
-            <Badge variant="secondary" className="mb-4">
-              <Heart className="w-4 h-4 mr-2" />
-              Community Voices
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              What Our <span className="gradient-text">Community</span> Says
-            </h2>
-            <p className="text-xl max-w-3xl mx-auto text-muted-foreground">
-              Hear from students, parents, and alumni about their experiences at Southville 8B National High School.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <AnimatedCard
-                key={index}
-                className="group hover:scale-105 transition-all duration-300 animate-slideInUp"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    <Image
-                      src={testimonial.image || "/placeholder.svg"}
-                      alt={testimonial.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform object-cover"
-                      loading="lazy"
-                    />
-                    <div>
-                      <h3 className="font-bold group-hover:text-primary transition-colors">{testimonial.name}</h3>
-                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground mb-4 italic">"{testimonial.content}"</p>
-                  <div className="flex">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
-                    ))}
-                  </div>
-                </div>
-              </AnimatedCard>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Academic Calendar */}
       <section className="py-20 bg-background">

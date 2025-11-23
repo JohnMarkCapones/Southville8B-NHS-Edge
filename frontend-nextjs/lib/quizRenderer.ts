@@ -21,17 +21,24 @@ const QUIZ_COMPONENTS = {
   "short-answer": ShortAnswerQuiz,
   paragraph: ParagraphQuiz,
   "multiple-choice": MultipleChoiceQuiz,
+  "multiple_choice": MultipleChoiceQuiz, // ✅ Alias for backend compatibility
   checkbox: CheckboxQuiz,
   dropdown: DropdownQuiz,
   "linear-scale": LinearScaleQuiz,
+  "linear_scale": LinearScaleQuiz, // ✅ Alias for backend compatibility
   "multiple-choice-grid": MultipleChoiceGridQuiz,
   "checkbox-grid": CheckboxGridQuiz,
   "drag-and-drop": DragAndDropQuiz,
+  "drag_drop": DragAndDropQuiz, // ✅ Alias for backend compatibility
   "true-false": TrueFalseQuiz,
+  "true_false": TrueFalseQuiz, // ✅ Alias for backend compatibility
   "matching-pair": MatchingPairQuiz,
   matching: MatchingPairQuiz, // ✅ Alias for backend compatibility
   "fill-in-blank": FillInBlankQuiz,
+  "fill_in_blank": FillInBlankQuiz, // ✅ Alias for backend compatibility
   ordering: OrderingQuiz,
+  "short_answer": ShortAnswerQuiz, // ✅ Alias for backend compatibility
+  essay: ParagraphQuiz, // ✅ Alias for backend compatibility (essay maps to paragraph)
 } as const
 
 export interface QuizComponentProps {

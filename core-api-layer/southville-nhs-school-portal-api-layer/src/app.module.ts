@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -44,6 +45,10 @@ import { SearchModule } from './search/search.module';
 import { AcademicYearsModule } from './academic-years/academic-years.module';
 import { TopPerformersModule } from './top-performers/top-performers.module';
 import { StudentActivitiesModule } from './student-activities/student-activities.module';
+import { GamificationModule } from './gamification/gamification.module';
+import { AuditModule } from './common/audit/audit.module';
+import { AuditInterceptor } from './common/audit/audit.interceptor';
+import { StudentAssistantModule } from './student-assistant/student-assistant.module';
 import supabaseConfig from './config/supabase.config';
 import r2Config from './config/r2.config';
 import cloudflareImagesConfig from './config/cloudflare-images.config';
@@ -81,6 +86,7 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     CampusFacilitiesModule,
     FaqModule,
     CommonModule,
+    AuditModule,
     LocationsModule,
     HotspotsModule,
     DepartmentsInformationModule,
@@ -101,8 +107,17 @@ import cloudflareImagesConfig from './config/cloudflare-images.config';
     AcademicYearsModule,
     TopPerformersModule,
     StudentActivitiesModule,
+    GamificationModule,
+    StudentAssistantModule,
   ],
   controllers: [AppController],
-  providers: [AppService, R2ConfigValidationService],
+  providers: [
+    AppService,
+    R2ConfigValidationService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+  ],
 })
 export class AppModule {}

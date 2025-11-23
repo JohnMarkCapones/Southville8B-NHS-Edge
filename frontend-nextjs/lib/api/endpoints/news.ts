@@ -537,19 +537,17 @@ export const newsApi = {
     if (params.status) searchParams.append('status', params.status.toLowerCase().replace(' ', '_'))
     if (params.visibility) searchParams.append('visibility', params.visibility.toLowerCase())
     if (params.search) searchParams.append('search', params.search)
+    if (params.includeDeleted !== undefined) {
+      searchParams.append('includeDeleted', params.includeDeleted.toString())
+    }
 
     const endpoint = `/news?${searchParams.toString()}`
 
     try {
       const response = await apiClient.get<NewsApiResponse[]>(endpoint)
 
-      // Filter by deleted status if needed
+      // No need for client-side filtering - backend handles includeDeleted
       let filteredData = response
-      if (params.includeDeleted === false) {
-        filteredData = response.filter(article => !article.deleted_at)
-      } else if (params.includeDeleted === true) {
-        filteredData = response.filter(article => article.deleted_at !== null)
-      }
 
       // Apply client-side search if provided
       if (params.search) {

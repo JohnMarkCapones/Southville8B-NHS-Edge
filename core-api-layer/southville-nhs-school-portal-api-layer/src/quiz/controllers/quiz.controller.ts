@@ -35,6 +35,8 @@ import { PoliciesGuard } from '../../auth/guards/policies.guard';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { AuthUser } from '../../auth/auth-user.decorator';
 import { SupabaseUser } from '../../auth/interfaces/supabase-user.interface';
+import { Audit } from '../../common/audit';
+import { AuditEntityType } from '../../common/audit/audit.types';
 
 @ApiTags('Quizzes')
 @ApiBearerAuth('JWT-auth')
@@ -91,6 +93,10 @@ export class QuizController {
   // ==================== QUIZ CRUD OPERATIONS ====================
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.QUIZ,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new quiz (draft status)' })
   @ApiResponse({
@@ -211,6 +217,10 @@ export class QuizController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.QUIZ,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Update a quiz (teachers can only update their own quizzes)',
@@ -236,6 +246,10 @@ export class QuizController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.QUIZ,
+    descriptionField: 'title',
+  })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a quiz (soft delete by archiving)' })
   @ApiResponse({
@@ -251,10 +265,10 @@ export class QuizController {
   async deleteQuiz(
     @Param('id') id: string,
     @AuthUser() user: SupabaseUser,
-  ): Promise<{ message: string }> {
+  ) {
     this.logger.log(`Deleting quiz ${id} for teacher: ${user.id}`);
-    await this.quizService.deleteQuiz(id, user.id);
-    return { message: 'Quiz archived successfully' };
+    // Return the deleted quiz for audit logging
+    return this.quizService.deleteQuiz(id, user.id);
   }
 
   // ==================== QUIZ QUESTIONS ====================

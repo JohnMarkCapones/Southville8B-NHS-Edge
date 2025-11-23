@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { PointsService } from '../../gamification/services/points.service';
 
 export interface ModuleDownloadLog {
   id: string;
@@ -22,7 +23,10 @@ export interface ModuleDownloadStats {
 export class ModuleDownloadLoggerService {
   private readonly logger = new Logger(ModuleDownloadLoggerService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly pointsService: PointsService,
+  ) {}
 
   /**
    * Log module download attempt
@@ -49,6 +53,48 @@ export class ModuleDownloadLoggerService {
 
       if (error) {
         this.logger.error('Failed to log module download:', error);
+        return;
+      }
+
+      // 🎯 Award points for successful module download
+      if (success) {
+        try {
+          // Get student ID from user ID
+          const { data: student } = await this.supabaseService
+            .getClient()
+            .from('students')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+
+          if (student) {
+            // Get module details for metadata
+            const { data: module } = await this.supabaseService
+              .getClient()
+              .from('modules')
+              .select('title, subject_id')
+              .eq('id', moduleId)
+              .single();
+
+            await this.pointsService.awardPoints({
+              studentId: student.id,
+              points: 5,
+              reason: `Downloaded module: ${module?.title || 'Unknown'}`,
+              type: 'module_downloaded',
+              category: 'activity',
+              relatedEntityId: moduleId,
+              relatedEntityType: 'module',
+              metadata: {
+                module_title: module?.title,
+                subject_id: module?.subject_id,
+              },
+            });
+            this.logger.log(`Awarded 5 points to student ${student.id} for downloading module ${moduleId}`);
+          }
+        } catch (pointsError) {
+          // Don't fail the download logging if points award fails
+          this.logger.error('Failed to award points for module download:', pointsError);
+        }
       }
     } catch (error) {
       this.logger.error('Error logging module download:', error);

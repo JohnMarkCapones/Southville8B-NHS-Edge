@@ -430,8 +430,9 @@ export class FileStorageService {
 
   /**
    * Soft delete file (keep in R2, mark as deleted in DB)
+   * @returns The deleted file (for audit logging)
    */
-  async softDelete(id: string, userId: string): Promise<void> {
+  async softDelete(id: string, userId: string): Promise<TeacherFile> {
     try {
       const file = await this.findOne(id);
 
@@ -455,6 +456,9 @@ export class FileStorageService {
 
       // Note: File remains in R2 storage at original location
       // Can be permanently deleted after retention period by admin
+
+      // Return the file for audit logging
+      return file;
     } catch (error) {
       this.logger.error('Error in softDelete:', error);
       throw error;

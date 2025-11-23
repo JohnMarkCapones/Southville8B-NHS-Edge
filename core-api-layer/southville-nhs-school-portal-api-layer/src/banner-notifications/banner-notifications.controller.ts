@@ -29,6 +29,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/dto/create-user.dto';
 import { AuthUser } from '../auth/auth-user.decorator';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Banner Notifications')
 @Controller('banner-notifications')
@@ -40,6 +42,10 @@ export class BannerNotificationsController {
   ) {}
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.BANNER_NOTIFICATION,
+    descriptionField: 'message',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -143,6 +149,10 @@ export class BannerNotificationsController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.BANNER_NOTIFICATION,
+    descriptionField: 'message',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -159,12 +169,17 @@ export class BannerNotificationsController {
   async update(
     @Param('id') id: string,
     @Body() updateBannerDto: UpdateBannerDto,
-  ): Promise<BannerNotification> {
+  ): Promise<{ before: BannerNotification; after: BannerNotification }> {
     this.logger.log(`Updating banner ${id}`);
+    // Return before/after states for audit logging
     return this.bannerNotificationsService.update(id, updateBannerDto);
   }
 
   @Patch(':id/toggle')
+  @Audit({
+    entityType: AuditEntityType.BANNER_NOTIFICATION,
+    descriptionField: 'message',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -177,12 +192,17 @@ export class BannerNotificationsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 404, description: 'Banner not found' })
-  async toggle(@Param('id') id: string): Promise<BannerNotification> {
+  async toggle(@Param('id') id: string): Promise<{ before: BannerNotification; after: BannerNotification }> {
     this.logger.log(`Toggling banner ${id} active status`);
+    // Return before/after states for audit logging
     return this.bannerNotificationsService.toggleActive(id);
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.BANNER_NOTIFICATION,
+    descriptionField: 'message',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -190,13 +210,14 @@ export class BannerNotificationsController {
   @ApiResponse({
     status: 200,
     description: 'Banner deleted successfully',
+    type: BannerNotification,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 404, description: 'Banner not found' })
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
+  async remove(@Param('id') id: string): Promise<BannerNotification> {
     this.logger.log(`Deleting banner ${id}`);
-    await this.bannerNotificationsService.remove(id);
-    return { message: 'Banner deleted successfully' };
+    // Return the deleted entity for audit logging
+    return this.bannerNotificationsService.remove(id);
   }
 }

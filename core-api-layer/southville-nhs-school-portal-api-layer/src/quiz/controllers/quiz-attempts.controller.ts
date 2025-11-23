@@ -25,6 +25,7 @@ import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { AuthUser } from '../../auth/auth-user.decorator';
 import { SupabaseUser } from '../../auth/interfaces/supabase-user.interface';
 import { FastifyRequest } from 'fastify';
+import { PointsService } from '../../gamification/services/points.service';
 
 @ApiTags('Quiz Attempts')
 @ApiBearerAuth('JWT-auth')
@@ -33,7 +34,10 @@ import { FastifyRequest } from 'fastify';
 export class QuizAttemptsController {
   private readonly logger = new Logger(QuizAttemptsController.name);
 
-  constructor(private readonly quizAttemptsService: QuizAttemptsService) {}
+  constructor(
+    private readonly quizAttemptsService: QuizAttemptsService,
+    private readonly pointsService: PointsService,
+  ) {}
 
   @Post('start/:quizId')
   @Roles(UserRole.STUDENT)
@@ -117,7 +121,16 @@ export class QuizAttemptsController {
     @AuthUser() user: SupabaseUser,
   ) {
     this.logger.log(`Submitting quiz attempt ${attemptId}`);
-    return this.quizAttemptsService.submitAttempt(attemptId, user.id);
+    const result = await this.quizAttemptsService.submitAttempt(attemptId, user.id);
+
+    // Award points for quiz completion (async, don't block response)
+    if (result && result.status === 'submitted') {
+      this.pointsService.awardQuizPoints(result).catch((error) => {
+        this.logger.error(`Error awarding quiz points for attempt ${attemptId}:`, error);
+      });
+    }
+
+    return result;
   }
 
   @Get(':attemptId')

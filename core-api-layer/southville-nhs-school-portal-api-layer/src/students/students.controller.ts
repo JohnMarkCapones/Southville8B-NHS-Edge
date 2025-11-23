@@ -35,6 +35,8 @@ import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { Policies } from '../auth/decorators/policies.decorator';
 import { AuthUser } from '../auth/auth-user.decorator';
 import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Students')
 @ApiBearerAuth('JWT-auth')
@@ -45,6 +47,10 @@ export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.STUDENT,
+    descriptionField: 'student_id',
+  })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Create a new student' })
   @ApiResponse({ status: 201, description: 'Student created successfully' })
@@ -193,6 +199,10 @@ export class StudentsController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.STUDENT,
+    descriptionField: 'student_id',
+  })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Policies('id', 'student:update')
   @ApiOperation({ summary: 'Update a student' })
@@ -213,6 +223,10 @@ export class StudentsController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.STUDENT,
+    descriptionField: 'student_id',
+  })
   @Roles(UserRole.ADMIN)
   @Policies('id', 'student:delete')
   @ApiOperation({ summary: 'Delete a student (Admin only)' })

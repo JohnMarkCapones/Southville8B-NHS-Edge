@@ -46,8 +46,9 @@ function transformBackendItemToFrontend(backendItem: GalleryItem): FrontendGalle
   const category = determineCategoryFromTags(backendItem.tags || []);
 
   // Generate Cloudflare Images URLs from cf_image_id
-  const thumbnailUrl = buildImageUrl(backendItem.cf_image_id, 'thumbnail');
-  const cardUrl = buildImageUrl(backendItem.cf_image_id, 'card');
+  // Use 'public' variant for all sizes since custom variants aren't created yet
+  const thumbnailUrl = buildImageUrl(backendItem.cf_image_id, 'public');
+  const cardUrl = buildImageUrl(backendItem.cf_image_id, 'public');
   const publicUrl = buildImageUrl(backendItem.cf_image_id, 'public');
 
   return {
@@ -55,7 +56,7 @@ function transformBackendItemToFrontend(backendItem: GalleryItem): FrontendGalle
     title: backendItem.title || backendItem.original_filename || 'Untitled',
     category,
     image: publicUrl, // Full-size image for display
-    thumbnail: thumbnailUrl, // Optimized thumbnail for grids
+    thumbnail: thumbnailUrl, // Optimized thumbnail for grids (using public variant)
     description: backendItem.caption || backendItem.alt_text || '',
     mediaType: backendItem.media_type,
     isFeatured: backendItem.is_featured,

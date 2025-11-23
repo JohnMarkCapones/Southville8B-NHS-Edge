@@ -37,6 +37,8 @@ import { CreateClubBenefitDto } from './dto/create-club-benefit.dto';
 import { UpdateClubBenefitDto } from './dto/update-club-benefit.dto';
 import { CreateClubFaqDto } from './dto/create-club-faq.dto';
 import { UpdateClubFaqDto } from './dto/update-club-faq.dto';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('clubs')
 @Controller('clubs')
@@ -51,6 +53,10 @@ export class ClubsController {
   ) {}
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.CLUB,
+    descriptionField: 'name',
+  })
   @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -128,6 +134,10 @@ export class ClubsController {
   }
 
   @Patch(':clubId')
+  @Audit({
+    entityType: AuditEntityType.CLUB,
+    descriptionField: 'name',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -144,6 +154,10 @@ export class ClubsController {
   }
 
   @Delete(':clubId')
+  @Audit({
+    entityType: AuditEntityType.CLUB,
+    descriptionField: 'name',
+  })
   @UseGuards(SupabaseAuthGuard, PoliciesGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Policies('clubId', 'club.delete')
@@ -155,7 +169,8 @@ export class ClubsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async remove(@Param('clubId') clubId: string) {
-    await this.clubsService.remove(clubId);
+    // Return entity for audit logging, but HTTP response will be 204 No Content
+    return this.clubsService.remove(clubId);
   }
 
   // Club Management endpoints with PBAC

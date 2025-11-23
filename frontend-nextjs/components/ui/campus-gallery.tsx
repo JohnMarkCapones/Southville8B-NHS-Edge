@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -169,10 +170,13 @@ export function CampusGallery() {
       {/* Featured Image */}
       <div className="relative rounded-lg overflow-hidden bg-muted">
         <div className="aspect-[21/9] md:aspect-[2.5/1] relative">
-          <img
+          <Image
             src={featuredItem.image || "/placeholder.svg"}
             alt={featuredItem.title}
-            className="w-full h-full object-cover cursor-pointer"
+            fill
+            className="object-cover cursor-pointer"
+            sizes="100vw"
+            quality={95}
             onClick={() => openLightbox(featuredItem)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -242,10 +246,13 @@ export function CampusGallery() {
             onClick={() => openLightbox(item)}
           >
             <div className="aspect-square relative">
-              <img
+              <Image
                 src={item.image || "/placeholder.svg"}
                 alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                sizes="(max-width: 1024px) 50vw, 33vw"
+                quality={95}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -306,10 +313,13 @@ export function CampusGallery() {
                 </div>
               )}
 
-              <img
+              <Image
                 src={lightboxImage.image || "/placeholder.svg"}
                 alt={lightboxImage.title}
+                width={1200}
+                height={800}
                 className="w-full max-h-[70vh] object-contain"
+                quality={95}
                 onLoad={() => setIsLightboxLoading(false)}
               />
             </div>

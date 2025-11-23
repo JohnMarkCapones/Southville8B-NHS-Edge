@@ -28,16 +28,26 @@ export class ChatController {
   @Get('conversations')
   @ApiOperation({ summary: 'Get user conversations' })
   @ApiResponse({ status: 200, description: 'Conversations retrieved successfully' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async getConversations(
     @Request() req,
     @Query() query: GetConversationsDto,
   ) {
-    const userId = req.user.id;
-    return this.chatService.getConversations(
-      userId,
-      query.page || 1,
-      query.limit || 20,
-    );
+    try {
+      if (!req.user || !req.user.id) {
+        throw new Error('User not found in request. Authentication may have failed.');
+      }
+      
+      const userId = req.user.id;
+      return await this.chatService.getConversations(
+        userId,
+        query.page || 1,
+        query.limit || 20,
+      );
+    } catch (error) {
+      console.error('Error in getConversations:', error);
+      throw error;
+    }
   }
 
   @Post('conversations')

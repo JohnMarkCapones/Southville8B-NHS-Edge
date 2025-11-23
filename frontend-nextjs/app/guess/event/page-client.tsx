@@ -146,6 +146,17 @@ export default function EventsPageClient({ initialEvents }: EventsPageClientProp
     return days
   }
 
+  // Check if URL is a presigned URL (R2) that needs to bypass Next.js image optimization
+  const isPresignedUrl = (url: string | undefined) => {
+    if (!url) return false
+    return (
+      url.includes('X-Amz-Algorithm') ||
+      url.includes('X-Amz-Signature') ||
+      url.includes('%3FX-Amz-') ||
+      url.includes('r2.cloudflarestorage.com')
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Hero Section */}
@@ -270,6 +281,8 @@ export default function EventsPageClient({ initialEvents }: EventsPageClientProp
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-700"
                         sizes="(min-width: 768px) 50vw, 100vw"
+                        unoptimized={false}
+                        quality={95}
                       />
                       <div className="absolute top-4 left-4">
                         <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg animate-pulse">
@@ -452,6 +465,8 @@ export default function EventsPageClient({ initialEvents }: EventsPageClientProp
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-700"
                             sizes={viewMode === "list" ? "192px" : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"}
+                            unoptimized={false}
+                            quality={95}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 

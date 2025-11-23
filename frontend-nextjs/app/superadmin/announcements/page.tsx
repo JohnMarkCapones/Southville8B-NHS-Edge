@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAnnouncements } from "@/hooks/useAnnouncements"
+import { useAnnouncements, useDeleteAnnouncement, useUpdateAnnouncement } from "@/hooks/useAnnouncements"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -216,8 +216,8 @@ const AnnouncementsPage = () => {
 
   const [activeTab, setActiveTab] = useState("announcements")
 
-  // Fetch banners from API (disabled temporarily due to backend error)
-  const { data: bannersData, isLoading: bannersLoading, error: bannersError } = useBanners({ enabled: false })
+  // Fetch banners from API
+  const { data: bannersData, isLoading: bannersLoading, error: bannersError } = useBanners({ enabled: true })
   const { createMutation, updateMutation, deleteMutation, toggleMutation } = useBannerMutations()
   const banners = bannersData?.data || []
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false)
@@ -258,6 +258,10 @@ const AnnouncementsPage = () => {
     page: currentPage,
     limit: itemsPerPage,
   })
+
+  // Mutation hooks for announcement CRUD operations
+  const deleteAnnouncementMutation = useDeleteAnnouncement()
+  const updateAnnouncementMutation = useUpdateAnnouncement()
 
   // Transform backend data to match UI expectations
   const announcements = announcementsData?.data.map(announcement => ({
@@ -657,16 +661,24 @@ const AnnouncementsPage = () => {
     })
   }
 
-  const confirmDeleteAnnouncement = () => {
+  const confirmDeleteAnnouncement = async () => {
     if (deleteConfirmation.announcement) {
-      // TODO: Backend - Delete announcement from database
-      setAnnouncements((prev) => prev.filter((a) => a.id !== deleteConfirmation.announcement.id))
+      try {
+        await deleteAnnouncementMutation.mutateAsync(deleteConfirmation.announcement.id)
 
-      toast({
-        title: "Announcement Deleted",
-        description: `"${deleteConfirmation.announcement.title}" has been permanently removed.`,
-        duration: 4000,
-      })
+        toast({
+          title: "Announcement Deleted",
+          description: `"${deleteConfirmation.announcement.title}" has been permanently removed.`,
+          duration: 4000,
+        })
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete announcement. Please try again.",
+          variant: "destructive",
+          duration: 4000,
+        })
+      }
 
       setDeleteConfirmation({ isOpen: false, announcement: null })
     }
@@ -677,18 +689,13 @@ const AnnouncementsPage = () => {
     closeContextMenu()
   }
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (statusConfirmation.announcement) {
-      // TODO: Backend - Update announcement status in database
-      setAnnouncements((prev) =>
-        prev.map((a) =>
-          a.id === statusConfirmation.announcement.id ? { ...a, status: statusConfirmation.newStatus } : a,
-        ),
-      )
-
+      // TODO: Backend doesn't support status field yet
       toast({
-        title: "Status Updated",
-        description: `"${statusConfirmation.announcement.title}" status changed to ${statusConfirmation.newStatus}`,
+        title: "Not Implemented",
+        description: "Status change is not yet supported by the backend.",
+        variant: "destructive",
         duration: 4000,
       })
 
@@ -701,18 +708,13 @@ const AnnouncementsPage = () => {
     closeContextMenu()
   }
 
-  const confirmPriorityChange = () => {
+  const confirmPriorityChange = async () => {
     if (priorityConfirmation.announcement) {
-      // TODO: Backend - Update announcement priority in database
-      setAnnouncements((prev) =>
-        prev.map((a) =>
-          a.id === priorityConfirmation.announcement.id ? { ...a, priority: priorityConfirmation.newPriority } : a,
-        ),
-      )
-
+      // TODO: Backend doesn't support priority field yet
       toast({
-        title: "Priority Updated",
-        description: `"${priorityConfirmation.announcement.title}" priority changed to ${priorityConfirmation.newPriority}`,
+        title: "Not Implemented",
+        description: "Priority change is not yet supported by the backend.",
+        variant: "destructive",
         duration: 4000,
       })
 
@@ -725,16 +727,13 @@ const AnnouncementsPage = () => {
     closeContextMenu()
   }
 
-  const confirmTogglePinned = () => {
+  const confirmTogglePinned = async () => {
     if (pinnedConfirmation.announcement) {
-      // TODO: Backend - Update announcement pinned status in database
-      setAnnouncements((prev) =>
-        prev.map((a) => (a.id === pinnedConfirmation.announcement.id ? { ...a, isPinned: !a.isPinned } : a)),
-      )
-
+      // TODO: Backend doesn't support isPinned field yet
       toast({
-        title: pinnedConfirmation.announcement.isPinned ? "Unpinned" : "Pinned",
-        description: `"${pinnedConfirmation.announcement.title}" ${pinnedConfirmation.announcement.isPinned ? "removed from" : "added to"} pinned announcements`,
+        title: "Not Implemented",
+        description: "Pin/Unpin is not yet supported by the backend.",
+        variant: "destructive",
         duration: 4000,
       })
 
@@ -744,23 +743,10 @@ const AnnouncementsPage = () => {
 
   const handleDuplicateAnnouncement = (announcement: any) => {
     // TODO: Backend - Create duplicate announcement in database
-    const newAnnouncement = {
-      ...announcement,
-      id: `${Date.now()}`,
-      title: `${announcement.title} (Copy)`,
-      status: "Draft",
-      publishedDate: null,
-      readCount: 0,
-      notificationSent: false,
-      emailSent: false,
-      smsSent: false,
-    }
-
-    setAnnouncements((prev) => [newAnnouncement, ...prev])
-
     toast({
-      title: "Announcement Duplicated",
-      description: `"${newAnnouncement.title}" created as draft`,
+      title: "Not Implemented",
+      description: "Duplicate announcement is not yet supported by the backend.",
+      variant: "destructive",
       duration: 4000,
     })
 

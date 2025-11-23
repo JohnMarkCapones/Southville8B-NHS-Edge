@@ -485,14 +485,13 @@ export class UsersService {
 
       const response: any = {
         success: true,
-        user: {
-          id: authUser.id,
-          email: userData.email,
-          fullName: userData.fullName,
-          role: userData.role,
-          userType: userData.userType,
-          status: 'Active',
-        },
+        // Include full_name at top level for audit logging
+        full_name: userData.fullName,
+        id: authUser.id,
+        email: userData.email,
+        role: userData.role,
+        userType: userData.userType,
+        status: 'Active',
         specificRecord,
         message: `${userData.userType} created successfully`,
       };
@@ -1062,8 +1061,19 @@ export class UsersService {
     return user;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<User> {
     const supabase = this.getSupabaseClient();
+
+    // Fetch user data for audit logging
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !user) {
+      throw new NotFoundException('User not found');
+    }
 
     // Soft delete by updating status
     const { error } = await supabase
@@ -1075,12 +1085,12 @@ export class UsersService {
       .eq('id', id);
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundException('User not found');
-      }
       this.logger.error('Error removing user:', error);
       throw new InternalServerErrorException('Failed to remove user');
     }
+
+    // Return the user for audit logging
+    return user;
   }
 
   async updateUserStatus(

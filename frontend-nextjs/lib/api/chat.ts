@@ -40,14 +40,21 @@ const CHAT_REQUEST_TIMEOUT = 60000;
  * Service runs on http://localhost:3001, so full URL is http://localhost:3001/api/v1/chat/...
  */
 function buildChatUrl(endpoint: string): string {
-  const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
-  const url = `${CHAT_SERVICE_BASE_URL}/api/v1/chat/${cleanEndpoint}`;
+  // Normalize base URL: remove trailing slashes
+  const normalizedBaseUrl = CHAT_SERVICE_BASE_URL.replace(/\/+$/, '');
+  
+  // Clean endpoint: remove leading slashes
+  const cleanEndpoint = endpoint.replace(/^\/+/, '');
+  
+  // Build URL ensuring no double slashes
+  const url = `${normalizedBaseUrl}/api/v1/chat/${cleanEndpoint}`;
 
   if (process.env.NODE_ENV === "development") {
     console.log("[Chat API] Building URL:", {
       endpoint,
       url,
       baseUrl: CHAT_SERVICE_BASE_URL,
+      normalizedBaseUrl,
     });
   }
 

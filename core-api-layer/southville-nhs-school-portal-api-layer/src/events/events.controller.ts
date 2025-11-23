@@ -51,6 +51,8 @@ import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
 import { R2StorageService } from '../storage/r2-storage/r2-storage.service';
 import { CloudflareImagesService } from '../gallery/services/cloudflare-images.service';
+import { Audit } from '../common/audit';
+import { AuditEntityType, AuditAction } from '../common/audit/audit.types';
 
 @ApiTags('Events')
 @Controller('events')
@@ -83,6 +85,18 @@ export class EventsController {
         return event;
       }
 
+      // Check if it's already a presigned URL - if so, leave it as-is
+      if (
+        event.eventImage.includes('X-Amz-Algorithm') ||
+        event.eventImage.includes('X-Amz-Signature') ||
+        event.eventImage.includes('%3FX-Amz-') // URL-encoded presigned URL
+      ) {
+        this.logger.debug(
+          `Event image is already a presigned URL, using as-is: ${event.eventImage.substring(0, 100)}...`,
+        );
+        return event;
+      }
+
       // Legacy R2 image handling
       let fileKey: string | null = null;
 
@@ -95,7 +109,10 @@ export class EventsController {
         // Extract key from URL like: https://pub-xxx.r2.dev/events/images/filename.jpg
         const urlParts = event.eventImage.split('/events/images/');
         if (urlParts.length === 2) {
-          fileKey = `events/images/${urlParts[1]}`;
+          // Ensure we don't include query parameters in the key
+          const keyWithParams = urlParts[1];
+          const keyPart = keyWithParams.split('?')[0]; // Remove any query params
+          fileKey = `events/images/${keyPart}`;
         }
       }
 
@@ -124,6 +141,10 @@ export class EventsController {
   }
 
   @Post()
+  @Audit({
+    entityType: AuditEntityType.EVENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -552,6 +573,10 @@ export class EventsController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.EVENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -578,6 +603,10 @@ export class EventsController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.EVENT,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -591,11 +620,17 @@ export class EventsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin/Teacher only' })
   @ApiResponse({ status: 404, description: 'Event not found' })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id') id: string) {
+    // Return entity for audit logging
     return this.eventsService.remove(id);
   }
 
   @Post(':id/archive')
+  @Audit({
+    entityType: AuditEntityType.EVENT,
+    descriptionField: 'title',
+    action: AuditAction.DELETE,
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -607,7 +642,8 @@ export class EventsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin/Teacher only' })
   @ApiResponse({ status: 404, description: 'Event not found' })
-  async archive(@Param('id') id: string, @AuthUser() user: any): Promise<void> {
+  async archive(@Param('id') id: string, @AuthUser() user: any) {
+    // Return entity for audit logging
     return this.eventsService.softDelete(id, user.id);
   }
 

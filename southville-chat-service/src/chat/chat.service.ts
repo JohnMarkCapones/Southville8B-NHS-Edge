@@ -57,15 +57,24 @@ export class ChatService {
             .eq('id', userId)
             .single();
 
-          if (error || !data) {
-            throw new Error(
-              `Failed to get role for user ${userId}: ${error?.message || 'No data returned'}`,
+          if (error) {
+            this.logger.debug(
+              `Supabase error getting role for user ${userId}: ${error.message} (code: ${error.code})`,
             );
+            throw new Error(
+              `Failed to get role for user ${userId}: ${error.message || 'Database error'}`,
+            );
+          }
+
+          if (!data) {
+            throw new Error(`User ${userId} not found in database`);
           }
 
           const roleName = (data as any)?.roles?.name || null;
           if (!roleName) {
-            throw new Error(`No role found for user ${userId}`);
+            throw new Error(
+              `User ${userId} exists but has no role assigned. Data: ${JSON.stringify(data)}`,
+            );
           }
 
           return roleName;
@@ -259,26 +268,44 @@ export class ChatService {
     );
 
     // Filter by role rules (Desktop: Admin↔Admin, Teacher↔Admin, Teacher↔Teacher)
-    const filteredConversations = conversationsWithDetails.filter((conv) => {
-      if (userRole === 'Student') {
-        // Students are read-only, but they can see conversations they're in
-        return true;
-      }
+    // Note: canChat is async, so we need to use Promise.all for filtering
+    const filterResults = await Promise.all(
+      conversationsWithDetails.map(async (conv) => {
+        if (userRole === 'Student') {
+          // Students are read-only, but they can see conversations they're in
+          return { conv, include: true };
+        }
 
-      // For Admin/Teacher, only show direct conversations with allowed roles
-      if (conv.type === 'direct') {
-        const otherParticipants = (conv.participants || []).filter(
-          (p: any) => p.user_id !== userId,
-        );
-        if (otherParticipants.length === 0) return false;
+        // For Admin/Teacher, only show direct conversations with allowed roles
+        if (conv.type === 'direct') {
+          const otherParticipants = (conv.participants || []).filter(
+            (p: any) => p.user_id !== userId,
+          );
+          if (otherParticipants.length === 0) {
+            return { conv, include: false };
+          }
 
-        const otherUserId = otherParticipants[0].user_id;
-        return this.canChat(userId, otherUserId);
-      }
+          const otherUserId = otherParticipants[0].user_id;
+          try {
+            const canChat = await this.canChat(userId, otherUserId);
+            return { conv, include: canChat };
+          } catch (error) {
+            this.logger.warn(
+              `Failed to check if user ${userId} can chat with ${otherUserId}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            // On error, exclude the conversation to be safe
+            return { conv, include: false };
+          }
+        }
 
-      // Group conversations are always visible if user is participant
-      return true;
-    });
+        // Group conversations are always visible if user is participant
+        return { conv, include: true };
+      }),
+    );
+
+    const filteredConversations = filterResults
+      .filter((result) => result.include)
+      .map((result) => result.conv);
 
     return {
       conversations: filteredConversations as ConversationWithParticipants[],

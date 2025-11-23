@@ -28,6 +28,8 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { AuthUser } from '../../auth/auth-user.decorator';
 import { R2StorageService } from '../../storage/r2-storage/r2-storage.service';
+import { Audit } from '../../common/audit';
+import { AuditEntityType } from '../../common/audit/audit.types';
 import { CloudflareImagesService } from '../../gallery/services/cloudflare-images.service';
 import { NewsService } from '../services/news.service';
 import { NewsApprovalService } from '../services/news-approval.service';
@@ -134,6 +136,10 @@ export class NewsController {
    * Only journalism members with publishing positions can create
    */
   @Post()
+  @Audit({
+    entityType: AuditEntityType.NEWS,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -414,6 +420,10 @@ export class NewsController {
    * Author or Advisers can update (only draft/pending)
    */
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.NEWS,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -516,6 +526,10 @@ export class NewsController {
    * Author or Advisers can delete (only drafts)
    */
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.NEWS,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -529,7 +543,9 @@ export class NewsController {
   })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async remove(@Param('id') id: string, @AuthUser('id') userId: string) {
-    await this.newsService.remove(id, userId);
+    // Return the deleted article for audit logging
+    // (HTTP response will still be 204 No Content due to @HttpCode decorator)
+    return this.newsService.remove(id, userId);
   }
 
   /**

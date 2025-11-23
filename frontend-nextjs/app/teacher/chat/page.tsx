@@ -15,6 +15,7 @@ import { ParticipantsList } from "@/components/chat/participants-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   getMySections,
   type SectionWithStudents,
@@ -392,9 +393,13 @@ export default function TeacherChatPage() {
       )}
       <div className="flex gap-4 h-full">
         {/* Left Sidebar - Sections */}
-        <div className="w-80 flex flex-col border-r">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold text-lg">Sections</h2>
+        <div className="w-80 flex flex-col border-r bg-gradient-to-b from-muted/30 to-background rounded-l-xl">
+          <div className="p-4 border-b bg-background/50 backdrop-blur-sm">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              My Sections
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">Select a section to chat</p>
           </div>
           <ScrollArea className="flex-1">
             {isLoadingSections ? (
@@ -404,8 +409,9 @@ export default function TeacherChatPage() {
                 ))}
               </div>
             ) : sections.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No sections assigned
+              <div className="p-8 text-center">
+                <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-sm font-medium text-muted-foreground">No sections assigned</p>
               </div>
             ) : (
               <div className="p-2">
@@ -424,26 +430,48 @@ export default function TeacherChatPage() {
                     section.students?.length ||
                     0;
 
+                  const hasUnread = sectionConversation?.unread_count && sectionConversation.unread_count > 0;
+
                   return (
                     <button
                       key={section.id}
                       onClick={() => handleSelectSection(section.id)}
-                      className={`w-full text-left p-3 rounded-lg transition-colors hover:bg-accent ${
-                        selectedSectionId === section.id ? "bg-accent" : ""
-                      }`}
+                      className={cn(
+                        "w-full text-left p-3 rounded-xl transition-all duration-200 group relative mb-1",
+                        selectedSectionId === section.id
+                          ? "bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-2 border-blue-500/20 shadow-sm"
+                          : "hover:bg-accent/50 border-2 border-transparent"
+                      )}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium">{section.name}</p>
-                        <Badge variant="secondary">
+                      {hasUnread && (
+                        <div className="absolute top-2 right-2">
+                          <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-white">
+                              {sectionConversation.unread_count > 9 ? '9+' : sectionConversation.unread_count}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className={cn(
+                          "font-semibold text-sm",
+                          selectedSectionId === section.id && "text-primary"
+                        )}>
+                          {section.name}
+                        </p>
+                        <Badge variant="secondary" className="text-xs">
                           {section.grade_level}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {participantCount}{" "}
-                        {participantCount === 1
-                          ? "participant"
-                          : "participants"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">
+                          {participantCount === 0
+                            ? "No students yet"
+                            : `${participantCount} ${participantCount === 1 ? "student" : "students"}`
+                          }
+                        </p>
+                      </div>
                     </button>
                   );
                 })}
@@ -453,21 +481,34 @@ export default function TeacherChatPage() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col border rounded-lg">
+        <div className="flex-1 flex flex-col border rounded-xl shadow-sm overflow-hidden bg-background">
           {selectedConversationId ? (
             <>
               {/* Header */}
-              <div className="border-b p-4">
+              <div className="border-b p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="font-semibold">
-                      {selectedConversation?.title || "Section Chat"}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedConversation?.participants?.length || 0}{" "}
-                      participants
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                      <Users className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-lg">
+                        {selectedConversation?.title || "Section Chat"}
+                      </h2>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                          <span>{selectedConversation?.participants?.length || 0} participants</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                  {isRealtimeConnected && isSupabaseAvailable() && (
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-400 border-0">
+                      <div className="h-2 w-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+                      Connected
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -489,14 +530,21 @@ export default function TeacherChatPage() {
               />
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-medium">
-                  Select a section
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Choose a section to start chatting with your students
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-muted/20 via-background to-muted/10">
+              <div className="text-center max-w-sm px-4">
+                <div className="mb-6 relative">
+                  <div className="h-24 w-24 mx-auto rounded-full bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center">
+                    <MessageSquare className="h-12 w-12 text-primary" />
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
+                    <Users className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-2">
+                  Welcome to Section Chat
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Select a section from the sidebar to start chatting with your students. Stay connected and engaged!
                 </p>
               </div>
             </div>
@@ -505,12 +553,15 @@ export default function TeacherChatPage() {
 
         {/* Right Sidebar - Participants */}
         {selectedConversationId && selectedConversation && (
-          <div className="w-64 flex flex-col border-l">
-            <div className="border-b p-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" />
+          <div className="w-96 flex flex-col border-l bg-gradient-to-b from-muted/30 to-background rounded-r-xl">
+            <div className="border-b p-4 bg-background/50 backdrop-blur-sm">
+              <h3 className="font-bold flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
                 Participants
               </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedConversation.participants?.length || 0} members
+              </p>
             </div>
             <ParticipantsList
               participants={selectedConversation.participants || []}

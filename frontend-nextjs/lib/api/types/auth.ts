@@ -51,3 +51,16 @@ export interface ChangePasswordRequest {
 export interface ChangePasswordResponse {
   message: string;
 }
+
+// Refresh Token Response
+export interface RefreshTokenResponse {
+  success: boolean;
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number; // Unix timestamp in seconds
+    expires_in: number; // Seconds until expiry
+    token_type: string;
+  };
+  message: string;
+}

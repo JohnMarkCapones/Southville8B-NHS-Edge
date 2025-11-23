@@ -655,14 +655,6 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
     },
     {
       type: "section" as const,
-      key: "documents",
-      icon: FileText,
-      label: t('navigation.documents'),
-      gradient: "from-orange-500 to-red-600",
-      items: [{ icon: Award, label: t('student.certificates'), href: "/student/certificates" }],
-    },
-    {
-      type: "section" as const,
       key: "studentLife",
       icon: Users,
       label: t('navigation.studentLife'),

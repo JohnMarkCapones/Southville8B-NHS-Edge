@@ -5,6 +5,7 @@ import "./globals.css"
 import { Providers } from "@/components/providers"
 import { SITE_URL } from "@/lib/seo"
 import { Analytics } from "@vercel/analytics/react"
+import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -92,6 +93,7 @@ export default function RootLayout({
           Skip to navigation
         </a>
         <Providers>{children}</Providers>
+        <CookieConsentBanner />
         <Analytics />
       </body>
     </html>

@@ -41,6 +41,8 @@ import {
   SuspendUserDto,
 } from './dto/update-user-status.dto';
 import { AssignDomainRoleDto } from './dto/assign-domain-role.dto';
+import { Audit } from '../common/audit';
+import { AuditEntityType } from '../common/audit/audit.types';
 
 @ApiTags('Users')
 @Controller('users')
@@ -50,6 +52,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('teacher')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new teacher (Admin only)' })
   @ApiResponse({ status: 201, description: 'Teacher created successfully' })
@@ -66,6 +72,10 @@ export class UsersController {
   }
 
   @Post('admin')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new admin (Admin only)' })
   @ApiResponse({ status: 201, description: 'Admin created successfully' })
@@ -82,6 +92,10 @@ export class UsersController {
   }
 
   @Post('student')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new student (Admin only)' })
   @ApiResponse({ status: 201, description: 'Student created successfully' })
@@ -257,6 +271,10 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Update a user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
@@ -270,6 +288,10 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.USER,
+    descriptionField: 'full_name',
+  })
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a user (Admin only)' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })

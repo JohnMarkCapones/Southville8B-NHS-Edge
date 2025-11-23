@@ -377,26 +377,40 @@ export class AnalyticsService {
       this.logger.log(`[Analytics] Fetched ${Object.keys(studentNames).length} student names`);
       this.logger.log(`[Analytics] Student names map:`, studentNames);
 
-      // Group attempts by student and get latest
+      // Group attempts by student and get BEST attempt (highest score) + count graded attempts
       const studentPerformanceMap = new Map<string, any>();
+      const studentAttemptCounts = new Map<string, number>();
+
+      // Count graded/submitted attempts per student
+      attempts.forEach((attempt) => {
+        const studentId = attempt.student_id;
+        const currentCount = studentAttemptCounts.get(studentId) || 0;
+        studentAttemptCounts.set(studentId, currentCount + 1);
+      });
 
       attempts.forEach((attempt) => {
         const studentId = attempt.student_id; // This is users.id
         const studentName = studentNames[studentId] || 'Unknown Student';
 
         const existing = studentPerformanceMap.get(studentId);
+        const attemptScore = attempt.score || 0;
+        const existingScore = existing?.score || 0;
 
-        // Keep only the latest attempt
-        if (!existing || attempt.attempt_number > existing.attempt_number) {
+        // ✅ FIX: Keep the BEST attempt (highest score), not latest
+        // If scores are equal, prefer the latest attempt
+        if (!existing || attemptScore > existingScore || 
+            (attemptScore === existingScore && attempt.attempt_number > existing.attempt_number)) {
           studentPerformanceMap.set(studentId, {
             student_id: studentId,
             student_name: studentName, // ✅ Use direct lookup from users table
             section: 'N/A', // Section info not needed for results page
             attempt_number: attempt.attempt_number,
-            score: attempt.score || 0,
+            attempt_id: attempt.attempt_id, // ✅ ADD: Store attempt_id for best attempt
+            graded_attempts_count: studentAttemptCounts.get(studentId) || 1, // ✅ FIX: Count of graded/submitted attempts
+            score: attemptScore,
             max_score: quiz.total_points,
-            percentage: attempt.score
-              ? Math.round((attempt.score / quiz.total_points) * 100 * 100) /
+            percentage: attemptScore
+              ? Math.round((attemptScore / quiz.total_points) * 100 * 100) /
                 100
               : 0,
             time_spent: attempt.time_taken_seconds || 0,
@@ -460,33 +474,25 @@ export class AnalyticsService {
         );
       }
 
-      // First, let's see ALL attempts for debugging
-      const { data: allAttempts } = await supabase
+      // ✅ FIX: Get student's BEST completed attempt (highest score), not latest
+      // First get all completed attempts, then find the best one
+      const { data: completedAttempts, error: attemptsError } = await supabase
         .from('quiz_attempts')
         .select('attempt_id, status, score, time_taken_seconds, submitted_at, attempt_number')
         .eq('quiz_id', quizId)
         .eq('student_id', studentId)
-        .order('attempt_number', { ascending: false });
+        .in('status', ['submitted', 'graded', 'completed']);
 
       this.logger.log(
-        `Found ${allAttempts?.length || 0} total attempts for student ${studentId} in quiz ${quizId}`,
+        `Found ${completedAttempts?.length || 0} completed attempts for student ${studentId} in quiz ${quizId}`,
       );
-      this.logger.log(`Attempt statuses: ${allAttempts?.map((a) => a.status).join(', ')}`);
+      if (completedAttempts && completedAttempts.length > 0) {
+        this.logger.log(`Attempt statuses: ${completedAttempts.map((a) => a.status).join(', ')}`);
+      }
 
-      // Get student's latest completed attempt
-      const { data: attempt, error: attemptError } = await supabase
-        .from('quiz_attempts')
-        .select('attempt_id, score, time_taken_seconds, submitted_at, status')
-        .eq('quiz_id', quizId)
-        .eq('student_id', studentId)
-        .in('status', ['submitted', 'graded', 'completed'])
-        .order('attempt_number', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (attemptError || !attempt) {
+      if (attemptsError || !completedAttempts || completedAttempts.length === 0) {
         this.logger.warn(
-          `No completed attempt found for student ${studentId} in quiz ${quizId}. Error: ${attemptError?.message}`,
+          `No completed attempt found for student ${studentId} in quiz ${quizId}. Error: ${attemptsError?.message}`,
         );
         return {
           quizId,
@@ -496,8 +502,21 @@ export class AnalyticsService {
         };
       }
 
+      // Find the best attempt: highest score, or if scores equal, prefer latest
+      const attempt = completedAttempts.reduce((best, current) => {
+        const bestScore = best.score || 0;
+        const currentScore = current.score || 0;
+        
+        if (currentScore > bestScore) {
+          return current;
+        } else if (currentScore === bestScore && current.attempt_number > best.attempt_number) {
+          return current;
+        }
+        return best;
+      });
+
       this.logger.log(
-        `Using attempt ${attempt.attempt_id} with status: ${attempt.status}`,
+        `Using BEST attempt ${attempt.attempt_id} (score: ${attempt.score}, attempt #${attempt.attempt_number}) with status: ${attempt.status}`,
       );
 
       // Get all answers for this attempt with question details
@@ -574,15 +593,21 @@ export class AnalyticsService {
               // Fill-in-blank: ["Paris", "Manila"]
               studentAnswer = answer.answer_json.join(', ');
             } else if (typeof answer.answer_json === 'object') {
-              // Complex answers (matching, ordering, etc.)
-              studentAnswer = JSON.stringify(answer.answer_json);
+              // ✅ FIX: For matching questions, return the object directly (not stringified)
+              // Frontend will format it properly
+              if (question?.question_type === 'matching' || question?.question_type === 'matching-pair') {
+                studentAnswer = answer.answer_json;
+              } else {
+                // Other complex answers (ordering, etc.) - stringify for now
+                studentAnswer = JSON.stringify(answer.answer_json);
+              }
             } else {
               studentAnswer = String(answer.answer_json);
             }
           }
 
           // Get correct answer(s)
-          // For fill-in-blank, check metadata first
+          // For fill-in-blank and matching, check metadata first
           if (question?.question_type === 'fill_in_blank') {
             const { data: metadata } = await supabase
               .from('quiz_question_metadata')
@@ -595,6 +620,20 @@ export class AnalyticsService {
                 (bp: any) => bp.answer
               );
               correctAnswer = correctAnswers.join(', ');
+            }
+          } else if (question?.question_type === 'matching' || question?.question_type === 'matching-pair') {
+            // ✅ FIX: Extract matching pairs from metadata for correct answer
+            const { data: metadata } = await supabase
+              .from('quiz_question_metadata')
+              .select('metadata')
+              .eq('question_id', answer.question_id)
+              .single();
+
+            if (metadata?.metadata?.matching_pairs) {
+              // Return the matching_pairs object (will be formatted by frontend)
+              correctAnswer = metadata.metadata.matching_pairs;
+            } else {
+              correctAnswer = 'N/A';
             }
           } else if (question?.correct_answer) {
             // For multiple choice/true-false, correct_answer contains choice_id(s)

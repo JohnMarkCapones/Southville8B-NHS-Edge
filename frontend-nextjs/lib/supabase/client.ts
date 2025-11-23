@@ -57,8 +57,8 @@ export function getSupabaseClient(): SupabaseClient {
         reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 30000),
       },
       auth: {
-        persistSession: false, // We're using cookies from the backend
-        autoRefreshToken: false,
+        persistSession: true, // ✅ Enable session persistence for auto-refresh
+        autoRefreshToken: true, // ✅ Enable automatic token refresh
         detectSessionInUrl: false,
       },
     });

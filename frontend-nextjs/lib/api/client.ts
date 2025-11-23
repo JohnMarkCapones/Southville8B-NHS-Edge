@@ -11,6 +11,7 @@
 
 import { apiConfig, buildApiUrl } from './config';
 import { ApiError, createErrorFromResponse, logError } from './errors';
+import { refreshTokenAction } from '@/app/actions/auth';
 
 /**
  * Request options extending standard RequestInit
@@ -312,18 +313,42 @@ class ApiClient {
 
       // Handle 401 Unauthorized (token expired or invalid)
       if (error instanceof ApiError && error.status === 401 && retryOnAuthFailure) {
-        // For Phase 1: Just redirect to login
-        // For Phase 2: Implement token refresh logic here
         if (typeof window !== 'undefined') {
-          // Don't redirect if we're on a public page (API endpoints are now public)
+          // Don't process if we're on a public page
           const currentPath = window.location.pathname;
-          const isPublicPage = currentPath === '/' || 
-                               currentPath.startsWith('/guess') || 
+          const isPublicPage = currentPath === '/' ||
+                               currentPath.startsWith('/guess') ||
                                currentPath.startsWith('/_next');
-          
+
           if (!isPublicPage) {
-            console.log('[API Client] 401 Unauthorized - redirecting to portal');
-            
+            console.log('[API Client] 401 Unauthorized - attempting token refresh');
+
+            try {
+              // Attempt to refresh the token
+              const refreshResult = await refreshTokenAction();
+
+              if (refreshResult.success) {
+                console.log('[API Client] Token refreshed successfully - retrying request');
+
+                // Retry the original request with the new token
+                // Set retryOnAuthFailure to false to prevent infinite loop
+                return this.request<T>(endpoint, {
+                  ...options,
+                  body,
+                  method,
+                  params,
+                  retryOnAuthFailure: false,
+                });
+              } else {
+                console.log('[API Client] Token refresh failed:', refreshResult.error);
+              }
+            } catch (refreshError) {
+              console.error('[API Client] Token refresh error:', refreshError);
+            }
+
+            // If refresh failed, redirect to login
+            console.log('[API Client] Redirecting to portal after failed refresh');
+
             // Determine role based on the current path
             let role = 'student'; // default
             if (currentPath.startsWith('/teacher')) {
@@ -331,7 +356,7 @@ class ApiClient {
             } else if (currentPath.startsWith('/admin') || currentPath.startsWith('/superadmin')) {
               role = 'admin';
             }
-            
+
             window.location.href = `/guess/portal?role=${role}`;
           }
         }

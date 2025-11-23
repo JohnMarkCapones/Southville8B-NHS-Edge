@@ -10,12 +10,16 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { UpdateClubDto } from './dto/update-club.dto';
 import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
+import { PointsService } from '../gamification/services/points.service';
 
 @Injectable()
 export class ClubsService {
   private readonly logger = new Logger(ClubsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly pointsService: PointsService,
+  ) {}
 
   /**
    * Creates a new club
@@ -339,14 +343,22 @@ export class ClubsService {
   /**
    * Deletes a club
    * @param id - Club ID
-   * @returns Promise<void>
+   * @returns Promise<Club> - Deleted club entity for audit logging
    */
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<any> {
     try {
       const supabase = this.supabaseService.getServiceClient();
 
-      // Verify club exists
-      await this.findOne(id);
+      // Fetch full club details to return for audit logging
+      const { data: club, error: fetchError } = await supabase
+        .from('clubs')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !club) {
+        throw new NotFoundException(`Club with ID ${id} not found`);
+      }
 
       const { error } = await supabase.from('clubs').delete().eq('id', id);
 
@@ -358,6 +370,9 @@ export class ClubsService {
       }
 
       this.logger.log(`Deleted club with ID: ${id}`);
+
+      // Return the entity so audit interceptor can capture the name
+      return club;
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -491,6 +506,27 @@ export class ClubsService {
       this.logger.log(
         `Student ${user.email} successfully joined club: ${club.name} (${clubId})`,
       );
+
+      // 🎯 Award points for joining a club
+      try {
+        await this.pointsService.awardPoints({
+          studentId: student.id,
+          points: 50,
+          reason: `Joined club: ${club.name}`,
+          type: 'club_joined',
+          category: 'activity',
+          relatedEntityId: clubId,
+          relatedEntityType: 'club',
+          metadata: {
+            club_name: club.name,
+            membership_id: newMembership.id,
+          },
+        });
+        this.logger.log(`Awarded 50 points to student ${student.id} for joining club ${club.name}`);
+      } catch (pointsError) {
+        // Don't fail the join if points award fails
+        this.logger.error('Failed to award points for club join:', pointsError);
+      }
 
       return { success: true };
     } catch (error) {

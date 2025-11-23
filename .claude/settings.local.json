@@ -31,7 +31,9 @@
       "Bash(cd:*)",
       "Bash(timeout 15 npm run dev:*)",
       "Bash(timeout:*)",
-      "Bash(Get-Content nul)"
+      "Bash(Get-Content nul)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

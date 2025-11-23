@@ -15,6 +15,7 @@ import { teacherQuizApi, studentQuizApi } from "@/lib/api/endpoints/quiz"
 import type { Quiz, QuizResponse } from "@/types/quiz"
 import { TimeUpDialog } from "@/components/quiz/time-up-dialog"
 import { FullscreenWarningDialog } from "@/components/quiz/fullscreen-warning-dialog"
+import { QuizWatermark } from "@/components/quiz/quiz-watermark"
 import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
 // ✅ ADD: Backend integration hooks
@@ -23,6 +24,9 @@ import { useQuizSession } from "@/hooks/useQuizSession"
 import { useQuizProgress } from "@/hooks/useQuizProgress"
 import { useQuizFlags } from "@/hooks/useQuizFlags"
 import { useHeartbeat } from "@/hooks/useHeartbeat"
+import { useQuery } from '@tanstack/react-query'
+import { getCurrentUser } from '@/lib/api/endpoints'
+import type { UserProfileResponse } from '@/lib/api/types'
 
 export default function DynamicQuizPage() {
   const params = useParams()
@@ -33,6 +37,22 @@ export default function DynamicQuizPage() {
   const backendAttempt = useQuizAttempt()
   const { sendProgress, calculateProgress } = useQuizProgress()
   const { toast } = useToast()
+
+  // ✅ ADD: Fetch current user to get student name for watermark
+  const { data: user } = useQuery<UserProfileResponse, Error>({
+    queryKey: ['user', 'me'],
+    queryFn: getCurrentUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  })
+
+  // ✅ ADD: Extract student name from user profile
+  const studentName = user?.student
+    ? `${user.student.first_name} ${user.student.middle_name ? user.student.middle_name + ' ' : ''}${user.student.last_name}`.trim()
+    : user?.full_name || 'Student'
 
   // ✅ KEEP: All existing state variables (100% preserved)
   const [quiz, setQuiz] = useState<Quiz | null>(null)
@@ -53,6 +73,7 @@ export default function DynamicQuizPage() {
   const [submissionMessage, setSubmissionMessage] = useState('') // ✅ NEW: Current motivational message
   const [reviewData, setReviewData] = useState<any>(null) // ✅ NEW: Detailed review data with correct answers
   const [showReview, setShowReview] = useState(false) // ✅ NEW: Toggle to show/hide answer review
+  const [screenshotDetected, setScreenshotDetected] = useState(false) // ✅ NEW: Track screenshot detection for watermark
 
   // ✅ ADD: Session monitoring (after quiz starts)
   const session = useQuizSession(
@@ -69,8 +90,21 @@ export default function DynamicQuizPage() {
       detectFullscreenExit: true,
       detectNetworkDisconnect: true,
       detectBrowserBack: true,
+      detectScreenshot: true,
     }
   )
+
+  // ✅ ADD: Track screenshot detection for watermark display
+  useEffect(() => {
+    if (flags.screenshotCount > 0) {
+      setScreenshotDetected(true)
+      // Keep watermark visible for 10 seconds after detection
+      const timer = setTimeout(() => {
+        setScreenshotDetected(false)
+      }, 10000)
+      return () => clearTimeout(timer)
+    }
+  }, [flags.screenshotCount])
 
   // ✅ ADD: Heartbeat to keep session alive (Phase 1 of resume functionality)
   const heartbeat = useHeartbeat({
@@ -1522,6 +1556,13 @@ export default function DynamicQuizPage() {
 
   return (
     <StudentLayout>
+      {/* ✅ ADD: Watermark overlay (subtle gray, student name only) */}
+      {quizStarted && !quizCompleted && (
+        <QuizWatermark
+          screenshotDetected={screenshotDetected}
+          studentName={studentName}
+        />
+      )}
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

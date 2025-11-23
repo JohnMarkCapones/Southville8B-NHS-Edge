@@ -374,15 +374,16 @@ export class GalleryItemsService {
    * Soft delete an item
    * @param id - Item ID
    * @param userId - User ID deleting
+   * @returns The deleted item (for audit logging)
    */
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(id: string, userId: string): Promise<GalleryItem> {
     try {
-      // Check if item exists using service client (includes deleted items)
+      // Check if item exists and fetch full details for audit log
       const { data: existingItem, error: fetchError } =
         await this.supabaseService
           .getServiceClient()
           .from('gallery_items')
-          .select('id, is_deleted')
+          .select('*')
           .eq('id', id)
           .single();
 
@@ -393,7 +394,7 @@ export class GalleryItemsService {
       // If already deleted, return early (idempotent delete)
       if (existingItem.is_deleted) {
         this.logger.log(`Gallery item ${id} is already deleted`);
-        return;
+        return existingItem;
       }
 
       // Soft delete in database
@@ -413,6 +414,9 @@ export class GalleryItemsService {
       }
 
       this.logger.log(`Gallery item soft deleted: ${id}`);
+
+      // Return the item for audit logging
+      return existingItem;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -426,8 +430,9 @@ export class GalleryItemsService {
    * Restore a soft-deleted item
    * @param id - Item ID to restore
    * @param userId - User ID restoring the item
+   * @returns The restored item (for audit logging)
    */
-  async restore(id: string, userId: string): Promise<void> {
+  async restore(id: string, userId: string): Promise<GalleryItem> {
     try {
       // Check if item exists (including deleted items)
       const { data: item, error: fetchError } = await this.supabaseService
@@ -446,22 +451,28 @@ export class GalleryItemsService {
       }
 
       // Restore the item (undelete)
-      const { error: updateError } = await this.supabaseService
-        .getServiceClient()
-        .from('gallery_items')
-        .update({
-          is_deleted: false,
-          deleted_at: null,
-          deleted_by: null,
-          updated_by: userId,
-        })
-        .eq('id', id);
+      const { data: restoredItem, error: updateError } =
+        await this.supabaseService
+          .getServiceClient()
+          .from('gallery_items')
+          .update({
+            is_deleted: false,
+            deleted_at: null,
+            deleted_by: null,
+            updated_by: userId,
+          })
+          .eq('id', id)
+          .select()
+          .single();
 
       if (updateError) {
         throw updateError;
       }
 
       this.logger.log(`Gallery item ${id} restored by user ${userId}`);
+
+      // Return the restored item for audit logging
+      return restoredItem;
     } catch (error) {
       if (
         error instanceof NotFoundException ||

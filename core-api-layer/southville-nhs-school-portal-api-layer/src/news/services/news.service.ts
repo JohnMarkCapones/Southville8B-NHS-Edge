@@ -413,10 +413,21 @@ export class NewsService {
    * Only drafts can be deleted
    * @param newsId Article ID
    * @param userId User ID
-   * @returns Promise<void>
+   * @returns The deleted article (for audit logging)
    */
-  async remove(newsId: string, userId: string): Promise<void> {
+  async remove(newsId: string, userId: string): Promise<News> {
     const supabase = this.supabaseService.getServiceClient();
+
+    // Fetch full article details for audit logging
+    const { data: article, error: fetchError } = await supabase
+      .from('news')
+      .select('*')
+      .eq('id', newsId)
+      .single();
+
+    if (fetchError || !article) {
+      throw new NotFoundException(`Article with ID ${newsId} not found`);
+    }
 
     // Check if user can delete this article
     const canDelete = await this.newsAccessService.canDeleteArticle(
@@ -447,6 +458,9 @@ export class NewsService {
     }
 
     this.logger.log(`Article deleted: ${newsId} by user ${userId}`);
+
+    // Return the article for audit logging
+    return article;
   }
 
   /**

@@ -339,11 +339,14 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or expired token');
       }
 
+      // Get the actual application role from database (e.g., SuperAdmin, Admin, Teacher, Student)
+      const roleFromDatabase = await this.getUserRoleFromDatabase(user.id);
+
       // Transform to SupabaseUser interface
       const supabaseUser: SupabaseUser = {
         id: user.id,
         email: user.email || '',
-        role: user.role,
+        role: roleFromDatabase || user.role, // Use database role, fallback to Supabase role
         user_metadata: user.user_metadata,
         app_metadata: user.app_metadata,
         aud: user.aud || 'authenticated',
@@ -358,6 +361,9 @@ export class AuthService {
 
       return supabaseUser;
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Token verification failed');
     }
   }
@@ -752,6 +758,59 @@ export class AuthService {
     }
 
     return password;
+  }
+
+  /**
+   * Refresh access token using a refresh token
+   * @param refreshToken - The refresh token from the session
+   * @returns Promise<{ session: any }> - New session with fresh tokens
+   * @throws UnauthorizedException - If refresh token is invalid or expired
+   */
+  async refreshToken(refreshToken: string): Promise<{ session: any }> {
+    try {
+      const authClient = this.getAuthClient();
+
+      // Use Supabase's setSession to refresh the tokens
+      const { data, error } = await authClient.auth.setSession({
+        access_token: '', // Can be empty, Supabase will generate new one
+        refresh_token: refreshToken,
+      });
+
+      if (error || !data.session) {
+        // Log detailed error information for debugging
+        this.logger.error(
+          `Token refresh failed: ${error?.message || 'No session returned'}`,
+        );
+        this.logger.debug(
+          `Refresh token validation error details: ${JSON.stringify({
+            errorCode: error?.code,
+            errorName: error?.name,
+            errorStatus: error?.status,
+            hasSession: !!data?.session,
+            hasUser: !!data?.user,
+          })}`,
+        );
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      }
+
+      this.logger.log(`Token refreshed successfully for user ${data.user?.id}`);
+
+      return {
+        session: {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at,
+          expires_in: data.session.expires_in,
+          token_type: data.session.token_type,
+        },
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`Token refresh error: ${error.message}`);
+      throw new UnauthorizedException('Token refresh failed');
+    }
   }
 
   /**

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Search, Activity, Settings, Sun, Moon, HelpCircle } from "lucide-react"
 import { primaryNavItems } from "@/components/superadmin/data/navigation-data"
 import { HelpSupportDialog } from "@/components/superadmin/help-support-dialog"
+import { BotChat } from "@/components/chat/bot-chat"
 
 // Loading components
 const DashboardSkeleton = () => (
@@ -132,6 +133,11 @@ export const DashboardLayout = ({ activeSection, activeSubSection, children }: D
         onClose={() => setHelpDialogOpen(false)}
         currentPage={pathname}
       />
+
+      {/* AI Chat Widget */}
+      <div className="fixed bottom-28 right-8 z-50">
+        <BotChat />
+      </div>
     </div>
   )
 }
@@ -474,6 +480,7 @@ const SecondarySidebar = ({
 
       // Settings section
       "System Config": "/superadmin/system-settings",
+      "Audit Logs": "/superadmin/audit-logs",
       Themes: "/superadmin/system-settings",
       Integrations: "/superadmin/integrations",
       Backup: "/superadmin/backups",

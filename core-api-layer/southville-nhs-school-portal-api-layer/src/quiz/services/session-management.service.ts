@@ -437,13 +437,29 @@ export class SessionManagementService {
             );
           }
 
-          // Also flag the old attempt as terminated
-          await supabase
+          // Also flag the old attempt as terminated (only if still in_progress)
+          // ✅ FIX: Don't overwrite submitted/graded attempts - only terminate in_progress ones
+          const { data: oldAttempt } = await supabase
             .from('quiz_attempts')
-            .update({
-              status: 'terminated',
-            })
-            .eq('attempt_id', session.attempt_id);
+            .select('status')
+            .eq('attempt_id', session.attempt_id)
+            .single();
+
+          if (oldAttempt && oldAttempt.status === 'in_progress') {
+            await supabase
+              .from('quiz_attempts')
+              .update({
+                status: 'terminated',
+              })
+              .eq('attempt_id', session.attempt_id);
+            this.logger.log(
+              `Terminated in-progress attempt ${session.attempt_id} due to duplicate session`,
+            );
+          } else {
+            this.logger.log(
+              `Skipped terminating attempt ${session.attempt_id} - status is '${oldAttempt?.status}' (not in_progress)`,
+            );
+          }
         }
       }
     } catch (error) {
@@ -555,7 +571,7 @@ export class SessionManagementService {
 
       // Determine severity based on flag type
       let severity: 'info' | 'warning' | 'critical' = 'info';
-      if (['tab_switch', 'fullscreen_exit', 'copy_paste'].includes(flagType)) {
+      if (['tab_switch', 'fullscreen_exit', 'copy_paste', 'screenshot_attempt'].includes(flagType)) {
         severity = 'warning';
       } else if (['multiple_sessions', 'device_change'].includes(flagType)) {
         severity = 'critical';

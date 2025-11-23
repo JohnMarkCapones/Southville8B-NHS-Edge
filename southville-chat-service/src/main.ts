@@ -10,6 +10,7 @@ import compression from '@fastify/compress';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -37,6 +38,9 @@ async function bootstrap() {
     threshold: 1024,
   });
 
+  // Global exception filter for error handling
+  app.useGlobalFilters(new AllExceptionsFilter());
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
@@ -55,17 +59,28 @@ async function bootstrap() {
 
   // Enable CORS
   // Note: When credentials: true, origin cannot be '*'
-  // For development, allow localhost origins; for production, use CORS_ORIGIN env var
-  const corsOrigin = configService.get<string>('CORS_ORIGIN') || 
-    (process.env.NODE_ENV === 'development' 
-      ? ['http://localhost:3000', 'http://localhost:3000/', 'http://127.0.0.1:3000']
-      : '*');
+  // Must use specific origins when credentials are enabled
+  const corsOriginEnv = configService.get<string>('CORS_ORIGIN');
+  let corsOrigin: string | string[];
+  
+  if (corsOriginEnv) {
+    // If CORS_ORIGIN is set, use it (can be comma-separated for multiple origins)
+    corsOrigin = corsOriginEnv.split(',').map(origin => origin.trim());
+  } else {
+    // Default to localhost:3000 for development
+    // In production, CORS_ORIGIN should be explicitly set
+    corsOrigin = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ];
+  }
   
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Swagger documentation

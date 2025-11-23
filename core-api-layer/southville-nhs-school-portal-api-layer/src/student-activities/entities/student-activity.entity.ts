@@ -19,6 +19,15 @@ export enum ActivityType {
   JOURNALISM_ARTICLE_REVISION_REQUESTED = 'journalism_article_revision_requested',
   JOURNALISM_ARTICLE_PUBLISHED = 'journalism_article_published',
 
+  // Gamification Activities
+  POINTS_AWARDED = 'points_awarded',
+  BADGE_EARNED = 'badge_earned',
+  LEVEL_UP = 'level_up',
+  STREAK_MILESTONE = 'streak_milestone',
+  RANK_IMPROVED = 'rank_improved',
+  QUIZ_COMPLETED = 'quiz_completed',
+  PERFECT_QUIZ = 'perfect_quiz',
+
   // General Activities
   OTHER = 'other',
 }

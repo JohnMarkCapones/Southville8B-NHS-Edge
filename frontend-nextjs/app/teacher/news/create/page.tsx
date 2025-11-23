@@ -28,6 +28,7 @@ import {
   Heart,
   Share2,
   AlertTriangle,
+  Facebook,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -495,12 +496,12 @@ export default function CreateArticlePage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "edit" | "preview")} className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <TabsTrigger value="edit" className="flex items-center gap-2">
+          <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+            <TabsTrigger value="edit" className="flex items-center justify-center gap-2">
               <Edit3 className="h-4 w-4" />
               Edit Article
             </TabsTrigger>
-            <TabsTrigger value="preview" className="flex items-center gap-2">
+            <TabsTrigger value="preview" className="flex items-center justify-center gap-2">
               <Eye className="h-4 w-4" />
               Preview
             </TabsTrigger>
@@ -1011,6 +1012,78 @@ export default function CreateArticlePage() {
                   </div>
                 </footer>
               </article>
+
+              {/* Facebook Preview Section */}
+              <div className="mt-8 mb-8">
+                <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+                  <CardHeader className="text-center items-center">
+                    <CardTitle className="flex items-center justify-center gap-2">
+                      <Facebook className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      Facebook Share Preview
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-2 text-center">
+                      This is how your article will look when shared on Facebook
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-center">
+                      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden max-w-2xl w-full">
+                        {/* Facebook-style preview card */}
+                        <div className="bg-white dark:bg-slate-800">
+                          {/* Image */}
+                          {getFeaturedImageUrl() ? (
+                            <div className="w-full aspect-video bg-gray-100 dark:bg-slate-700 overflow-hidden">
+                              <img
+                                src={getFeaturedImageUrl()}
+                                alt={formData.title || "Article preview"}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-video bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                              <ImageIcon className="h-12 w-12 text-gray-400 dark:text-slate-500" />
+                            </div>
+                          )}
+                          
+                          {/* Content */}
+                          <div className="p-4">
+                            {/* Site name */}
+                            <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1">
+                              Southville 8B National High School
+                            </div>
+                            
+                            {/* Title */}
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2 line-clamp-2">
+                              {formData.title || "Your article title will appear here"}
+                            </h3>
+                            
+                            {/* Description */}
+                            <p className="text-sm text-gray-600 dark:text-slate-300 line-clamp-3 mb-3">
+                              {formData.description || 
+                                (formData.articleHtml 
+                                  ? formData.articleHtml.replace(/<[^>]*>/g, '').substring(0, 150) + '...'
+                                  : "Add a description to see how it will appear on Facebook")}
+                            </p>
+                            
+                            {/* URL */}
+                            <div className="text-xs text-gray-400 dark:text-slate-500">
+                              southville8bnhs.com
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Tips */}
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-800 dark:text-blue-200">
+                        <strong>Tip:</strong> Facebook recommends images of at least 1200x630 pixels for best results. 
+                        Make sure your title is clear and your description is engaging!
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

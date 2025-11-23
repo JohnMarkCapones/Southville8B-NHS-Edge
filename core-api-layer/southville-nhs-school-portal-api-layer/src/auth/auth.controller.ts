@@ -18,7 +18,7 @@ import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SupabaseUser } from './interfaces/supabase-user.interface';
-import { LoginDto, TokenVerifyDto } from './dto/login.dto';
+import { LoginDto, TokenVerifyDto, RefreshTokenDto } from './dto/login.dto';
 import { SessionManagementService } from '../session-management/session-management.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { AuthUser } from './auth-user.decorator';
@@ -208,6 +208,66 @@ export class AuthController {
       };
     } catch (error) {
       throw error; // Let NestJS handle the error response
+    }
+  }
+
+  @Post('refresh')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description: 'Uses a refresh token to obtain a new access token and refresh token',
+  })
+  @ApiBody({
+    description: 'Refresh token',
+    type: RefreshTokenDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        session: {
+          type: 'object',
+          properties: {
+            access_token: { type: 'string' },
+            refresh_token: { type: 'string' },
+            expires_at: { type: 'number' },
+            expires_in: { type: 'number' },
+            token_type: { type: 'string' },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number' },
+        message: { type: 'string' },
+        error: { type: 'string' },
+      },
+    },
+  })
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    try {
+      const { session } = await this.authService.refreshToken(
+        refreshTokenDto.refresh_token,
+      );
+
+      return {
+        success: true,
+        session,
+        message: 'Token refreshed successfully',
+      };
+    } catch (error) {
+      throw error;
     }
   }
 

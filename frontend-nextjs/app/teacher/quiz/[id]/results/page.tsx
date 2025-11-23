@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
+import { useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -37,6 +38,137 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
+// ============================================================================
+// MOCK DATA (for development/testing - use ?mock=true in URL)
+// ============================================================================
+
+const mockQuizData = {
+  id: "QZ001",
+  title: "Mathematics - Algebra Basics",
+  subject: "Mathematics",
+  grade: "Grade 8",
+  questions: 15,
+  duration: 30,
+  totalAttempts: 45,
+  avgScore: 82.5,
+  created: "2024-01-10",
+  dueDate: "2024-01-25",
+  status: "completed",
+}
+
+const mockQuestionsData = [
+  {
+    id: 1,
+    question: "What is the value of x in the equation 2x + 5 = 15?",
+    type: "Multiple Choice",
+    correctAnswer: "x = 5",
+    options: ["x = 3", "x = 5", "x = 7", "x = 10"],
+    difficulty: "Medium",
+    avgScore: 85.2,
+    correctCount: 38,
+    totalAttempts: 45,
+    timeSpent: "2.3m",
+    needsGrading: false,
+  },
+  {
+    id: 2,
+    question: "Simplify the expression: 3(x + 4) - 2x",
+    type: "Short Answer",
+    correctAnswer: "x + 12",
+    difficulty: "Easy",
+    avgScore: 92.1,
+    correctCount: 41,
+    totalAttempts: 45,
+    timeSpent: "1.8m",
+    needsGrading: true,
+    ungradedCount: 12,
+  },
+  {
+    id: 3,
+    question: "Which of the following is a quadratic equation?",
+    type: "Multiple Choice",
+    correctAnswer: "x² + 3x + 2 = 0",
+    options: ["2x + 5 = 0", "x² + 3x + 2 = 0", "3x - 7 = 0", "x/2 + 1 = 0"],
+    difficulty: "Hard",
+    avgScore: 67.8,
+    correctCount: 30,
+    totalAttempts: 45,
+    timeSpent: "3.1m",
+    needsGrading: false,
+  },
+  {
+    id: 4,
+    question: "Explain the concept of variables in algebra and provide two real-world examples of how variables are used.",
+    type: "Long Answer",
+    difficulty: "Medium",
+    avgScore: 0,
+    correctCount: 0,
+    totalAttempts: 45,
+    timeSpent: "5.2m",
+    needsGrading: true,
+    ungradedCount: 45,
+    maxPoints: 10,
+  },
+  {
+    id: 5,
+    question: "Describe the steps to solve a linear equation. Use an example to illustrate your explanation.",
+    type: "Long Answer",
+    difficulty: "Hard",
+    avgScore: 0,
+    correctCount: 0,
+    totalAttempts: 45,
+    timeSpent: "6.5m",
+    needsGrading: true,
+    ungradedCount: 45,
+    maxPoints: 10,
+  },
+]
+
+const mockStudentsData = [
+  {
+    id: "ST001",
+    name: "Adit Irwan",
+    avatar: "/placeholder.svg?height=40&width=40",
+    score: 95,
+    timeSpent: "28m",
+    attempts: 1,
+    completedAt: "2024-01-20 14:30",
+    answers: [
+      { questionId: 1, answer: "x = 5", isCorrect: true, timeSpent: "2.1m" },
+      { questionId: 2, answer: "x + 12", isCorrect: true, timeSpent: "1.5m" },
+      { questionId: 3, answer: "x² + 3x + 2 = 0", isCorrect: true, timeSpent: "2.8m" },
+    ],
+  },
+  {
+    id: "ST002",
+    name: "Arif Brata",
+    avatar: "/placeholder.svg?height=40&width=40",
+    score: 78,
+    timeSpent: "32m",
+    attempts: 2,
+    completedAt: "2024-01-20 15:45",
+    answers: [
+      { questionId: 1, answer: "x = 3", isCorrect: false, timeSpent: "3.2m" },
+      { questionId: 2, answer: "x + 12", isCorrect: true, timeSpent: "2.1m" },
+      { questionId: 3, answer: "x² + 3x + 2 = 0", isCorrect: true, timeSpent: "3.5m" },
+    ],
+  },
+  {
+    id: "ST003",
+    name: "Ardhi Irwandi",
+    avatar: "/placeholder.svg?height=40&width=40",
+    score: 89,
+    timeSpent: "25m",
+    attempts: 1,
+    completedAt: "2024-01-20 16:20",
+    answers: [
+      { questionId: 1, answer: "x = 5", isCorrect: true, timeSpent: "1.8m" },
+      { questionId: 2, answer: "x + 10", isCorrect: false, timeSpent: "2.3m" },
+      { questionId: 3, answer: "x² + 3x + 2 = 0", isCorrect: true, timeSpent: "2.9m" },
+    ],
+  },
+]
+
 // Default empty quiz data structure
 const defaultQuizData = {
   id: "",
@@ -59,21 +191,86 @@ const formatQuestionText = (questionText: string): string => {
   return questionText.replace(/{{blank_\d+}}/g, "_______")
 }
 
-// Helper function to format student answers (especially for fill-in-blank)
-const formatStudentAnswer = (answer: any): string => {
+// Helper function to format student answers (especially for fill-in-blank and matching)
+const formatStudentAnswer = (answer: any, questionType?: string): string | JSX.Element => {
   if (!answer) return "No answer provided"
+
+  // Handle matching questions - format like student view
+  if (questionType === 'matching' || questionType === 'matching-pair') {
+    // answer could be:
+    // 1. The matching_pairs object directly (for correctAnswer from extractCorrectAnswer)
+    // 2. Nested in answerJson (for studentAnswer from getAttemptReview)
+    // 3. A stringified JSON string (from getStudentAnswers analytics endpoint)
+    let matchAnswers: any = {}
+    
+    if (typeof answer === 'string') {
+      // Try to parse if it's a JSON string (common from analytics endpoint)
+      try {
+        const parsed = JSON.parse(answer)
+        matchAnswers = parsed
+      } catch {
+        // If parsing fails, check if it's "N/A" or empty
+        if (answer === 'N/A' || answer.trim() === '') {
+          return "N/A"
+        }
+        return answer // Return as-is if not valid JSON
+      }
+    } else if (typeof answer === 'object' && answer !== null) {
+      // Check if it has answerJson property (from backend structure)
+      matchAnswers = answer.answerJson || answer
+    }
+    
+    // Format as list of matches
+    if (typeof matchAnswers === 'object' && matchAnswers !== null && Object.keys(matchAnswers).length > 0) {
+      return (
+        <div className="space-y-2">
+          {Object.entries(matchAnswers).map(([left, right], idx) => (
+            <div key={idx} className="flex items-center gap-2 text-sm">
+              <span className="font-medium">{left}</span>
+              <span className="text-muted-foreground">→</span>
+              <span>{right as string}</span>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    return "No answer provided"
+  }
 
   // If it's an array (fill-in-blank or checkbox), format it nicely
   if (Array.isArray(answer)) {
     return answer.map((item, idx) => `Blank ${idx + 1}: "${item}"`).join(", ")
   }
 
-  // If it's an object, try to stringify it nicely
+  // If it's an object (but not matching), try to extract meaningful data
   if (typeof answer === "object") {
+    // Check if it has answerJson (from backend structure)
+    if (answer.answerJson) {
+      return formatStudentAnswer(answer.answerJson, questionType)
+    }
+    // Check if it has answerText
+    if (answer.answerText) {
+      return answer.answerText
+    }
+    // Check if it has choiceId (multiple choice)
+    if (answer.choiceId) {
+      return `Choice ID: ${answer.choiceId}`
+    }
+    // Otherwise stringify
     try {
       return JSON.stringify(answer, null, 2)
     } catch {
       return String(answer)
+    }
+  }
+
+  // If it's a string, check if it's JSON
+  if (typeof answer === 'string' && answer.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(answer)
+      return formatStudentAnswer(parsed, questionType)
+    } catch {
+      // Not valid JSON, return as string
     }
   }
 
@@ -83,8 +280,12 @@ const formatStudentAnswer = (answer: any): string => {
 
 export default function QuizResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { id: quizId } = use(params)
+  
+  // Check if mock mode is enabled via URL query parameter
+  const useMockData = searchParams.get("mock") === "true"
 
   // State
   const [activeTab, setActiveTab] = useState("overview")
@@ -103,13 +304,100 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
   const [studentPerformance, setStudentPerformance] = useState<any>(null)
   const [studentAnswers, setStudentAnswers] = useState<any>(null)
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false)
+  const [allStudentAnswers, setAllStudentAnswers] = useState<Map<string, any>>(new Map()) // Store answers for all students for Class tab
 
-  // Backend integration: Load quiz data and analytics
+  // Backend integration: Load quiz data and analytics (or use mock data)
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
       setBackendError(null)
 
+      // If mock mode is enabled, use mock data instead of API calls
+      if (useMockData) {
+        // Simulate API delay for realistic behavior
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Transform mock data to match backend structure
+        setQuizData({
+          quiz_id: mockQuizData.id,
+          title: mockQuizData.title,
+          subject: { subject_name: mockQuizData.subject },
+          grade_level: mockQuizData.grade,
+          questions: mockQuestionsData.map(q => ({
+            question_id: `q-${q.id}`,
+            question_text: q.question,
+            question_type: q.type,
+            correct_answer: q.correctAnswer,
+            options: q.options || [],
+            difficulty: q.difficulty.toLowerCase(),
+          })),
+          time_limit: mockQuizData.duration,
+          created_at: mockQuizData.created,
+          due_date: mockQuizData.dueDate,
+          status: mockQuizData.status,
+        })
+
+        setAnalyticsData({
+          quizId: mockQuizData.id,
+          quizTitle: mockQuizData.title,
+          totalAttempts: mockQuizData.totalAttempts,
+          completedAttempts: mockQuizData.totalAttempts,
+          averageScore: mockQuizData.avgScore,
+          highestScore: 98,
+          lowestScore: 65,
+          passRate: 75,
+          averageTimeSpent: 1500, // in seconds
+          scoreDistribution: [
+            { range: "90-100", count: 12 },
+            { range: "80-89", count: 18 },
+            { range: "70-79", count: 10 },
+            { range: "60-69", count: 5 },
+          ],
+          lastCalculated: new Date().toISOString(),
+        })
+
+        setQuestionAnalytics({
+          quizId: mockQuizData.id,
+          questions: mockQuestionsData.map(q => ({
+            question_id: `q-${q.id}`,
+            question_text: q.question,
+            question_type: q.type,
+            points: 10,
+            total_attempts: q.totalAttempts,
+            correct_attempts: q.correctCount,
+            correct_rate: q.avgScore,
+            average_time_spent: 120, // in seconds
+            difficulty: q.difficulty.toLowerCase(),
+          })),
+        })
+
+        setStudentPerformance({
+          quizId: mockQuizData.id,
+          students: mockStudentsData.map(s => ({
+            student_id: s.id,
+            student_name: s.name,
+            student_email: `${s.name.toLowerCase().replace(' ', '.')}@school.com`,
+            section: "Grade 8A",
+            attempt_number: s.attempts,
+            score: s.score,
+            max_score: 100,
+            percentage: s.score,
+            time_spent: parseInt(s.timeSpent.replace('m', '')) * 60, // Convert minutes to seconds
+            status: "completed",
+            submitted_at: s.completedAt,
+            is_late: false,
+          })),
+        })
+
+        toast({
+          title: "Mock Data Loaded",
+          description: "Using mock data for demonstration. Add ?mock=true to URL to see this.",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      // Normal backend API calls
       try {
         const { quizApi } = await import("@/lib/api/endpoints")
 
@@ -119,10 +407,25 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
 
         // Then load analytics data in parallel
         const [quizAnalytics, questionStats, studentStats] = await Promise.all([
-          quizApi.analytics.getQuizAnalytics(quizId).catch(() => null),
-          quizApi.analytics.getQuestionAnalytics(quizId).catch(() => null),
-          quizApi.analytics.getStudentPerformance(quizId).catch(() => null),
+          quizApi.analytics.getQuizAnalytics(quizId).catch((err) => {
+            console.error('[Quiz Results] Error loading quiz analytics:', err)
+            return null
+          }),
+          quizApi.analytics.getQuestionAnalytics(quizId).catch((err) => {
+            console.error('[Quiz Results] Error loading question analytics:', err)
+            return null
+          }),
+          quizApi.analytics.getStudentPerformance(quizId).catch((err) => {
+            console.error('[Quiz Results] Error loading student performance:', err)
+            return null
+          }),
         ])
+
+        console.log('[Quiz Results] Analytics data loaded:', {
+          quizAnalytics: quizAnalytics ? 'loaded' : 'null',
+          questionStats: questionStats ? 'loaded' : 'null',
+          studentStats: studentStats ? 'loaded' : 'null',
+        })
 
         setAnalyticsData(quizAnalytics)
         setQuestionAnalytics(questionStats)
@@ -146,7 +449,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
     }
 
     loadData()
-  }, [quizId, toast])
+  }, [quizId, toast, useMockData])
 
   // Backend integration: Load student answers when student is selected
   useEffect(() => {
@@ -160,6 +463,38 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
       const student = studentPerformance.students[selectedStudent]
       if (!student || !student.student_id) {
         setStudentAnswers(null)
+        return
+      }
+
+      // If mock mode, use mock student answers
+      if (useMockData) {
+        const mockStudent = mockStudentsData[selectedStudent]
+        if (mockStudent) {
+          setStudentAnswers({
+            quizId: mockQuizData.id,
+            studentId: mockStudent.id,
+            attemptId: `attempt-${mockStudent.id}`,
+            score: mockStudent.score,
+            timeTaken: parseInt(mockStudent.timeSpent.replace('m', '')) * 60,
+            submittedAt: mockStudent.completedAt,
+            answers: mockStudent.answers.map((ans, idx) => {
+              const question = mockQuestionsData[idx]
+              return {
+                questionId: `q-${question.id}`,
+                questionNumber: idx + 1,
+                questionText: question.question,
+                questionType: question.type,
+                questionImageUrl: null,
+                studentAnswer: ans.answer,
+                correctAnswer: question.correctAnswer,
+                isCorrect: ans.isCorrect,
+                pointsAwarded: ans.isCorrect ? 10 : 0,
+                maxPoints: 10,
+                timeSpent: parseInt(ans.timeSpent.replace('m', '')) * 60,
+              }
+            }),
+          })
+        }
         return
       }
 
@@ -182,7 +517,68 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
     }
 
     loadStudentAnswers()
-  }, [selectedStudent, studentPerformance, quizId, toast])
+  }, [selectedStudent, studentPerformance, quizId, toast, useMockData])
+
+  // Load answers for all students when Class tab is active (for showing correct/incorrect icons)
+  useEffect(() => {
+    const loadAllStudentAnswers = async () => {
+      // Only load if Class tab is active and we have students
+      if (activeTab !== 'class' || !studentPerformance?.students || studentPerformance.students.length === 0) {
+        return
+      }
+
+      // If mock mode, use mock data
+      if (useMockData) {
+        const answersMap = new Map()
+        mockStudentsData.forEach((student) => {
+          answersMap.set(student.id, student.answers.map((ans: any, idx: number) => ({
+            questionId: `q-${mockQuestionsData[idx]?.id || idx + 1}`,
+            isCorrect: ans.isCorrect,
+          })))
+        })
+        setAllStudentAnswers(answersMap)
+        return
+      }
+
+      // Load answers for all students
+      try {
+        const { quizApi } = await import("@/lib/api/endpoints")
+        const answersMap = new Map<string, any>()
+
+        // Load answers for each student in parallel (limit to 10 at a time to avoid overwhelming)
+        const students = studentPerformance.students
+        const batchSize = 10
+        
+        for (let i = 0; i < students.length; i += batchSize) {
+          const batch = students.slice(i, i + batchSize)
+          await Promise.all(
+            batch.map(async (student: any) => {
+              try {
+                const answers = await quizApi.analytics.getStudentAnswers(quizId, student.student_id)
+                if (answers?.answers) {
+                  // Map answers by questionId for quick lookup
+                  const answerMap = answers.answers.map((ans: any) => ({
+                    questionId: ans.questionId,
+                    isCorrect: ans.isCorrect,
+                  }))
+                  answersMap.set(student.student_id, answerMap)
+                }
+              } catch (error) {
+                console.error(`Error loading answers for student ${student.student_id}:`, error)
+                // Continue with other students even if one fails
+              }
+            })
+          )
+        }
+
+        setAllStudentAnswers(answersMap)
+      } catch (error) {
+        console.error("Error loading all student answers:", error)
+      }
+    }
+
+    loadAllStudentAnswers()
+  }, [activeTab, studentPerformance, quizId, useMockData])
 
   // Backend integration: Transform analytics data for UI
   const transformedQuizData = quizData ? {
@@ -227,6 +623,9 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
 
   const transformedStudents = studentPerformance?.students ? studentPerformance.students.map((s: any) => {
     const timeInSeconds = s.time_spent || 0
+    
+    // ✅ FIX: Get answers from allStudentAnswers map for Class tab
+    const studentAnswers = allStudentAnswers.get(s.student_id) || []
 
     return {
       id: s.student_id,
@@ -236,13 +635,13 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
       score: s.percentage || 0,
       totalQuestions: s.max_score || 0,
       correctAnswers: Math.round((s.score / s.max_score) * s.max_score) || 0,
-      attempts: s.attempt_number || 1,
-      attemptCount: s.attempt_number || 1, // Used for attempt patterns analysis
+      attempts: s.graded_attempts_count || s.attempt_number || 1, // ✅ FIX: Use count of graded attempts, not attempt number
+      attemptCount: s.graded_attempts_count || s.attempt_number || 1, // ✅ FIX: Used for attempt patterns analysis
       timeSpent: timeInSeconds, // Time in seconds (for calculations)
       timeSpentDisplay: timeInSeconds ? `${Math.floor(timeInSeconds / 60)}m` : "0m", // Time display string
       completedAt: s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "Not completed",
       status: s.status || "completed",
-      answers: [], // Detailed answers not available in performance summary
+      answers: studentAnswers, // ✅ FIX: Use loaded answers for Class tab
     }
   }) : []
 
@@ -338,6 +737,31 @@ ${transformedStudents.map((student) => `${student.name}: ${student.score}% (${st
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 p-4 lg:p-6 space-y-6">
+      {/* Mock Data Indicator Banner */}
+      {useMockData && (
+        <div className="bg-yellow-500 dark:bg-yellow-600 border-l-4 border-yellow-700 dark:border-yellow-800 p-4 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-900 dark:text-yellow-100" />
+              <div>
+                <p className="font-semibold text-yellow-900 dark:text-yellow-100">Mock Data Mode Active</p>
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  You are viewing mock/demo data. Remove <code className="bg-yellow-400/30 px-1 rounded">?mock=true</code> from URL to see real data.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(window.location.pathname)}
+              className="bg-yellow-100 hover:bg-yellow-200 text-yellow-900 border-yellow-700"
+            >
+              View Real Data
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Enhanced Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-800 p-6 lg:p-8 text-white shadow-2xl">
         <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
@@ -1204,13 +1628,21 @@ ${transformedStudents.map((student) => `${student.name}: ${student.score}% (${st
                                 return (
                                   <td key={question.id} className="p-2 text-center">
                                     <div className="flex justify-center">
-                                      {answer?.isCorrect ? (
-                                        <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                        </div>
+                                      {answer ? (
+                                        // Answer data is available
+                                        answer.isCorrect ? (
+                                          <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                          </div>
+                                        ) : (
+                                          <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                          </div>
+                                        )
                                       ) : (
-                                        <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                          <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                        // Answer data not loaded yet - show neutral indicator
+                                        <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                                          <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
                                         </div>
                                       )}
                                     </div>
@@ -1469,23 +1901,23 @@ ${transformedStudents.map((student) => `${student.name}: ${student.score}% (${st
                                       <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                                         Student's Answer:
                                       </p>
-                                      <p
+                                      <div
                                         className={`p-3 rounded-lg ${
                                           answer.isCorrect
                                             ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
                                             : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
                                         }`}
                                       >
-                                        {formatStudentAnswer(answer.studentAnswer)}
-                                      </p>
+                                        {formatStudentAnswer(answer.studentAnswer, answer.questionType)}
+                                      </div>
                                     </div>
                                     <div>
                                       <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                                         Correct Answer:
                                       </p>
-                                      <p className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200">
-                                        {formatStudentAnswer(answer.correctAnswer)}
-                                      </p>
+                                      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200">
+                                        {formatStudentAnswer(answer.correctAnswer, answer.questionType)}
+                                      </div>
                                     </div>
                                   </div>
                                   <div className="flex items-center justify-between">
