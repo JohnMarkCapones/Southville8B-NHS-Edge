@@ -7,6 +7,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { NotificationService } from '../../common/services/notification.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../../activity-monitoring/activity-monitoring.service';
 import { StartQuizAttemptDto } from '../dto/start-quiz-attempt.dto';
 import { SubmitAnswerDto } from '../dto/submit-answer.dto';
 import { QuizAttempt } from '../entities';
@@ -23,6 +26,8 @@ export class QuizAttemptsService {
     private readonly autoGradingService: AutoGradingService,
     private readonly sessionManagementService: SessionManagementService,
     private readonly analyticsService: QuizAnalyticsService,
+    private readonly notificationService: NotificationService,
+    private readonly activityMonitoring: ActivityMonitoringService,
   ) {}
 
   /**
@@ -722,6 +727,63 @@ export class QuizAttemptsService {
       }
 
       this.logger.log(`Quiz attempt submitted: ${attemptId}`);
+
+      // Notify teacher about quiz submission
+      try {
+        // Get quiz details to find teacher
+        const { data: quizData } = await supabase
+          .from('quizzes')
+          .select('quiz_id, title, teacher_id')
+          .eq('quiz_id', attempt.quiz_id)
+          .single();
+
+        if (quizData?.teacher_id) {
+          // Get teacher user_id
+          const { data: teacher } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .eq('id', quizData.teacher_id)
+            .single();
+
+          if (teacher?.user_id) {
+            // Get student name for notification
+            const { data: student } = await supabase
+              .from('students')
+              .select('first_name, last_name')
+              .eq('id', studentId)
+              .single();
+
+            const studentName = student
+              ? `${student.first_name} ${student.last_name}`
+              : 'A student';
+
+            // Activity monitoring - notify teacher about quiz submission
+            try {
+              await this.activityMonitoring.handleQuizSubmitted(
+                attemptId,
+                attempt.quiz_id,
+                quizData.title,
+                studentId,
+                studentName,
+                teacher.user_id,
+              );
+            } catch (error) {
+              this.logger.warn('Failed to handle quiz submission activity monitoring:', error);
+            }
+
+            await this.notificationService.notifyUser(
+              teacher.user_id,
+              'Quiz Submission',
+              `${studentName} has submitted the quiz "${quizData.title}".`,
+              NotificationType.INFO,
+              studentId,
+              { expiresInDays: 7 },
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to create notification for quiz submission:', error);
+      }
 
       // ✅ FIX: Calculate percentage
       const percentage = gradingResult.maxScore > 0

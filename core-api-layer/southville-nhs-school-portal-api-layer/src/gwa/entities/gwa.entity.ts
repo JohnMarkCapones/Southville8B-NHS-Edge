@@ -22,6 +22,18 @@ export class Gwa {
   student_id: string;
 
   @ApiProperty({
+    description: 'Academic year reference (UUID)',
+    required: false,
+  })
+  academic_year_id?: string | null;
+
+  @ApiProperty({
+    description: 'Academic period reference (UUID)',
+    required: false,
+  })
+  academic_period_id?: string | null;
+
+  @ApiProperty({
     description: 'General Weighted Average',
     example: 95.5,
     minimum: 50.0,

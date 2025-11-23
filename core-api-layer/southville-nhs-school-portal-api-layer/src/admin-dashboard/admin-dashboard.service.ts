@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Observable, Subject, interval } from 'rxjs';
 import { map, startWith, switchMap } from 'rxjs/operators';
+import { DesktopSidebarService } from '../desktop-sidebar/desktop-sidebar.service';
 
 export interface AdminDashboardMetrics {
   totalStudents: number;
@@ -12,13 +13,30 @@ export interface AdminDashboardMetrics {
   lastUpdated: string;
 }
 
+export interface AdminActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  actionType: string;
+  description: string;
+  entityType?: string;
+  entityId?: string;
+  metadata?: Record<string, any>;
+  icon?: string;
+  color?: string;
+  createdAt: string;
+}
+
 @Injectable()
 export class AdminDashboardService {
   private readonly logger = new Logger(AdminDashboardService.name);
   private supabase: SupabaseClient;
   private metricsSubject = new Subject<AdminDashboardMetrics>();
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private readonly desktopSidebarService: DesktopSidebarService,
+  ) {
     const supabaseUrl = this.configService.get<string>('supabase.url');
     const serviceRoleKey = this.configService.get<string>(
       'supabase.serviceRoleKey',
@@ -112,5 +130,103 @@ export class AdminDashboardService {
     const metrics = await this.fetchMetrics();
     this.metricsSubject.next(metrics);
     return metrics;
+  }
+
+  // Fetch recent admin activities
+  async getRecentActivities(limit: number = 10): Promise<AdminActivity[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('admin_activities')
+        .select(
+          `
+          id,
+          user_id,
+          action_type,
+          description,
+          entity_type,
+          entity_id,
+          metadata,
+          icon,
+          color,
+          created_at,
+          users!user_id (
+            full_name
+          )
+        `,
+        )
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        this.logger.error('Error fetching admin activities:', error);
+        throw error;
+      }
+
+      // Map the data to AdminActivity interface
+      return (data || []).map((activity) => {
+        // Supabase returns users as an object when using !user_id
+        const userName = (activity.users as any)?.full_name || 'Unknown User';
+
+        return {
+          id: activity.id,
+          userId: activity.user_id,
+          userName: userName,
+          actionType: activity.action_type,
+          description: activity.description,
+          entityType: activity.entity_type,
+          entityId: activity.entity_id,
+          metadata: activity.metadata,
+          icon: activity.icon,
+          color: activity.color,
+          createdAt: activity.created_at,
+        };
+      });
+    } catch (error) {
+      this.logger.error('Error fetching admin activities:', error);
+      return [];
+    }
+  }
+
+  // Create new admin activity
+  async createActivity(activityData: {
+    user_id: string;
+    action_type: string;
+    description: string;
+    entity_type?: string;
+    entity_id?: string;
+    icon?: string;
+    color?: string;
+    metadata?: any;
+  }): Promise<{ success: boolean; id?: string }> {
+    try {
+      const { data, error } = await this.supabase
+        .from('admin_activities')
+        .insert({
+          user_id: activityData.user_id,
+          action_type: activityData.action_type,
+          description: activityData.description,
+          entity_type: activityData.entity_type || null,
+          entity_id: activityData.entity_id || null,
+          icon: activityData.icon || 'Info',
+          color: activityData.color || 'gray',
+          metadata: activityData.metadata || {},
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        this.logger.error('Error creating admin activity:', error);
+        throw error;
+      }
+
+      this.logger.log(
+        `Activity logged: ${activityData.action_type} by user ${activityData.user_id}`,
+      );
+      await this.desktopSidebarService.triggerActivitiesUpdate();
+      return { success: true, id: data?.id };
+    } catch (error) {
+      this.logger.error('Error creating admin activity:', error);
+      return { success: false };
+    }
   }
 }

@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { getAuthToken, setAuthToken } from "@/lib/auth/auth-token";
+import { refreshTokensWithSupabase } from "@/lib/auth/token-manager";
 
 export class APIError extends Error {
   status?: number;
@@ -40,6 +42,22 @@ const resolveDefaultBaseUrl = () => {
       return `http://${host}:3004/api/v1`;
     }
 
+    // Fallback: Try to get host from CHAT_SERVICE_URL if available
+    if (process.env.EXPO_PUBLIC_CHAT_SERVICE_URL) {
+      try {
+        const chatUrl = new URL(process.env.EXPO_PUBLIC_CHAT_SERVICE_URL);
+        if (
+          chatUrl.hostname &&
+          chatUrl.hostname !== "localhost" &&
+          chatUrl.hostname !== "127.0.0.1"
+        ) {
+          return `http://${chatUrl.hostname}:3004/api/v1`;
+        }
+      } catch (e) {
+        // Ignore invalid URL
+      }
+    }
+
     if (Platform.OS === "android") {
       return "http://10.0.2.2:3004/api/v1";
     }
@@ -60,8 +78,6 @@ const resolveDefaultBaseUrl = () => {
 const DEFAULT_BASE_URL = resolveDefaultBaseUrl();
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_BASE_URL;
-
-let authToken: string | null = null;
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -89,12 +105,11 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   body?: Record<string, unknown> | FormData;
 };
 
-export function setAuthToken(token: string | null): void {
-  authToken = token;
-}
+export { setAuthToken, getAuthToken };
 
-export function getAuthToken(): string | null {
-  return authToken;
+async function tryRefreshAuthToken(): Promise<boolean> {
+  const refreshed = await refreshTokensWithSupabase();
+  return !!refreshed;
 }
 
 export async function apiRequest<TResponse = unknown>(
@@ -105,23 +120,8 @@ export async function apiRequest<TResponse = unknown>(
   const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
   const isFormData = body instanceof FormData;
-  const preparedHeaders = new Headers(headers);
-  preparedHeaders.set("Accept", "application/json");
-
-  if (authToken && !preparedHeaders.has("Authorization")) {
-    preparedHeaders.set("Authorization", `Bearer ${authToken}`);
-  }
-
-  let preparedBody: BodyInit | undefined;
-
-  if (body !== undefined) {
-    if (isFormData) {
-      preparedBody = body;
-    } else {
-      preparedHeaders.set("Content-Type", "application/json");
-      preparedBody = JSON.stringify(body);
-    }
-  }
+  const preparedBody: BodyInit | undefined =
+    body === undefined ? undefined : isFormData ? body : JSON.stringify(body);
 
   const method = rest.method ?? (body ? "POST" : "GET");
   const requestLabel = `[apiRequest] ${method} ${url}`;
@@ -135,29 +135,55 @@ export async function apiRequest<TResponse = unknown>(
         : maskSensitiveFields(body as Record<string, unknown>);
     console.log(requestLabel, {
       body: debugBody,
-      auth: authToken ? "attached" : "none",
+      auth: getAuthToken() ? "attached" : "none",
     });
   }
 
-  let response: Response;
+  const executeRequest = async (): Promise<Response> => {
+    const preparedHeaders = new Headers(headers);
+    preparedHeaders.set("Accept", "application/json");
 
-  try {
-    response = await fetch(url, {
-      method,
-      ...rest,
-      headers: preparedHeaders,
-      body: preparedBody,
-    });
-  } catch (error) {
-    if (isDev) {
-      console.error(`${requestLabel} network error`, error);
+    const token = getAuthToken();
+    if (token && !preparedHeaders.has("Authorization")) {
+      preparedHeaders.set("Authorization", `Bearer ${token}`);
     }
 
-    throw new APIError(
-      "Unable to reach the server. Check your network connection.",
-      undefined,
-      error
-    );
+    if (body !== undefined && !isFormData) {
+      preparedHeaders.set("Content-Type", "application/json");
+    }
+
+    try {
+      return await fetch(url, {
+        method,
+        ...rest,
+        headers: preparedHeaders,
+        body: preparedBody,
+      });
+    } catch (error) {
+      if (isDev) {
+        console.error(`${requestLabel} network error`, error);
+      }
+
+      throw new APIError(
+        "Unable to reach the server. Check your network connection.",
+        undefined,
+        error
+      );
+    }
+  };
+
+  let response = await executeRequest();
+
+  const shouldRetry =
+    !response.ok &&
+    !isFormData &&
+    (response.status === 401 || response.status === 403);
+
+  if (shouldRetry) {
+    const refreshed = await tryRefreshAuthToken();
+    if (refreshed) {
+      response = await executeRequest();
+    }
   }
 
   const contentType = response.headers.get("content-type") ?? "";

@@ -70,7 +70,7 @@ public partial class NewChatViewModel : ViewModelBase
                     {
                         UserId = user.Id,
                         Name = user.FullName ?? user.Email,
-                        Role = user.Role?.Name ?? "Admin"
+                        Role = user.Role ?? "Admin"
                     });
                 }
             }
@@ -83,7 +83,7 @@ public partial class NewChatViewModel : ViewModelBase
                     {
                         UserId = user.Id,
                         Name = user.FullName ?? user.Email,
-                        Role = user.Role?.Name ?? "Teacher"
+                        Role = user.Role ?? "Teacher"
                     });
                 }
             }
@@ -128,7 +128,7 @@ public partial class NewChatViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
-    private async void Create()
+    private async Task Create()
     {
         if (SelectedUser == null || string.IsNullOrEmpty(SelectedUser.UserId) || _chatService == null)
             return;

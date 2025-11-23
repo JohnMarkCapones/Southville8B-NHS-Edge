@@ -28,13 +28,14 @@ export class DesktopSidebarController {
   @Sse('kpi/stream')
   @Roles(UserRole.ADMIN)
   @ApiOperation({
-    summary: 'Get real-time sidebar KPI metrics stream',
+    summary: 'Get real-time sidebar KPI metrics and activities stream',
     description:
-      'Server-Sent Events stream for live sidebar KPI metrics updates (Events, Teachers, Students, Sections)',
+      'Server-Sent Events stream delivering live sidebar KPI metrics updates (Events, Teachers, Students, Sections) and recent activity feed entries',
   })
   @ApiResponse({
     status: 200,
-    description: 'SSE stream of sidebar KPI metrics',
+    description:
+      'SSE stream of sidebar KPI metrics and admin activity updates. Metrics emit event `metrics-update`; activities emit event `dashboard-activities-update`.',
     schema: {
       type: 'object',
       properties: {

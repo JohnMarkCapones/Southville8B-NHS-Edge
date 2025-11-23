@@ -34,13 +34,15 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private ObservableCollection<AnnouncementItemViewModel> _filteredAnnouncements = new();
     private bool _isUpdatingAnnouncements = false;
     [ObservableProperty] private string _newAnnouncementTitle = "";
-    [ObservableProperty] private string _newAnnouncementClass = "";
+    [ObservableProperty] private string _newAnnouncementClass = ""; // Keep for backward compatibility
     [ObservableProperty] private string _newAnnouncementPriority = "";
     [ObservableProperty] private string _newAnnouncementContent = "";
     [ObservableProperty] private bool _postImmediately = true;
     [ObservableProperty] private DateTime? _scheduledDate;
     [ObservableProperty] private ObservableCollection<string> _availableClasses = new() { "Grade 8A", "Grade 8B", "Grade 9A" };
+    [ObservableProperty] private ObservableCollection<SelectableSection> _availableClassesWithSelection = new();
     [ObservableProperty] private ObservableCollection<string> _priorityOptions = new() { "High", "Medium", "Low" };
+    [ObservableProperty] private string _selectedSectionsDisplay = "No sections selected";
     [ObservableProperty] private ObservableCollection<AnnouncementActivityViewModel> _recentActivity = new();
     [ObservableProperty] private bool _isEditMode = false;
     [ObservableProperty] private string _editingAnnouncementId = "";
@@ -121,15 +123,48 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
             if (sections != null)
             {
                 AvailableClasses.Clear();
+                AvailableClassesWithSelection.Clear();
                 foreach (var section in sections)
                 {
                     AvailableClasses.Add(section.Name);
+                    var selectableSection = new SelectableSection
+                    {
+                        Id = section.Id,
+                        Name = section.Name,
+                        IsSelected = false
+                    };
+                    selectableSection.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(SelectableSection.IsSelected))
+                        {
+                            UpdateSelectedSectionsDisplay();
+                        }
+                    };
+                    AvailableClassesWithSelection.Add(selectableSection);
                 }
+                UpdateSelectedSectionsDisplay();
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Error loading sections: {ex.Message}");
+        }
+    }
+
+    private void UpdateSelectedSectionsDisplay()
+    {
+        var selected = AvailableClassesWithSelection.Where(s => s.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            SelectedSectionsDisplay = "No sections selected";
+        }
+        else if (selected.Count == 1)
+        {
+            SelectedSectionsDisplay = selected[0].Name;
+        }
+        else
+        {
+            SelectedSectionsDisplay = $"{selected.Count} sections selected";
         }
     }
 
@@ -307,6 +342,12 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
         NewAnnouncementPriority = announcement.Priority;
         NewAnnouncementClass = announcement.TargetClass;
         
+        // Select the sections that this announcement was posted to
+        foreach (var selectableSection in AvailableClassesWithSelection)
+        {
+            selectableSection.IsSelected = announcement.Sections.Any(s => s.Id == selectableSection.Id);
+        }
+        
         // Set edit mode
         IsEditMode = true;
         EditingAnnouncementId = announcement.Id;
@@ -355,6 +396,9 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
 
         try
         {
+            var deletedTitle = announcement.Title;
+            var deletedId = announcement.Id;
+            
             // Delete via API
             await _apiClient.DeleteAnnouncementAsync(announcement.Id);
 
@@ -368,9 +412,17 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
             RecentActivity.Insert(0, new AnnouncementActivityViewModel
             {
                 Activity = "Deleted announcement",
-                AnnouncementTitle = announcement.Title,
+                AnnouncementTitle = deletedTitle,
                 Timestamp = "just now"
             });
+            
+            // Log activity
+            await LogActivityAsync(
+                "announcement_deleted",
+                $"Deleted announcement '{deletedTitle}'",
+                "announcement",
+                deletedId
+            );
         }
         catch (Exception ex)
         {
@@ -384,16 +436,16 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // Find section ID from section name
-            var sectionId = string.Empty;
-            if (!string.IsNullOrEmpty(NewAnnouncementClass))
+            // Get all selected section IDs
+            var selectedSectionIds = AvailableClassesWithSelection
+                .Where(s => s.IsSelected)
+                .Select(s => s.Id)
+                .ToList();
+            
+            if (selectedSectionIds.Count == 0)
             {
-                var sections = await _apiClient.GetMySectionsAsync();
-                var section = sections?.FirstOrDefault(s => s.Name == NewAnnouncementClass);
-                if (section != null)
-                {
-                    sectionId = section.Id;
-                }
+                await _dialogService.ShowConfirmAsync("No Sections Selected", "Please select at least one section to post the announcement to.", "OK");
+                return;
             }
 
             var type = MapPriorityToType(NewAnnouncementPriority);
@@ -410,7 +462,7 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
                     Visibility = "private",
                     ExpiresAt = expiresAt,
                     TargetRoleIds = null,
-                    SectionIds = !string.IsNullOrEmpty(sectionId) ? new List<string> { sectionId } : null
+                    SectionIds = selectedSectionIds.Count > 0 ? selectedSectionIds : null
                 };
 
                 var updated = await _apiClient.UpdateAnnouncementAsync(EditingAnnouncementId, updateDto);
@@ -435,6 +487,14 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
                         AnnouncementTitle = NewAnnouncementTitle,
                         Timestamp = "just now"
                     });
+                    
+                    // Log activity
+                    await LogActivityAsync(
+                        "announcement_updated",
+                        $"Updated announcement '{NewAnnouncementTitle}'",
+                        "announcement",
+                        EditingAnnouncementId
+                    );
                 }
 
                 // Reset edit mode
@@ -452,7 +512,7 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
                     Visibility = "private",
                     ExpiresAt = expiresAt,
                     TargetRoleIds = null,
-                    SectionIds = !string.IsNullOrEmpty(sectionId) ? new List<string> { sectionId } : null
+                    SectionIds = selectedSectionIds.Count > 0 ? selectedSectionIds : null
                 };
 
                 var created = await _apiClient.CreateAnnouncementAsync(dto);
@@ -472,12 +532,30 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
                     });
                     
                     UpdateAnnouncementCounts();
+                    
+                    // Log activity
+                    await LogActivityAsync(
+                        "announcement_posted",
+                        $"Posted announcement '{NewAnnouncementTitle}' to {NewAnnouncementClass}",
+                        "announcement",
+                        created.Id
+                    );
                 }
             }
 
             // Reset form
             NewAnnouncementTitle = NewAnnouncementContent = string.Empty;
             NewAnnouncementClass = NewAnnouncementPriority = string.Empty;
+            
+            // Clear all section selections
+            foreach (var section in AvailableClassesWithSelection)
+            {
+                section.IsSelected = false;
+            }
+            
+            // Reset edit mode if it was active
+            IsEditMode = false;
+            EditingAnnouncementId = string.Empty;
         }
         catch (Exception ex)
         {
@@ -530,6 +608,47 @@ public partial class MyAnnouncementsViewModel : ViewModelBase, IDisposable
         foreach (var item in filtered)
         {
             FilteredAnnouncements.Add(item);
+        }
+    }
+
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            // Get current user ID
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+            
+            // Map action types to icons and colors
+            var (icon, color) = actionType switch
+            {
+                "announcement_posted" => ("Megaphone", "blue"),
+                "announcement_updated" => ("Edit", "orange"),
+                "announcement_deleted" => ("Delete", "red"),
+                _ => ("Info", "gray")
+            };
+            
+            // Create activity data
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = actionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "my_announcements" }
+            };
+            
+            // POST to teacher activity API
+            await _apiClient.PostAsync("teacher-activity/activities", activityData);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the main operation
+            System.Diagnostics.Debug.WriteLine($"Error logging teacher activity: {ex.Message}");
         }
     }
 
@@ -642,6 +761,13 @@ public partial class AnnouncementItemViewModel : ViewModelBase
                 break;
         }
     }
+}
+
+public partial class SelectableSection : ObservableObject
+{
+    [ObservableProperty] private string _id = string.Empty;
+    [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private bool _isSelected = false;
 }
 
 public partial class AnnouncementActivityViewModel : ViewModelBase

@@ -334,7 +334,7 @@ public partial class LoginViewModel : ViewModelBase
             Id = loginUser.Id,
             Email = loginUser.Email,
             FullName = loginUser.Email, // Login API doesn't provide full name, use email as fallback
-            Role = new RoleDto { Name = loginUser.Role }, // Convert string role to RoleDto
+            Role = loginUser.Role, // Role is now a string
             Status = "Active", // Assume active for login
             CreatedAt = loginUser.CreatedAt,
             EmailConfirmedAt = loginUser.EmailConfirmedAt,

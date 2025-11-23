@@ -331,12 +331,6 @@
 							<TextBlock Text="Refresh"/>
 						</StackPanel>
 					</Button>
-					<Button x:Name="CreateButton" Classes="primary" Background="#C64747" Command="{Binding CreateEventCommand}">
-						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-							<ic:FluentIcon Icon="Add" IconSize="Size20" Foreground="White"/>
-							<TextBlock Text="Create Event" Foreground="white"/>
-						</StackPanel>
-					</Button>
 				</StackPanel>
 			</Grid>
 

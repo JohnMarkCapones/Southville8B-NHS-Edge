@@ -62,3 +62,45 @@ public class AcademicYearDto
     }
 }
 
+public class AcademicPeriodDto
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("academic_year_id")]
+    public string AcademicYearId { get; set; } = string.Empty;
+
+    [JsonPropertyName("period_name")]
+    public string? PeriodName { get; set; }
+
+    [JsonPropertyName("period_order")]
+    public int? PeriodOrder { get; set; }
+
+    [JsonPropertyName("start_date")]
+    public string? StartDate { get; set; }
+
+    [JsonPropertyName("end_date")]
+    public string? EndDate { get; set; }
+
+    [JsonPropertyName("is_grading_period")]
+    public bool? IsGradingPeriod { get; set; }
+}
+
+public class AcademicDashboardOverviewDto
+{
+    [JsonPropertyName("active_year")]
+    public AcademicYearDto? ActiveYear { get; set; }
+
+    [JsonPropertyName("current_period")]
+    public AcademicPeriodDto? CurrentPeriod { get; set; }
+
+    [JsonPropertyName("total_years")]
+    public int TotalYears { get; set; }
+
+    [JsonPropertyName("upcoming_years")]
+    public int UpcomingYears { get; set; }
+
+    [JsonPropertyName("archived_years")]
+    public int ArchivedYears { get; set; }
+}
+

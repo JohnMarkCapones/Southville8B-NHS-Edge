@@ -7,6 +7,12 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationService } from '../common/services/notification.service';
+import {
+  NotificationType,
+  NotificationCategory,
+} from '../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { UpdateClubDto } from './dto/update-club.dto';
 import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
@@ -18,6 +24,8 @@ export class ClubsService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
+    private readonly notificationService: NotificationService,
+    private readonly activityMonitoring: ActivityMonitoringService,
     private readonly pointsService: PointsService,
   ) {}
 
@@ -147,6 +155,87 @@ export class ClubsService {
       }
 
       this.logger.log(`Created club: ${club.name} (ID: ${club.id})`);
+
+      // Activity monitoring - notify admins about new club
+      try {
+        await this.activityMonitoring.handleClubCreated(
+          club.id,
+          club.name,
+          'system',
+        );
+      } catch (error) {
+        this.logger.warn(
+          'Failed to handle club creation activity monitoring:',
+          error,
+        );
+      }
+
+      // Notify club advisors about new club creation
+      try {
+        const advisorIds: string[] = [];
+        if (club.advisor_id) advisorIds.push(club.advisor_id);
+        if (club.co_advisor_id) advisorIds.push(club.co_advisor_id);
+
+        if (advisorIds.length > 0) {
+          // Get teacher user_ids
+          const { data: teachers } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .in('id', advisorIds);
+
+          if (teachers) {
+            const teacherUserIds = teachers
+              .map((t) => t.user_id)
+              .filter((id) => id);
+            if (teacherUserIds.length > 0) {
+              await this.notificationService.notifyUsers(
+                teacherUserIds,
+                'New Club Created',
+                `You have been assigned as an advisor for the club "${club.name}".`,
+                NotificationType.INFO,
+                undefined,
+                { expiresInDays: 7 },
+              );
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to create notifications for club creation:',
+          error,
+        );
+      }
+
+      // ✅ NEW: Notify all students about new club
+      try {
+        const { data: students } = await supabase
+          .from('students')
+          .select('user_id');
+
+        if (students && students.length > 0) {
+          const studentUserIds = students.map((s) => s.user_id).filter(Boolean);
+
+          if (studentUserIds.length > 0) {
+            await this.notificationService.notifyUsers(
+              studentUserIds,
+              'New Club Available',
+              `A new club has been created: "${club.name}". Check it out and join!`,
+              NotificationType.INFO,
+              undefined,
+              {
+                category: NotificationCategory.COMMUNICATION,
+                expiresInDays: 14,
+              },
+            );
+            this.logger.log(
+              `🎉 Notified ${studentUserIds.length} students about new club: ${club.name}`,
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to notify students about new club:', error);
+      }
+
       return club;
     } catch (error) {
       if (
@@ -507,6 +596,47 @@ export class ClubsService {
         `Student ${user.email} successfully joined club: ${club.name} (${clubId})`,
       );
 
+      // Notify club advisors about new member
+      try {
+        const { data: clubData } = await supabase
+          .from('clubs')
+          .select('advisor_id, co_advisor_id, name')
+          .eq('id', clubId)
+          .single();
+
+        if (clubData) {
+          const advisorIds: string[] = [];
+          if (clubData.advisor_id) advisorIds.push(clubData.advisor_id);
+          if (clubData.co_advisor_id) advisorIds.push(clubData.co_advisor_id);
+
+          if (advisorIds.length > 0) {
+            const { data: teachers } = await supabase
+              .from('teachers')
+              .select('user_id')
+              .in('id', advisorIds);
+
+            if (teachers) {
+              const teacherUserIds = teachers
+                .map((t) => t.user_id)
+                .filter((id) => id);
+              if (teacherUserIds.length > 0) {
+                await this.notificationService.notifyUsers(
+                  teacherUserIds,
+                  'New Club Member',
+                  `A new student has joined the club "${clubData.name}".`,
+                  NotificationType.INFO,
+                  user.id,
+                  { expiresInDays: 7 },
+                );
+              }
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to create notifications for club join:',
+          error,
+        );
       // 🎯 Award points for joining a club
       try {
         await this.pointsService.awardPoints({

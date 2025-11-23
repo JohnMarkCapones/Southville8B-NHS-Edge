@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Logger } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -69,5 +69,24 @@ export class TeacherActivityController {
   ): Promise<TeacherActivityDto[]> {
     this.logger.log(`Getting recent activities for teacher: ${user.id}`);
     return this.teacherActivityService.getRecentActivities(user.id);
+  }
+
+  @Post('activities')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Log a teacher activity',
+    description: 'Creates a new activity record for the authenticated teacher',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Activity logged successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async createActivity(
+    @AuthUser() user: any,
+    @Body() activityData: any,
+  ): Promise<{ success: boolean; id?: string }> {
+    this.logger.log(`Logging activity for teacher: ${user.id}`);
+    return this.teacherActivityService.createActivity(user.id, activityData);
   }
 }

@@ -65,11 +65,11 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _isDarkMode, value);
     }
 
-    [ObservableProperty] private int _totalClasses = 6;
+    [ObservableProperty] private int _totalClasses = 0;
     [ObservableProperty] private int _pendingAssignments = 24;
     [ObservableProperty] private int _totalAnnouncements = 0;
-    [ObservableProperty] private int _totalStudents = 180;
-    [ObservableProperty] private int _unreadMessages = 12;
+    [ObservableProperty] private int _totalStudents = 0;
+    [ObservableProperty] private int _unreadMessages = 0;
 
     // Calendar / Dates
     private DateTime _currentMonthDate = DateTime.Today; // internal reference for accurate calendar
@@ -155,7 +155,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
             _userId = user.Id;
             _teacherId = user.Teacher?.Id; // Extract teacher ID from user data
             UserEmail = user.Email ?? "teacher@southville.edu.ph";
-              UserRole = FormatRoleName(user.Role?.Name);
+              UserRole = FormatRoleName(user.Role);
             UserInitials = GetInitialsFromEmail(user.Email);
             
             
@@ -167,11 +167,19 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         _currentContent = CreateDashboardViewModel();
         UpdateColumnWidths();
 
-        // Initialize theme without triggering change
+        // Initialize theme without triggering change (skip in unit tests where Application.Current may be null)
         if (Application.Current is not null)
         {
-        _isDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
-            OnPropertyChanged(nameof(IsDarkMode));
+            try
+            {
+                _isDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+                OnPropertyChanged(nameof(IsDarkMode));
+            }
+            catch
+            {
+                // Skip theme initialization if not on UI thread (unit tests)
+                _isDarkMode = false;
+            }
         }
 
         GenerateCalendarDays();
@@ -303,18 +311,32 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
 
     private async Task LoadRecentActivitiesAsync()
     {
-        if (string.IsNullOrEmpty(_userId)) return;
+        System.Diagnostics.Debug.WriteLine($"=== LoadRecentActivitiesAsync called, _userId: {_userId} ===");
+        
+        if (string.IsNullOrEmpty(_userId))
+        {
+            System.Diagnostics.Debug.WriteLine("User ID is empty, returning early");
+            return;
+        }
         
         try
         {
-            var activities = await _apiClient.GetTeacherRecentActivitiesAsync(_userId);
-            if (activities != null)
+            System.Diagnostics.Debug.WriteLine("Calling GetMyTeacherActivitiesAsync...");
+            // Fetch teacher's own activities from teacher_activities table
+            var activities = await _apiClient.GetMyTeacherActivitiesAsync(limit: 10);
+            
+            System.Diagnostics.Debug.WriteLine($"API returned {activities?.Count ?? 0} activities");
+            
+            if (activities != null && activities.Count > 0)
             {
+                System.Diagnostics.Debug.WriteLine($"First activity: {activities[0].Activity}");
+                
                 Dispatcher.UIThread.Post(() =>
                 {
                     RecentActivities.Clear();
                     foreach (var activity in activities)
                     {
+                        System.Diagnostics.Debug.WriteLine($"Adding activity: {activity.Activity}");
                         RecentActivities.Add(new TeacherActivityItem
                         {
                             StudentName = activity.StudentName,
@@ -323,21 +345,27 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
                             TimeAgo = activity.TimeAgo
                         });
                     }
+                    System.Diagnostics.Debug.WriteLine($"RecentActivities count: {RecentActivities.Count}");
+                });
+            }
+            else
+            {
+                // No activities yet
+                System.Diagnostics.Debug.WriteLine("No activities found, clearing collection");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    RecentActivities.Clear();
                 });
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to load recent activities: {ex.Message}");
-            // Fallback to mock data
+            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Clear on error
             Dispatcher.UIThread.Post(() =>
             {
-                RecentActivities = new ObservableCollection<TeacherActivityItem>
-                {
-                    new() { StudentName = "John Smith",  StudentInitials = "JS", Activity = "Submitted Assignment #3",      TimeAgo = "1hr ago"},
-                    new() { StudentName = "Maria Garcia",StudentInitials = "MG", Activity = "Asked question in Math class", TimeAgo = "2hrs ago"},
-                    new() { StudentName = "Anna Lee",    StudentInitials = "AL", Activity = "Completed quiz successfully",  TimeAgo = "3hrs ago"}
-                };
+                RecentActivities.Clear();
             });
         }
     }
@@ -966,7 +994,7 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void NavigateToNotifications()
     {
-        CurrentContent = new NotificationsViewModel();
+        CurrentContent = new NotificationsViewModel(_apiClient);
         CurrentPage = "Notifications";
         IsUserDropdownVisible = false;
     }
@@ -1236,8 +1264,15 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
     private void ToggleDarkMode()
     {
         IsDarkMode = !IsDarkMode;
-        if (Application.Current is not null)
-            Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
+        try
+        {
+            if (Application.Current is not null)
+                Application.Current.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
+        }
+        catch
+        {
+            // Skip theme change if not on UI thread (unit tests)
+        }
         IsUserDropdownVisible = false;
     }
 

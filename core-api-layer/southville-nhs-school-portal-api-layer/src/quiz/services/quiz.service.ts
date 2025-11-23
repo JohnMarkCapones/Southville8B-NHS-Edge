@@ -8,6 +8,9 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { CloudflareImagesService } from '../../common/services/cloudflare-images.service';
+import { NotificationService } from '../../common/services/notification.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../../activity-monitoring/activity-monitoring.service';
 import {
   CreateQuizDto,
   UpdateQuizDto,
@@ -24,6 +27,8 @@ export class QuizService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly cloudflareImagesService: CloudflareImagesService,
+    private readonly notificationService: NotificationService,
+    private readonly activityMonitoring: ActivityMonitoringService,
   ) {}
 
   /**
@@ -109,6 +114,30 @@ export class QuizService {
         this.logger.error('Error creating quiz settings:', settingsError);
         // Don't throw error - settings are optional, quiz still valid
         this.logger.warn(`Quiz ${quiz.quiz_id} created without settings`);
+      }
+
+      // ✅ Assign sections if provided during creation
+      if (createQuizDto.sectionIds && createQuizDto.sectionIds.length > 0) {
+        const sectionsToInsert = createQuizDto.sectionIds.map((sectionId) => ({
+          quiz_id: quiz.quiz_id,
+          section_id: sectionId,
+          assigned_at: new Date().toISOString(),
+        }));
+
+        const { error: sectionsError } = await supabase
+          .from('quiz_sections')
+          .insert(sectionsToInsert);
+
+        if (sectionsError) {
+          this.logger.error('Error assigning sections to quiz:', sectionsError);
+          this.logger.warn(
+            `Quiz ${quiz.quiz_id} created without section assignments`,
+          );
+        } else {
+          this.logger.log(
+            `✅ Assigned ${createQuizDto.sectionIds.length} sections to quiz ${quiz.quiz_id}`,
+          );
+        }
       }
 
       this.logger.log(`Quiz created successfully: ${quiz.quiz_id}`);
@@ -259,15 +288,25 @@ export class QuizService {
 
     // ✅ Extract and flatten quiz_question_metadata for easier frontend access
     if (quiz && quiz.questions) {
-      this.logger.log(`[MATCHING DEBUG] Processing ${quiz.questions.length} questions for metadata extraction`);
+      this.logger.log(
+        `[MATCHING DEBUG] Processing ${quiz.questions.length} questions for metadata extraction`,
+      );
 
       quiz.questions = quiz.questions.map((question: any) => {
-        this.logger.log(`[MATCHING DEBUG] Question ${question.question_id} (${question.question_type}):`);
-        this.logger.log(`[MATCHING DEBUG]   - quiz_question_metadata present: ${!!question.quiz_question_metadata}`);
+        this.logger.log(
+          `[MATCHING DEBUG] Question ${question.question_id} (${question.question_type}):`,
+        );
+        this.logger.log(
+          `[MATCHING DEBUG]   - quiz_question_metadata present: ${!!question.quiz_question_metadata}`,
+        );
 
         if (question.quiz_question_metadata) {
-          this.logger.log(`[MATCHING DEBUG]   - quiz_question_metadata is array: ${Array.isArray(question.quiz_question_metadata)}`);
-          this.logger.log(`[MATCHING DEBUG]   - quiz_question_metadata type: ${typeof question.quiz_question_metadata}`);
+          this.logger.log(
+            `[MATCHING DEBUG]   - quiz_question_metadata is array: ${Array.isArray(question.quiz_question_metadata)}`,
+          );
+          this.logger.log(
+            `[MATCHING DEBUG]   - quiz_question_metadata type: ${typeof question.quiz_question_metadata}`,
+          );
         }
 
         // ✅ FIX: Handle both array and object formats from Supabase
@@ -277,20 +316,29 @@ export class QuizService {
           if (Array.isArray(question.quiz_question_metadata)) {
             // Array format: take first item
             metadataRecord = question.quiz_question_metadata[0];
-            this.logger.log(`[MATCHING DEBUG]   - Array format, length: ${question.quiz_question_metadata.length}`);
+            this.logger.log(
+              `[MATCHING DEBUG]   - Array format, length: ${question.quiz_question_metadata.length}`,
+            );
           } else if (typeof question.quiz_question_metadata === 'object') {
             // Object format: use it directly
             metadataRecord = question.quiz_question_metadata;
-            this.logger.log(`[MATCHING DEBUG]   - Object format (single record)`);
+            this.logger.log(
+              `[MATCHING DEBUG]   - Object format (single record)`,
+            );
           }
         }
 
         if (metadataRecord && metadataRecord.metadata) {
           question.metadata = metadataRecord.metadata;
-          this.logger.log(`[MATCHING DEBUG]   - ✅ Extracted metadata:`, JSON.stringify(question.metadata, null, 2));
+          this.logger.log(
+            `[MATCHING DEBUG]   - ✅ Extracted metadata:`,
+            JSON.stringify(question.metadata, null, 2),
+          );
           delete question.quiz_question_metadata;
         } else {
-          this.logger.warn(`[MATCHING DEBUG]   - ⚠️ No metadata found for this question`);
+          this.logger.warn(
+            `[MATCHING DEBUG]   - ⚠️ No metadata found for this question`,
+          );
         }
 
         // ✅ Convert snake_case image fields to camelCase for frontend
@@ -802,8 +850,13 @@ export class QuizService {
     // Create metadata if provided (for complex question types)
     if (createQuestionDto.metadata) {
       // 🔍 DIAGNOSTIC: Log metadata being saved
-      this.logger.log(`[MATCHING DEBUG] Saving metadata for question type: ${createQuestionDto.questionType}`);
-      this.logger.log(`[MATCHING DEBUG] Metadata content:`, JSON.stringify(createQuestionDto.metadata, null, 2));
+      this.logger.log(
+        `[MATCHING DEBUG] Saving metadata for question type: ${createQuestionDto.questionType}`,
+      );
+      this.logger.log(
+        `[MATCHING DEBUG] Metadata content:`,
+        JSON.stringify(createQuestionDto.metadata, null, 2),
+      );
 
       const metadataType = this.getMetadataType(createQuestionDto.questionType);
       this.logger.log(`[MATCHING DEBUG] Metadata type: ${metadataType}`);
@@ -817,12 +870,19 @@ export class QuizService {
         });
 
       if (metadataError) {
-        this.logger.error('[MATCHING DEBUG] ❌ Error creating question metadata:', metadataError);
+        this.logger.error(
+          '[MATCHING DEBUG] ❌ Error creating question metadata:',
+          metadataError,
+        );
       } else {
-        this.logger.log(`[MATCHING DEBUG] ✅ Metadata saved successfully for question ${question.question_id}`);
+        this.logger.log(
+          `[MATCHING DEBUG] ✅ Metadata saved successfully for question ${question.question_id}`,
+        );
       }
     } else {
-      this.logger.warn(`[MATCHING DEBUG] ⚠️ No metadata provided for question type: ${createQuestionDto.questionType}`);
+      this.logger.warn(
+        `[MATCHING DEBUG] ⚠️ No metadata provided for question type: ${createQuestionDto.questionType}`,
+      );
     }
 
     // Recalculate total points for the quiz
@@ -855,10 +915,14 @@ export class QuizService {
     if (updateQuestionDto.questionType === 'true_false') {
       this.logger.log(`[TRUE_FALSE] Update question ${questionId}:`);
       this.logger.log(`  - Choices provided: ${!!updateQuestionDto.choices}`);
-      this.logger.log(`  - Choices length: ${updateQuestionDto.choices?.length || 0}`);
+      this.logger.log(
+        `  - Choices length: ${updateQuestionDto.choices?.length || 0}`,
+      );
       if (updateQuestionDto.choices && updateQuestionDto.choices.length > 0) {
         updateQuestionDto.choices.forEach((c, i) => {
-          this.logger.log(`  - Choice ${i}: "${c.choiceText}" isCorrect=${c.isCorrect}`);
+          this.logger.log(
+            `  - Choice ${i}: "${c.choiceText}" isCorrect=${c.isCorrect}`,
+          );
         });
       }
     }
@@ -880,7 +944,9 @@ export class QuizService {
 
     // 🔍 DIAGNOSTIC: Log calculated correct answer
     if (updateQuestionDto.questionType === 'true_false') {
-      this.logger.log(`  - Calculated correct_answer: ${JSON.stringify(correctAnswer)}`);
+      this.logger.log(
+        `  - Calculated correct_answer: ${JSON.stringify(correctAnswer)}`,
+      );
     }
 
     // Update question
@@ -1052,8 +1118,13 @@ export class QuizService {
     // Update metadata if provided (for complex question types like fill-in-blank)
     if (updateQuestionDto.metadata) {
       // 🔍 DIAGNOSTIC: Log metadata being updated
-      this.logger.log(`[MATCHING DEBUG] Updating metadata for question type: ${updateQuestionDto.questionType}`);
-      this.logger.log(`[MATCHING DEBUG] Metadata content:`, JSON.stringify(updateQuestionDto.metadata, null, 2));
+      this.logger.log(
+        `[MATCHING DEBUG] Updating metadata for question type: ${updateQuestionDto.questionType}`,
+      );
+      this.logger.log(
+        `[MATCHING DEBUG] Metadata content:`,
+        JSON.stringify(updateQuestionDto.metadata, null, 2),
+      );
 
       // Delete old metadata first
       await supabase
@@ -1074,12 +1145,19 @@ export class QuizService {
         });
 
       if (metadataError) {
-        this.logger.error('[MATCHING DEBUG] ❌ Error updating question metadata:', metadataError);
+        this.logger.error(
+          '[MATCHING DEBUG] ❌ Error updating question metadata:',
+          metadataError,
+        );
       } else {
-        this.logger.log(`[MATCHING DEBUG] ✅ Metadata updated successfully for question ${questionId}`);
+        this.logger.log(
+          `[MATCHING DEBUG] ✅ Metadata updated successfully for question ${questionId}`,
+        );
       }
     } else {
-      this.logger.warn(`[MATCHING DEBUG] ⚠️ No metadata provided for question type: ${updateQuestionDto.questionType}`);
+      this.logger.warn(
+        `[MATCHING DEBUG] ⚠️ No metadata provided for question type: ${updateQuestionDto.questionType}`,
+      );
     }
 
     // Recalculate total points for the quiz
@@ -1234,6 +1312,79 @@ export class QuizService {
     this.logger.log(
       `Quiz published: ${quizId} with status ${publishDto.status}`,
     );
+
+    // Notify students in assigned sections about published quiz
+    try {
+      // ✅ Get all assigned sections (from publishDto OR already assigned in quiz_sections)
+      let sectionIdsToNotify: string[] = [];
+
+      if (publishDto.sectionIds && publishDto.sectionIds.length > 0) {
+        sectionIdsToNotify = publishDto.sectionIds;
+      } else {
+        // Fetch already assigned sections from quiz_sections table
+        const { data: assignedSections } = await supabase
+          .from('quiz_sections')
+          .select('section_id')
+          .eq('quiz_id', quizId);
+
+        if (assignedSections && assignedSections.length > 0) {
+          sectionIdsToNotify = assignedSections.map((s) => s.section_id);
+        }
+      }
+
+      if (sectionIdsToNotify.length > 0) {
+        const userIds: string[] = [];
+        for (const sectionId of sectionIdsToNotify) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('section_id', sectionId);
+          if (students) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter((id) => id);
+            userIds.push(...studentUserIds);
+          }
+        }
+
+        // Activity monitoring - notify assigned students
+        if (userIds.length > 0) {
+          try {
+            await this.activityMonitoring.handleQuizPublished(
+              quizId,
+              quiz.title,
+              userIds,
+              teacherId,
+            );
+          } catch (error) {
+            this.logger.warn(
+              'Failed to handle quiz publication activity monitoring:',
+              error,
+            );
+          }
+        }
+
+        if (userIds.length > 0) {
+          await this.notificationService.notifyUsers(
+            userIds,
+            `New Quiz: ${quiz.title}`,
+            `A new quiz "${quiz.title}" has been published and is now available.`,
+            NotificationType.INFO,
+            teacherId,
+            { expiresInDays: 7 },
+          );
+          this.logger.log(
+            `✅ Sent notifications to ${userIds.length} students in ${sectionIdsToNotify.length} sections`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notifications for quiz publication:',
+        error,
+      );
+    }
+
     return updatedQuiz;
   }
 
@@ -1316,6 +1467,45 @@ export class QuizService {
     );
 
     this.logger.log(`Quiz scheduled: ${quizId} for ${scheduleData.startDate}`);
+
+    // Notify students in assigned sections about scheduled quiz
+    try {
+      if (scheduleData.sectionIds && scheduleData.sectionIds.length > 0) {
+        const userIds: string[] = [];
+        for (const sectionId of scheduleData.sectionIds) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('section_id', sectionId);
+          if (students) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter((id) => id);
+            userIds.push(...studentUserIds);
+          }
+        }
+
+        if (userIds.length > 0) {
+          const startDate = new Date(
+            scheduleData.startDate,
+          ).toLocaleDateString();
+          await this.notificationService.notifyUsers(
+            userIds,
+            `Quiz Scheduled: ${quiz.title}`,
+            `A quiz "${quiz.title}" has been scheduled and will be available starting ${startDate}.`,
+            NotificationType.INFO,
+            teacherId,
+            { expiresInDays: 7 },
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notifications for quiz scheduling:',
+        error,
+      );
+    }
+
     return updatedQuiz;
   }
 
@@ -1467,6 +1657,39 @@ export class QuizService {
     this.logger.log(
       `Quiz ${quizId} assigned to ${sectionIds.length} section(s)`,
     );
+
+    // Notify students in assigned sections about quiz assignment
+    try {
+      const userIds: string[] = [];
+      for (const sectionId of sectionIds) {
+        const { data: students } = await supabase
+          .from('students')
+          .select('user_id')
+          .eq('section_id', sectionId);
+        if (students) {
+          const studentUserIds = students
+            .map((s) => s.user_id)
+            .filter((id) => id);
+          userIds.push(...studentUserIds);
+        }
+      }
+
+      if (userIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          userIds,
+          `Quiz Assigned: ${quiz.title}`,
+          `A quiz "${quiz.title}" has been assigned to your section.`,
+          NotificationType.INFO,
+          teacherId,
+          { expiresInDays: 7 },
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to create notifications for quiz assignment:',
+        error,
+      );
+    }
   }
 
   /**
@@ -1979,7 +2202,9 @@ export class QuizService {
     this.logger.log(`  - Points: ${bankQuestion.default_points}`);
     this.logger.log(`  - Time limit: ${bankQuestion.time_limit_seconds}s`);
     this.logger.log(`  - Has explanation: ${!!bankQuestion.explanation}`);
-    this.logger.log(`  - Correct answer: ${JSON.stringify(bankQuestion.correct_answer)}`);
+    this.logger.log(
+      `  - Correct answer: ${JSON.stringify(bankQuestion.correct_answer)}`,
+    );
     this.logger.log(`  - Has choices: ${!!bankQuestion.choices}`);
     if (bankQuestion.choices) {
       this.logger.log(`  - Number of choices: ${bankQuestion.choices.length}`);
@@ -2022,7 +2247,9 @@ export class QuizService {
 
       this.logger.log(`[IMPORT] Inserting ${choicesToInsert.length} choices:`);
       choicesToInsert.forEach((c, i) => {
-        this.logger.log(`  - Choice ${i}: "${c.choice_text}" is_correct=${c.is_correct}`);
+        this.logger.log(
+          `  - Choice ${i}: "${c.choice_text}" is_correct=${c.is_correct}`,
+        );
       });
 
       const { error: choicesError } = await supabase
@@ -2033,10 +2260,14 @@ export class QuizService {
         this.logger.error('[IMPORT] Error importing choices:', choicesError);
         // Don't fail the entire import, choices can be added later
       } else {
-        this.logger.log(`[IMPORT] ✅ Successfully imported ${choicesToInsert.length} choices`);
+        this.logger.log(
+          `[IMPORT] ✅ Successfully imported ${choicesToInsert.length} choices`,
+        );
       }
     } else {
-      this.logger.warn('[IMPORT] ⚠️ No choices to import (choices field missing or not an array)');
+      this.logger.warn(
+        '[IMPORT] ⚠️ No choices to import (choices field missing or not an array)',
+      );
     }
 
     // Recalculate total points for the quiz

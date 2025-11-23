@@ -46,3 +46,8 @@ public class AlertListResponse
     [JsonPropertyName("totalPages")] public int TotalPages { get; set; }
 }
 
+public class MarkAlertReadResponse
+{
+    [JsonPropertyName("success")] public bool Success { get; set; }
+}
+

@@ -29,6 +29,11 @@ import { UpdateEventFaqDto } from './dto/update-event-faq.dto';
 import { ReorderEventItemsDto } from './dto/reorder-event-items.dto';
 import { EventStatisticsDto } from './dto/event-statistics.dto';
 import { TagDto } from './dto/tag.dto';
+import { NotificationService } from '../common/services/notification.service';
+import {
+  NotificationType,
+  NotificationCategory,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class EventsService {
@@ -40,6 +45,7 @@ export class EventsService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private notificationService: NotificationService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -247,7 +253,88 @@ export class EventsService {
       await this.invalidateEventCaches();
 
       this.logger.log(`Event created successfully: ${event.id}`);
-      return await this.findOne(event.id);
+
+      // Notify target audience about new event
+      const eventData = await this.findOne(event.id);
+      const targetUserIds = await this.getTargetUsersForEvent(eventData);
+
+      if (targetUserIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          targetUserIds,
+          `New Event: ${eventData.title}`,
+          `${eventData.description?.substring(0, 100) || 'A new event has been created.'}...`,
+          NotificationType.INFO,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for ${targetUserIds.length} users about new event: ${eventData.title}`,
+        );
+      } else {
+        this.logger.warn(
+          `No target users found for event: ${eventData.title} (visibility: ${eventData.visibility}, club_id: ${eventData.clubId})`,
+        );
+      }
+
+      // ✅ NEW: Notify all teachers about school-wide events created by admin
+      try {
+        if (
+          eventData.visibility === 'public' ||
+          (Array.isArray(eventData.visibility) &&
+            eventData.visibility.includes('public'))
+        ) {
+          // Get all active teachers
+          const { data: teachers, error: teachersError } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .not('user_id', 'is', null);
+
+          if (!teachersError && teachers && teachers.length > 0) {
+            const teacherUserIds = teachers
+              .map((t) => t.user_id)
+              .filter(Boolean);
+
+            if (teacherUserIds.length > 0) {
+              // Verify users are active
+              const { data: activeTeachers } = await supabase
+                .from('users')
+                .select('id')
+                .in('id', teacherUserIds)
+                .eq('status', 'active');
+
+              if (activeTeachers && activeTeachers.length > 0) {
+                const activeTeacherIds = activeTeachers.map((u) => u.id);
+
+                await this.notificationService.notifyUsers(
+                  activeTeacherIds,
+                  `📅 School Event: ${eventData.title}`,
+                  `New school event on ${eventData.date} at ${eventData.time || 'TBA'}. Location: ${eventData.location || 'TBA'}. ${eventData.description?.substring(0, 80) || ''}`,
+                  NotificationType.INFO,
+                  userId,
+                  {
+                    category: NotificationCategory.EVENT_ANNOUNCEMENT,
+                    expiresInDays: 14,
+                  },
+                );
+
+                this.logger.log(
+                  `👩‍🏫 Notified ${activeTeacherIds.length} teachers about school event: ${eventData.title}`,
+                );
+              }
+            }
+          }
+        }
+      } catch (teacherNotifError) {
+        this.logger.warn(
+          'Failed to notify teachers about event:',
+          teacherNotifError,
+        );
+      }
+
+      return eventData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -900,7 +987,29 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event updated successfully: ${id}`);
-      return await this.findOne(id);
+
+      // Notify target audience about event update
+      const eventData = await this.findOne(id);
+      const targetUserIds = await this.getTargetUsersForEvent(eventData);
+
+      if (targetUserIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          targetUserIds,
+          `Event Updated: ${eventData.title}`,
+          `The event "${eventData.title}" has been updated.`,
+          NotificationType.INFO,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for ${targetUserIds.length} users about event update: ${eventData.title}`,
+        );
+      }
+
+      return eventData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -957,6 +1066,8 @@ export class EventsService {
     const supabase = this.getSupabaseClient();
 
     try {
+      // Get event data before soft-deleting
+      const eventData = await this.findOne(id);
       // Fetch event data for audit logging
       const event = await this.findOne(id);
 
@@ -979,6 +1090,25 @@ export class EventsService {
 
       this.logger.log(`Event archived successfully: ${id}`);
 
+      // Notify target audience about event cancellation
+      const targetUserIds = await this.getTargetUsersForEvent(eventData);
+
+      if (targetUserIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          targetUserIds,
+          `Event Cancelled: ${eventData.title}`,
+          `The event "${eventData.title}" has been cancelled.`,
+          NotificationType.WARNING,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for ${targetUserIds.length} users about event cancellation: ${eventData.title}`,
+        );
+      }
       // Return the event for audit logging
       return event;
     } catch (error) {
@@ -1758,6 +1888,106 @@ export class EventsService {
     for (const pattern of patterns) {
       // Since cache-manager doesn't expose keys(), we'll rely on TTL expiration
       // In production, consider using Redis with pattern-based deletion
+    }
+  }
+
+  /**
+   * Get target user IDs for an event based on visibility and club_id
+   */
+  private async getTargetUsersForEvent(event: Event): Promise<string[]> {
+    try {
+      const supabase = this.getSupabaseClient();
+      const userIds: string[] = [];
+
+      // If event is public, notify all active users
+      if (
+        event.visibility === 'public' ||
+        (Array.isArray(event.visibility) && event.visibility.includes('public'))
+      ) {
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('status', 'active');
+
+        if (error) {
+          this.logger.error('Error fetching users for public event:', error);
+          return [];
+        }
+
+        if (users) {
+          userIds.push(...users.map((u) => u.id));
+        }
+      }
+      // If event is private and has club_id, notify club members
+      else if (event.clubId) {
+        const { data: memberships, error } = await supabase
+          .from('club_memberships')
+          .select('user_id')
+          .eq('club_id', event.clubId)
+          .eq('status', 'active');
+
+        if (error) {
+          this.logger.error(
+            'Error fetching club members for private event:',
+            error,
+          );
+          return [];
+        }
+
+        if (memberships) {
+          const memberUserIds = memberships
+            .map((m) => m.user_id)
+            .filter(Boolean);
+
+          // Verify these users are active
+          if (memberUserIds.length > 0) {
+            const { data: activeUsers } = await supabase
+              .from('users')
+              .select('id')
+              .in('id', memberUserIds)
+              .eq('status', 'active');
+
+            if (activeUsers) {
+              userIds.push(...activeUsers.map((u) => u.id));
+            }
+          }
+        }
+      }
+      // If event is private without club_id, notify admins only
+      else {
+        // Get admin role ID
+        const { data: adminRole } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', 'Admin')
+          .single();
+
+        if (adminRole) {
+          const { data: admins, error } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role_id', adminRole.id)
+            .eq('status', 'active');
+
+          if (error) {
+            this.logger.error(
+              'Error fetching admins for private event:',
+              error,
+            );
+            return [];
+          }
+
+          if (admins) {
+            userIds.push(...admins.map((u) => u.id));
+          }
+        }
+      }
+
+      // Remove duplicates
+      return Array.from(new Set(userIds));
+    } catch (error) {
+      this.logger.error('Error in getTargetUsersForEvent:', error);
+      return [];
     }
   }
 }

@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { StorageModule } from '../storage/storage.module';
 import { StudentActivitiesModule } from '../student-activities/student-activities.module';
 import { GalleryModule } from '../gallery/gallery.module';
+import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
 
 // Controllers
 import {
@@ -38,6 +39,7 @@ import { NewsReviewCommentsService } from './services/news-review-comments.servi
     StorageModule,
     StudentActivitiesModule,
     GalleryModule,
+    ActivityMonitoringModule,
   ],
   controllers: [
     NewsController,

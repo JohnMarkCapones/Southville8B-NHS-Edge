@@ -192,40 +192,7 @@ public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
 
     private void InitializeWeeklyStats()
     {
-        var stats = new[]
-        {
-            new WeeklyStatViewModel { Day = "Mon", StudentCount = 1480, EventCount = 3, RoomBookings = 28 },
-            new WeeklyStatViewModel { Day = "Tue", StudentCount = 1495, EventCount = 2, RoomBookings = 32 },
-            new WeeklyStatViewModel { Day = "Wed", StudentCount = 1502, EventCount = 4, RoomBookings = 35 },
-            new WeeklyStatViewModel { Day = "Thu", StudentCount = 1489, EventCount = 1, RoomBookings = 29 },
-            new WeeklyStatViewModel { Day = "Fri", StudentCount = 1512, EventCount = 5, RoomBookings = 31 },
-            new WeeklyStatViewModel { Day = "Sat", StudentCount = 892, EventCount = 2, RoomBookings = 15 },
-            new WeeklyStatViewModel { Day = "Sun", StudentCount = 654, EventCount = 1, RoomBookings = 8 }
-        };
-
-        int max = stats.Max(s => s.StudentCount);
-        double average = stats.Length > 0 ? stats.Average(s => s.StudentCount) : 0;
-        string todayAbbrev = DateTime.Today.DayOfWeek switch
-        {
-            DayOfWeek.Monday => "Mon",
-            DayOfWeek.Tuesday => "Tue",
-            DayOfWeek.Wednesday => "Wed",
-            DayOfWeek.Thursday => "Thu",
-            DayOfWeek.Friday => "Fri",
-            DayOfWeek.Saturday => "Sat",
-            DayOfWeek.Sunday => "Sun",
-            _ => string.Empty
-        };
-
-        foreach (var item in stats)
-        {
-            item.IsPeak = item.StudentCount == max;
-            item.IsToday = item.Day == todayAbbrev;
-            item.IsAboveAverage = item.StudentCount >= average;
-            item.RefreshTheme();
-        }
-
-        WeeklyStats = new ObservableCollection<WeeklyStatViewModel>(stats);
+        WeeklyStats = new ObservableCollection<WeeklyStatViewModel>();
     }
 
     private void InitializeUpcomingEvents()
@@ -236,27 +203,14 @@ public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
 
     private void InitializeRecentActivities()
     {
-        RecentActivities = new ObservableCollection<DashboardActivityViewModel>
-        {
-            new() { User = "System", Action = "automated backup completed successfully", Timestamp = "2m ago", Icon = "Save", Type = "System" },
-            new() { User = "Robert Wilson", Action = "approved room booking for 'Room 201'", Timestamp = "5m ago", Icon = "CheckmarkCircle", Type = "Approval" },
-            new() { User = "Maria Rodriguez", Action = "created new event 'Science Fair'", Timestamp = "12m ago", Icon = "Calendar", Type = "Event" },
-            new() { User = "System", Action = "registered new student 'Kevin Anderson'", Timestamp = "25m ago", Icon = "PersonAdd", Type = "Registration" },
-            new() { User = "Jennifer Taylor", Action = "submitted grade reports for Grade 10", Timestamp = "35m ago", Icon = "ChartMultiple", Type = "Academic" },
-            new() { User = "Dr. Michael Brown", Action = "sent message to admin group", Timestamp = "1h ago", Icon = "Chat", Type = "Communication" },
-            new() { User = "System", Action = "performed scheduled maintenance", Timestamp = "2h ago", Icon = "Wrench", Type = "Maintenance" }
-        };
+        RecentActivities = new ObservableCollection<DashboardActivityViewModel>();
+        // Load activities from API
+        _ = LoadRecentActivitiesAsync();
     }
 
     private void InitializeSystemAlerts()
     {
-        SystemAlerts = new ObservableCollection<SystemAlertViewModel>
-        {
-            new() { Title = "Server Performance", Message = "High CPU usage detected on main server", Severity = "Warning", Timestamp = "5m ago" },
-            new() { Title = "Room Maintenance", Message = "Room 305 requires immediate attention", Severity = "Critical", Timestamp = "1h ago" },
-            new() { Title = "Backup Status", Message = "Weekly backup completed successfully", Severity = "Info", Timestamp = "2h ago" },
-            new() { Title = "User Limit", Message = "Approaching maximum concurrent users", Severity = "Warning", Timestamp = "3h ago" }
-        };
+        SystemAlerts = new ObservableCollection<SystemAlertViewModel>();
     }
 
     private void InitializeAdminMetrics()
@@ -316,6 +270,15 @@ public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
             
             // Load upcoming events (top 5)
             await LoadUpcomingEventsAsync();
+            
+            // Load recent activities
+            await LoadRecentActivitiesAsync();
+
+            // Load weekly stats
+            await LoadWeeklyStatsAsync();
+
+            // Load system alerts
+            await LoadSystemAlertsAsync();
         }
         catch (Exception ex)
         {
@@ -395,7 +358,7 @@ public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
             }
 
             // Filter only students by role name
-            var students = allUsers.Where(u => string.Equals(u.Role?.Name, "Student", StringComparison.OrdinalIgnoreCase)).ToList();
+            var students = allUsers.Where(u => string.Equals(u.Role, "Student", StringComparison.OrdinalIgnoreCase)).ToList();
             System.Diagnostics.Debug.WriteLine($"Total users fetched: {allUsers.Count}; Students filtered: {students.Count}");
 
             // Parse grade level and filter 7-10 only
@@ -550,6 +513,164 @@ public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task LoadWeeklyStatsAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== LOADING WEEKLY STATS ===");
+            
+            // 1. Prepare days
+            var days = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+            var shortDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+            
+            // 2. Fetch Students to calculate section counts
+            // We fetch students directly to get accurate enrollment counts per section
+            var studentsResp = await _apiClient.GetAsync<StudentListResponse>("students?limit=1000");
+            var students = studentsResp?.Data ?? new List<StudentDto>();
+            
+            var sectionStudentCountMap = students
+                .Where(s => !string.IsNullOrEmpty(s.SectionId))
+                .GroupBy(s => s.SectionId!)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            // 3. Fetch Events for this week
+            var eventsResponse = await _apiClient.GetEventsAsync(page: 1, limit: 100, status: "published");
+            var allEvents = eventsResponse?.Data ?? new List<EventDto>();
+            
+            // Filter events for this week (Mon-Sun)
+            var today = DateTime.Today;
+            var currentDayOfWeek = (int)today.DayOfWeek;
+            var daysFromMonday = currentDayOfWeek == 0 ? 6 : currentDayOfWeek - 1;
+            var startOfWeek = today.AddDays(-daysFromMonday);
+            var endOfWeek = startOfWeek.AddDays(6);
+            
+            var eventsByDay = new Dictionary<string, int>();
+            foreach (var day in days) eventsByDay[day] = 0;
+
+            foreach (var ev in allEvents)
+            {
+                if (DateTime.TryParse(ev.Date, out var date))
+                {
+                    if (date.Date >= startOfWeek && date.Date <= endOfWeek)
+                    {
+                        eventsByDay[date.DayOfWeek.ToString()]++;
+                    }
+                }
+            }
+
+            // 4. Fetch Schedules for each day
+            var tasks = days.Select(async (day, index) => 
+            {
+                int roomBookings = 0;
+                int studentCount = 0;
+                
+                try 
+                {
+                    var schedulesResp = await _apiClient.GetSchedulesAsync(limit: 100, dayOfWeek: day);
+                    if (schedulesResp?.Data != null)
+                    {
+                        roomBookings = schedulesResp.Data.Count;
+                        studentCount = schedulesResp.Data.Sum(s => sectionStudentCountMap.ContainsKey(s.SectionId) ? sectionStudentCountMap[s.SectionId] : 0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error fetching schedules for {day}: {ex.Message}");
+                }
+
+                return new WeeklyStatViewModel 
+                { 
+                    Day = shortDays[index], 
+                    StudentCount = studentCount, 
+                    EventCount = eventsByDay.ContainsKey(day) ? eventsByDay[day] : 0, 
+                    RoomBookings = roomBookings 
+                };
+            });
+
+            var results = await Task.WhenAll(tasks);
+            
+            // 5. Update UI
+            int maxStudents = results.Any() ? results.Max(s => s.StudentCount) : 0;
+            double avgStudents = results.Any() ? results.Average(s => s.StudentCount) : 0;
+            string todayAbbrev = today.DayOfWeek.ToString().Substring(0, 3);
+
+            foreach (var item in results)
+            {
+                item.IsPeak = maxStudents > 0 && item.StudentCount == maxStudents;
+                item.IsToday = item.Day == todayAbbrev;
+                item.IsAboveAverage = item.StudentCount >= avgStudents;
+                item.RefreshTheme();
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                WeeklyStats.Clear();
+                foreach (var item in results)
+                {
+                    WeeklyStats.Add(item);
+                }
+            });
+            
+            System.Diagnostics.Debug.WriteLine("=== WEEKLY STATS LOADED ===");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading weekly stats: {ex.Message}");
+        }
+    }
+
+    private async Task LoadSystemAlertsAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== LOADING SYSTEM ALERTS ===");
+            
+            var alertsResp = await _apiClient.GetAlertsAsync(limit: 10);
+            var alerts = alertsResp?.Data ?? new List<AlertDto>();
+            
+            var items = new List<SystemAlertViewModel>();
+            foreach (var alert in alerts)
+            {
+                string severity = (alert.Type?.ToLower() ?? "info") switch
+                {
+                    "error" => "Critical",
+                    "warning" => "Warning",
+                    "success" => "Success",
+                    "info" => "Info",
+                    "system" => "Info",
+                    _ => "Info"
+                };
+                
+                var diff = DateTimeOffset.UtcNow - alert.CreatedAt;
+                string timeAgo;
+                if (diff.TotalMinutes < 60) timeAgo = $"{(int)diff.TotalMinutes}m ago";
+                else if (diff.TotalHours < 24) timeAgo = $"{(int)diff.TotalHours}h ago";
+                else timeAgo = $"{(int)diff.TotalDays}d ago";
+
+                items.Add(new SystemAlertViewModel
+                {
+                    Title = alert.Title,
+                    Message = alert.Message,
+                    Severity = severity,
+                    Timestamp = timeAgo
+                });
+            }
+            
+            Dispatcher.UIThread.Post(() =>
+            {
+                SystemAlerts.Clear();
+                foreach (var item in items)
+                {
+                    SystemAlerts.Add(item);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading system alerts: {ex.Message}");
+        }
+    }
+
     private async Task LoadAdminMetricsAsync()
     {
         try
@@ -610,6 +731,99 @@ public partial class AdminDashboardViewModel : ViewModelBase, IDisposable
                     AdminMetrics[3].PrimaryValueText = "N/A";
                 }
             });
+        }
+    }
+
+    private async Task LoadRecentActivitiesAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== LOADING RECENT ACTIVITIES ===");
+            
+            var activities = await _apiClient.GetAdminActivitiesAsync(limit: 10);
+            
+            if (activities != null && activities.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fetched {activities.Count} activities");
+                
+                var activityViewModels = activities.Select(activity =>
+                {
+                    // Parse the timestamp and calculate relative time
+                    DateTime createdAt = DateTime.UtcNow;
+                    if (DateTime.TryParse(activity.CreatedAt, out var parsedDate))
+                    {
+                        createdAt = parsedDate.ToUniversalTime();
+                    }
+                    
+                    var diff = DateTime.UtcNow - createdAt;
+                    string timestamp;
+                    if (diff.TotalMinutes < 60)
+                        timestamp = $"{(int)diff.TotalMinutes}m ago";
+                    else if (diff.TotalHours < 24)
+                        timestamp = $"{(int)diff.TotalHours}h ago";
+                    else
+                        timestamp = $"{(int)diff.TotalDays}d ago";
+                    
+                    // Map action_type to Type for color coding
+                    string type = activity.ActionType switch
+                    {
+                        "system_backup" or "system_maintenance" or "system_update" => "System",
+                        "room_booking_approved" or "news_approved" or "schedule_approved" => "Approval",
+                        "event_created" or "event_updated" or "event_deleted" => "Event",
+                        "student_registered" or "user_created" => "Registration",
+                        "grade_entered" or "grade_updated" => "Academic",
+                        "message_sent" or "announcement_created" => "Communication",
+                        _ => "System"
+                    };
+                    
+                    // Map icon names from database to Avalonia FluentIcons
+                    string icon = activity.Icon ?? "Info";
+                    icon = icon switch
+                    {
+                        "Database" => "DatabaseRegular",
+                        "CheckCircle" => "CheckmarkCircleRegular",
+                        "Calendar" => "CalendarRegular",
+                        "UserPlus" => "PersonAddRegular",
+                        "FileText" => "DocumentRegular",
+                        "MessageCircle" => "ChatRegular",
+                        "Tool" => "WrenchRegular",
+                        _ => icon
+                    };
+                    
+                    // User name comes from API, description is the full action text
+                    var user = activity.UserName ?? "System";
+                    var action = activity.Description;
+                    
+                    return new DashboardActivityViewModel
+                    {
+                        User = user,
+                        Action = action,
+                        Timestamp = timestamp,
+                        Icon = icon,
+                        Type = type
+                    };
+                }).ToList();
+                
+                Dispatcher.UIThread.Post(() =>
+                {
+                    RecentActivities.Clear();
+                    foreach (var vm in activityViewModels)
+                    {
+                        RecentActivities.Add(vm);
+                    }
+                });
+                
+                System.Diagnostics.Debug.WriteLine("=== RECENT ACTIVITIES LOADED ===");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No activities returned from API");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading recent activities: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
         }
     }
 
@@ -741,9 +955,8 @@ public partial class DashboardActivityViewModel : ViewModelBase
         _ => RB("TextMutedBrush")
     };
 
-    public string Description => string.IsNullOrWhiteSpace(User) && string.IsNullOrWhiteSpace(Action)
-        ? string.Empty
-        : string.IsNullOrWhiteSpace(Action) ? User : string.IsNullOrWhiteSpace(User) ? Action : $"{User} {Action}";
+    // Just return the action description directly
+    public string Description => Action;
 
     partial void OnUserChanged(string value) => OnPropertyChanged(nameof(Description));
     partial void OnActionChanged(string value) => OnPropertyChanged(nameof(Description));

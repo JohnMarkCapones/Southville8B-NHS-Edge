@@ -11,13 +11,18 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateBuildingDto } from './dto/create-building.dto';
 import { UpdateBuildingDto } from './dto/update-building.dto';
 import { Building } from './entities/building.entity';
+import { NotificationService } from '../common/services/notification.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class BuildingsService {
   private readonly logger = new Logger(BuildingsService.name);
   private supabase: SupabaseClient;
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private notificationService: NotificationService,
+  ) {}
 
   private getSupabaseClient(): SupabaseClient {
     if (!this.supabase) {
@@ -69,6 +74,15 @@ export class BuildingsService {
 
       this.logger.log(
         `Building created successfully: ${building.building_name}`,
+      );
+
+      // Notify admins about building creation (global notification)
+      await this.notificationService.notifyAll(
+        'New Building Created',
+        `A new building "${building.building_name}" (${building.code}) has been created.`,
+        NotificationType.INFO,
+        undefined,
+        { expiresInDays: 7 },
       );
 
       // Transform database fields to API response format
@@ -291,6 +305,15 @@ export class BuildingsService {
 
     this.logger.log(`Building updated successfully: ${building.building_name}`);
 
+    // Notify admins about building update (global notification)
+    await this.notificationService.notifyAll(
+      'Building Updated',
+      `Building "${building.building_name}" (${building.code}) has been updated.`,
+      NotificationType.INFO,
+      undefined,
+      { expiresInDays: 7 },
+    );
+
     // Transform database fields to API response format
     return {
       id: building.id,
@@ -315,6 +338,15 @@ export class BuildingsService {
     }
 
     this.logger.log(`Building deleted successfully: ${id}`);
+
+    // Notify admins about building deletion (global notification)
+    await this.notificationService.notifyAll(
+      'Building Deleted',
+      `A building has been deleted.`,
+      NotificationType.WARNING,
+      undefined,
+      { expiresInDays: 7 },
+    );
   }
 
   async getBuildingStats(id: string): Promise<any> {

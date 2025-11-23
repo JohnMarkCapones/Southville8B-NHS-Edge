@@ -1,18 +1,29 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Plus,
   ArrowLeft,
@@ -41,52 +52,93 @@ import {
   CheckCircle,
   Globe,
   Users,
-} from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useQuiz } from "@/hooks/useQuiz" // Backend integration
-import { useToast } from "@/hooks/use-toast"
-import { QuizType, GradingType } from "@/lib/api/types/quiz"
-import { useTeacherAssignments } from "@/hooks/useTeacherAssignments" // Teacher assignments
-import { apiClient } from "@/lib/api/client"
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQuiz } from "@/hooks/useQuiz"; // Backend integration
+import { useToast } from "@/hooks/use-toast";
+import { QuizType, GradingType } from "@/lib/api/types/quiz";
+import { useTeacherAssignments } from "@/hooks/useTeacherAssignments"; // Teacher assignments
+import { apiClient } from "@/lib/api/client";
+import {
+  getSectionById,
+  type SectionWithDetails,
+} from "@/lib/api/endpoints/sections";
 
 export default function CreateQuiz() {
-  const router = useRouter()
-  const { toast } = useToast()
+  const router = useRouter();
+  const { toast } = useToast();
 
   // Backend integration: useQuiz hook
-  const { createQuiz, isSaving } = useQuiz()
+  const { createQuiz, isSaving } = useQuiz();
 
   // Backend integration: Fetch teacher's assigned subjects/sections/grades
-  const [teacherUserId, setTeacherUserId] = useState<string | null>(null)
+  const [teacherUserId, setTeacherUserId] = useState<string | null>(null);
   const {
     subjects: teacherSubjects,
     sections: teacherSections,
     gradeLevels: teacherGrades,
     isLoading: loadingAssignments,
-  } = useTeacherAssignments(teacherUserId)
+  } = useTeacherAssignments(teacherUserId);
 
-  // Fetch teacher user ID on mount
+  // Fetch teacher user ID and advisory section on mount
   useEffect(() => {
     const fetchTeacherId = async () => {
       try {
-        const userProfile = await apiClient.get<any>('/users/me')
-        const teacherId = userProfile.teacher?.id || userProfile.id
-        setTeacherUserId(teacherId)
+        const userProfile = await apiClient.get<any>("/users/me");
+        console.log("[Quiz Create] User profile:", userProfile);
+        const teacherId = userProfile.teacher?.id || userProfile.id;
+        setTeacherUserId(teacherId);
+
+        // Check if advisory section is already populated from backend (new API)
+        if (userProfile.teacher?.advisory_section) {
+          console.log(
+            "[Quiz Create] Advisory section from API:",
+            userProfile.teacher.advisory_section
+          );
+          setAdvisorySection(userProfile.teacher.advisory_section);
+        }
+        // Fallback: Fetch advisory section by ID if only ID is available (old API)
+        else if (userProfile.teacher?.advisory_section_id) {
+          const advisorySectionId = userProfile.teacher.advisory_section_id;
+          console.log(
+            "[Quiz Create] Fetching advisory section by ID:",
+            advisorySectionId
+          );
+
+          setLoadingAdvisorySection(true);
+          try {
+            const section = await getSectionById(advisorySectionId);
+            console.log("[Quiz Create] Fetched advisory section:", section);
+            setAdvisorySection(section);
+          } catch (error) {
+            console.error("Error fetching advisory section:", error);
+            // Don't show error toast for advisory section - it's optional
+          } finally {
+            setLoadingAdvisorySection(false);
+          }
+        } else {
+          console.warn(
+            "[Quiz Create] No advisory section found in user profile"
+          );
+        }
       } catch (error) {
-        console.error("Error fetching teacher ID:", error)
+        console.error("Error fetching teacher ID:", error);
         toast({
           title: "Warning",
-          description: "Could not load your assigned subjects and sections. Using default options.",
+          description:
+            "Could not load your assigned subjects and sections. Using default options.",
           variant: "destructive",
-        })
+        });
       }
-    }
-    fetchTeacherId()
-  }, [])
+    };
+    fetchTeacherId();
+  }, [toast]);
 
-  const [animatingToggles, setAnimatingToggles] = useState<Set<string>>(new Set())
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null)
-  const [formProgress, setFormProgress] = useState(0)
+  const [animatingToggles, setAnimatingToggles] = useState<Set<string>>(
+    new Set()
+  );
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [formProgress, setFormProgress] = useState(0);
 
   const [newQuiz, setNewQuiz] = useState({
     testType: "long-form" as "long-form" | "mixed" | "one-at-a-time",
@@ -124,156 +176,198 @@ export default function CreateQuiz() {
     stratifiedSampling: false,
     totalQuestions: 20,
     poolSize: 20,
-  })
+  });
 
-  const [newSubject, setNewSubject] = useState("")
-  const [newGrade, setNewGrade] = useState("")
-  const [newSection, setNewSection] = useState("")
+  const [newSubject, setNewSubject] = useState("");
+  const [newGrade, setNewGrade] = useState("");
+  const [newSection, setNewSection] = useState("");
 
-  // Backend integration: Use teacher's assigned subjects/sections/grades (or fallback to defaults)
-  const subjectOptions = teacherSubjects.length > 0
-    ? teacherSubjects.map(s => s.name)
-    : [
-        "Mathematics",
-        "Science",
-        "English",
-        "Filipino",
-        "Social Studies",
-        "Physical Education",
-        "Music",
-        "Arts",
-        "Technology and Livelihood Education",
-        "Values Education",
-        "Computer Science",
-        "Physics",
-        "Chemistry",
-        "Biology",
-      ]
+  // State for teacher's advisory section
+  const [advisorySection, setAdvisorySection] =
+    useState<SectionWithDetails | null>(null);
+  const [loadingAdvisorySection, setLoadingAdvisorySection] = useState(false);
 
-  const gradeOptions = teacherGrades.length > 0
-    ? teacherGrades
-    : [
-        "Grade 7",
-        "Grade 8",
-        "Grade 9",
-        "Grade 10",
-        "Grade 11",
-        "Grade 12",
-        "Kindergarten",
-        "Grade 1",
-        "Grade 2",
-        "Grade 3",
-        "Grade 4",
-        "Grade 5",
-        "Grade 6",
-      ]
+  // Backend integration: Use teacher's assigned subjects/sections/grades ONLY
+  // Only show what the teacher is actually assigned to teach (from schedules)
+  const subjectOptions = teacherSubjects.map((s) => s.name);
 
-  const sectionOptions = teacherSections.length > 0
-    ? teacherSections.map(s => s.name)
-    : [
-        "Section A",
-        "Section B",
-        "Section C",
-        "Section D",
-        "Section E",
-        "Section F",
-        "Section G",
-        "Section H",
-        "Section I",
-        "Section J",
-        "Diamond",
-        "Emerald",
-        "Ruby",
-        "Sapphire",
-        "Pearl",
-        "Gold",
-        "Silver",
-      ]
+  const gradeOptions = teacherGrades;
+
+  // Merge teacher's assigned sections with advisory section
+  // Only show sections the teacher is actually assigned to teach (from schedules)
+  const allAvailableSections = useMemo(() => {
+    const combined: Array<{ id: string; name: string; grade_level: string }> =
+      [];
+
+    // Add teacher's schedule sections (from assignments)
+    teacherSections.forEach((s) => {
+      combined.push({
+        id: s.id,
+        name: s.name,
+        grade_level: s.gradeLevel || "",
+      });
+    });
+
+    // Always include advisory section if available (as fallback if not already in schedules)
+    if (advisorySection) {
+      // Check if advisory section is already in teacherSections to avoid duplicates
+      const isAlreadyIncluded = teacherSections.some(
+        (s) => s.id === advisorySection.id
+      );
+      if (!isAlreadyIncluded) {
+        console.log(
+          "[Quiz Create] Adding advisory section to available sections:",
+          advisorySection.name
+        );
+        combined.push({
+          id: advisorySection.id,
+          name: advisorySection.name,
+          grade_level: advisorySection.grade_level || "",
+        });
+      }
+    }
+
+    // Deduplicate by section ID
+    const uniqueSections = Array.from(
+      new Map(combined.map((s) => [s.id, s])).values()
+    );
+
+    console.log(
+      "[Quiz Create] All available sections:",
+      uniqueSections.map((s) => `${s.name} (${s.grade_level})`)
+    );
+
+    // Sort by name for better UX
+    return uniqueSections.sort((a, b) => a.name.localeCompare(b.name));
+  }, [teacherSections, advisorySection]);
+
+  // Only show sections the teacher is assigned to (no fallback)
+  const sectionOptions = allAvailableSections.map((s) => s.name);
 
   const [expandedSections, setExpandedSections] = useState({
     securedQuiz: false,
     questionPool: false,
-  })
+  });
 
-  // Auto-populate form with teacher's first assignments when loaded
+  // Auto-populate form with teacher's assignments when loaded
+  // Priority: Use advisory section if available, otherwise use first assigned section
   useEffect(() => {
-    if (!loadingAssignments && teacherSubjects.length > 0 && newQuiz.subjects.length === 0) {
-      setNewQuiz(prev => ({
+    if (
+      !loadingAssignments &&
+      teacherSubjects.length > 0 &&
+      newQuiz.subjects.length === 0
+    ) {
+      // Determine which section to auto-select (prioritize advisory section)
+      let defaultSection: string | null = null;
+
+      if (advisorySection) {
+        // Prefer advisory section if available
+        defaultSection = advisorySection.name;
+        console.log(
+          "[Quiz Create] Auto-selecting advisory section:",
+          defaultSection
+        );
+      } else if (teacherSections.length > 0) {
+        // Fallback to first assigned section from schedules
+        defaultSection = teacherSections[0].name;
+        console.log(
+          "[Quiz Create] Auto-selecting first assigned section:",
+          defaultSection
+        );
+      }
+
+      setNewQuiz((prev) => ({
         ...prev,
         subjects: [teacherSubjects[0].name],
         grades: teacherGrades.length > 0 ? [teacherGrades[0]] : [],
-        sections: teacherSections.length > 0 ? [teacherSections[0].name] : [],
-      }))
+        sections: defaultSection ? [defaultSection] : [],
+      }));
     }
-  }, [loadingAssignments, teacherSubjects, teacherGrades, teacherSections, newQuiz.subjects.length])
+  }, [
+    loadingAssignments,
+    teacherSubjects,
+    teacherGrades,
+    teacherSections,
+    advisorySection,
+    newQuiz.subjects.length,
+  ]);
 
   useEffect(() => {
-    const requiredFields = ["title", "subjects", "grades", "sections"]
+    const requiredFields = ["title", "subjects", "grades", "sections"];
     const filledFields = requiredFields.filter((field) => {
-      const value = newQuiz[field as keyof typeof newQuiz]
-      return Array.isArray(value) ? value.length > 0 : value
-    })
-    setFormProgress((filledFields.length / requiredFields.length) * 100)
-  }, [newQuiz])
+      const value = newQuiz[field as keyof typeof newQuiz];
+      return Array.isArray(value) ? value.length > 0 : value;
+    });
+    setFormProgress((filledFields.length / requiredFields.length) * 100);
+  }, [newQuiz]);
 
   const addSubject = () => {
     if (newSubject && !newQuiz.subjects.includes(newSubject)) {
-      setNewQuiz({ ...newQuiz, subjects: [...newQuiz.subjects, newSubject] })
-      setNewSubject("")
+      setNewQuiz({ ...newQuiz, subjects: [...newQuiz.subjects, newSubject] });
+      setNewSubject("");
     }
-  }
+  };
 
   const removeSubject = (subject: string) => {
     if (newQuiz.subjects.length > 1) {
-      setNewQuiz({ ...newQuiz, subjects: newQuiz.subjects.filter((s) => s !== subject) })
+      setNewQuiz({
+        ...newQuiz,
+        subjects: newQuiz.subjects.filter((s) => s !== subject),
+      });
     }
-  }
+  };
 
   const addGrade = () => {
     if (newGrade && !newQuiz.grades.includes(newGrade)) {
-      setNewQuiz({ ...newQuiz, grades: [...newQuiz.grades, newGrade] })
-      setNewGrade("")
+      setNewQuiz({ ...newQuiz, grades: [...newQuiz.grades, newGrade] });
+      setNewGrade("");
     }
-  }
+  };
 
   const removeGrade = (grade: string) => {
     if (newQuiz.grades.length > 1) {
-      setNewQuiz({ ...newQuiz, grades: newQuiz.grades.filter((g) => g !== grade) })
+      setNewQuiz({
+        ...newQuiz,
+        grades: newQuiz.grades.filter((g) => g !== grade),
+      });
     }
-  }
+  };
 
   const addSection = () => {
     if (newSection && !newQuiz.sections.includes(newSection)) {
-      setNewQuiz({ ...newQuiz, sections: [...newQuiz.sections, newSection] })
-      setNewSection("")
+      setNewQuiz({ ...newQuiz, sections: [...newQuiz.sections, newSection] });
+      setNewSection("");
     }
-  }
+  };
 
   const removeSection = (section: string) => {
     if (newQuiz.sections.length > 1) {
-      setNewQuiz({ ...newQuiz, sections: newQuiz.sections.filter((s) => s !== section) })
+      setNewQuiz({
+        ...newQuiz,
+        sections: newQuiz.sections.filter((s) => s !== section),
+      });
     }
-  }
+  };
 
   const handleToggleChange = (key: string, checked: boolean) => {
-    setAnimatingToggles((prev) => new Set(prev).add(key))
-    setNewQuiz({ ...newQuiz, [key]: checked })
+    setAnimatingToggles((prev) => new Set(prev).add(key));
+    setNewQuiz({ ...newQuiz, [key]: checked });
 
     setTimeout(() => {
       setAnimatingToggles((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(key)
-        return newSet
-      })
-    }, 300)
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }, 300);
 
     if (key === "securedQuiz" && checked) {
-      setExpandedSections((prev) => ({ ...prev, securedQuiz: true }))
+      setExpandedSections((prev) => ({ ...prev, securedQuiz: true }));
     }
     if (key === "questionPool" && checked) {
-      setExpandedSections((prev) => ({ ...prev, questionPool: true }))
+      setExpandedSections((prev) => ({ ...prev, questionPool: true }));
     }
-  }
+  };
 
   const handleCreateQuestions = async () => {
     // Validate required fields
@@ -285,37 +379,46 @@ export default function CreateQuiz() {
     ) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields (Title, Subject, Grade, Section)",
+        description:
+          "Please fill in all required fields (Title, Subject, Grade, Section)",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Backend integration: Create quiz via API
     // Map subject name to subject ID from teacher's assignments
-    const selectedSubject = teacherSubjects.find(s => s.name === newQuiz.subjects[0])
-    const subjectId = selectedSubject?.id || newQuiz.subjects[0] // Fallback to name if ID not found
+    const selectedSubject = teacherSubjects.find(
+      (s) => s.name === newQuiz.subjects[0]
+    );
+    const subjectId = selectedSubject?.id || newQuiz.subjects[0]; // Fallback to name if ID not found
 
     // Map quiz type to backend enum values
     const typeMapping = {
-      "long-form": "form",        // form = all questions on one page
+      "long-form": "form", // form = all questions on one page
       "one-at-a-time": "sequential", // sequential = one question at a time
-      "mixed": "mixed"            // mixed = combination
-    }
+      mixed: "mixed", // mixed = combination
+    };
 
     const quizData = {
       title: newQuiz.title,
       description: newQuiz.description || undefined,
-      subjectId: subjectId,       // ✅ camelCase (not subject_id)
+      subjectId: subjectId, // ✅ camelCase (not subject_id)
       type: typeMapping[newQuiz.testType] || "form", // ✅ "type" (not quiz_type)
-      gradingType: "auto",        // ✅ camelCase (not grading_type), values: "auto", "manual", "hybrid"
+      gradingType: "auto", // ✅ camelCase (not grading_type), values: "auto", "manual", "hybrid"
       timeLimit: newQuiz.timeLimitMinutes || undefined, // ✅ camelCase (not time_limit), in MINUTES
-      startDate: newQuiz.scheduleOpenDate ?
-        new Date(`${newQuiz.scheduleOpenDate}T${newQuiz.scheduleOpenTime || '00:00'}`).toISOString() :
-        undefined, // ✅ camelCase (not start_date)
-      endDate: newQuiz.scheduleCloseDate ?
-        new Date(`${newQuiz.scheduleCloseDate}T${newQuiz.scheduleCloseTime || '23:59'}`).toISOString() :
-        undefined, // ✅ camelCase (not end_date)
+      startDate: newQuiz.scheduleOpenDate
+        ? new Date(
+            `${newQuiz.scheduleOpenDate}T${newQuiz.scheduleOpenTime || "00:00"}`
+          ).toISOString()
+        : undefined, // ✅ camelCase (not start_date)
+      endDate: newQuiz.scheduleCloseDate
+        ? new Date(
+            `${newQuiz.scheduleCloseDate}T${
+              newQuiz.scheduleCloseTime || "23:59"
+            }`
+          ).toISOString()
+        : undefined, // ✅ camelCase (not end_date)
 
       // ✅ Quiz Settings - Security features
       securedQuiz: newQuiz.securedQuiz,
@@ -341,65 +444,70 @@ export default function CreateQuiz() {
       // Don't send visibility here - it's already in the main quizzes table
       accessCode: newQuiz.accessCode || undefined,
       publishMode: newQuiz.publishMode,
-    }
 
-    const createdQuiz = await createQuiz(quizData)
+      // ✅ Section Assignment - Send section IDs during creation
+      sectionIds: newQuiz.sections
+        .map(
+          (sectionName) =>
+            allAvailableSections.find((s) => s.name === sectionName)?.id
+        )
+        .filter(Boolean) as string[],
+    };
+
+    const createdQuiz = await createQuiz(quizData);
 
     if (createdQuiz) {
-      // Map section names to section IDs from teacher's assignments
-      const selectedSectionIds = newQuiz.sections
-        .map(sectionName => teacherSections.find(s => s.name === sectionName)?.id)
-        .filter(Boolean) as string[]
-
-      // Store quiz details + section assignment data in localStorage for later
-      // Section assignment will happen AFTER publishing (backend requirement)
-      localStorage.setItem("quizDetails", JSON.stringify({
-        ...newQuiz,
-        quizId: createdQuiz.quiz_id,
-        pendingSectionAssignment: {
-          sectionIds: selectedSectionIds.length > 0 ? selectedSectionIds : newQuiz.sections,
-          sectionNames: newQuiz.sections, // Store names for display
-          startDate: quizData.startDate,
-          endDate: quizData.endDate,
-          timeLimit: quizData.timeLimit,
-        }
-      }))
+      // Store quiz details in localStorage for builder page
+      localStorage.setItem(
+        "quizDetails",
+        JSON.stringify({
+          ...newQuiz,
+          quizId: createdQuiz.quiz_id,
+        })
+      );
 
       toast({
         title: "Quiz Created",
-        description: "Quiz created successfully. Add questions and publish to assign to sections.",
-      })
+        description: `Quiz created and assigned to ${newQuiz.sections.length} section(s). Add questions to complete.`,
+      });
 
       // Navigate to quiz builder with quiz ID
-      router.push(`/teacher/quiz/builder?quizId=${createdQuiz.quiz_id}`)
+      router.push(`/teacher/quiz/builder?quizId=${createdQuiz.quiz_id}`);
     }
     // Error toast is handled by the hook
-  }
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
+    }));
+  };
 
   const getRecommendations = () => {
-    const recommendations = []
+    const recommendations = [];
 
-    if (newQuiz.title.toLowerCase().includes("exam") || newQuiz.title.toLowerCase().includes("test")) {
-      recommendations.push("securedQuiz")
-      recommendations.push("questionPool")
+    if (
+      newQuiz.title.toLowerCase().includes("exam") ||
+      newQuiz.title.toLowerCase().includes("test")
+    ) {
+      recommendations.push("securedQuiz");
+      recommendations.push("questionPool");
     }
 
-    if (newQuiz.subjects.some((subject) => subject === "Mathematics" || subject === "Science")) {
-      recommendations.push("questionPool")
-      recommendations.push("shuffleQuestions")
+    if (
+      newQuiz.subjects.some(
+        (subject) => subject === "Mathematics" || subject === "Science"
+      )
+    ) {
+      recommendations.push("questionPool");
+      recommendations.push("shuffleQuestions");
     }
 
-    return recommendations
-  }
+    return recommendations;
+  };
 
-  const recommendations = getRecommendations()
+  const recommendations = getRecommendations();
 
   const tooltipExplanations = {
     securedQuiz:
@@ -426,9 +534,15 @@ export default function CreateQuiz() {
       "Disable right-click context menu to prevent access to browser developer tools and other potentially helpful features.",
     lockdownUI:
       "Force the quiz into full-screen mode and hide browser navigation, taskbar, and other UI elements that could be distracting or helpful for cheating.",
-  }
+  };
 
-  const QuestionTooltip = ({ content, children }: { content: string; children: React.ReactNode }) => (
+  const QuestionTooltip = ({
+    content,
+    children,
+  }: {
+    content: string;
+    children: React.ReactNode;
+  }) => (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -441,37 +555,41 @@ export default function CreateQuiz() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  )
+  );
 
   const getSchedulePreview = () => {
     if (newQuiz.publishMode === "immediate") {
-      return "Quiz will be available immediately after creation"
+      return "Quiz will be available immediately after creation";
     }
 
     const openDateTime =
       newQuiz.scheduleOpenDate && newQuiz.scheduleOpenTime
-        ? `${new Date(newQuiz.scheduleOpenDate).toLocaleDateString()} at ${newQuiz.scheduleOpenTime}`
-        : "Not set"
+        ? `${new Date(newQuiz.scheduleOpenDate).toLocaleDateString()} at ${
+            newQuiz.scheduleOpenTime
+          }`
+        : "Not set";
 
     const closeDateTime =
       newQuiz.scheduleCloseDate && newQuiz.scheduleCloseTime
-        ? `${new Date(newQuiz.scheduleCloseDate).toLocaleDateString()} at ${newQuiz.scheduleCloseTime}`
-        : "Not set"
+        ? `${new Date(newQuiz.scheduleCloseDate).toLocaleDateString()} at ${
+            newQuiz.scheduleCloseTime
+          }`
+        : "Not set";
 
-    return { openDateTime, closeDateTime }
-  }
+    return { openDateTime, closeDateTime };
+  };
   // </CHANGE>
 
   // </CHANGE>
 
   const generateAccessCode = () => {
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    let code = ""
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
     for (let i = 0; i < 8; i++) {
-      code += characters.charAt(Math.floor(Math.random() * characters.length))
+      code += characters.charAt(Math.floor(Math.random() * characters.length));
     }
-    setNewQuiz({ ...newQuiz, accessCode: code })
-  }
+    setNewQuiz({ ...newQuiz, accessCode: code });
+  };
 
   // Generate access code when public-code visibility is selected
   // </CHANGE>
@@ -494,7 +612,9 @@ export default function CreateQuiz() {
               Create Quiz
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <p className="text-gray-600 dark:text-gray-400">Design an assessment for your students</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Design an assessment for your students
+              </p>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
@@ -502,7 +622,9 @@ export default function CreateQuiz() {
                     style={{ width: `${formProgress}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{Math.round(formProgress)}%</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {Math.round(formProgress)}%
+                </span>
               </div>
             </div>
           </div>
@@ -515,8 +637,8 @@ export default function CreateQuiz() {
               Choose Your Test Format
             </CardTitle>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Select how students will experience your quiz. Each format offers different benefits for various
-              assessment types.
+              Select how students will experience your quiz. Each format offers
+              different benefits for various assessment types.
             </p>
           </CardHeader>
 
@@ -535,18 +657,27 @@ export default function CreateQuiz() {
                     ? "scale-105 ring-2 ring-blue-500 shadow-xl"
                     : "hover:scale-102 hover:shadow-lg"
                 }`}
-                onClick={() => setNewQuiz({ ...newQuiz, testType: "long-form" })}
+                onClick={() =>
+                  setNewQuiz({ ...newQuiz, testType: "long-form" })
+                }
               >
                 <div className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-2 border-blue-200 dark:border-blue-800 h-full">
                   <div className="flex items-start justify-between mb-4">
-                    <RadioGroupItem value="long-form" id="long-form" className="mt-1" />
+                    <RadioGroupItem
+                      value="long-form"
+                      id="long-form"
+                      className="mt-1"
+                    />
                     <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   </div>
 
                   <Label htmlFor="long-form" className="cursor-pointer">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">All Questions (Long Form)</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      All Questions (Long Form)
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      All questions displayed on one scrollable page, like Google Forms
+                      All questions displayed on one scrollable page, like
+                      Google Forms
                     </p>
                   </Label>
 
@@ -554,7 +685,10 @@ export default function CreateQuiz() {
                   <div className="relative h-32 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-300 dark:border-blue-700 overflow-hidden mb-4">
                     <div className="absolute inset-0 p-3 space-y-2 animate-scroll-slow">
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="flex items-start gap-2 bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
+                        <div
+                          key={i}
+                          className="flex items-start gap-2 bg-blue-100 dark:bg-blue-900/30 p-2 rounded"
+                        >
                           <div className="w-4 h-4 rounded-full bg-blue-500 flex-shrink-0 mt-0.5" />
                           <div className="flex-1 space-y-1">
                             <div className="h-2 bg-blue-300 dark:bg-blue-700 rounded w-3/4" />
@@ -599,7 +733,9 @@ export default function CreateQuiz() {
                   </div>
 
                   <Label htmlFor="mixed" className="cursor-pointer">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Mixed Sections</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      Mixed Sections
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Questions organized into sections or pages with navigation
                     </p>
@@ -658,16 +794,24 @@ export default function CreateQuiz() {
                     ? "scale-105 ring-2 ring-orange-500 shadow-xl"
                     : "hover:scale-102 hover:shadow-lg"
                 }`}
-                onClick={() => setNewQuiz({ ...newQuiz, testType: "one-at-a-time" })}
+                onClick={() =>
+                  setNewQuiz({ ...newQuiz, testType: "one-at-a-time" })
+                }
               >
                 <div className="p-6 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-2 border-orange-200 dark:border-orange-800 h-full">
                   <div className="flex items-start justify-between mb-4">
-                    <RadioGroupItem value="one-at-a-time" id="one-at-a-time" className="mt-1" />
+                    <RadioGroupItem
+                      value="one-at-a-time"
+                      id="one-at-a-time"
+                      className="mt-1"
+                    />
                     <Monitor className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                   </div>
 
                   <Label htmlFor="one-at-a-time" className="cursor-pointer">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">One Question at a Time</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      One Question at a Time
+                    </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Single question per screen with next/previous navigation
                     </p>
@@ -676,7 +820,9 @@ export default function CreateQuiz() {
                   <div className="relative h-32 bg-white dark:bg-gray-800 rounded-lg border-2 border-orange-300 dark:border-orange-700 overflow-hidden mb-4">
                     <div className="absolute inset-0 p-4 flex flex-col justify-between">
                       {/* Question counter */}
-                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">Question 1 of 10</div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        Question 1 of 10
+                      </div>
                       {/* Single question with horizontal slide animation */}
                       <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg flex-1 my-2 flex items-center justify-center animate-question-slide">
                         <div className="w-full space-y-2">
@@ -721,7 +867,8 @@ export default function CreateQuiz() {
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
                     {newQuiz.testType === "long-form" && "Long Form Selected"}
                     {newQuiz.testType === "mixed" && "Mixed Sections Selected"}
-                    {newQuiz.testType === "one-at-a-time" && "One at a Time Selected"}
+                    {newQuiz.testType === "one-at-a-time" &&
+                      "One at a Time Selected"}
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {newQuiz.testType === "long-form" &&
@@ -766,7 +913,9 @@ export default function CreateQuiz() {
                       id="quiz-title"
                       placeholder="Enter quiz title..."
                       value={newQuiz.title}
-                      onChange={(e) => setNewQuiz({ ...newQuiz, title: e.target.value })}
+                      onChange={(e) =>
+                        setNewQuiz({ ...newQuiz, title: e.target.value })
+                      }
                       className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-600/50"
                     />
                   </div>
@@ -774,9 +923,13 @@ export default function CreateQuiz() {
                   <div className="space-y-4 p-5 bg-gradient-to-br from-violet-50/50 to-purple-50/30 dark:from-violet-900/20 dark:to-purple-900/10 rounded-xl border-2 border-violet-200/50 dark:border-violet-800/30">
                     <div className="flex items-center gap-2">
                       <Globe className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                      <Label className="text-base font-semibold text-gray-900 dark:text-white">Quiz Visibility</Label>
+                      <Label className="text-base font-semibold text-gray-900 dark:text-white">
+                        Quiz Visibility
+                      </Label>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Choose who can access this quiz</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Choose who can access this quiz
+                    </p>
 
                     <RadioGroup
                       value={newQuiz.visibility}
@@ -787,20 +940,36 @@ export default function CreateQuiz() {
                     >
                       {/* Assigned to Specific Classes */}
                       <div className="flex items-start space-x-3 p-4 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors border border-violet-200/50 dark:border-violet-800/30">
-                        <RadioGroupItem value="assigned" id="assigned" className="mt-1" />
-                        <Label htmlFor="assigned" className="flex-1 cursor-pointer">
+                        <RadioGroupItem
+                          value="assigned"
+                          id="assigned"
+                          className="mt-1"
+                        />
+                        <Label
+                          htmlFor="assigned"
+                          className="flex-1 cursor-pointer"
+                        >
                           <div className="flex items-center gap-2 mb-1">
                             <Users className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium">Assigned to Specific Classes</span>
+                            <span className="text-sm font-medium">
+                              Assigned to Specific Classes
+                            </span>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                            Only students in selected grade levels and sections can access
+                            Only students in selected grade levels and sections
+                            can access
                           </p>
                           <div className="mt-2 flex flex-wrap gap-1">
-                            <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-blue-100 dark:bg-blue-900/30"
+                            >
                               Targeted
                             </Badge>
-                            <Badge variant="secondary" className="text-xs bg-green-100 dark:bg-green-900/30">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 dark:bg-green-900/30"
+                            >
                               Tracked
                             </Badge>
                           </div>
@@ -809,20 +978,35 @@ export default function CreateQuiz() {
 
                       {/* School-wide */}
                       <div className="flex items-start space-x-3 p-4 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors border border-violet-200/50 dark:border-violet-800/30">
-                        <RadioGroupItem value="school-wide" id="school-wide" className="mt-1" />
-                        <Label htmlFor="school-wide" className="flex-1 cursor-pointer">
+                        <RadioGroupItem
+                          value="school-wide"
+                          id="school-wide"
+                          className="mt-1"
+                        />
+                        <Label
+                          htmlFor="school-wide"
+                          className="flex-1 cursor-pointer"
+                        >
                           <div className="flex items-center gap-2 mb-1">
                             <Globe className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium">School-wide (All Students)</span>
+                            <span className="text-sm font-medium">
+                              School-wide (All Students)
+                            </span>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 font-normal">
                             Available to all students in the school
                           </p>
                           <div className="mt-2 flex flex-wrap gap-1">
-                            <Badge variant="secondary" className="text-xs bg-green-100 dark:bg-green-900/30">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 dark:bg-green-900/30"
+                            >
                               Open Access
                             </Badge>
-                            <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-blue-100 dark:bg-blue-900/30"
+                            >
                               Practice
                             </Badge>
                           </div>
@@ -835,7 +1019,8 @@ export default function CreateQuiz() {
                       <div className="pt-4 border-t border-violet-200 dark:border-violet-800/50 animate-in fade-in slide-in-from-top-2 duration-300">
                         <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
                           <CheckCircle className="w-3 h-3 text-green-600" />
-                          Select target classes below (Subjects, Grade Levels, Sections)
+                          Select target classes below (Subjects, Grade Levels,
+                          Sections)
                         </p>
                       </div>
                     )}
@@ -846,7 +1031,8 @@ export default function CreateQuiz() {
                         <div className="p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-300/50 dark:border-green-700/50">
                           <p className="text-xs font-medium text-green-900 dark:text-green-100 flex items-center gap-2">
                             <Globe className="w-4 h-4" />
-                            This quiz will be visible to all students in your school
+                            This quiz will be visible to all students in your
+                            school
                           </p>
                         </div>
                       </div>
@@ -856,7 +1042,9 @@ export default function CreateQuiz() {
                   {newQuiz.visibility === "assigned" && (
                     <>
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Subjects *</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Subjects *
+                        </Label>
                         <div className="flex flex-wrap gap-2 mb-2">
                           {newQuiz.subjects.map((subject, index) => (
                             <Badge
@@ -877,18 +1065,44 @@ export default function CreateQuiz() {
                           ))}
                         </div>
                         <div className="flex gap-2">
-                          <Select value={newSubject} onValueChange={setNewSubject}>
+                          <Select
+                            value={newSubject}
+                            onValueChange={setNewSubject}
+                            disabled={loadingAssignments}
+                          >
                             <SelectTrigger className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200">
-                              <SelectValue placeholder="Select subject..." />
+                              <SelectValue
+                                placeholder={
+                                  loadingAssignments
+                                    ? "Loading subjects..."
+                                    : "Select subject..."
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              {subjectOptions
-                                .filter((subject) => !newQuiz.subjects.includes(subject))
-                                .map((subject) => (
-                                  <SelectItem key={subject} value={subject}>
-                                    {subject}
-                                  </SelectItem>
-                                ))}
+                              {loadingAssignments ? (
+                                <SelectItem value="loading" disabled>
+                                  Loading subjects...
+                                </SelectItem>
+                              ) : teacherSubjects.length === 0 ? (
+                                <SelectItem value="empty" disabled>
+                                  No subjects assigned
+                                </SelectItem>
+                              ) : (
+                                teacherSubjects
+                                  .filter(
+                                    (subject) =>
+                                      !newQuiz.subjects.includes(subject.name)
+                                  )
+                                  .map((subject) => (
+                                    <SelectItem
+                                      key={subject.id}
+                                      value={subject.name}
+                                    >
+                                      {subject.name}
+                                    </SelectItem>
+                                  ))
+                              )}
                             </SelectContent>
                           </Select>
                           <Button
@@ -904,7 +1118,9 @@ export default function CreateQuiz() {
                       </div>
 
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Grade Levels *</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Grade Levels *
+                        </Label>
                         <div className="flex flex-wrap gap-2 mb-2">
                           {newQuiz.grades.map((grade, index) => (
                             <Badge
@@ -925,18 +1141,40 @@ export default function CreateQuiz() {
                           ))}
                         </div>
                         <div className="flex gap-2">
-                          <Select value={newGrade} onValueChange={setNewGrade}>
+                          <Select
+                            value={newGrade}
+                            onValueChange={setNewGrade}
+                            disabled={loadingAssignments}
+                          >
                             <SelectTrigger className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200">
-                              <SelectValue placeholder="Select grade level..." />
+                              <SelectValue
+                                placeholder={
+                                  loadingAssignments
+                                    ? "Loading grade levels..."
+                                    : "Select grade level..."
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              {gradeOptions
-                                .filter((grade) => !newQuiz.grades.includes(grade))
-                                .map((grade) => (
-                                  <SelectItem key={grade} value={grade}>
-                                    {grade}
-                                  </SelectItem>
-                                ))}
+                              {loadingAssignments ? (
+                                <SelectItem value="loading" disabled>
+                                  Loading grade levels...
+                                </SelectItem>
+                              ) : teacherGrades.length === 0 ? (
+                                <SelectItem value="empty" disabled>
+                                  No grade levels assigned
+                                </SelectItem>
+                              ) : (
+                                teacherGrades
+                                  .filter(
+                                    (grade) => !newQuiz.grades.includes(grade)
+                                  )
+                                  .map((grade) => (
+                                    <SelectItem key={grade} value={grade}>
+                                      {grade}
+                                    </SelectItem>
+                                  ))
+                              )}
                             </SelectContent>
                           </Select>
                           <Button
@@ -952,7 +1190,9 @@ export default function CreateQuiz() {
                       </div>
 
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Sections *</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Sections *
+                        </Label>
                         <div className="flex flex-wrap gap-2 mb-2">
                           {newQuiz.sections.map((section, index) => (
                             <Badge
@@ -973,18 +1213,44 @@ export default function CreateQuiz() {
                           ))}
                         </div>
                         <div className="flex gap-2">
-                          <Select value={newSection} onValueChange={setNewSection}>
+                          <Select
+                            value={newSection}
+                            onValueChange={setNewSection}
+                            disabled={loadingAssignments}
+                          >
                             <SelectTrigger className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200">
-                              <SelectValue placeholder="Select section..." />
+                              <SelectValue
+                                placeholder={
+                                  loadingAssignments
+                                    ? "Loading sections..."
+                                    : "Select section..."
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              {sectionOptions
-                                .filter((section) => !newQuiz.sections.includes(section))
-                                .map((section) => (
-                                  <SelectItem key={section} value={section}>
-                                    {section}
-                                  </SelectItem>
-                                ))}
+                              {loadingAssignments ? (
+                                <SelectItem value="loading" disabled>
+                                  Loading sections...
+                                </SelectItem>
+                              ) : teacherSections.length === 0 ? (
+                                <SelectItem value="empty" disabled>
+                                  No sections assigned
+                                </SelectItem>
+                              ) : (
+                                teacherSections
+                                  .filter(
+                                    (section) =>
+                                      !newQuiz.sections.includes(section.name)
+                                  )
+                                  .map((section) => (
+                                    <SelectItem
+                                      key={section.id}
+                                      value={section.name}
+                                    >
+                                      {section.name}
+                                    </SelectItem>
+                                  ))
+                              )}
                             </SelectContent>
                           </Select>
                           <Button
@@ -1012,7 +1278,8 @@ export default function CreateQuiz() {
                           <QuestionTooltip content="How long students have to complete the quiz once they start. For example, if you set 60 minutes, students must finish within 60 minutes from when they begin." />
                         </Label>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          Total time students have to complete the quiz after starting
+                          Total time students have to complete the quiz after
+                          starting
                         </p>
                       </div>
                     </div>
@@ -1026,17 +1293,25 @@ export default function CreateQuiz() {
                           placeholder="60"
                           value={newQuiz.timeLimitMinutes}
                           onChange={(e) =>
-                            setNewQuiz({ ...newQuiz, timeLimitMinutes: Number.parseInt(e.target.value) || 30 })
+                            setNewQuiz({
+                              ...newQuiz,
+                              timeLimitMinutes:
+                                Number.parseInt(e.target.value) || 30,
+                            })
                           }
                           className="w-32 bg-white/70 dark:bg-gray-700/70 text-lg font-semibold"
                         />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">minutes</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          minutes
+                        </span>
                       </div>
 
                       <div className="p-3 bg-orange-100/50 dark:bg-orange-900/20 rounded-lg border border-orange-300/50 dark:border-orange-700/50">
                         <p className="text-xs text-orange-900 dark:text-orange-100">
-                          <strong>Example:</strong> If set to {newQuiz.timeLimitMinutes} minutes, students must complete
-                          the quiz within {newQuiz.timeLimitMinutes} minutes from when they click "Start Quiz"
+                          <strong>Example:</strong> If set to{" "}
+                          {newQuiz.timeLimitMinutes} minutes, students must
+                          complete the quiz within {newQuiz.timeLimitMinutes}{" "}
+                          minutes from when they click "Start Quiz"
                         </p>
                       </div>
                     </div>
@@ -1050,7 +1325,9 @@ export default function CreateQuiz() {
                     <Input
                       type="date"
                       value={newQuiz.dueDate}
-                      onChange={(e) => setNewQuiz({ ...newQuiz, dueDate: e.target.value })}
+                      onChange={(e) =>
+                        setNewQuiz({ ...newQuiz, dueDate: e.target.value })
+                      }
                       min={new Date().toISOString().split("T")[0]}
                       className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
                     />
@@ -1069,7 +1346,9 @@ export default function CreateQuiz() {
                     <Textarea
                       placeholder="Provide instructions for your quiz..."
                       value={newQuiz.description}
-                      onChange={(e) => setNewQuiz({ ...newQuiz, description: e.target.value })}
+                      onChange={(e) =>
+                        setNewQuiz({ ...newQuiz, description: e.target.value })
+                      }
                       className="min-h-[120px] bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm resize-none hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
                     />
                   </div>
@@ -1098,34 +1377,53 @@ export default function CreateQuiz() {
                       className="space-y-3"
                     >
                       <div className="flex items-start space-x-3 p-4 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors border border-cyan-200/50 dark:border-cyan-800/30">
-                        <RadioGroupItem value="immediate" id="immediate" className="mt-1" />
-                        <Label htmlFor="immediate" className="flex-1 cursor-pointer">
+                        <RadioGroupItem
+                          value="immediate"
+                          id="immediate"
+                          className="mt-1"
+                        />
+                        <Label
+                          htmlFor="immediate"
+                          className="flex-1 cursor-pointer"
+                        >
                           <div className="flex items-center gap-2 mb-1">
                             <Zap className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-semibold">Available Immediately</span>
+                            <span className="text-sm font-semibold">
+                              Available Immediately
+                            </span>
                           </div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 font-normal">
-                            Quiz becomes available right after you create it. Students can start anytime until the due
-                            date.
+                            Quiz becomes available right after you create it.
+                            Students can start anytime until the due date.
                           </p>
                           <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                             <p className="text-xs text-green-800 dark:text-green-200">
-                              <strong>Timeline:</strong> Now → Due Date ({newQuiz.dueDate || "Not set"})
+                              <strong>Timeline:</strong> Now → Due Date (
+                              {newQuiz.dueDate || "Not set"})
                             </p>
                           </div>
                         </Label>
                       </div>
 
                       <div className="flex items-start space-x-3 p-4 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors border border-cyan-200/50 dark:border-cyan-800/30">
-                        <RadioGroupItem value="scheduled" id="scheduled" className="mt-1" />
-                        <Label htmlFor="scheduled" className="flex-1 cursor-pointer">
+                        <RadioGroupItem
+                          value="scheduled"
+                          id="scheduled"
+                          className="mt-1"
+                        />
+                        <Label
+                          htmlFor="scheduled"
+                          className="flex-1 cursor-pointer"
+                        >
                           <div className="flex items-center gap-2 mb-1">
                             <Calendar className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-semibold">Schedule Availability Window</span>
+                            <span className="text-sm font-semibold">
+                              Schedule Availability Window
+                            </span>
                           </div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 font-normal">
-                            Set specific dates and times when the quiz opens and closes. Students can only start during
-                            this window.
+                            Set specific dates and times when the quiz opens and
+                            closes. Students can only start during this window.
                           </p>
                         </Label>
                       </div>
@@ -1137,8 +1435,10 @@ export default function CreateQuiz() {
                           <p className="text-xs text-blue-900 dark:text-blue-100 flex items-center gap-2">
                             <HelpCircle className="w-4 h-4" />
                             <span>
-                              <strong>Important:</strong> Students can only START the quiz during this window. Once
-                              started, they have {newQuiz.timeLimitMinutes} minutes to complete it.
+                              <strong>Important:</strong> Students can only
+                              START the quiz during this window. Once started,
+                              they have {newQuiz.timeLimitMinutes} minutes to
+                              complete it.
                             </span>
                           </p>
                         </div>
@@ -1152,21 +1452,35 @@ export default function CreateQuiz() {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <Label className="text-xs text-gray-600 dark:text-gray-400">Date</Label>
+                              <Label className="text-xs text-gray-600 dark:text-gray-400">
+                                Date
+                              </Label>
                               <Input
                                 type="date"
                                 value={newQuiz.scheduleOpenDate}
-                                onChange={(e) => setNewQuiz({ ...newQuiz, scheduleOpenDate: e.target.value })}
+                                onChange={(e) =>
+                                  setNewQuiz({
+                                    ...newQuiz,
+                                    scheduleOpenDate: e.target.value,
+                                  })
+                                }
                                 className="bg-white/70 dark:bg-gray-700/70 text-sm"
                                 min={new Date().toISOString().split("T")[0]}
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs text-gray-600 dark:text-gray-400">Time</Label>
+                              <Label className="text-xs text-gray-600 dark:text-gray-400">
+                                Time
+                              </Label>
                               <Input
                                 type="time"
                                 value={newQuiz.scheduleOpenTime}
-                                onChange={(e) => setNewQuiz({ ...newQuiz, scheduleOpenTime: e.target.value })}
+                                onChange={(e) =>
+                                  setNewQuiz({
+                                    ...newQuiz,
+                                    scheduleOpenTime: e.target.value,
+                                  })
+                                }
                                 className="bg-white/70 dark:bg-gray-700/70 text-sm"
                               />
                             </div>
@@ -1182,50 +1496,76 @@ export default function CreateQuiz() {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <Label className="text-xs text-gray-600 dark:text-gray-400">Date</Label>
+                              <Label className="text-xs text-gray-600 dark:text-gray-400">
+                                Date
+                              </Label>
                               <Input
                                 type="date"
                                 value={newQuiz.scheduleCloseDate}
-                                onChange={(e) => setNewQuiz({ ...newQuiz, scheduleCloseDate: e.target.value })}
+                                onChange={(e) =>
+                                  setNewQuiz({
+                                    ...newQuiz,
+                                    scheduleCloseDate: e.target.value,
+                                  })
+                                }
                                 className="bg-white/70 dark:bg-gray-700/70 text-sm"
-                                min={newQuiz.scheduleOpenDate || new Date().toISOString().split("T")[0]}
+                                min={
+                                  newQuiz.scheduleOpenDate ||
+                                  new Date().toISOString().split("T")[0]
+                                }
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs text-gray-600 dark:text-gray-400">Time</Label>
+                              <Label className="text-xs text-gray-600 dark:text-gray-400">
+                                Time
+                              </Label>
                               <Input
                                 type="time"
                                 value={newQuiz.scheduleCloseTime}
-                                onChange={(e) => setNewQuiz({ ...newQuiz, scheduleCloseTime: e.target.value })}
+                                onChange={(e) =>
+                                  setNewQuiz({
+                                    ...newQuiz,
+                                    scheduleCloseTime: e.target.value,
+                                  })
+                                }
                                 className="bg-white/70 dark:bg-gray-700/70 text-sm"
                               />
                             </div>
                           </div>
                         </div>
 
-                        {newQuiz.scheduleOpenDate && newQuiz.scheduleOpenTime && (
-                          <div className="p-4 bg-gradient-to-r from-cyan-100/50 to-blue-100/50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-lg border border-cyan-300/50 dark:border-cyan-700/50">
-                            <p className="text-xs font-semibold text-cyan-900 dark:text-cyan-100 mb-2 flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4" />
-                              Availability Summary:
-                            </p>
-                            <div className="space-y-1 text-xs text-cyan-800 dark:text-cyan-200">
-                              <p>
-                                <strong>Opens:</strong> {new Date(newQuiz.scheduleOpenDate).toLocaleDateString()} at{" "}
-                                {newQuiz.scheduleOpenTime}
+                        {newQuiz.scheduleOpenDate &&
+                          newQuiz.scheduleOpenTime && (
+                            <div className="p-4 bg-gradient-to-r from-cyan-100/50 to-blue-100/50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-lg border border-cyan-300/50 dark:border-cyan-700/50">
+                              <p className="text-xs font-semibold text-cyan-900 dark:text-cyan-100 mb-2 flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Availability Summary:
                               </p>
-                              {newQuiz.scheduleCloseDate && newQuiz.scheduleCloseTime && (
+                              <div className="space-y-1 text-xs text-cyan-800 dark:text-cyan-200">
                                 <p>
-                                  <strong>Closes:</strong> {new Date(newQuiz.scheduleCloseDate).toLocaleDateString()} at{" "}
-                                  {newQuiz.scheduleCloseTime}
+                                  <strong>Opens:</strong>{" "}
+                                  {new Date(
+                                    newQuiz.scheduleOpenDate
+                                  ).toLocaleDateString()}{" "}
+                                  at {newQuiz.scheduleOpenTime}
                                 </p>
-                              )}
-                              <p className="pt-2 border-t border-cyan-300 dark:border-cyan-700 mt-2">
-                                <strong>Time Limit:</strong> {newQuiz.timeLimitMinutes} minutes per attempt
-                              </p>
+                                {newQuiz.scheduleCloseDate &&
+                                  newQuiz.scheduleCloseTime && (
+                                    <p>
+                                      <strong>Closes:</strong>{" "}
+                                      {new Date(
+                                        newQuiz.scheduleCloseDate
+                                      ).toLocaleDateString()}{" "}
+                                      at {newQuiz.scheduleCloseTime}
+                                    </p>
+                                  )}
+                                <p className="pt-2 border-t border-cyan-300 dark:border-cyan-700 mt-2">
+                                  <strong>Time Limit:</strong>{" "}
+                                  {newQuiz.timeLimitMinutes} minutes per attempt
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     )}
                   </div>
@@ -1252,22 +1592,34 @@ export default function CreateQuiz() {
                       </Badge>
                     </div>
                     <div
-                      className={`p-6 rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50/50 to-red-50/30 dark:from-amber-900/20 dark:via-orange-900/10 dark:to-red-900/10 transition-all duration-300 transform hover:scale-[1.02] ${animatingToggles.has("securedQuiz") ? "animate-pulse" : ""}`}
+                      className={`p-6 rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50/50 to-red-50/30 dark:from-amber-900/20 dark:via-orange-900/10 dark:to-red-900/10 transition-all duration-300 transform hover:scale-[1.02] ${
+                        animatingToggles.has("securedQuiz")
+                          ? "animate-pulse"
+                          : ""
+                      }`}
                       onMouseEnter={() => setHoveredCard("securedQuiz")}
                       onMouseLeave={() => setHoveredCard(null)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`p-3 rounded-xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/30 dark:to-pink-900/30 transition-all duration-300 ${hoveredCard === "securedQuiz" ? "scale-110 rotate-3" : ""}`}
+                            className={`p-3 rounded-xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/30 dark:to-pink-900/30 transition-all duration-300 ${
+                              hoveredCard === "securedQuiz"
+                                ? "scale-110 rotate-3"
+                                : ""
+                            }`}
                           >
                             <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />
                           </div>
                           <div>
                             <Label className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                               Secured Quiz
-                              <QuestionTooltip content={tooltipExplanations.securedQuiz} />
-                              {newQuiz.securedQuiz && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+                              <QuestionTooltip
+                                content={tooltipExplanations.securedQuiz}
+                              />
+                              {newQuiz.securedQuiz && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full" />
+                              )}
                             </Label>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Enable comprehensive security features
@@ -1277,7 +1629,9 @@ export default function CreateQuiz() {
                         <div className="flex items-center gap-3">
                           <Switch
                             checked={newQuiz.securedQuiz}
-                            onCheckedChange={(checked) => handleToggleChange("securedQuiz", checked)}
+                            onCheckedChange={(checked) =>
+                              handleToggleChange("securedQuiz", checked)
+                            }
                             className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-red-600 data-[state=checked]:to-pink-600 transition-all duration-300"
                           />
                           {newQuiz.securedQuiz && (
@@ -1285,7 +1639,11 @@ export default function CreateQuiz() {
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleSection("securedQuiz")}
-                              className={`h-10 w-10 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 ${expandedSections.securedQuiz ? "bg-red-50 dark:bg-red-900/20" : ""}`}
+                              className={`h-10 w-10 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 ${
+                                expandedSections.securedQuiz
+                                  ? "bg-red-50 dark:bg-red-900/20"
+                                  : ""
+                              }`}
                             >
                               {expandedSections.securedQuiz ? (
                                 <ChevronDown className="w-5 h-5 text-red-600 transition-transform duration-200" />
@@ -1335,7 +1693,9 @@ export default function CreateQuiz() {
                             ].map((option, index) => (
                               <div
                                 key={option.key}
-                                className={`flex items-center justify-between p-4 bg-gradient-to-r from-red-50/50 to-pink-50/30 dark:from-red-900/20 dark:to-pink-900/10 rounded-xl border border-red-200/50 dark:border-red-800/30 hover:from-red-100/50 hover:to-pink-100/40 dark:hover:from-red-900/30 dark:hover:to-pink-900/20 transition-all duration-300 transform hover:scale-[1.02] ${option.span ? "md:col-span-2" : ""}`}
+                                className={`flex items-center justify-between p-4 bg-gradient-to-r from-red-50/50 to-pink-50/30 dark:from-red-900/20 dark:to-pink-900/10 rounded-xl border border-red-200/50 dark:border-red-800/30 hover:from-red-100/50 hover:to-pink-100/40 dark:hover:from-red-900/30 dark:hover:to-pink-900/20 transition-all duration-300 transform hover:scale-[1.02] ${
+                                  option.span ? "md:col-span-2" : ""
+                                }`}
                                 style={{ animationDelay: `${index * 100}ms` }}
                               >
                                 <div className="flex items-center gap-3">
@@ -1344,15 +1704,27 @@ export default function CreateQuiz() {
                                     <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
                                       {option.label}
                                       <QuestionTooltip
-                                        content={tooltipExplanations[option.key as keyof typeof tooltipExplanations]}
+                                        content={
+                                          tooltipExplanations[
+                                            option.key as keyof typeof tooltipExplanations
+                                          ]
+                                        }
                                       />
                                     </span>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">{option.desc}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      {option.desc}
+                                    </p>
                                   </div>
                                 </div>
                                 <Switch
-                                  checked={newQuiz[option.key as keyof typeof newQuiz] as boolean}
-                                  onCheckedChange={(checked) => handleToggleChange(option.key, checked)}
+                                  checked={
+                                    newQuiz[
+                                      option.key as keyof typeof newQuiz
+                                    ] as boolean
+                                  }
+                                  onCheckedChange={(checked) =>
+                                    handleToggleChange(option.key, checked)
+                                  }
                                   className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-red-600 data-[state=checked]:to-pink-600"
                                 />
                               </div>
@@ -1364,22 +1736,32 @@ export default function CreateQuiz() {
                   </div>
                 ) : (
                   <div
-                    className={`p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${animatingToggles.has("securedQuiz") ? "animate-pulse" : ""}`}
+                    className={`p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
+                      animatingToggles.has("securedQuiz") ? "animate-pulse" : ""
+                    }`}
                     onMouseEnter={() => setHoveredCard("securedQuiz")}
                     onMouseLeave={() => setHoveredCard(null)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div
-                          className={`p-3 rounded-xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/30 dark:to-pink-900/30 transition-all duration-300 ${hoveredCard === "securedQuiz" ? "scale-110 rotate-3" : ""}`}
+                          className={`p-3 rounded-xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/30 dark:to-pink-900/30 transition-all duration-300 ${
+                            hoveredCard === "securedQuiz"
+                              ? "scale-110 rotate-3"
+                              : ""
+                          }`}
                         >
                           <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />
                         </div>
                         <div>
                           <Label className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             Secured Quiz
-                            <QuestionTooltip content={tooltipExplanations.securedQuiz} />
-                            {newQuiz.securedQuiz && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+                            <QuestionTooltip
+                              content={tooltipExplanations.securedQuiz}
+                            />
+                            {newQuiz.securedQuiz && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full" />
+                            )}
                           </Label>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Enable comprehensive security features
@@ -1389,7 +1771,9 @@ export default function CreateQuiz() {
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={newQuiz.securedQuiz}
-                          onCheckedChange={(checked) => handleToggleChange("securedQuiz", checked)}
+                          onCheckedChange={(checked) =>
+                            handleToggleChange("securedQuiz", checked)
+                          }
                           className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-red-600 data-[state=checked]:to-pink-600 transition-all duration-300"
                         />
                         {newQuiz.securedQuiz && (
@@ -1397,7 +1781,11 @@ export default function CreateQuiz() {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleSection("securedQuiz")}
-                            className={`h-10 w-10 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 ${expandedSections.securedQuiz ? "bg-red-50 dark:bg-red-900/20" : ""}`}
+                            className={`h-10 w-10 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 ${
+                              expandedSections.securedQuiz
+                                ? "bg-red-50 dark:bg-red-900/20"
+                                : ""
+                            }`}
                           >
                             {expandedSections.securedQuiz ? (
                               <ChevronDown className="w-5 h-5 text-red-600 transition-transform duration-200" />
@@ -1413,7 +1801,12 @@ export default function CreateQuiz() {
                       <div className="mt-6 pt-6 border-t border-red-200 dark:border-red-800/50">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {[
-                            { key: "quizLockdown", label: "Quiz Lockdown", desc: "Browser-only access", icon: Monitor },
+                            {
+                              key: "quizLockdown",
+                              label: "Quiz Lockdown",
+                              desc: "Browser-only access",
+                              icon: Monitor,
+                            },
                             {
                               key: "antiScreenshot",
                               label: "Anti-Screenshot",
@@ -1442,7 +1835,9 @@ export default function CreateQuiz() {
                           ].map((option, index) => (
                             <div
                               key={option.key}
-                              className={`flex items-center justify-between p-4 bg-gradient-to-r from-red-50/50 to-pink-50/30 dark:from-red-900/20 dark:to-pink-900/10 rounded-xl border border-red-200/50 dark:border-red-800/30 hover:from-red-100/50 hover:to-pink-100/40 dark:hover:from-red-900/30 dark:hover:to-pink-900/20 transition-all duration-300 transform hover:scale-[1.02] ${option.span ? "md:col-span-2" : ""}`}
+                              className={`flex items-center justify-between p-4 bg-gradient-to-r from-red-50/50 to-pink-50/30 dark:from-red-900/20 dark:to-pink-900/10 rounded-xl border border-red-200/50 dark:border-red-800/30 hover:from-red-100/50 hover:to-pink-100/40 dark:hover:from-red-900/30 dark:hover:to-pink-900/20 transition-all duration-300 transform hover:scale-[1.02] ${
+                                option.span ? "md:col-span-2" : ""
+                              }`}
                               style={{ animationDelay: `${index * 100}ms` }}
                             >
                               <div className="flex items-center gap-3">
@@ -1451,15 +1846,27 @@ export default function CreateQuiz() {
                                   <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
                                     {option.label}
                                     <QuestionTooltip
-                                      content={tooltipExplanations[option.key as keyof typeof tooltipExplanations]}
+                                      content={
+                                        tooltipExplanations[
+                                          option.key as keyof typeof tooltipExplanations
+                                        ]
+                                      }
                                     />
                                   </span>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">{option.desc}</p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    {option.desc}
+                                  </p>
                                 </div>
                               </div>
                               <Switch
-                                checked={newQuiz[option.key as keyof typeof newQuiz] as boolean}
-                                onCheckedChange={(checked) => handleToggleChange(option.key, checked)}
+                                checked={
+                                  newQuiz[
+                                    option.key as keyof typeof newQuiz
+                                  ] as boolean
+                                }
+                                onCheckedChange={(checked) =>
+                                  handleToggleChange(option.key, checked)
+                                }
                                 className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-red-600 data-[state=checked]:to-pink-600"
                               />
                             </div>
@@ -1480,22 +1887,34 @@ export default function CreateQuiz() {
                       </Badge>
                     </div>
                     <div
-                      className={`p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-cyan-50/50 to-indigo-50/30 dark:from-blue-900/20 dark:via-cyan-900/10 dark:to-indigo-900/10 transition-all duration-300 transform hover:scale-[1.02] ${animatingToggles.has("questionPool") ? "animate-pulse" : ""}`}
+                      className={`p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-cyan-50/50 to-indigo-50/30 dark:from-blue-900/20 dark:via-cyan-900/10 dark:to-indigo-900/10 transition-all duration-300 transform hover:scale-[1.02] ${
+                        animatingToggles.has("questionPool")
+                          ? "animate-pulse"
+                          : ""
+                      }`}
                       onMouseEnter={() => setHoveredCard("questionPool")}
                       onMouseLeave={() => setHoveredCard(null)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`p-3 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 transition-all duration-300 ${hoveredCard === "questionPool" ? "scale-110 rotate-3" : ""}`}
+                            className={`p-3 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 transition-all duration-300 ${
+                              hoveredCard === "questionPool"
+                                ? "scale-110 rotate-3"
+                                : ""
+                            }`}
                           >
                             <Shuffle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div>
                             <Label className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                               Question Pool with Randomize Sampling
-                              <QuestionTooltip content={tooltipExplanations.questionPool} />
-                              {newQuiz.questionPool && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                              <QuestionTooltip
+                                content={tooltipExplanations.questionPool}
+                              />
+                              {newQuiz.questionPool && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                              )}
                             </Label>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Create more questions than needed
@@ -1505,7 +1924,9 @@ export default function CreateQuiz() {
                         <div className="flex items-center gap-3">
                           <Switch
                             checked={newQuiz.questionPool}
-                            onCheckedChange={(checked) => handleToggleChange("questionPool", checked)}
+                            onCheckedChange={(checked) =>
+                              handleToggleChange("questionPool", checked)
+                            }
                             className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-600 data-[state=checked]:to-cyan-600 transition-all duration-300"
                           />
                           {newQuiz.questionPool && (
@@ -1513,7 +1934,11 @@ export default function CreateQuiz() {
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleSection("questionPool")}
-                              className={`h-10 w-10 p-0 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 ${expandedSections.questionPool ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                              className={`h-10 w-10 p-0 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 ${
+                                expandedSections.questionPool
+                                  ? "bg-blue-50 dark:bg-blue-900/20"
+                                  : ""
+                              }`}
                             >
                               {expandedSections.questionPool ? (
                                 <ChevronDown className="w-5 h-5 text-blue-600 transition-transform duration-200" />
@@ -1525,83 +1950,119 @@ export default function CreateQuiz() {
                         </div>
                       </div>
 
-                      {newQuiz.questionPool && expandedSections.questionPool && (
-                        <div className="mt-6 pt-6 border-t border-blue-200 dark:border-blue-800/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div className="space-y-2 group">
-                              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors group-focus-within:text-blue-600">
-                                Questions to Show
-                              </Label>
-                              <Input
-                                type="number"
-                                value={newQuiz.totalQuestions}
-                                onChange={(e) =>
-                                  setNewQuiz({ ...newQuiz, totalQuestions: Number.parseInt(e.target.value) || 20 })
-                                }
-                                className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
-                              />
-                            </div>
-                            <div className="space-y-2 group">
-                              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors group-focus-within:text-blue-600">
-                                Total Pool Size
-                              </Label>
-                              <Input
-                                type="number"
-                                value={newQuiz.poolSize}
-                                onChange={(e) =>
-                                  setNewQuiz({ ...newQuiz, poolSize: Number.parseInt(e.target.value) || 20 })
-                                }
-                                className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50/50 to-cyan-50/30 dark:from-blue-900/20 dark:to-cyan-900/10 rounded-xl border border-blue-200/50 dark:border-blue-800/30 hover:from-blue-100/50 hover:to-cyan-100/40 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/20 transition-all duration-300 transform hover:scale-[1.02]">
-                            <div className="flex items-center gap-3">
-                              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                              <div>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
-                                  Stratified Sampling
-                                  <QuestionTooltip content={tooltipExplanations.stratifiedSampling} />
-                                </span>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">Easy/Medium/Hard categories</p>
+                      {newQuiz.questionPool &&
+                        expandedSections.questionPool && (
+                          <div className="mt-6 pt-6 border-t border-blue-200 dark:border-blue-800/50">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div className="space-y-2 group">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors group-focus-within:text-blue-600">
+                                  Questions to Show
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={newQuiz.totalQuestions}
+                                  onChange={(e) =>
+                                    setNewQuiz({
+                                      ...newQuiz,
+                                      totalQuestions:
+                                        Number.parseInt(e.target.value) || 20,
+                                    })
+                                  }
+                                  className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
+                                />
+                              </div>
+                              <div className="space-y-2 group">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors group-focus-within:text-blue-600">
+                                  Total Pool Size
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={newQuiz.poolSize}
+                                  onChange={(e) =>
+                                    setNewQuiz({
+                                      ...newQuiz,
+                                      poolSize:
+                                        Number.parseInt(e.target.value) || 20,
+                                    })
+                                  }
+                                  className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
+                                />
                               </div>
                             </div>
-                            <Switch
-                              checked={newQuiz.stratifiedSampling}
-                              onCheckedChange={(checked) => handleToggleChange("stratifiedSampling", checked)}
-                              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-600 data-[state=checked]:to-cyan-600"
-                            />
+                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50/50 to-cyan-50/30 dark:from-blue-900/20 dark:to-cyan-900/10 rounded-xl border border-blue-200/50 dark:border-blue-800/30 hover:from-blue-100/50 hover:to-cyan-100/40 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/20 transition-all duration-300 transform hover:scale-[1.02]">
+                              <div className="flex items-center gap-3">
+                                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <div>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                                    Stratified Sampling
+                                    <QuestionTooltip
+                                      content={
+                                        tooltipExplanations.stratifiedSampling
+                                      }
+                                    />
+                                  </span>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Easy/Medium/Hard categories
+                                  </p>
+                                </div>
+                              </div>
+                              <Switch
+                                checked={newQuiz.stratifiedSampling}
+                                onCheckedChange={(checked) =>
+                                  handleToggleChange(
+                                    "stratifiedSampling",
+                                    checked
+                                  )
+                                }
+                                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-600 data-[state=checked]:to-cyan-600"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   </div>
                 ) : (
                   <div
-                    className={`p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-blue-50/50 dark:from-gray-800 dark:to-blue-700/50 hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${animatingToggles.has("questionPool") ? "animate-pulse" : ""}`}
+                    className={`p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-blue-50/50 dark:from-gray-800 dark:to-blue-700/50 hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
+                      animatingToggles.has("questionPool")
+                        ? "animate-pulse"
+                        : ""
+                    }`}
                     onMouseEnter={() => setHoveredCard("questionPool")}
                     onMouseLeave={() => setHoveredCard(null)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div
-                          className={`p-3 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 transition-all duration-300 ${hoveredCard === "questionPool" ? "scale-110 rotate-3" : ""}`}
+                          className={`p-3 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 transition-all duration-300 ${
+                            hoveredCard === "questionPool"
+                              ? "scale-110 rotate-3"
+                              : ""
+                          }`}
                         >
                           <Shuffle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
                           <Label className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             Question Pool with Randomize Sampling
-                            <QuestionTooltip content={tooltipExplanations.questionPool} />
-                            {newQuiz.questionPool && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                            <QuestionTooltip
+                              content={tooltipExplanations.questionPool}
+                            />
+                            {newQuiz.questionPool && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                            )}
                           </Label>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Create more questions than needed</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Create more questions than needed
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={newQuiz.questionPool}
-                          onCheckedChange={(checked) => handleToggleChange("questionPool", checked)}
+                          onCheckedChange={(checked) =>
+                            handleToggleChange("questionPool", checked)
+                          }
                           className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-600 data-[state=checked]:to-cyan-600 transition-all duration-300"
                         />
                         {newQuiz.questionPool && (
@@ -1609,7 +2070,11 @@ export default function CreateQuiz() {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleSection("questionPool")}
-                            className={`h-10 w-10 p-0 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 ${expandedSections.questionPool ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                            className={`h-10 w-10 p-0 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 ${
+                              expandedSections.questionPool
+                                ? "bg-blue-50 dark:bg-blue-900/20"
+                                : ""
+                            }`}
                           >
                             {expandedSections.questionPool ? (
                               <ChevronDown className="w-5 h-5 text-blue-600 transition-transform duration-200" />
@@ -1633,7 +2098,11 @@ export default function CreateQuiz() {
                               type="number"
                               value={newQuiz.totalQuestions}
                               onChange={(e) =>
-                                setNewQuiz({ ...newQuiz, totalQuestions: Number.parseInt(e.target.value) || 20 })
+                                setNewQuiz({
+                                  ...newQuiz,
+                                  totalQuestions:
+                                    Number.parseInt(e.target.value) || 20,
+                                })
                               }
                               className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
                             />
@@ -1646,7 +2115,11 @@ export default function CreateQuiz() {
                               type="number"
                               value={newQuiz.poolSize}
                               onChange={(e) =>
-                                setNewQuiz({ ...newQuiz, poolSize: Number.parseInt(e.target.value) || 20 })
+                                setNewQuiz({
+                                  ...newQuiz,
+                                  poolSize:
+                                    Number.parseInt(e.target.value) || 20,
+                                })
                               }
                               className="bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm hover:bg-gray-100/50 dark:hover:bg-gray-600/50 transition-all duration-200"
                             />
@@ -1658,14 +2131,22 @@ export default function CreateQuiz() {
                             <div>
                               <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
                                 Stratified Sampling
-                                <QuestionTooltip content={tooltipExplanations.stratifiedSampling} />
+                                <QuestionTooltip
+                                  content={
+                                    tooltipExplanations.stratifiedSampling
+                                  }
+                                />
                               </span>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">Easy/Medium/Hard categories</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                Easy/Medium/Hard categories
+                              </p>
                             </div>
                           </div>
                           <Switch
                             checked={newQuiz.stratifiedSampling}
-                            onCheckedChange={(checked) => handleToggleChange("stratifiedSampling", checked)}
+                            onCheckedChange={(checked) =>
+                              handleToggleChange("stratifiedSampling", checked)
+                            }
                             className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-600 data-[state=checked]:to-cyan-600"
                           />
                         </div>
@@ -1685,22 +2166,34 @@ export default function CreateQuiz() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div
-                          className={`p-3 rounded-xl bg-gradient-to-br from-orange-100 to-yellow-100 dark:from-orange-900/30 dark:to-yellow-900/30 transition-all duration-300 ${hoveredCard === "strictTimeLimit" ? "scale-110 rotate-3" : ""}`}
+                          className={`p-3 rounded-xl bg-gradient-to-br from-orange-100 to-yellow-100 dark:from-orange-900/30 dark:to-yellow-900/30 transition-all duration-300 ${
+                            hoveredCard === "strictTimeLimit"
+                              ? "scale-110 rotate-3"
+                              : ""
+                          }`}
                         >
                           <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
                           <Label className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             Strict per Question Time Limit
-                            <QuestionTooltip content={tooltipExplanations.strictTimeLimit} />
-                            {newQuiz.strictTimeLimit && <div className="w-2 h-2 bg-orange-500 rounded-full" />}
+                            <QuestionTooltip
+                              content={tooltipExplanations.strictTimeLimit}
+                            />
+                            {newQuiz.strictTimeLimit && (
+                              <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                            )}
                           </Label>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Individual question timing</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Individual question timing
+                          </p>
                         </div>
                       </div>
                       <Switch
                         checked={newQuiz.strictTimeLimit}
-                        onCheckedChange={(checked) => handleToggleChange("strictTimeLimit", checked)}
+                        onCheckedChange={(checked) =>
+                          handleToggleChange("strictTimeLimit", checked)
+                        }
                         className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-orange-600 data-[state=checked]:to-yellow-600"
                       />
                     </div>
@@ -1723,22 +2216,34 @@ export default function CreateQuiz() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div
-                              className={`p-3 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 transition-all duration-300 ${hoveredCard === "autoSave" ? "scale-110 rotate-3" : ""}`}
+                              className={`p-3 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 transition-all duration-300 ${
+                                hoveredCard === "autoSave"
+                                  ? "scale-110 rotate-3"
+                                  : ""
+                              }`}
                             >
                               <Save className="w-6 h-6 text-green-600 dark:text-green-400" />
                             </div>
                             <div>
                               <Label className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                 Auto-Save & Auto-Submit
-                                <QuestionTooltip content={tooltipExplanations.autoSave} />
-                                {newQuiz.autoSave && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+                                <QuestionTooltip
+                                  content={tooltipExplanations.autoSave}
+                                />
+                                {newQuiz.autoSave && (
+                                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                )}
                               </Label>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Automatic progress saving</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Automatic progress saving
+                              </p>
                             </div>
                           </div>
                           <Switch
                             checked={newQuiz.autoSave}
-                            onCheckedChange={(checked) => handleToggleChange("autoSave", checked)}
+                            onCheckedChange={(checked) =>
+                              handleToggleChange("autoSave", checked)
+                            }
                             className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-green-600 data-[state=checked]:to-emerald-600"
                           />
                         </div>
@@ -1753,22 +2258,34 @@ export default function CreateQuiz() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`p-3 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 transition-all duration-300 ${hoveredCard === "autoSave" ? "scale-110 rotate-3" : ""}`}
+                            className={`p-3 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 transition-all duration-300 ${
+                              hoveredCard === "autoSave"
+                                ? "scale-110 rotate-3"
+                                : ""
+                            }`}
                           >
                             <Save className="w-6 h-6 text-green-600 dark:text-green-400" />
                           </div>
                           <div>
                             <Label className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                               Auto-Save & Auto-Submit
-                              <QuestionTooltip content={tooltipExplanations.autoSave} />
-                              {newQuiz.autoSave && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+                              <QuestionTooltip
+                                content={tooltipExplanations.autoSave}
+                              />
+                              {newQuiz.autoSave && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full" />
+                              )}
                             </Label>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Automatic progress saving</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Automatic progress saving
+                            </p>
                           </div>
                         </div>
                         <Switch
                           checked={newQuiz.autoSave}
-                          onCheckedChange={(checked) => handleToggleChange("autoSave", checked)}
+                          onCheckedChange={(checked) =>
+                            handleToggleChange("autoSave", checked)
+                          }
                           className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-green-600 data-[state=checked]:to-emerald-600"
                         />
                       </div>
@@ -1784,15 +2301,23 @@ export default function CreateQuiz() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div
-                          className={`p-3 rounded-xl bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 transition-all duration-300 ${hoveredCard === "backtrackingControl" ? "scale-110 rotate-3" : ""}`}
+                          className={`p-3 rounded-xl bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 transition-all duration-300 ${
+                            hoveredCard === "backtrackingControl"
+                              ? "scale-110 rotate-3"
+                              : ""
+                          }`}
                         >
                           <RotateCcw className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
                           <Label className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             Backtracking Control
-                            <QuestionTooltip content={tooltipExplanations.backtrackingControl} />
-                            {newQuiz.backtrackingControl && <div className="w-2 h-2 bg-purple-500 rounded-full" />}
+                            <QuestionTooltip
+                              content={tooltipExplanations.backtrackingControl}
+                            />
+                            {newQuiz.backtrackingControl && (
+                              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                            )}
                           </Label>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Prevent going back to previous questions
@@ -1801,7 +2326,9 @@ export default function CreateQuiz() {
                       </div>
                       <Switch
                         checked={newQuiz.backtrackingControl}
-                        onCheckedChange={(checked) => handleToggleChange("backtrackingControl", checked)}
+                        onCheckedChange={(checked) =>
+                          handleToggleChange("backtrackingControl", checked)
+                        }
                         className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-600 data-[state=checked]:to-violet-600"
                       />
                     </div>
@@ -1824,22 +2351,34 @@ export default function CreateQuiz() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div
-                              className={`p-3 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900/30 dark:to-blue-900/30 transition-all duration-300 ${hoveredCard === "shuffleQuestions" ? "scale-110 rotate-3" : ""}`}
+                              className={`p-3 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900/30 dark:to-blue-900/30 transition-all duration-300 ${
+                                hoveredCard === "shuffleQuestions"
+                                  ? "scale-110 rotate-3"
+                                  : ""
+                              }`}
                             >
                               <Shuffle className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
                               <Label className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                 Shuffle Questions
-                                <QuestionTooltip content={tooltipExplanations.shuffleQuestions} />
-                                {newQuiz.shuffleQuestions && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                                <QuestionTooltip
+                                  content={tooltipExplanations.shuffleQuestions}
+                                />
+                                {newQuiz.shuffleQuestions && (
+                                  <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+                                )}
                               </Label>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Randomize question order</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Randomize question order
+                              </p>
                             </div>
                           </div>
                           <Switch
                             checked={newQuiz.shuffleQuestions}
-                            onCheckedChange={(checked) => handleToggleChange("shuffleQuestions", checked)}
+                            onCheckedChange={(checked) =>
+                              handleToggleChange("shuffleQuestions", checked)
+                            }
                             className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-indigo-600 data-[state=checked]:to-blue-600"
                           />
                         </div>
@@ -1854,22 +2393,34 @@ export default function CreateQuiz() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`p-3 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900/30 dark:to-blue-900/30 transition-all duration-300 ${hoveredCard === "shuffleQuestions" ? "scale-110 rotate-3" : ""}`}
+                            className={`p-3 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900/30 dark:to-blue-900/30 transition-all duration-300 ${
+                              hoveredCard === "shuffleQuestions"
+                                ? "scale-110 rotate-3"
+                                : ""
+                            }`}
                           >
                             <Shuffle className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                           </div>
                           <div>
                             <Label className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                               Shuffle Questions
-                              <QuestionTooltip content={tooltipExplanations.shuffleQuestions} />
-                              {newQuiz.shuffleQuestions && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                              <QuestionTooltip
+                                content={tooltipExplanations.shuffleQuestions}
+                              />
+                              {newQuiz.shuffleQuestions && (
+                                <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+                              )}
                             </Label>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Randomize question order</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Randomize question order
+                            </p>
                           </div>
                         </div>
                         <Switch
                           checked={newQuiz.shuffleQuestions}
-                          onCheckedChange={(checked) => handleToggleChange("shuffleQuestions", checked)}
+                          onCheckedChange={(checked) =>
+                            handleToggleChange("shuffleQuestions", checked)
+                          }
                           className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-indigo-600 data-[state=checked]:to-blue-600"
                         />
                       </div>
@@ -1905,5 +2456,5 @@ export default function CreateQuiz() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

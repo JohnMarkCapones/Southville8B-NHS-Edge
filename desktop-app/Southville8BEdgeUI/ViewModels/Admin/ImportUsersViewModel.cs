@@ -305,6 +305,8 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
             try
             {
                 string? phoneNum = csv.GetField("phone_number");
+                var parsedPhone = ParsePhoneNumber(phoneNum ?? "");
+                
                 var student = new CsvStudentRowDto
                 {
                     full_name = csv.GetField("full_name") ?? "",
@@ -316,13 +318,13 @@ Lucas Mason Lopez,Student,Active,Lucas,Lopez,Mason,STU-1002,LRN-9002,Grade 10,20
                     student_id = csv.GetField("student_id") ?? "",
                     lrn_id = csv.GetField("lrn_id") ?? "",
                     grade_level = csv.GetField("grade_level") ?? "",
-                    enrollment = int.TryParse(csv.GetField("enrollment"), out var enrollment) ? enrollment : 0,
-                    section = csv.GetField("section") ?? "",
+                    enrollment = int.TryParse(csv.GetField("enrollment"), out var enrollment) && enrollment > 1900 ? enrollment : DateTime.Now.Year,
+                    section = !string.IsNullOrWhiteSpace(csv.GetField("section")) ? csv.GetField("section")! : "Unassigned",
                     age = int.TryParse(csv.GetField("age"), out var age) ? age : null,
                     birthday = DateTime.TryParse(csv.GetField("birthday"), out var birthday) ? birthday : DateTime.MinValue,
-                    guardian_name = csv.GetField("guardian_name") ?? "",
-                    relationship = csv.GetField("relationship") ?? "",
-                    phone_number = ParsePhoneNumber(phoneNum ?? ""),
+                    guardian_name = !string.IsNullOrWhiteSpace(csv.GetField("guardian_name")) ? csv.GetField("guardian_name")! : "N/A",
+                    relationship = !string.IsNullOrWhiteSpace(csv.GetField("relationship")) ? csv.GetField("relationship")! : "Guardian",
+                    phone_number = !string.IsNullOrWhiteSpace(parsedPhone) ? parsedPhone : "09000000000",
                     email = csv.GetField("email"),
                     address = csv.GetField("address"),
                     is_primary = bool.TryParse(csv.GetField("is_primary"), out var isPrimary) ? isPrimary : false

@@ -65,9 +65,16 @@ public partial class SchedulePlannerViewModel : ViewModelBase
 
     private static IBrush ResolveBrush(string key, IBrush fallback)
     {
-        var app = Application.Current;
-        if (app != null && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var obj) && obj is IBrush b)
-            return b;
+        try
+        {
+            var app = Application.Current;
+            if (app != null && app.Resources.TryGetResource(key, app.ActualThemeVariant, out var obj) && obj is IBrush b)
+                return b;
+        }
+        catch
+        {
+            // Skip theme resolution if not on UI thread (unit tests)
+        }
         return fallback;
     }
 

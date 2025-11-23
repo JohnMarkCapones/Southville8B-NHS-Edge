@@ -8,9 +8,14 @@ import {
 } from "react";
 
 import type { LoginRequest, LoginResponse } from "@/services/auth";
-import { login as loginService, restoreAuthSession } from "@/services/auth";
+import {
+  clearAuthSession,
+  login as loginService,
+  restoreAuthSession,
+} from "@/services/auth";
 // import { recordLogin } from "@/services/user";
 import type { StoredTokens } from "@/lib/storage/token-storage";
+import { subscribeToTokenChanges } from "@/lib/auth/token-manager";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -56,6 +61,21 @@ export function AuthSessionProvider({
       });
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToTokenChanges((nextTokens) => {
+      setTokens(nextTokens);
+      if (nextTokens) {
+        setStatus("authenticated");
+      } else {
+        setStatus((prev) =>
+          prev === "loading" ? "loading" : "unauthenticated"
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   const signIn = useCallback(async (payload: LoginRequest) => {
     try {
       const response = await loginService(payload);
@@ -81,7 +101,10 @@ export function AuthSessionProvider({
 
   const signOut = useCallback(() => {
     console.log(
-      "[AuthSession] Signing out - setting status to unauthenticated"
+      "[AuthSession] Signing out - clearing stored tokens and auth state"
+    );
+    clearAuthSession().catch((error) =>
+      console.warn("[AuthSession] Failed to clear auth session", error)
     );
     setStatus("unauthenticated");
     setTokens(null);

@@ -163,4 +163,39 @@ export class TeacherActivityService {
       return `${diffDays}day${diffDays > 1 ? 's' : ''} ago`;
     }
   }
+
+  async createActivity(
+    userId: string,
+    activityData: any,
+  ): Promise<{ success: boolean; id?: string }> {
+    try {
+      this.logger.log(`Creating teacher activity for user: ${userId}`);
+
+      const { data, error } = await this.supabase
+        .from('teacher_activities')
+        .insert({
+          user_id: activityData.user_id || userId,
+          action_type: activityData.action_type,
+          description: activityData.description,
+          entity_type: activityData.entity_type || null,
+          entity_id: activityData.entity_id || null,
+          icon: activityData.icon || null,
+          color: activityData.color || null,
+          metadata: activityData.metadata || {},
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        this.logger.error('Error creating teacher activity:', error);
+        return { success: false };
+      }
+
+      this.logger.log(`Teacher activity created successfully: ${data.id}`);
+      return { success: true, id: data.id };
+    } catch (error) {
+      this.logger.error('Error creating teacher activity:', error);
+      return { success: false };
+    }
+  }
 }

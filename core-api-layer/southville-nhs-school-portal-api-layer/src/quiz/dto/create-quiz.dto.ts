@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsDateString,
   IsUUID,
+  IsArray,
   Min,
   MinLength,
   MaxLength,
@@ -363,4 +364,20 @@ export class CreateQuizDto {
     required: false,
   })
   publishMode?: string;
+
+  // ========== Section Assignment ==========
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ApiProperty({
+    example: [
+      '550e8400-e29b-41d4-a716-446655440001',
+      '550e8400-e29b-41d4-a716-446655440002',
+    ],
+    description:
+      'Array of section IDs to assign quiz to (optional, can assign later)',
+    type: [String],
+    required: false,
+  })
+  sectionIds?: string[];
 }

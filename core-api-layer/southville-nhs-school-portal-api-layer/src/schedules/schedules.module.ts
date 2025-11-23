@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AuthModule } from '../auth/auth.module';
 import { StudentsModule } from '../students/students.module';
+import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
 import { SchedulesService } from './schedules.service';
 import { SchedulesController } from './schedules.controller';
 
@@ -15,6 +16,7 @@ import { SchedulesController } from './schedules.controller';
     }),
     AuthModule,
     StudentsModule,
+    ActivityMonitoringModule,
   ],
   controllers: [SchedulesController],
   providers: [SchedulesService],

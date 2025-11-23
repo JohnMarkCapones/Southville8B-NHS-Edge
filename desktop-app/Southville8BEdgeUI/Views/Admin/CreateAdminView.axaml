@@ -57,6 +57,17 @@
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
 
+        <Style Selector="DatePicker.form-input">
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
@@ -130,7 +141,7 @@
                     </Border>
 
                     <!-- Form Fields -->
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
                         <!-- First Name -->
                         <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,12,0">
                             <TextBlock Text="First Name" Classes="field-label"/>
@@ -162,20 +173,24 @@
                         <StackPanel Grid.Column="0" Grid.Row="2" Margin="0,0,12,0">
                             <TextBlock Text="Birthday" Classes="field-label"/>
                             <TextBlock Text="*" Classes="required"/>
-                            <TextBox Text="{Binding Birthday}" Classes="form-input" Watermark="YYYY-MM-DD"/>
+                            <DatePicker SelectedDate="{Binding Birthday}" Classes="form-input"/>
                         </StackPanel>
 
                         <!-- Age -->
                         <StackPanel Grid.Column="1" Grid.Row="2" Margin="12,0,0,0">
                             <TextBlock Text="Age" Classes="field-label"/>
-                            <TextBox Text="{Binding Age}" Classes="form-input" Watermark="Auto-calculated from birthday"/>
+                            <TextBox Text="{Binding Age}" 
+                                     Classes="form-input" 
+                                     Watermark="Auto-calculated from birthday"
+                                     IsReadOnly="True"
+                                     Background="{DynamicResource PageBackgroundBrush}"/>
                         </StackPanel>
 
                         <!-- Department -->
                         <StackPanel Grid.Column="0" Grid.Row="3" Margin="0,0,12,0">
                             <TextBlock Text="Department" Classes="field-label"/>
                             <ComboBox ItemsSource="{Binding DepartmentOptions}" 
-                                    SelectedValue="{Binding DepartmentId}"
+                                      SelectedItem="{Binding DepartmentId}"
                                       Classes="form-combo" 
                                       PlaceholderText="Select department (optional)"/>
                         </StackPanel>

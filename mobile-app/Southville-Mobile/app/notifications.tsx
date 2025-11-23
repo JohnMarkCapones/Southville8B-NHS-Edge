@@ -2,15 +2,14 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshCon
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState, useCallback } from 'react';
-// import { useNotifications } from '@/hooks/use-notifications';
-import { Notification } from '@/lib/types/notification';
+import { useNotifications } from '@/hooks/use-notifications';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useNavigationLoading } from '@/hooks/use-navigation-loading';
 import { useTheme } from '@/contexts/theme-context';
 import { Colors } from '@/constants/theme';
 
 export default function NotificationsScreen() {
-  // const { notifications, loading, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, loading, error, unreadCount, markAsRead, markAllAsRead, deleteNotification, refresh } = useNotifications();
   const { isLoading, navigateWithLoading, navigateBackWithLoading } = useNavigationLoading();
   const { isDark } = useTheme();
   const colors = Colors[isDark ? 'dark' : 'light'];
@@ -20,52 +19,13 @@ export default function NotificationsScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // In a real implementation, this would call the notifications refetch function
-      // await refetchNotifications();
+      await refresh();
     } catch (error) {
       console.error('Error refreshing notifications:', error);
     } finally {
       setRefreshing(false);
     }
-  }, []);
-  
-  // Mock data for now
-  const notifications: Notification[] = [
-    {
-      id: '1',
-      userId: 'user-1',
-      title: 'Class Suspension Notice !',
-      message: 'All classes for All levels are suspended today at 8:00 AM due to heavy rain.',
-      type: 'announcement',
-      read: false,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      userId: 'user-1',
-      title: 'Class Schedule Notice',
-      message: 'Incoming class subject English 8-00, Room 302 with sir Richard',
-      type: 'class_schedule',
-      read: false,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-  ];
-  
-  const loading = false;
-  
-  const markAsRead = (id: string) => {
-    console.log('Mark as read:', id);
-  };
-  
-  const markAllAsRead = () => {
-    console.log('Mark all as read');
-  };
-  
-  const deleteNotification = (id: string) => {
-    console.log('Delete notification:', id);
-  };
+  }, [refresh]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -181,13 +141,27 @@ export default function NotificationsScreen() {
         <TouchableOpacity style={styles.tab}>
           <Text style={[styles.tabText, { color: colors.icon }]}>Unread</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={markAllAsRead}>
-          <Text style={[styles.markAllRead, { color: colors.tint }]}>Mark all read</Text>
-        </TouchableOpacity>
+        {unreadCount > 0 && (
+          <TouchableOpacity onPress={markAllAsRead}>
+            <Text style={[styles.markAllRead, { color: colors.tint }]}>Mark all read</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
+      {/* Error Message */}
+      {error && (
+        <View style={[styles.errorContainer, { backgroundColor: isDark ? 'rgba(244, 67, 54, 0.1)' : '#FFEBEE' }]}>
+          <Ionicons name="alert-circle" size={20} color="#F44336" />
+          <Text style={[styles.errorText, { color: '#F44336' }]}>{error}</Text>
+        </View>
+      )}
+
       {/* Content */}
-      {notifications.length === 0 ? (
+      {loading && notifications.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: colors.icon }]}>Loading notifications...</Text>
+        </View>
+      ) : notifications.length === 0 ? (
         <View style={styles.emptyState}>
           <Image source={require('@/assets/subjects/Spider.png')} style={styles.emptyImage} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>No notification yet</Text>
@@ -376,5 +350,17 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    flex: 1,
   },
 });

@@ -313,6 +313,7 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="GWA Entry System" Classes="header"/>
                     <TextBlock Text="Enter final GWA for students in your advisory section" Classes="subtitle"/>
+                    <TextBlock Text="{Binding CurrentTermLabel}" Classes="subtitle" Margin="0,4,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1" 
                         Background="{DynamicResource TextSecondaryBrush}" 
@@ -344,11 +345,24 @@
                     <ComboBox Grid.Column="1" ItemsSource="{Binding GradingPeriods}" SelectedItem="{Binding SelectedGradingPeriod}" MinWidth="120"/>
                     <TextBlock Grid.Column="2" Text="School Year:" VerticalAlignment="Center" Margin="16,0,8,0"/>
                     <ComboBox Grid.Column="3" ItemsSource="{Binding SchoolYears}" SelectedItem="{Binding SelectedSchoolYear}" MinWidth="120"/>
+                    <StackPanel Grid.Column="4" Margin="16,0,0,0">
+                        <TextBlock Text="Active Term" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding CurrentTermLabel}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
                     <StackPanel Grid.Column="5" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <TextBlock Text="{Binding SectionName}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Right"/>
                         <TextBlock Text="{Binding GradeLevel}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Right"/>
                     </StackPanel>
                 </Grid>
+            </Border>
+
+            <Border Classes="card" Background="{DynamicResource AccentSoftBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                    IsVisible="{Binding TermRestrictionMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <ic:FluentIcon Icon="LockClosed" IconSize="Size16" Foreground="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="{Binding TermRestrictionMessage}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
             </Border>
 
             <!-- Loading Indicator -->
@@ -384,9 +398,19 @@
                                                 </StackPanel>
                                                 
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Classes="action-buttons">
+                                                    <Button Background="{DynamicResource InfoBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                                                            Padding="8,4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Edit Grade" 
+                                                            Command="{Binding EditGradeCommand}" IsVisible="{Binding !IsEditing}" Classes="edit-btn"
+                                                            IsEnabled="{Binding IsTermEditable}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
+                                                            <TextBlock Text="Edit"/>
+                                                        </StackPanel>
+                                                    </Button>
                                                     <Button Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" 
                                                             Padding="8,4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Save Grade" 
-                                                            Command="{Binding SaveGradeCommand}" IsVisible="{Binding IsDirty}" Classes="save-btn">
+                                                            Command="{Binding SaveGradeCommand}" IsVisible="{Binding IsEditing}" Classes="save-btn"
+                                                            IsEnabled="{Binding IsTermEditable}">
                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                             <ic:FluentIcon Icon="Save" IconSize="Size16"/>
                                                             <TextBlock Text="Save"/>
@@ -394,7 +418,8 @@
                                                     </Button>
                                                     <Button Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource AccentTextOnAccentBrush}" 
                                                             Padding="8,4" BorderThickness="0" CornerRadius="4" ToolTip.Tip="Delete Entry" 
-                                                            Command="{Binding DeleteGradeCommand}" IsVisible="{Binding GwaId, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Classes="delete-btn">
+                                                            Command="{Binding DeleteGradeCommand}" IsVisible="{Binding GwaId, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Classes="delete-btn"
+                                                            IsEnabled="{Binding IsTermEditable}">
                                                         <ic:FluentIcon Icon="Delete" IconSize="Size16"/>
                                                     </Button>
                                                 </StackPanel>
@@ -405,7 +430,12 @@
                                                 <!-- GWA Field -->
                                                 <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,8,0">
                                                     <TextBlock Text="GWA" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
-                                                    <TextBox Text="{Binding Gwa}" Watermark="50.00-100.00" TextAlignment="Center"/>
+                                                    <TextBox Text="{Binding GwaInput}" Watermark="50.00-100.00" TextAlignment="Center" IsEnabled="{Binding IsEditing}"/>
+                                                    <TextBlock Text="{Binding GwaErrorMessage}" 
+                                                               Foreground="{DynamicResource DangerBrush}" 
+                                                               FontSize="12" 
+                                                               Margin="0,4,0,0"
+                                                               IsVisible="{Binding GwaErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                 </StackPanel>
                                                 
                                                 <!-- Honor Status Field (Read-only, Auto-calculated) -->
@@ -427,7 +457,7 @@
                                                 <!-- Remarks Field - Full Width -->
                                                 <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="0,12,0,0">
                                                     <TextBlock Text="Remarks" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
-                                                    <TextBox Text="{Binding Remarks}" Watermark="Optional remarks"/>
+                                                    <TextBox Text="{Binding Remarks}" Watermark="Optional remarks" IsEnabled="{Binding IsEditing}"/>
                                                 </StackPanel>
                                             </Grid>
                                         </StackPanel>

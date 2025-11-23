@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Observable, Subject, interval } from 'rxjs';
+import type { AdminActivity } from '../admin-dashboard/admin-dashboard.service';
+import { Observable, Subject, interval, merge } from 'rxjs';
 import { map, startWith, switchMap } from 'rxjs/operators';
 
 export interface SidebarMetrics {
@@ -26,6 +27,8 @@ export class DesktopSidebarService {
   private supabase: SupabaseClient;
   private metricsSubject = new Subject<SidebarMetrics>();
   private teacherMetricsSubject = new Subject<TeacherSidebarMetrics>();
+  private activitiesSubject = new Subject<AdminActivity[]>();
+  private readonly activitiesLimit = 5;
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('supabase.url');
@@ -37,6 +40,7 @@ export class DesktopSidebarService {
 
     // Start periodic metrics updates
     this.startMetricsPolling();
+    this.startActivitiesPolling();
   }
 
   private startMetricsPolling() {
@@ -55,6 +59,25 @@ export class DesktopSidebarService {
         },
         error: (error) => {
           this.logger.error('Error updating sidebar metrics:', error);
+        },
+      });
+  }
+
+  private startActivitiesPolling() {
+    interval(30000)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.fetchRecentActivities(this.activitiesLimit)),
+      )
+      .subscribe({
+        next: (activities) => {
+          this.activitiesSubject.next(activities);
+          this.logger.log(
+            `Sidebar activities updated (${activities.length} items)`,
+          );
+        },
+        error: (error) => {
+          this.logger.error('Error updating sidebar activities:', error);
         },
       });
   }
@@ -160,7 +183,7 @@ export class DesktopSidebarService {
 
   // SSE stream for real-time metrics
   getMetricsStream(): Observable<MessageEvent> {
-    return this.metricsSubject
+    const metrics$ = this.metricsSubject
       .asObservable()
       .pipe(
         map(
@@ -168,6 +191,18 @@ export class DesktopSidebarService {
             ({ type: 'metrics-update', data: metrics }) as MessageEvent,
         ),
       );
+
+    const activities$ = this.activitiesSubject.asObservable().pipe(
+      map(
+        (activities) =>
+          ({
+            type: 'dashboard-activities-update',
+            data: activities,
+          }) as MessageEvent,
+      ),
+    );
+
+    return merge(metrics$, activities$);
   }
 
   // Manual trigger for immediate update
@@ -175,6 +210,68 @@ export class DesktopSidebarService {
     const metrics = await this.fetchMetrics();
     this.metricsSubject.next(metrics);
     return metrics;
+  }
+
+  async triggerActivitiesUpdate(
+    limit: number = this.activitiesLimit,
+  ): Promise<AdminActivity[]> {
+    const activities = await this.fetchRecentActivities(limit);
+    this.activitiesSubject.next(activities);
+    return activities;
+  }
+
+  private async fetchRecentActivities(limit: number): Promise<AdminActivity[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('admin_activities')
+        .select(
+          `
+          id,
+          user_id,
+          action_type,
+          description,
+          entity_type,
+          entity_id,
+          metadata,
+          icon,
+          color,
+          created_at,
+          users!user_id (
+            full_name
+          )
+        `,
+        )
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        this.logger.error('Error fetching admin activities:', error);
+        throw error;
+      }
+
+      return (data ?? []).map((activity: any) => {
+        const userName =
+          (activity.users as { full_name?: string } | null)?.full_name ||
+          'Unknown User';
+
+        return {
+          id: activity.id,
+          userId: activity.user_id,
+          userName,
+          actionType: activity.action_type,
+          description: activity.description,
+          entityType: activity.entity_type ?? undefined,
+          entityId: activity.entity_id ?? undefined,
+          metadata: activity.metadata ?? undefined,
+          icon: activity.icon ?? undefined,
+          color: activity.color ?? undefined,
+          createdAt: activity.created_at,
+        } as AdminActivity;
+      });
+    } catch (error) {
+      this.logger.error('Error fetching admin activities:', error);
+      return [];
+    }
   }
 
   // Teacher-specific metrics methods

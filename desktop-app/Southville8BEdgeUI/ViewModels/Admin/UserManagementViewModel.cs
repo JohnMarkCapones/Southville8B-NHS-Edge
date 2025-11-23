@@ -224,7 +224,7 @@ CurrentPage = 1;
   if (response.Users.Count > 0)
        {
       var firstUser = response.Users[0];
-         System.Diagnostics.Debug.WriteLine($"First user: ID={firstUser.Id}, Email={firstUser.Email}, FullName={firstUser.FullName}, Role={firstUser.Role?.Name}");
+         System.Diagnostics.Debug.WriteLine($"First user: ID={firstUser.Id}, Email={firstUser.Email}, FullName={firstUser.FullName}, Role={firstUser.Role}");
         System.Diagnostics.Debug.WriteLine($"First user StudentId={firstUser.StudentId}, GradeLevel={firstUser.GradeLevel}");
     }
             
@@ -232,7 +232,7 @@ CurrentPage = 1;
          foreach (var userDto in response.Users)
         {
   // Debug logging to see what we're receiving
-       System.Diagnostics.Debug.WriteLine($"User DTO: ID={userDto.Id}, FullName='{userDto.FullName}', Email='{userDto.Email}', Role='{userDto.Role?.Name}', GradeLevel='{userDto.GradeLevel}'");
+       System.Diagnostics.Debug.WriteLine($"User DTO: ID={userDto.Id}, FullName='{userDto.FullName}', Email='{userDto.Email}', Role='{userDto.Role}', GradeLevel='{userDto.GradeLevel}'");
      
    var userVm = MapUserDtoToViewModel(userDto);
     Users.Add(userVm);
@@ -335,7 +335,7 @@ CurrentPage = 1;
      // If still no name, create a descriptive fallback
        if (string.IsNullOrEmpty(displayName))
    {
-            var roleName = dto.Role?.Name ?? "User";
+            var roleName = dto.Role ?? "User";
         var id = !string.IsNullOrEmpty(dto.StudentId) ? dto.StudentId : 
          !string.IsNullOrEmpty(dto.EmployeeId) ? dto.EmployeeId : 
    dto.Id;
@@ -365,9 +365,9 @@ CurrentPage = 1;
   FullName = displayName,
   Username = username,
             Email = dto.Email,
-            Role = dto.Role?.Name ?? "Unknown",
+            Role = dto.Role ?? "Unknown",
 Status = dto.Status,
-       Grade = dto.GradeLevel ?? (dto.Role?.Name == "Teacher" ? "Faculty" : "N/A"),
+       Grade = dto.GradeLevel ?? (dto.Role == "Teacher" ? "Faculty" : "N/A"),
             StudentId = dto.StudentId ?? "",
             EmployeeId = dto.EmployeeId ?? "",
             PhoneNumber = dto.PhoneNumber ?? "",
@@ -410,13 +410,19 @@ Status = dto.Status,
     OnPropertyChanged(nameof(ActivePercentage));
     }
 
-    [RelayCommand] private void CreateUser()
+    [RelayCommand] 
+    private async Task CreateUser()
     {
         var vm = new CreateUserViewModel(_apiClient, _toastService) 
         { 
-      NavigateBack = () => NavigateTo?.Invoke(this),
+            NavigateBack = async () => 
+            {
+                await LoadUsersAsync();
+                await LoadKpiMetricsAsync();
+                NavigateTo?.Invoke(this);
+            },
             NavigateTo = NavigateTo
-    };
+        };
         NavigateTo?.Invoke(vm);
     }
 
@@ -452,28 +458,35 @@ Status = dto.Status,
       _ = ToggleUserStatusAsync(user);
   }
 
-  private async Task ToggleUserStatusAsync(UserViewModel user)
+    private async Task ToggleUserStatusAsync(UserViewModel user)
     {
         try
-    {
-      var newStatus = user.IsActive ? "Inactive" : "Active";
+        {
+            var newStatus = user.IsActive ? "Inactive" : "Active";
             var success = await _apiClient.UpdateUserStatusAsync(user.Id, newStatus);
             
- if (success)
-         {
-      user.Status = newStatus;
-        UpdateStatisticsFromUsers();
-          // Reload to get fresh data from server
-    await LoadUsersAsync();
-          }
+            if (success)
+            {
+                user.Status = newStatus;
+                UpdateStatisticsFromUsers();
+                
+                // Log activity
+                await LogActivityAsync(
+                    "user_status_updated",
+                    $"{(newStatus == "Active" ? "Activated" : "Deactivated")} user {user.FullName}",
+                    "user",
+                    user.Id
+                );
+                
+                // Reload to get fresh data from server
+                await LoadUsersAsync();
+            }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error updating user status: {ex.Message}");
         }
-    }
-
-    [RelayCommand]
+    }    [RelayCommand]
     private void ResetPassword(UserViewModel user)
     {
         _ = ResetPasswordAsync(user);
@@ -561,22 +574,30 @@ IsLoading = true;
     }
 
     private async Task DeleteUserAsync(UserViewModel user)
-{
+    {
         try
         {
-     var success = await _apiClient.DeleteUserAsync(user.Id);
+            var success = await _apiClient.DeleteUserAsync(user.Id);
             
-        if (success)
-       {
-         // Reload to get fresh data from server
-  await LoadUsersAsync();
-         await LoadKpiMetricsAsync();
-      }
-     }
+            if (success)
+            {
+                // Log activity
+                await LogActivityAsync(
+                    "user_deleted",
+                    $"Deleted user {user.FullName}",
+                    "user",
+                    user.Id
+                );
+                
+                // Reload to get fresh data from server
+                await LoadUsersAsync();
+                await LoadKpiMetricsAsync();
+            }
+        }
         catch (Exception ex)
-      {
-      System.Diagnostics.Debug.WriteLine($"Error deleting user: {ex.Message}");
-      }
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting user: {ex.Message}");
+        }
     }
 }
 
@@ -664,4 +685,53 @@ public partial class UserViewModel : ViewModelBase
     partial void OnLastLoginChanged(DateTime? value) => OnPropertyChanged(nameof(LastLoginText));
     partial void OnStudentIdChanged(string value) => OnPropertyChanged(nameof(DisplayId));
     partial void OnEmployeeIdChanged(string value) => OnPropertyChanged(nameof(DisplayId));
+}
+
+// Extension for UserManagementViewModel to add activity logging
+partial class UserManagementViewModel
+{
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            // Get current user ID from API client
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                System.Diagnostics.Debug.WriteLine("Cannot log activity: No current user ID");
+                return;
+            }
+
+            // Map action types to icons and colors
+            var (icon, color) = actionType switch
+            {
+                "user_created" => ("UserPlus", "blue"),
+                "user_status_updated" => ("CheckCircle", "green"),
+                "password_reset" => ("Key", "orange"),
+                "user_deleted" => ("Delete", "red"),
+                "user_updated" => ("Edit", "blue"),
+                _ => ("Info", "gray")
+            };
+
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = actionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "user_management" }
+            };
+
+            await _apiClient.PostAsync("admin-activities", activityData);
+            System.Diagnostics.Debug.WriteLine($"Activity logged: {actionType} - {description}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error logging activity: {ex.Message}");
+            // Don't throw - activity logging failure shouldn't break user operations
+        }
+    }
 }

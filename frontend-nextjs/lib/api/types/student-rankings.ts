@@ -13,7 +13,7 @@ export interface StudentRanking {
   school_year: string;
   created_at: string;
   updated_at: string;
-  
+
   // Related data
   student?: {
     id: string;
@@ -53,7 +53,7 @@ export interface Gwa {
   recorded_by: string;
   created_at: string;
   updated_at: string;
-  
+
   // Related data
   student?: {
     id: string;
@@ -86,15 +86,15 @@ export interface GwaQueryParams {
   gradingPeriod?: string;
   schoolYear?: string;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: "ASC" | "DESC";
 }
 
 // Honor status enum
 export enum HonorStatus {
-  NONE = 'None',
-  WITH_HONORS = 'With Honors',
-  WITH_HIGH_HONORS = 'With High Honors',
-  WITH_HIGHEST_HONORS = 'With Highest Honors'
+  NONE = "None",
+  WITH_HONORS = "With Honors",
+  WITH_HIGH_HONORS = "With High Honors",
+  WITH_HIGHEST_HONORS = "With Highest Honors",
 }
 
 // Frontend component types
@@ -103,7 +103,7 @@ export interface LeaderboardStudent {
   name: string;
   avatar?: string;
   gradeLevel: 7 | 8 | 9 | 10;
-  section: "A" | "B" | "C" | "D";
+  section: string;
   gwa: number; // 0-100 style (e.g., 98.6)
   rank: number; // global rank only as a consistent tie-breaker
   trend: number; // +/- delta

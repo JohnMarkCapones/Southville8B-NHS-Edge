@@ -202,6 +202,14 @@ public partial class CreateTeacherViewModel : ViewModelBase
                     expiration: TimeSpan.FromSeconds(5)
                 );
                 
+                // Log activity
+                await LogActivityAsync(
+                    "teacher_created",
+                    $"Created new teacher {FirstName} {LastName} ({Email})",
+                    "teacher",
+                    response.User?.Id ?? response.UserId
+                );
+                
                 // Reset form for next teacher
                 ResetForm();
             }
@@ -251,6 +259,61 @@ public partial class CreateTeacherViewModel : ViewModelBase
         // Clear messages
         ErrorMessage = string.Empty;
         SuccessMessage = string.Empty;
+    }
+
+    private async Task LogActivityAsync(string actionType, string description, string? entityType = null, string? entityId = null)
+    {
+        try
+        {
+            // Get current user ID
+            var currentUserId = _apiClient.GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+            
+            // Map custom action types to backend-supported values
+            var resolvedActionType = actionType switch
+            {
+                "teacher_created" => "user_created",
+                _ => actionType
+            };
+
+            // Map action types to icons and colors for activity feed rendering
+            var (icon, color) = actionType switch
+            {
+                "teacher_created" => ("PersonAdd", "blue"),
+                _ => ("Info", "gray")
+            };
+            
+            // Create activity data
+            var activityData = new
+            {
+                user_id = currentUserId,
+                action_type = resolvedActionType,
+                description = description,
+                entity_type = entityType,
+                entity_id = entityId,
+                icon = icon,
+                color = color,
+                metadata = new { source = "desktop_app", module = "create_teacher", role = "teacher" }
+            };
+            
+            // POST to API
+            var success = await _apiClient.PostAsync("desktop-admin-dashboard/activities", activityData);
+
+            if (!success)
+            {
+                System.Diagnostics.Debug.WriteLine("Teacher activity log request returned a non-success status code.");
+            }
+        }
+        catch (ApiException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error logging teacher activity: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the main operation
+            System.Diagnostics.Debug.WriteLine($"Error logging activity: {ex.Message}");
+        }
     }
 
     [RelayCommand]

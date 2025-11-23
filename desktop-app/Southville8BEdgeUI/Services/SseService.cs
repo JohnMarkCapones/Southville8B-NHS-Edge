@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -18,11 +19,16 @@ public class SseService : ISseService
     private bool _isConnected = false;
     private DateTime _lastTeacherMetricsEmittedUtc = DateTime.MinValue;
     private static readonly TimeSpan TeacherEmitInterval = TimeSpan.FromSeconds(30);
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
     public bool IsConnected => _isConnected;
     public event EventHandler<SidebarMetrics>? MetricsUpdated;
     public event EventHandler<AdminDashboardMetrics>? DashboardMetricsUpdated;
     public event EventHandler<TeacherSidebarMetrics>? TeacherMetricsUpdated;
+    public event EventHandler<IReadOnlyList<AdminActivity>>? AdminActivitiesUpdated;
     public event EventHandler<string>? ConnectionStatusChanged;
 
     public SseService(HttpClient httpClient, IConfiguration configuration)
@@ -63,6 +69,7 @@ public class SseService : ISseService
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
             var dataBuffer = new StringBuilder();
+            string? currentEventType = null;
             
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
@@ -80,22 +87,79 @@ public class SseService : ISseService
                         if (json.Contains("\"heartbeat\"", StringComparison.OrdinalIgnoreCase))
                         {
                             dataBuffer.Clear();
+                            currentEventType = null;
                             continue;
                         }
                         if (json.Contains("\"isFinal\":false", StringComparison.OrdinalIgnoreCase))
                         {
                             dataBuffer.Clear();
+                            currentEventType = null;
                             continue;
                         }
 
                         try
                         {
-                            // Try to parse as SidebarMetrics first
-                            var sidebarMetrics = JsonSerializer.Deserialize<SidebarMetrics>(json);
-                            if (sidebarMetrics != null)
+                            if (!string.IsNullOrWhiteSpace(currentEventType))
                             {
-                                MetricsUpdated?.Invoke(this, sidebarMetrics);
+                                if (currentEventType.Equals("metrics-update", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var sidebarMetrics = JsonSerializer.Deserialize<SidebarMetrics>(json, JsonOptions);
+                                    if (sidebarMetrics != null)
+                                    {
+                                        MetricsUpdated?.Invoke(this, sidebarMetrics);
+                                        dataBuffer.Clear();
+                                        currentEventType = null;
+                                        continue;
+                                    }
+                                }
+                                else if (currentEventType.Equals("teacher-metrics-update", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var teacherMetrics = JsonSerializer.Deserialize<TeacherSidebarMetrics>(json, JsonOptions);
+                                    if (teacherMetrics != null)
+                                    {
+                                        var now = DateTime.UtcNow;
+                                        if (now - _lastTeacherMetricsEmittedUtc >= TeacherEmitInterval)
+                                        {
+                                            _lastTeacherMetricsEmittedUtc = now;
+                                            TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                        }
+
+                                        dataBuffer.Clear();
+                                        currentEventType = null;
+                                        continue;
+                                    }
+                                }
+                                else if (currentEventType.Equals("dashboard-metrics-update", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var dashboardMetrics = JsonSerializer.Deserialize<AdminDashboardMetrics>(json, JsonOptions);
+                                    if (dashboardMetrics != null)
+                                    {
+                                        DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
+                                        dataBuffer.Clear();
+                                        currentEventType = null;
+                                        continue;
+                                    }
+                                }
+                                else if (currentEventType.Equals("dashboard-activities-update", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var activities = JsonSerializer.Deserialize<List<AdminActivity>>(json, JsonOptions);
+                                    if (activities != null)
+                                    {
+                                        AdminActivitiesUpdated?.Invoke(this, activities);
+                                        dataBuffer.Clear();
+                                        currentEventType = null;
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            // Try to parse as SidebarMetrics first
+                            var fallbackSidebarMetrics = JsonSerializer.Deserialize<SidebarMetrics>(json, JsonOptions);
+                            if (fallbackSidebarMetrics != null)
+                            {
+                                MetricsUpdated?.Invoke(this, fallbackSidebarMetrics);
                                 dataBuffer.Clear();
+                                currentEventType = null;
                                 continue;
                             }
                         }
@@ -107,17 +171,18 @@ public class SseService : ISseService
                         try
                         {
                             // Try parsing as TeacherSidebarMetrics
-                            var teacherMetrics = JsonSerializer.Deserialize<TeacherSidebarMetrics>(json);
-                            if (teacherMetrics != null)
+                            var fallbackTeacherMetrics = JsonSerializer.Deserialize<TeacherSidebarMetrics>(json, JsonOptions);
+                            if (fallbackTeacherMetrics != null)
                             {
                                 var now = DateTime.UtcNow;
                                 if (now - _lastTeacherMetricsEmittedUtc >= TeacherEmitInterval)
                                 {
                                     _lastTeacherMetricsEmittedUtc = now;
-                                    TeacherMetricsUpdated?.Invoke(this, teacherMetrics);
+                                    TeacherMetricsUpdated?.Invoke(this, fallbackTeacherMetrics);
                                 }
                                 // Whether throttled or emitted, clear and continue
                                 dataBuffer.Clear();
+                                currentEventType = null;
                                 continue;
                             }
                         }
@@ -129,11 +194,12 @@ public class SseService : ISseService
                         try
                         {
                             // Try parsing as AdminDashboardMetrics
-                            var dashboardMetrics = JsonSerializer.Deserialize<AdminDashboardMetrics>(json);
-                            if (dashboardMetrics != null)
+                            var fallbackDashboardMetrics = JsonSerializer.Deserialize<AdminDashboardMetrics>(json, JsonOptions);
+                            if (fallbackDashboardMetrics != null)
                             {
-                                DashboardMetricsUpdated?.Invoke(this, dashboardMetrics);
+                                DashboardMetricsUpdated?.Invoke(this, fallbackDashboardMetrics);
                                 dataBuffer.Clear();
+                                currentEventType = null;
                                 continue;
                             }
                         }
@@ -144,6 +210,7 @@ public class SseService : ISseService
                         
                         // Clear the buffer after processing
                         dataBuffer.Clear();
+                        currentEventType = null;
                     }
                     continue;
                 }
@@ -163,7 +230,7 @@ public class SseService : ISseService
                 // Handle other SSE event types
                 else if (line.StartsWith("event: "))
                 {
-                    var eventType = line.Substring(7).Trim();
+                    currentEventType = line.Substring(7).Trim();
                 }
             }
         }

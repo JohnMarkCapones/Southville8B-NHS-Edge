@@ -28,6 +28,9 @@ export function ReusableHeader({
   const iconColor = useThemeColor({}, "icon");
   // const { unreadCount } = useNotifications();
   const { isLoading, navigateWithLoading } = useNavigationLoading();
+  const headerBackgroundColor = showWelcomeSection
+    ? "transparent"
+    : backgroundColor;
 
   const handleNotificationPress = () => {
     if (onNotificationPress) {
@@ -38,7 +41,9 @@ export function ReusableHeader({
   };
 
   return (
-    <View style={[styles.headerSection, { backgroundColor }]}>
+    <View
+      style={[styles.headerSection, { backgroundColor: headerBackgroundColor }]}
+    >
       {/* Top Header Row */}
       <View style={styles.topHeader}>
         {/* User Avatar */}

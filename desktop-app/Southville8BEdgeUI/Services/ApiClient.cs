@@ -140,6 +140,11 @@ public class ApiClient : IApiClient
         return await GetAsync<AdminDashboardMetrics>("desktop-admin-dashboard/metrics");
     }
 
+    public async Task<List<AdminActivity>?> GetAdminActivitiesAsync(int limit = 10)
+    {
+        return await GetAsync<List<AdminActivity>>($"desktop-admin-dashboard/activities?limit={limit}");
+    }
+
     // User Management Methods
     public async Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25)
     {
@@ -1144,6 +1149,153 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<AlertListResponse?> GetMyAlertsAsync(int page = 1, int limit = 50)
+    {
+        try
+        {
+            return await GetAsync<AlertListResponse>($"alerts/my?page={page}&limit={limit}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error fetching my alerts: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> MarkAlertAsReadAsync(string alertId)
+    {
+        try
+        {
+            var result = await PostAsync<MarkAlertReadResponse>($"alerts/{alertId}/read", new { });
+            return result?.Success ?? false;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error marking alert as read: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> MarkAllAlertsAsReadAsync()
+    {
+        try
+        {
+            // Fetch all unread alerts
+            var alertsResponse = await GetMyAlertsAsync(1, 1000); // Large limit to get all
+            if (alertsResponse?.Data == null)
+                return false;
+
+            var unreadAlerts = alertsResponse.Data.Where(a => !a.IsRead).ToList();
+            if (unreadAlerts.Count == 0)
+                return true;
+
+            // Mark each as read
+            var tasks = unreadAlerts.Select(alert => MarkAlertAsReadAsync(alert.Id));
+            var results = await Task.WhenAll(tasks);
+
+            return results.All(r => r);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error marking all alerts as read: {ex.Message}");
+            return false;
+        }
+    }
+
+    // Notifications API
+    public async Task<NotificationListResponse?> GetMyNotificationsAsync(int page = 1, int limit = 50)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Fetching notifications: page={page}, limit={limit}");
+            var response = await GetAsync<NotificationListResponse>($"notifications/my?page={page}&limit={limit}");
+            if (response != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiClient] Notifications response: Found {response.Data?.Count ?? 0} notifications");
+                System.Diagnostics.Debug.WriteLine($"[ApiClient] Total: {response.Total}, Page: {response.Page}, Limit: {response.Limit}, TotalPages: {response.TotalPages}");
+                if (response.Data != null && response.Data.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiClient] First notification: Id={response.Data[0].Id}, Title={response.Data[0].Title}, Type={response.Data[0].Type}, IsRead={response.Data[0].IsRead}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiClient] Notifications response is null");
+            }
+            return response;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Error fetching my notifications: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Stack trace: {ex.StackTrace}");
+            return null;
+        }
+    }
+
+    public async Task<bool> MarkNotificationAsReadAsync(string notificationId)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Marking notification as read: {notificationId}");
+            var result = await PatchAsync<MarkNotificationReadResponse>($"notifications/{notificationId}/read", new { });
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Mark notification result: {result?.Success ?? false}");
+            return result?.Success ?? false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error marking notification as read: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> MarkAllNotificationsAsReadAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Marking all notifications as read");
+            var result = await PostAsync<MarkNotificationReadResponse>("notifications/mark-all-read", new { });
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Mark all notifications result: {result?.Success ?? false}");
+            return result?.Success ?? false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error marking all notifications as read: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteNotificationAsync(string notificationId)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Deleting notification: {notificationId}");
+            var result = await DeleteAsync($"notifications/{notificationId}");
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Delete notification result: {result}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting notification: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Getting unread notification count");
+            var response = await GetAsync<UnreadNotificationCountResponse>("notifications/unread-count");
+            System.Diagnostics.Debug.WriteLine($"[ApiClient] Unread count: {response?.Count ?? 0}");
+            return response?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error getting unread notification count: {ex.Message}");
+            return 0;
+        }
+    }
+
     // Teacher-specific API methods
     public async Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId)
     {
@@ -1182,6 +1334,69 @@ public class ApiClient : IApiClient
             Debug.WriteLine($"Error getting teacher recent activities: {ex.Message}");
             return null;
         }
+    }
+
+    public async Task<List<TeacherActivityDto>?> GetMyTeacherActivitiesAsync(int limit = 10)
+    {
+        try
+        {
+            Debug.WriteLine($"=== GetMyTeacherActivitiesAsync called with limit={limit} ===");
+            var response = await GetAsync<List<TeacherOwnActivityDto>>($"desktop-teacher-dashboard/activities?limit={limit}");
+            
+            Debug.WriteLine($"API response: {(response == null ? "NULL" : $"{response.Count} items")}");
+            
+            if (response == null)
+            {
+                Debug.WriteLine("Response is null, returning null");
+                return null;
+            }
+            
+            if (response.Count > 0)
+            {
+                Debug.WriteLine($"First activity - UserName: {response[0].UserName}, Description: {response[0].Description}");
+            }
+            
+            // Map to TeacherActivityDto for display
+            var result = response.Select(a => new TeacherActivityDto
+            {
+                StudentName = a.UserName ?? "Unknown User",
+                StudentInitials = GetInitials(a.UserName ?? "U"),
+                Activity = a.Description ?? "No description",
+                TimeAgo = FormatTimeAgo(a.CreatedAt)
+            }).ToList();
+            
+            Debug.WriteLine($"Mapped {result.Count} activities");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting my teacher activities: {ex.Message}");
+            Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            return null;
+        }
+    }
+
+    private string GetInitials(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "U";
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "U";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+
+    private string FormatTimeAgo(DateTime timestamp)
+    {
+        var now = DateTime.Now;
+        var diff = now - timestamp;
+        
+        if (diff.TotalMinutes < 60)
+            return $"{(int)diff.TotalMinutes}min ago";
+        if (diff.TotalHours < 24)
+            return $"{(int)diff.TotalHours}hr{((int)diff.TotalHours > 1 ? "s" : "")} ago";
+        if (diff.TotalDays < 7)
+            return $"{(int)diff.TotalDays}day{((int)diff.TotalDays > 1 ? "s" : "")} ago";
+        return timestamp.ToString("MMM dd");
     }
 
     // GWA Management Methods
@@ -1684,6 +1899,19 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<AcademicDashboardOverviewDto?> GetAcademicDashboardOverviewAsync()
+    {
+        try
+        {
+            return await GetAsync<AcademicDashboardOverviewDto>("academic-years/dashboard/overview");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error getting academic dashboard overview: {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task<StudentDistributionDto?> GetStudentDistributionAsync()
     {
         try
@@ -1728,4 +1956,9 @@ public class NotFoundException : ApiException
 public class ServerException : ApiException
 {
     public ServerException(string message) : base(message) { }
+}
+
+public class UnreadNotificationCountResponse
+{
+    [JsonPropertyName("count")] public int Count { get; set; }
 }

@@ -39,7 +39,7 @@ public partial class CreateUserViewModel : ViewModelBase
         {
             "Student" => new CreateStudentViewModel(_apiClient, _toastService) { NavigateBack = () => NavigateTo?.Invoke(this) },
             "Teacher" => new CreateTeacherViewModel(_apiClient, _toastService) { NavigateBack = () => NavigateTo?.Invoke(this) },
-            "Admin" => new CreateAdminViewModel(_apiClient) { NavigateBack = () => NavigateTo?.Invoke(this) },
+            "Admin" => new CreateAdminViewModel(_apiClient, _toastService) { NavigateBack = () => NavigateTo?.Invoke(this) },
             _ => null
         };
 

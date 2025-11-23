@@ -1,4 +1,4 @@
-import { apiClient } from '../client';
+import { apiClient } from "../client";
 
 export interface Section {
   id: string;
@@ -8,7 +8,7 @@ export interface Section {
   building_id?: string;
   floor_id?: string;
   room_id?: string;
-  status: 'active' | 'inactive' | 'archived';
+  status: "active" | "inactive" | "archived";
   created_at: string;
   updated_at: string;
 }
@@ -51,7 +51,7 @@ export interface CreateSectionRequest {
   building_id?: string;
   floor_id?: string;
   room_id?: string;
-  status?: 'active' | 'inactive' | 'archived';
+  status?: "active" | "inactive" | "archived";
 }
 
 export interface UpdateSectionRequest {
@@ -61,7 +61,7 @@ export interface UpdateSectionRequest {
   building_id?: string;
   floor_id?: string;
   room_id?: string;
-  status?: 'active' | 'inactive' | 'archived';
+  status?: "active" | "inactive" | "archived";
 }
 
 export interface SectionsListParams {
@@ -71,7 +71,7 @@ export interface SectionsListParams {
   status?: string;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedSectionsResponse {
@@ -91,55 +91,90 @@ export interface AvailableTeacher {
 }
 
 // API Functions
-export const getSections = async (params?: SectionsListParams): Promise<PaginatedSectionsResponse> => {
+export const getSections = async (
+  params?: SectionsListParams
+): Promise<PaginatedSectionsResponse> => {
   const queryParams = new URLSearchParams();
-  
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.limit) queryParams.append('limit', params.limit.toString());
-  if (params?.grade_level) queryParams.append('grade_level', params.grade_level);
-  if (params?.status) queryParams.append('status', params.status);
-  if (params?.search) queryParams.append('search', params.search);
-  if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-  if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-  const response = await apiClient.request(`/sections?${queryParams.toString()}`, {
-    method: 'GET',
-    requiresAuth: true,
-  });
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.limit) queryParams.append("limit", params.limit.toString());
+  if (params?.grade_level)
+    queryParams.append("grade_level", params.grade_level);
+  if (params?.status) queryParams.append("status", params.status);
+  if (params?.search) queryParams.append("search", params.search);
+  if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
-  return response.data;
-};
-
-export const getSectionById = async (id: string): Promise<SectionWithDetails> => {
-  const response = await apiClient.request(`/sections/${id}`, {
-    method: 'GET',
-    requiresAuth: true,
-  });
+  const response = await apiClient.request(
+    `/sections?${queryParams.toString()}`,
+    {
+      method: "GET",
+      requiresAuth: true,
+    }
+  );
 
   return response.data;
 };
 
-export const getSectionsByGradeLevel = async (gradeLevel: string): Promise<SectionWithDetails[]> => {
-  const response = await apiClient.request(`/sections/grade/${gradeLevel}`, {
-    method: 'GET',
+export const getSectionById = async (
+  id: string
+): Promise<SectionWithDetails> => {
+  const response = await apiClient.request<any>(`/sections/${id}`, {
+    method: "GET",
     requiresAuth: true,
   });
 
-  return response.data;
+  // Handle different response formats
+  if (response?.data) {
+    return response.data;
+  }
+
+  // If response is the section directly
+  if (response?.id) {
+    return response;
+  }
+
+  throw new Error("Invalid section response format");
+};
+
+export const getSectionsByGradeLevel = async (
+  gradeLevel: string
+): Promise<SectionWithDetails[]> => {
+  const response = await apiClient.request<any>(
+    `/sections/grade/${gradeLevel}`,
+    {
+      method: "GET",
+      requiresAuth: true,
+    }
+  );
+
+  // Handle different response formats
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (response?.data && Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  // Return empty array if no valid data
+  return [];
 };
 
 export const getAvailableTeachers = async (): Promise<AvailableTeacher[]> => {
-  const response = await apiClient.request('/sections/teachers/available', {
-    method: 'GET',
+  const response = await apiClient.request("/sections/teachers/available", {
+    method: "GET",
     requiresAuth: true,
   });
 
   return response.data;
 };
 
-export const createSection = async (data: CreateSectionRequest): Promise<Section> => {
-  const response = await apiClient.request('/sections', {
-    method: 'POST',
+export const createSection = async (
+  data: CreateSectionRequest
+): Promise<Section> => {
+  const response = await apiClient.request("/sections", {
+    method: "POST",
     body: data,
     requiresAuth: true,
   });
@@ -147,9 +182,12 @@ export const createSection = async (data: CreateSectionRequest): Promise<Section
   return response.data;
 };
 
-export const updateSection = async (id: string, data: UpdateSectionRequest): Promise<Section> => {
+export const updateSection = async (
+  id: string,
+  data: UpdateSectionRequest
+): Promise<Section> => {
   const response = await apiClient.request(`/sections/${id}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: data,
     requiresAuth: true,
   });
@@ -159,30 +197,38 @@ export const updateSection = async (id: string, data: UpdateSectionRequest): Pro
 
 export const deleteSection = async (id: string): Promise<void> => {
   await apiClient.request(`/sections/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
     requiresAuth: true,
   });
 };
 
-export const getTeacherSections = async (teacherUserId: string): Promise<SectionWithStudents[]> => {
-  const response = await apiClient.request<SectionWithStudents[]>(`/sections/teacher/${teacherUserId}`, {
-    method: 'GET',
-    requiresAuth: true,
-  });
+export const getTeacherSections = async (
+  teacherUserId: string
+): Promise<SectionWithStudents[]> => {
+  const response = await apiClient.request<SectionWithStudents[]>(
+    `/sections/teacher/${teacherUserId}`,
+    {
+      method: "GET",
+      requiresAuth: true,
+    }
+  );
 
   return response || []; // Backend returns array directly, not wrapped in { data: ... }
 };
 
 /**
  * Get teacher's assigned sections (for current authenticated teacher)
- * 
+ *
  * @returns Promise with teacher's sections including students
  */
 export const getMySections = async (): Promise<SectionWithStudents[]> => {
-  const response = await apiClient.request<SectionWithStudents[]>(`/sections/my-sections`, {
-    method: 'GET',
-    requiresAuth: true,
-  });
+  const response = await apiClient.request<SectionWithStudents[]>(
+    `/sections/my-sections`,
+    {
+      method: "GET",
+      requiresAuth: true,
+    }
+  );
 
   return response || [];
 };
