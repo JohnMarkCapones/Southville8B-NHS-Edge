@@ -3,6 +3,7 @@
 ## 🚀 Quick Deployment Steps
 
 ### Step 1: Push Your Code to Git
+
 ```bash
 # Make sure you're on the branch you want to deploy (main or develop)
 git add .
@@ -22,6 +23,7 @@ git push origin main  # or your deployment branch
 ### Step 3: Render Auto-Detection
 
 Render will automatically detect `render.yaml` and configure:
+
 - ✅ Build Command: `npm ci && npm run build`
 - ✅ Start Command: `npm run start:prod`
 - ✅ Health Check: `/health`
@@ -29,6 +31,7 @@ Render will automatically detect `render.yaml` and configure:
 - ✅ Auto-deploy: Enabled
 
 **IMPORTANT**: If your repo has multiple services, set:
+
 - **Root Directory**: `core-api-layer/southville-nhs-school-portal-api-layer`
 
 ### Step 4: Add Environment Variables
@@ -36,6 +39,7 @@ Render will automatically detect `render.yaml` and configure:
 In Render dashboard, go to **Environment** tab and add:
 
 #### Required Variables:
+
 ```
 NODE_ENV=production
 PORT=3004
@@ -46,6 +50,7 @@ FRONTEND_URL=https://your-frontend-domain.com
 ```
 
 #### Optional Variables (if using):
+
 ```
 SUPABASE_JWT_SECRET=your-jwt-secret
 R2_ACCOUNT_ID=your-r2-account-id
@@ -74,11 +79,13 @@ CLOUDFLARE_ACCOUNT_HASH=your-account-hash
 ### Step 6: Verify Deployment
 
 Once deployed, your service will be available at:
+
 ```
 https://southville-nhs-api.onrender.com
 ```
 
 **Test these endpoints:**
+
 1. Health Check: `https://southville-nhs-api.onrender.com/health`
    - Should return: `{"status":"healthy","timestamp":"...","supabase":"connected"}`
 
@@ -98,22 +105,26 @@ https://southville-nhs-api.onrender.com
 ## 🔧 Troubleshooting
 
 ### Build Fails
+
 - Check **Logs** tab for error messages
 - Verify `package.json` and `package-lock.json` are committed
 - Ensure Node.js version is compatible (project uses Node 18)
 
 ### Service Crashes
+
 - Check **Logs** tab for runtime errors
 - Verify all required environment variables are set
 - Check Supabase credentials are correct
 - Ensure `PORT` matches Render's expected port
 
 ### Health Check Fails
+
 - Verify Supabase connection credentials
 - Check that `users` table exists in Supabase
 - Review application logs for specific errors
 
 ### CORS Errors
+
 - Set `FRONTEND_URL` or `ALLOWED_ORIGINS` environment variable
 - Ensure URL matches exactly (including `https://`)
 - Restart service after updating environment variables
@@ -121,6 +132,7 @@ https://southville-nhs-api.onrender.com
 ## 📋 Pre-Deployment Checklist
 
 Before deploying, ensure:
+
 - [x] Code is pushed to Git repository
 - [x] `render.yaml` is in the API layer root directory
 - [x] All environment variables are ready (see `env.example`)
@@ -130,6 +142,7 @@ Before deploying, ensure:
 ## 🎯 Post-Deployment
 
 After successful deployment:
+
 1. ✅ Test health endpoint
 2. ✅ Test API documentation
 3. ✅ Test authentication endpoints
@@ -146,4 +159,3 @@ After successful deployment:
 ---
 
 **Ready to deploy?** Follow steps 1-6 above! 🚀
-
