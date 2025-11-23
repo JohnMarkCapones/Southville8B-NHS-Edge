@@ -29,7 +29,7 @@ npm install
 Copy the example environment file and configure your Supabase credentials:
 
 ```bash
-cp .env.example .env
+cp env.example .env
 ```
 
 Edit `.env` with your Supabase project details:
@@ -41,7 +41,7 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Application Configuration
-PORT=3000
+PORT=3004
 NODE_ENV=development
 ```
 
@@ -65,12 +65,13 @@ npm run start:dev
 npm run start:prod
 ```
 
-The API will be available at `http://localhost:3000`
+The API will be available at `http://localhost:3004`
 
 ## 🔍 API Endpoints
 
 - `GET /` - Welcome message
 - `GET /health` - Health check with Supabase connectivity status
+- `GET /api/docs` - Swagger API documentation
 
 ## 🏗️ Project Structure
 
@@ -147,3 +148,12 @@ Follow the architectural rules defined in the workspace for consistent developme
 ## 📄 License
 
 This project is private and proprietary to Southville NHS School Portal.
+
+## 📖 Additional Documentation
+
+See the `docs/` directory for comprehensive documentation including:
+- `CLAUDE.md` - Development guidelines and architecture
+- `DEPLOYMENT.md` - Render deployment guide
+- `api-layer/` - Authentication and authorization documentation
+- Various system documentation files
+

@@ -1,0 +1,17 @@
+  services:
+  - type: web
+    name: southville-nhs-api
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3004
+    autoDeploy: true
+    branch: develop
+
