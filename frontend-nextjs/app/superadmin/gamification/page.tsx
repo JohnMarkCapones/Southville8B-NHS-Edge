@@ -1,18 +1,24 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -29,10 +35,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { DashboardLayout } from "@/components/superadmin/dashboard/layout"
-import { LeaderboardWidget } from "@/components/gamification"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/superadmin/dashboard/layout";
+import { LeaderboardWidget } from "@/components/gamification";
 import {
   getAnalytics,
   getAllBadges,
@@ -41,7 +47,7 @@ import {
   type Badge as BadgeType,
   type LeaderboardResponse,
   type AwardPointsRequest,
-} from "@/lib/api/endpoints/gamification"
+} from "@/lib/api/endpoints/gamification";
 import {
   Trophy,
   Users,
@@ -54,53 +60,53 @@ import {
   Loader2,
   Gift,
   BarChart3,
-} from "lucide-react"
+} from "lucide-react";
 
 export default function SuperadminGamificationPage() {
-  const [analyticsData, setAnalyticsData] = useState<any>(null)
-  const [badges, setBadges] = useState<BadgeType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [badges, setBadges] = useState<BadgeType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Award points dialog state
-  const [isAwardDialogOpen, setIsAwardDialogOpen] = useState(false)
+  const [isAwardDialogOpen, setIsAwardDialogOpen] = useState(false);
   const [awardForm, setAwardForm] = useState({
     studentId: "",
     points: "",
     reason: "",
     category: "bonus" as "quiz" | "activity" | "streak" | "bonus" | "penalty",
-  })
-  const [isAwarding, setIsAwarding] = useState(false)
+  });
+  const [isAwarding, setIsAwarding] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
       try {
         const [analytics, badgesData] = await Promise.all([
           getAnalytics(),
           getAllBadges(false),
-        ])
-        setAnalyticsData(analytics)
-        setBadges(badgesData)
+        ]);
+        setAnalyticsData(analytics);
+        setBadges(badgesData);
       } catch (err) {
-        console.error("Error fetching gamification data:", err)
-        setError("Failed to load gamification data. Please try again.")
+        console.error("Error fetching gamification data:", err);
+        setError("Failed to load gamification data. Please try again.");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   const handleAwardPoints = async () => {
     if (!awardForm.studentId || !awardForm.points || !awardForm.reason) {
-      alert("Please fill in all fields")
-      return
+      alert("Please fill in all fields");
+      return;
     }
 
-    setIsAwarding(true)
+    setIsAwarding(true);
     try {
       const request: AwardPointsRequest = {
         studentId: awardForm.studentId,
@@ -109,24 +115,24 @@ export default function SuperadminGamificationPage() {
         category: awardForm.category,
         transactionType: "manual_award",
         isManual: true,
-      }
+      };
 
-      await awardPoints(request)
-      alert("Points awarded successfully!")
-      setIsAwardDialogOpen(false)
+      await awardPoints(request);
+      alert("Points awarded successfully!");
+      setIsAwardDialogOpen(false);
       setAwardForm({
         studentId: "",
         points: "",
         reason: "",
         category: "bonus",
-      })
+      });
     } catch (err) {
-      console.error("Error awarding points:", err)
-      alert("Failed to award points. Please try again.")
+      console.error("Error awarding points:", err);
+      alert("Failed to award points. Please try again.");
     } finally {
-      setIsAwarding(false)
+      setIsAwarding(false);
     }
-  }
+  };
 
   const stats = analyticsData
     ? {
@@ -144,7 +150,7 @@ export default function SuperadminGamificationPage() {
         averagePoints: 0,
         averageLevel: "N/A",
         totalBadges: 0,
-      }
+      };
 
   return (
     <DashboardLayout>
@@ -170,7 +176,8 @@ export default function SuperadminGamificationPage() {
               <DialogHeader>
                 <DialogTitle>Award Points to Student</DialogTitle>
                 <DialogDescription>
-                  Manually award points to a student for achievements or special recognition
+                  Manually award points to a student for achievements or special
+                  recognition
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -180,7 +187,9 @@ export default function SuperadminGamificationPage() {
                     id="studentId"
                     placeholder="Enter student UUID"
                     value={awardForm.studentId}
-                    onChange={(e) => setAwardForm({ ...awardForm, studentId: e.target.value })}
+                    onChange={(e) =>
+                      setAwardForm({ ...awardForm, studentId: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -190,7 +199,9 @@ export default function SuperadminGamificationPage() {
                     type="number"
                     placeholder="100"
                     value={awardForm.points}
-                    onChange={(e) => setAwardForm({ ...awardForm, points: e.target.value })}
+                    onChange={(e) =>
+                      setAwardForm({ ...awardForm, points: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -219,13 +230,18 @@ export default function SuperadminGamificationPage() {
                     id="reason"
                     placeholder="Excellent performance in science fair..."
                     value={awardForm.reason}
-                    onChange={(e) => setAwardForm({ ...awardForm, reason: e.target.value })}
+                    onChange={(e) =>
+                      setAwardForm({ ...awardForm, reason: e.target.value })
+                    }
                     rows={3}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAwardDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAwardDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleAwardPoints} disabled={isAwarding}>
@@ -250,7 +266,9 @@ export default function SuperadminGamificationPage() {
         {isLoading && (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
-            <span className="ml-2 text-muted-foreground">Loading gamification data...</span>
+            <span className="ml-2 text-muted-foreground">
+              Loading gamification data...
+            </span>
           </div>
         )}
 
@@ -272,7 +290,9 @@ export default function SuperadminGamificationPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-purple-100 text-sm">Total Students</p>
-                      <p className="text-3xl font-bold">{stats.totalStudents}</p>
+                      <p className="text-3xl font-bold">
+                        {stats.totalStudents}
+                      </p>
                       <p className="text-xs text-purple-200 mt-1">
                         {stats.activeStudents} active
                       </p>
@@ -287,7 +307,9 @@ export default function SuperadminGamificationPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-yellow-100 text-sm">Total Points</p>
-                      <p className="text-3xl font-bold">{formatPoints(stats.totalPoints)}</p>
+                      <p className="text-3xl font-bold">
+                        {formatPoints(stats.totalPoints)}
+                      </p>
                       <p className="text-xs text-yellow-200 mt-1">
                         Avg: {formatPoints(stats.averagePoints)}
                       </p>
@@ -377,7 +399,9 @@ export default function SuperadminGamificationPage() {
                       <TableBody>
                         {badges.slice(0, 10).map((badge) => (
                           <TableRow key={badge.id}>
-                            <TableCell className="font-medium">{badge.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {badge.name}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="capitalize">
                                 {badge.category}
@@ -394,7 +418,9 @@ export default function SuperadminGamificationPage() {
                             <TableCell>{badge.points_reward}</TableCell>
                             <TableCell>
                               <Badge
-                                variant={badge.is_active ? "default" : "secondary"}
+                                variant={
+                                  badge.is_active ? "default" : "secondary"
+                                }
                               >
                                 {badge.is_active ? "Active" : "Inactive"}
                               </Badge>
@@ -427,23 +453,31 @@ export default function SuperadminGamificationPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Average Level</p>
+                    <p className="text-sm text-muted-foreground">
+                      Average Level
+                    </p>
                     <p className="text-2xl font-bold">{stats.averageLevel}</p>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Active Badges</p>
+                    <p className="text-sm text-muted-foreground">
+                      Active Badges
+                    </p>
                     <p className="text-2xl font-bold">
                       {badges.filter((b) => b.is_active).length}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Progressive Badges</p>
+                    <p className="text-sm text-muted-foreground">
+                      Progressive Badges
+                    </p>
                     <p className="text-2xl font-bold">
                       {badges.filter((b) => b.is_progressive).length}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Hidden Badges</p>
+                    <p className="text-sm text-muted-foreground">
+                      Hidden Badges
+                    </p>
                     <p className="text-2xl font-bold">
                       {badges.filter((b) => b.is_hidden).length}
                     </p>
@@ -455,5 +489,5 @@ export default function SuperadminGamificationPage() {
         )}
       </div>
     </DashboardLayout>
-  )
+  );
 }

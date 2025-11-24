@@ -1,15 +1,21 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TiptapEditor } from "@/components/ui/tiptap-editor"
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TiptapEditor } from "@/components/ui/tiptap-editor";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertCircle,
   AlertTriangle,
@@ -18,11 +24,14 @@ import {
   Save,
   Sparkles,
   Loader2,
-} from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useAnnouncementById, useUpdateAnnouncement } from "@/hooks/useAnnouncements"
-import { AnnouncementVisibility } from "@/lib/api/types/announcements"
-import { useRoles } from "@/hooks/useRoles"
+} from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  useAnnouncementById,
+  useUpdateAnnouncement,
+} from "@/hooks/useAnnouncements";
+import { AnnouncementVisibility } from "@/lib/api/types/announcements";
+import { useRoles } from "@/hooks/useRoles";
 import {
   validateExpirationDate,
   getVisibilityDuration,
@@ -31,57 +40,66 @@ import {
   getSuggestedExpirationDate,
   type DateValidationResult,
   formatDateTimeLocal,
-} from "@/lib/utils/announcement-date-validation"
+} from "@/lib/utils/announcement-date-validation";
 
 export default function EditAnnouncementPage() {
-  const params = useParams()
-  const announcementId = params.id as string
-  const { toast } = useToast()
-  const router = useRouter()
+  const params = useParams();
+  const announcementId = params.id as string;
+  const { toast } = useToast();
+  const router = useRouter();
 
   // Fetch existing announcement
-  const { data: announcement, isLoading: loadingAnnouncement, error: fetchError } = useAnnouncementById(announcementId)
-  const updateMutation = useUpdateAnnouncement()
-  const { data: roles, isLoading: rolesLoading } = useRoles()
+  const {
+    data: announcement,
+    isLoading: loadingAnnouncement,
+    error: fetchError,
+  } = useAnnouncementById(announcementId);
+  const updateMutation = useUpdateAnnouncement();
+  const { data: roles, isLoading: rolesLoading } = useRoles();
 
   // Form state
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [category, setCategory] = useState<"urgent" | "academic" | "event" | "general">("general")
-  const [expirationDate, setExpirationDate] = useState("")
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState<
+    "urgent" | "academic" | "event" | "general"
+  >("general");
+  const [expirationDate, setExpirationDate] = useState("");
 
   // Target audience
-  const [targetStudents, setTargetStudents] = useState(false)
-  const [targetTeachers, setTargetTeachers] = useState(false)
-  const [targetParents, setTargetParents] = useState(false)
-  const [targetStaff, setTargetStaff] = useState(false)
+  const [targetStudents, setTargetStudents] = useState(false);
+  const [targetTeachers, setTargetTeachers] = useState(false);
+  const [targetParents, setTargetParents] = useState(false);
+  const [targetStaff, setTargetStaff] = useState(false);
 
   // Date validation state
-  const [dateValidation, setDateValidation] = useState<DateValidationResult>({ isValid: true })
+  const [dateValidation, setDateValidation] = useState<DateValidationResult>({
+    isValid: true,
+  });
 
   // UI state
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSaving, setIsSaving] = useState(false);
 
   // Pre-fill form when announcement loads
   useEffect(() => {
     if (announcement) {
-      setTitle(announcement.title)
-      setContent(announcement.content)
-      setCategory(announcement.type as any || "general")
+      setTitle(announcement.title);
+      setContent(announcement.content);
+      setCategory((announcement.type as any) || "general");
 
       if (announcement.expiresAt) {
-        const expiresDate = new Date(announcement.expiresAt)
-        setExpirationDate(formatDateTimeLocal(expiresDate))
+        const expiresDate = new Date(announcement.expiresAt);
+        setExpirationDate(formatDateTimeLocal(expiresDate));
       }
 
       // Set target audience based on roles
-      const targetRoleNames = announcement.targetRoles?.map((r: any) => r.name) || []
-      setTargetStudents(targetRoleNames.includes('Student'))
-      setTargetTeachers(targetRoleNames.includes('Teacher'))
-      setTargetParents(targetRoleNames.includes('Parent'))
-      setTargetStaff(targetRoleNames.includes('Staff'))
+      const targetRoleNames =
+        announcement.targetRoles?.map((r: any) => r.name) || [];
+      setTargetStudents(targetRoleNames.includes("Student"));
+      setTargetTeachers(targetRoleNames.includes("Teacher"));
+      setTargetParents(targetRoleNames.includes("Parent"));
+      setTargetStaff(targetRoleNames.includes("Staff"));
     }
-  }, [announcement])
+  }, [announcement]);
 
   const handleSave = async () => {
     // Validation
@@ -90,8 +108,8 @@ export default function EditAnnouncementPage() {
         title: "Title Required",
         description: "Please enter a title for the announcement.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (!content.trim()) {
@@ -99,41 +117,41 @@ export default function EditAnnouncementPage() {
         title: "Content Required",
         description: "Please add content to the announcement.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Validate expiration date
     if (expirationDate) {
-      const validation = validateExpirationDate(expirationDate)
+      const validation = validateExpirationDate(expirationDate);
       if (!validation.isValid) {
         toast({
           title: "Invalid Expiration Date",
           description: validation.error || "Please check the expiration date.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
     }
 
     // Build target role IDs array from fetched roles
-    const targetRoleIds: string[] = []
+    const targetRoleIds: string[] = [];
     if (roles) {
       if (targetStudents) {
-        const studentRole = roles.find(r => r.name === 'Student')
-        if (studentRole) targetRoleIds.push(studentRole.id)
+        const studentRole = roles.find((r) => r.name === "Student");
+        if (studentRole) targetRoleIds.push(studentRole.id);
       }
       if (targetTeachers) {
-        const teacherRole = roles.find(r => r.name === 'Teacher')
-        if (teacherRole) targetRoleIds.push(teacherRole.id)
+        const teacherRole = roles.find((r) => r.name === "Teacher");
+        if (teacherRole) targetRoleIds.push(teacherRole.id);
       }
       if (targetParents) {
-        const parentRole = roles.find(r => r.name === 'Parent')
-        if (parentRole) targetRoleIds.push(parentRole.id)
+        const parentRole = roles.find((r) => r.name === "Parent");
+        if (parentRole) targetRoleIds.push(parentRole.id);
       }
       if (targetStaff) {
-        const staffRole = roles.find(r => r.name === 'Staff')
-        if (staffRole) targetRoleIds.push(staffRole.id)
+        const staffRole = roles.find((r) => r.name === "Staff");
+        if (staffRole) targetRoleIds.push(staffRole.id);
       }
     }
 
@@ -142,11 +160,11 @@ export default function EditAnnouncementPage() {
         title: "Target Audience Required",
         description: "Please select at least one target audience.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       // Transform form data to match backend API schema
@@ -157,32 +175,34 @@ export default function EditAnnouncementPage() {
         visibility: AnnouncementVisibility.PUBLIC,
         targetRoleIds,
         expiresAt: expirationDate || undefined,
-      }
+      };
 
       // Update announcement via API
       await updateMutation.mutateAsync({
         id: announcementId,
         data: announcementData,
-      })
+      });
 
       toast({
         title: "Announcement Updated!",
         description: `Your announcement "${title}" has been updated successfully.`,
-      })
+      });
 
       // Navigate back to announcements list
-      router.push("/superadmin/announcements")
+      router.push("/superadmin/announcements");
     } catch (error: any) {
-      console.error("Failed to update announcement:", error)
+      console.error("Failed to update announcement:", error);
       toast({
         title: "Failed to Update Announcement",
-        description: error?.message || "An error occurred while updating the announcement. Please try again.",
+        description:
+          error?.message ||
+          "An error occurred while updating the announcement. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Loading state
   if (loadingAnnouncement || rolesLoading) {
@@ -193,7 +213,7 @@ export default function EditAnnouncementPage() {
           <span className="ml-3 text-lg">Loading announcement...</span>
         </div>
       </div>
-    )
+    );
   }
 
   // Error state
@@ -216,7 +236,7 @@ export default function EditAnnouncementPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -268,7 +288,11 @@ export default function EditAnnouncementPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="content">Content *</Label>
-                <TiptapEditor value={content} onChange={setContent} placeholder="Write your announcement content..." />
+                <TiptapEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Write your announcement content..."
+                />
               </div>
             </CardContent>
           </Card>
@@ -280,7 +304,9 @@ export default function EditAnnouncementPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="expiration">Expiration Date & Time (Optional)</Label>
+                <Label htmlFor="expiration">
+                  Expiration Date & Time (Optional)
+                </Label>
                 <Input
                   id="expiration"
                   type="datetime-local"
@@ -288,16 +314,16 @@ export default function EditAnnouncementPage() {
                   min={getMinimumExpirationDate()}
                   max={getMaximumExpirationDate()}
                   onChange={(e) => {
-                    setExpirationDate(e.target.value)
-                    const validation = validateExpirationDate(e.target.value)
-                    setDateValidation(validation)
+                    setExpirationDate(e.target.value);
+                    const validation = validateExpirationDate(e.target.value);
+                    setDateValidation(validation);
                   }}
                   className={
-                    dateValidation.severity === 'error'
-                      ? 'border-red-500 focus:border-red-500'
-                      : dateValidation.severity === 'warning'
-                        ? 'border-yellow-500 focus:border-yellow-500'
-                        : ''
+                    dateValidation.severity === "error"
+                      ? "border-red-500 focus:border-red-500"
+                      : dateValidation.severity === "warning"
+                      ? "border-yellow-500 focus:border-yellow-500"
+                      : ""
                   }
                 />
 
@@ -305,14 +331,18 @@ export default function EditAnnouncementPage() {
                 {dateValidation.error && (
                   <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md dark:bg-red-900/20 dark:border-red-800">
                     <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">{dateValidation.error}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {dateValidation.error}
+                    </p>
                   </div>
                 )}
 
                 {dateValidation.warning && !dateValidation.error && (
                   <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md dark:bg-yellow-900/20 dark:border-yellow-800">
                     <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-yellow-600 dark:text-yellow-400">{dateValidation.warning}</p>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                      {dateValidation.warning}
+                    </p>
                   </div>
                 )}
 
@@ -328,8 +358,8 @@ export default function EditAnnouncementPage() {
 
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {!expirationDate
-                    ? 'Leave empty for no expiration (announcement will be visible indefinitely)'
-                    : 'Announcement will be hidden after this date'}
+                    ? "Leave empty for no expiration (announcement will be visible indefinitely)"
+                    : "Announcement will be hidden after this date"}
                 </p>
 
                 {/* Quick Actions */}
@@ -339,10 +369,10 @@ export default function EditAnnouncementPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const suggested = getSuggestedExpirationDate()
-                      setExpirationDate(suggested)
-                      const validation = validateExpirationDate(suggested)
-                      setDateValidation(validation)
+                      const suggested = getSuggestedExpirationDate();
+                      setExpirationDate(suggested);
+                      const validation = validateExpirationDate(suggested);
+                      setDateValidation(validation);
                     }}
                     className="w-full"
                   >
@@ -363,7 +393,10 @@ export default function EditAnnouncementPage() {
               <CardTitle>Category</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={category} onValueChange={(v: any) => setCategory(v)}>
+              <Select
+                value={category}
+                onValueChange={(v: any) => setCategory(v)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -387,7 +420,9 @@ export default function EditAnnouncementPage() {
                 <Checkbox
                   id="target-students"
                   checked={targetStudents}
-                  onCheckedChange={(checked) => setTargetStudents(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setTargetStudents(checked as boolean)
+                  }
                 />
                 <Label htmlFor="target-students">All Students</Label>
               </div>
@@ -395,7 +430,9 @@ export default function EditAnnouncementPage() {
                 <Checkbox
                   id="target-teachers"
                   checked={targetTeachers}
-                  onCheckedChange={(checked) => setTargetTeachers(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setTargetTeachers(checked as boolean)
+                  }
                 />
                 <Label htmlFor="target-teachers">All Teachers</Label>
               </div>
@@ -403,7 +440,9 @@ export default function EditAnnouncementPage() {
                 <Checkbox
                   id="target-parents"
                   checked={targetParents}
-                  onCheckedChange={(checked) => setTargetParents(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setTargetParents(checked as boolean)
+                  }
                 />
                 <Label htmlFor="target-parents">Parents</Label>
               </div>
@@ -411,7 +450,9 @@ export default function EditAnnouncementPage() {
                 <Checkbox
                   id="target-staff"
                   checked={targetStaff}
-                  onCheckedChange={(checked) => setTargetStaff(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setTargetStaff(checked as boolean)
+                  }
                 />
                 <Label htmlFor="target-staff">Staff</Label>
               </div>
@@ -420,5 +461,5 @@ export default function EditAnnouncementPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
