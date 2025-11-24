@@ -39,27 +39,40 @@ export class AppController {
     },
   })
   async getHealth() {
+    // Fast health check - don't block on Supabase for Render's health checks
+    // Render expects a quick response (usually < 5 seconds)
+    const healthCheck = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      supabase: 'checking',
+      error: null,
+    };
+
+    // Test Supabase connection asynchronously with timeout
     try {
-      // Test Supabase connection using an existing table
       const supabase = this.supabaseService.getClient();
-      const { data, error } = await supabase
+      const supabaseCheck = supabase
         .from('users')
         .select('id')
-        .limit(1);
+        .limit(1)
+        .then(({ error }) => {
+          healthCheck.supabase = error ? 'disconnected' : 'connected';
+          healthCheck.error = error?.message || null;
+        })
+        .catch(() => {
+          healthCheck.supabase = 'error';
+        });
 
-      return {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        supabase: error ? 'disconnected' : 'connected',
-        error: error?.message || null,
-      };
+      // Wait max 2 seconds for Supabase check, then return
+      await Promise.race([
+        supabaseCheck,
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
     } catch (error) {
-      return {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        supabase: 'error',
-        error: error.message,
-      };
+      healthCheck.supabase = 'error';
+      healthCheck.error = error.message;
     }
+
+    return healthCheck;
   }
 }
