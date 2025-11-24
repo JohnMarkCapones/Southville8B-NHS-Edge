@@ -87,9 +87,12 @@ const nextConfig = {
   // Webpack configuration for react-pdf-viewer
   webpack: (config, { isServer }) => {
     // Handle PDF.js worker
+    const path = require('path')
     config.resolve.alias = {
       ...config.resolve.alias,
       'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.mjs',
+      // Explicitly resolve @ alias to current directory (works from any build context)
+      '@': path.resolve(__dirname),
     }
     
     // Handle canvas and other Node.js modules for server-side rendering
