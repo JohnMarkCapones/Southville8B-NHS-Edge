@@ -5,9 +5,12 @@ export async function GET() {
   let successCount = 0;
   const totalTests = 3;
 
+  // Get API URL from environment variable with fallback
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.INTERNAL_API_URL || 'http://localhost:3004';
+
   try {
     // Test 1: Get student rankings (should be public)
-    const rankingsResponse = await fetch('http://localhost:3004/api/v1/public/students/rankings?limit=5', {
+    const rankingsResponse = await fetch(`${apiBaseUrl}/api/v1/public/students/rankings?limit=5`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -45,7 +48,7 @@ export async function GET() {
 
   try {
     // Test 2: Get top students by GWA (should be public)
-    const gwaResponse = await fetch('http://localhost:3004/api/v1/public/gwa/top?limit=5', {
+    const gwaResponse = await fetch(`${apiBaseUrl}/api/v1/public/gwa/top?limit=5`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +85,7 @@ export async function GET() {
 
   try {
     // Test 3: Test with no auth headers (should still work)
-    const noAuthResponse = await fetch('http://localhost:3004/api/v1/public/students/rankings?limit=1', {
+    const noAuthResponse = await fetch(`${apiBaseUrl}/api/v1/public/students/rankings?limit=1`, {
       method: 'GET',
       // Intentionally no headers to test public access
     });
