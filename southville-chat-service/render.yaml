@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: southville-chat-service
+    runtime: node
+    plan: pro
+    region: singapore
+    buildCommand: npm ci --legacy-peer-deps --include=dev && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    rootDir: southville-chat-service
+    envVars:
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
+    branch: main
+
