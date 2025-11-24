@@ -126,7 +126,8 @@ async function bootstrap() {
   // Enable shutdown hooks for graceful shutdown
   app.enableShutdownHooks();
 
-  const port = configService.get<number>('PORT') || 3004;
+  // Render automatically sets PORT env var - use it directly
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : configService.get<number>('PORT') || 3004;
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);
