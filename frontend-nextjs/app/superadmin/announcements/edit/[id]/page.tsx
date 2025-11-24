@@ -20,7 +20,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useAnnouncement, useUpdateAnnouncement } from "@/hooks/useAnnouncements"
+import { useAnnouncementById, useUpdateAnnouncement } from "@/hooks/useAnnouncements"
 import { AnnouncementVisibility } from "@/lib/api/types/announcements"
 import { useRoles } from "@/hooks/useRoles"
 import {
@@ -40,7 +40,7 @@ export default function EditAnnouncementPage() {
   const router = useRouter()
 
   // Fetch existing announcement
-  const { data: announcement, isLoading: loadingAnnouncement, error: fetchError } = useAnnouncement(announcementId)
+  const { data: announcement, isLoading: loadingAnnouncement, error: fetchError } = useAnnouncementById(announcementId)
   const updateMutation = useUpdateAnnouncement()
   const { data: roles, isLoading: rolesLoading } = useRoles()
 

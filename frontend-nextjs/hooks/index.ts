@@ -11,13 +11,15 @@ export * from './useAllUsersStats';
 export * from './useClubs';
 export * from './use-clubs';
 export * from './useTeacherClubs';
-export * from './useClubMemberships';
+// useClubMemberships is already exported from use-clubs, so we don't need to export it again
+// export * from './useClubMemberships';
 export * from './useStudentSearch';
 export * from './useClubPositions';
 export * from './useClubMembershipMutations';
 export * from './useClubForms';
 export * from './useClubFormMutations';
-export * from './useFormResponses';
+// useFormResponses and useFormResponse are already exported from useClubForms, so we don't need to export them again
+// export * from './useFormResponses';
 export * from './useFormResponseMutations';
 export * from './useEntityCounts';
 export * from './useEvents';

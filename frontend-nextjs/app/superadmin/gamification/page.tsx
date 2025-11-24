@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import DashboardLayout from "@/components/superadmin/dashboard/layout"
+import { DashboardLayout } from "@/components/superadmin/dashboard/layout"
 import { LeaderboardWidget } from "@/components/gamification"
 import {
   getAnalytics,
