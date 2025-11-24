@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 
 // Base URL detection: fallback to localhost for tests if not provided
 const API_BASE_URL =
@@ -8,97 +8,140 @@ const API_BASE_URL =
 let currentAccessToken = "access_token_initial";
 let currentRefreshToken = "refresh_token_initial";
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
+
+const json = <T extends JsonValue>(data: T, init?: ResponseInit) =>
+  HttpResponse.json<T>(data, init);
+
+const readJson = async <T>(request: Request): Promise<T> =>
+  (await request.json()) as T;
+
+type AuthErrorResponse = { error: string; message?: string };
+
+type LoginResponse =
+  | {
+      access_token: string;
+      refresh_token: string;
+      token_type: "bearer";
+      expires_in: number;
+      user_id: string;
+    }
+  | AuthErrorResponse;
+
+type MeResponse =
+  | {
+      user_id: string;
+      email: string;
+      role: string;
+    }
+  | AuthErrorResponse;
+
+type RefreshTokenResponse =
+  | {
+      access_token: string;
+      token_type: "bearer";
+      expires_in: number;
+    }
+  | AuthErrorResponse;
+
 export const handlers = [
   // Login
-  rest.post(`${API_BASE_URL}/auth/login`, async (req, res, ctx) => {
-    const body = await req.json();
-    const { email, password } = body as { email?: string; password?: string };
+  http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
+    const { email, password } = await readJson<{
+      email?: string;
+      password?: string;
+    }>(request);
 
     if (email === "student@example.com" && password === "Correct#123") {
       currentAccessToken = "access_token_abc";
       currentRefreshToken = "refresh_token_xyz";
-      return res(
-        ctx.status(200),
-        ctx.json({
+      return json<LoginResponse>(
+        {
           access_token: currentAccessToken,
           refresh_token: currentRefreshToken,
           token_type: "bearer",
           expires_in: 3600,
           user_id: "user_123",
-        })
+        },
+        { status: 200 }
       );
     }
 
     if (email === "locked@example.com") {
-      return res(
-        ctx.status(423),
-        ctx.json({ error: "account_locked", message: "Account is locked" })
+      return json<LoginResponse>(
+        { error: "account_locked", message: "Account is locked" },
+        { status: 423 }
       );
     }
 
-    return res(
-      ctx.status(401),
-      ctx.json({
+    return json<LoginResponse>(
+      {
         error: "invalid_credentials",
         message: "Invalid email or password",
-      })
+      },
+      { status: 401 }
     );
   }),
 
   // Me (protected)
-  rest.get(`${API_BASE_URL}/me`, (req, res, ctx) => {
-    const auth = req.headers.get("authorization") || "";
+  http.get(`${API_BASE_URL}/me`, ({ request }) => {
+    const auth = request.headers.get("authorization") || "";
     const token = auth.replace("Bearer ", "");
 
     if (token === "expired") {
-      return res(ctx.status(401), ctx.json({ error: "token_expired" }));
+      return json<MeResponse>({ error: "token_expired" }, { status: 401 });
     }
 
     if (token === currentAccessToken) {
-      return res(
-        ctx.status(200),
-        ctx.json({
+      return json<MeResponse>(
+        {
           user_id: "user_123",
           email: "student@example.com",
           role: "student",
-        })
+        },
+        { status: 200 }
       );
     }
 
-    return res(ctx.status(401), ctx.json({ error: "unauthorized" }));
+    return json<MeResponse>({ error: "unauthorized" }, { status: 401 });
   }),
 
   // Refresh token
-  rest.post(`${API_BASE_URL}/auth/refresh`, async (req, res, ctx) => {
-    const body = await req.json();
-    const { refresh_token } = body as { refresh_token?: string };
+  http.post(`${API_BASE_URL}/auth/refresh`, async ({ request }) => {
+    const { refresh_token } = await readJson<{ refresh_token?: string }>(
+      request
+    );
 
     if (refresh_token === currentRefreshToken) {
       currentAccessToken = "access_token_refreshed";
-      return res(
-        ctx.status(200),
-        ctx.json({
+      return json<RefreshTokenResponse>(
+        {
           access_token: currentAccessToken,
           token_type: "bearer",
           expires_in: 3600,
-        })
+        },
+        { status: 200 }
       );
     }
 
-    return res(ctx.status(401), ctx.json({ error: "invalid_refresh_token" }));
+    // Keep type inference consistent with success branch to satisfy MSW resolver typing.
+    return json<RefreshTokenResponse>(
+      { error: "invalid_refresh_token" },
+      { status: 401 }
+    );
   }),
 
   // Logout
-  rest.post(`${API_BASE_URL}/auth/logout`, (req, res, ctx) => {
+  http.post(`${API_BASE_URL}/auth/logout`, () => {
     currentAccessToken = "";
-    return res(ctx.status(200), ctx.json({}));
+    return json({}, { status: 200 });
   }),
 
   // Current user profile
-  rest.get(`${API_BASE_URL}/users/me`, (_req, res, ctx) => {
-    return res(
-      ctx.status(200),
-      ctx.json({
+  http.get(`${API_BASE_URL}/users/me`, () =>
+    json(
+      {
         id: "user_123",
         email: "student@example.com",
         full_name: "Student User",
@@ -115,12 +158,13 @@ export const handlers = [
           phone_number: "",
           address: "",
         },
-      })
-    );
-  }),
+      },
+      { status: 200 }
+    )
+  ),
 
   // Schedules: my-schedule
-  rest.get(`${API_BASE_URL}/schedules/my-schedule`, (req, res, ctx) => {
+  http.get(`${API_BASE_URL}/schedules/my-schedule`, () => {
     // Default: success response with a few classes this week
     const todayName = new Date().toLocaleDateString("en-US", {
       weekday: "long",
@@ -165,13 +209,14 @@ export const handlers = [
         room: { id: "room_102", room_number: "102", floor_id: "floor_1" },
       },
     ];
-    return res(ctx.status(200), ctx.json(data));
+    return json(data, { status: 200 });
   }),
 
   // Academics: GWA (Grades) - my GWA records
-  rest.get(`${API_BASE_URL}/gwa/my-gwa`, (req, res, ctx) => {
-    const gradingPeriod = req.url.searchParams.get("grading_period");
-    const schoolYear = req.url.searchParams.get("school_year");
+  http.get(`${API_BASE_URL}/gwa/my-gwa`, ({ request }) => {
+    const url = new URL(request.url);
+    const gradingPeriod = url.searchParams.get("grading_period");
+    const schoolYear = url.searchParams.get("school_year");
 
     // Default: return success with GWA records
     const data = [
@@ -194,6 +239,7 @@ export const handlers = [
         grading_period: "Q2",
         school_year: "2025-2026",
         honor_status: "With High Honors",
+        remarks: "Consistent performance",
         recorded_by: "teacher_123",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -210,13 +256,14 @@ export const handlers = [
       ? filteredData.filter((r) => r.school_year === schoolYear)
       : filteredData;
 
-    return res(ctx.status(200), ctx.json(finalData));
+    return json(finalData, { status: 200 });
   }),
 
   // Announcements list
-  rest.get(`${API_BASE_URL}/announcements`, (req, res, ctx) => {
-    const page = Number(req.url.searchParams.get("page") || "1");
-    const limit = Number(req.url.searchParams.get("limit") || "10");
+  http.get(`${API_BASE_URL}/announcements`, ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") || "1");
+    const limit = Number(url.searchParams.get("limit") || "10");
     // includeExpired is not used in mock filtering
 
     const all = [
@@ -243,9 +290,8 @@ export const handlers = [
     const start = (page - 1) * limit;
     const paged = all.slice(start, start + limit);
 
-    return res(
-      ctx.status(200),
-      ctx.json({
+    return json(
+      {
         data: paged,
         pagination: {
           page,
@@ -253,12 +299,13 @@ export const handlers = [
           total: all.length,
           totalPages: Math.ceil(all.length / limit),
         },
-      })
+      },
+      { status: 200 }
     );
   }),
 
   // Events list (Home uses useUpcomingEvents -> services/events.ts -> GET /events)
-  rest.get(`${API_BASE_URL}/events`, (_req, res, ctx) => {
+  http.get(`${API_BASE_URL}/events`, () => {
     const now = new Date();
     const plus1 = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const plus2 = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
@@ -272,7 +319,7 @@ export const handlers = [
         time: "09:00",
         location: "Main Campus Grounds",
         organizerId: "user_admin",
-        eventImage: undefined,
+        eventImage: null,
         status: "published",
         visibility: "public",
         createdAt: now.toISOString(),
@@ -295,7 +342,7 @@ export const handlers = [
         time: "13:00",
         location: "Auditorium",
         organizerId: "user_admin",
-        eventImage: undefined,
+        eventImage: null,
         status: "published",
         visibility: "public",
         createdAt: now.toISOString(),
@@ -317,9 +364,9 @@ export const handlers = [
       },
     ];
 
-    return res(
-      ctx.status(200),
-      ctx.json({ data, pagination: { total: data.length, page: 1, limit: 10 } })
+    return json(
+      { data, pagination: { total: data.length, page: 1, limit: 10 } },
+      { status: 200 }
     );
   }),
 ];

@@ -9,7 +9,10 @@ module.exports = {
     "**/?(*.)+(spec|test).{ts,tsx}",
   ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  moduleNameMapper: {
+    "^msw/node$": "<rootDir>/node_modules/msw/lib/node/index.js",
+  },
   transformIgnorePatterns: [
-    "node_modules/(?!(react-native|@react-native|react-clone-referenced-element|@react-navigation|react-native-gesture-handler|react-native-reanimated|react-native-safe-area-context|react-native-screens|expo(nent)?|@expo(nent)?|expo-router|expo-modules-core|@expo/.*|@unimodules/.*|unimodules-.*|sentry-expo|native-base)/)",
+    "node_modules/(?!(react-native|@react-native|react-clone-referenced-element|@react-navigation|react-native-gesture-handler|react-native-reanimated|react-native-safe-area-context|react-native-screens|expo(nent)?|@expo(nent)?|expo-router|expo-modules-core|@expo/.*|@unimodules/.*|unimodules-.*|sentry-expo|native-base|msw|until-async)/)",
   ],
 };

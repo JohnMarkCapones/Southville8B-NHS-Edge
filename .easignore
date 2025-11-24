@@ -1,0 +1,15 @@
+# Exclude other workspace packages from upload to keep mobile builds lean
+core-api-layer/
+desktop-app/
+frontend-nextjs/
+southville-chat-service/
+
+# Remove local IDE artifacts
+.vs/
+.vscode/
+.idea/
+
+# OS cruft
+Thumbs.db
+.DS_Store
+
