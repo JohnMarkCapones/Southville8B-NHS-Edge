@@ -222,7 +222,7 @@ export default function MobileAppPage() {
                     <div className="w-64 h-[500px] bg-gray-900 rounded-[2.5rem] p-2 shadow-2xl">
                       <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative">
                         <img
-                          src="/images/design-mode/image%281%29%281%29(1).png"
+                          src="/images/design-mode/1.%20Sign-In.png"
                           alt="Access the portal anywhere"
                           className="w-full h-full object-cover"
                         />
@@ -235,7 +235,7 @@ export default function MobileAppPage() {
                     <div className="w-64 h-[500px] bg-gray-900 rounded-[2.5rem] p-2 shadow-2xl">
                       <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative">
                         <img
-                          src="/images/design-mode/image%281%29%281%29(1).png"
+                          src="/images/design-mode/Onboarding-Screen-1.png"
                           alt="Event Notification Real-time"
                           className="w-full h-full object-cover"
                         />
@@ -331,7 +331,7 @@ export default function MobileAppPage() {
               <div className="w-80 h-[600px] bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
                 <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
                   <img
-                    src="/images/design-mode/image%281%29%281%29(1).png"
+                    src="/images/design-mode/1.%20Sign-In.png"
                     alt="Southville 8B NHS Edge Welcome Screen"
                     className="w-full h-full object-cover"
                   />
