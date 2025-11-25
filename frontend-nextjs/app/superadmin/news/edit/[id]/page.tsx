@@ -361,7 +361,10 @@ export default function EditArticlePage() {
             : undefined,
         tags: formData.tags.length > 0 ? formData.tags : undefined,
         visibility: formData.visibility,
-        featured_image_url: formData.featuredImageUrl || undefined,
+        // CRITICAL: Filter out base64 data URIs - they don't work for social media OG images
+        featured_image_url: (formData.featuredImageUrl && !formData.featuredImageUrl.startsWith('data:')) 
+          ? formData.featuredImageUrl 
+          : undefined,
         authorName: formData.author || undefined,
         credits: formData.credits || undefined,
       }

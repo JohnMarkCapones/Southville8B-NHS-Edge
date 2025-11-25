@@ -30,10 +30,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   // Use article image if available, otherwise use OG image generator
   // Ensure image URL is absolute (handles both relative paths and full URLs)
-  const imageUrl = article.image 
-    ? (article.image.startsWith('http://') || article.image.startsWith('https://') 
-        ? article.image 
-        : absoluteUrl(article.image))
+  // Filter out data URIs (base64) - Facebook doesn't support them for OG images
+  const hasValidImage = article.image && 
+    !article.image.startsWith('data:') && 
+    !article.image.includes('placeholder');
+  
+  const imageUrl: string = hasValidImage
+    ? (article.image!.startsWith('http://') || article.image!.startsWith('https://') 
+        ? article.image! 
+        : absoluteUrl(article.image!))
     : absoluteUrl(`/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(
       `Published: ${new Date(article.date).toLocaleDateString()}`,
     )}`)

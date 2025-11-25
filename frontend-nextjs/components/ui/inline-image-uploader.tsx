@@ -3,8 +3,10 @@
 import type React from "react"
 
 import { NodeViewWrapper } from "@tiptap/react"
-import { Upload } from "lucide-react"
-import { useCallback, useRef } from "react"
+import { Upload, Loader2 } from "lucide-react"
+import { useCallback, useRef, useState } from "react"
+import { newsApi } from "@/lib/api/endpoints/news"
+import { useToast } from "@/hooks/use-toast"
 
 interface InlineImageUploaderProps {
   editor: any
@@ -14,47 +16,81 @@ interface InlineImageUploaderProps {
 
 export function InlineImageUploader({ editor, getPos, deleteNode }: InlineImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const { toast } = useToast()
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
+  const uploadToCloudflare = useCallback(
+    async (file: File) => {
+      setIsUploading(true)
+      try {
+        // Upload to Cloudflare via API
+        const result = await newsApi.uploadImage(file)
+        const cloudflareUrl = result.cf_image_url || result.url
 
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please upload an image file")
-        return
-      }
-
-      // Validate file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Image size must be less than 5MB")
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const src = event.target?.result as string
         const pos = getPos()
 
-        // Replace the uploader node with an image node
+        // Replace the uploader node with an image node using Cloudflare URL
         editor
           .chain()
           .focus()
           .deleteRange({ from: pos, to: pos + 1 })
           .insertContentAt(pos, {
             type: "image",
-            attrs: { src },
+            attrs: { src: cloudflareUrl },
           })
           .run()
+
+        toast({
+          title: "✅ Image uploaded",
+          description: "Image uploaded to Cloudflare successfully",
+        })
+      } catch (error) {
+        console.error("Failed to upload image:", error)
+        toast({
+          title: "❌ Upload failed",
+          description: "Failed to upload image. Please try again.",
+          variant: "destructive",
+        })
+        deleteNode()
+      } finally {
+        setIsUploading(false)
       }
-      reader.readAsDataURL(file)
     },
-    [editor, getPos],
+    [editor, getPos, deleteNode, toast],
+  )
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "❌ Invalid file type",
+          description: "Please upload an image file",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "❌ File too large",
+          description: "Image size must be less than 5MB",
+          variant: "destructive",
+        })
+        return
+      }
+
+      await uploadToCloudflare(file)
+    },
+    [uploadToCloudflare, toast],
   )
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault()
       e.stopPropagation()
 
@@ -63,35 +99,27 @@ export function InlineImageUploader({ editor, getPos, deleteNode }: InlineImageU
 
       // Validate file type
       if (!file.type.startsWith("image/")) {
-        alert("Please upload an image file")
+        toast({
+          title: "❌ Invalid file type",
+          description: "Please upload an image file",
+          variant: "destructive",
+        })
         return
       }
 
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert("Image size must be less than 5MB")
+        toast({
+          title: "❌ File too large",
+          description: "Image size must be less than 5MB",
+          variant: "destructive",
+        })
         return
       }
 
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const src = event.target?.result as string
-        const pos = getPos()
-
-        // Replace the uploader node with an image node
-        editor
-          .chain()
-          .focus()
-          .deleteRange({ from: pos, to: pos + 1 })
-          .insertContentAt(pos, {
-            type: "image",
-            attrs: { src },
-          })
-          .run()
-      }
-      reader.readAsDataURL(file)
+      await uploadToCloudflare(file)
     },
-    [editor, getPos],
+    [uploadToCloudflare, toast],
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -103,19 +131,31 @@ export function InlineImageUploader({ editor, getPos, deleteNode }: InlineImageU
     <NodeViewWrapper className="my-4">
       <div
         className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-            <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            {isUploading ? (
+              <Loader2 className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-spin" />
+            ) : (
+              <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            )}
           </div>
           <div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              <span className="text-blue-600 dark:text-blue-400 underline">Click to upload</span> or drag and drop
+              {isUploading ? (
+                "Uploading to Cloudflare..."
+              ) : (
+                <>
+                  <span className="text-blue-600 dark:text-blue-400 underline">Click to upload</span> or drag and drop
+                </>
+              )}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum 3 files, 5MB each</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {isUploading ? "Please wait..." : "Maximum file size: 5MB"}
+            </p>
           </div>
         </div>
         <input
@@ -125,6 +165,7 @@ export function InlineImageUploader({ editor, getPos, deleteNode }: InlineImageU
           className="hidden"
           onChange={handleFileChange}
           multiple={false}
+          disabled={isUploading}
         />
       </div>
     </NodeViewWrapper>

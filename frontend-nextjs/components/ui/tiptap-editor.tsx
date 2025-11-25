@@ -31,6 +31,8 @@ import { useCallback } from "react"
 import { ImageUploader } from "@/lib/tiptap-extensions"
 import { TooltipButton } from "@/components/ui/tooltip-button"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { newsApi } from "@/lib/api/endpoints/news"
+import { useToast } from "@/hooks/use-toast"
 
 interface TiptapEditorProps {
   content: string
@@ -39,6 +41,8 @@ interface TiptapEditorProps {
 }
 
 export function TiptapEditor({ content, onChange, editable = true }: TiptapEditorProps) {
+  const { toast } = useToast()
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -80,19 +84,61 @@ export function TiptapEditor({ content, onChange, editable = true }: TiptapEdito
           if (fileType.startsWith("image/")) {
             event.preventDefault()
 
-            const reader = new FileReader()
-            reader.onload = (e) => {
-              const src = e.target?.result as string
-              const { schema } = view.state
-              const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
-
-              if (coordinates) {
-                const node = schema.nodes.image.create({ src })
-                const transaction = view.state.tr.insert(coordinates.pos, node)
-                view.dispatch(transaction)
-              }
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+              toast({
+                title: "❌ File too large",
+                description: "Image size must be less than 5MB",
+                variant: "destructive",
+              })
+              return true
             }
-            reader.readAsDataURL(file)
+
+            // Upload to Cloudflare instead of using base64
+            const { schema } = view.state
+            const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
+
+            if (coordinates) {
+              // Show loading placeholder
+              const loadingNode = schema.nodes.image.create({ 
+                src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' font-size='14' text-anchor='middle' dy='.3em' fill='%236b7280'%3EUploading...%3C/text%3E%3C/svg%3E",
+                alt: "Uploading..."
+              })
+              const transaction = view.state.tr.insert(coordinates.pos, loadingNode)
+              view.dispatch(transaction)
+              const insertPos = coordinates.pos
+
+              // Upload to Cloudflare
+              newsApi.uploadImage(file)
+                .then((result) => {
+                  const cloudflareUrl = result.cf_image_url || result.url
+                  
+                  // Replace loading placeholder with actual image
+                  const tr = view.state.tr.replaceWith(
+                    insertPos,
+                    insertPos + 1,
+                    schema.nodes.image.create({ src: cloudflareUrl })
+                  )
+                  view.dispatch(tr)
+
+                  toast({
+                    title: "✅ Image uploaded",
+                    description: "Image uploaded to Cloudflare successfully",
+                  })
+                })
+                .catch((error) => {
+                  console.error("Failed to upload image:", error)
+                  // Remove loading placeholder on error
+                  const tr = view.state.tr.delete(insertPos, insertPos + 1)
+                  view.dispatch(tr)
+                  
+                  toast({
+                    title: "❌ Upload failed",
+                    description: "Failed to upload image. Please try again.",
+                    variant: "destructive",
+                  })
+                })
+            }
             return true
           }
         }
@@ -109,12 +155,59 @@ export function TiptapEditor({ content, onChange, editable = true }: TiptapEdito
             event.preventDefault()
             const file = items[i].getAsFile()
             if (file) {
-              const reader = new FileReader()
-              reader.onload = (e) => {
-                const src = e.target?.result as string
-                editor?.chain().focus().setImage({ src }).run()
+              // Validate file size (5MB)
+              if (file.size > 5 * 1024 * 1024) {
+                toast({
+                  title: "❌ File too large",
+                  description: "Image size must be less than 5MB",
+                  variant: "destructive",
+                })
+                return true
               }
-              reader.readAsDataURL(file)
+
+              // Show loading image while uploading
+              editor?.chain().focus().setImage({ 
+                src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' font-size='14' text-anchor='middle' dy='.3em' fill='%236b7280'%3EUploading...%3C/text%3E%3C/svg%3E",
+                alt: "Uploading..."
+              }).run()
+
+              // Get current selection to replace the loading image later
+              const currentPos = view.state.selection.from - 1
+
+              // Upload to Cloudflare
+              newsApi.uploadImage(file)
+                .then((result) => {
+                  const cloudflareUrl = result.cf_image_url || result.url
+                  
+                  // Replace loading placeholder with actual Cloudflare URL
+                  if (editor) {
+                    const tr = view.state.tr.setNodeMarkup(currentPos, undefined, { 
+                      src: cloudflareUrl,
+                      alt: file.name
+                    })
+                    view.dispatch(tr)
+                  }
+
+                  toast({
+                    title: "✅ Image uploaded",
+                    description: "Image uploaded to Cloudflare successfully",
+                  })
+                })
+                .catch((error) => {
+                  console.error("Failed to upload image:", error)
+                  
+                  // Remove loading image on error
+                  if (editor) {
+                    const tr = view.state.tr.delete(currentPos, currentPos + 1)
+                    view.dispatch(tr)
+                  }
+
+                  toast({
+                    title: "❌ Upload failed",
+                    description: "Failed to upload image. Please try again.",
+                    variant: "destructive",
+                  })
+                })
             }
             return true
           }

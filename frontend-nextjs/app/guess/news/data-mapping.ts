@@ -101,7 +101,11 @@ export function mapBackendNewsToFrontend(backendNews: BackendNews): NewsArticle 
     },
     date: backendNews.published_date || backendNews.created_at,
     category: category,
-    image: backendNews.featured_image_url || '/placeholder.svg?height=400&width=600&text=News',
+    // Filter out data URIs (base64) - they don't work for OG images
+    // Only use actual HTTP/HTTPS URLs or local paths
+    image: (backendNews.featured_image_url && !backendNews.featured_image_url.startsWith('data:'))
+      ? backendNews.featured_image_url
+      : '/placeholder.svg?height=400&width=600&text=News',
     readTime: readTime,
     views: backendNews.views,
     featured: featured,

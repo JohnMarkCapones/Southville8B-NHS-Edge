@@ -289,7 +289,10 @@ export default function CreateArticlePage() {
                     ? formData.categoryId : undefined,
         tags: formData.tags.length > 0 ? formData.tags : undefined,
         visibility: formData.visibility,
-        featuredImageUrl: formData.featuredImageUrl || undefined,
+        // CRITICAL: Filter out base64 data URIs - they don't work for social media OG images
+        featuredImageUrl: (formData.featuredImageUrl && !formData.featuredImageUrl.startsWith('data:')) 
+          ? formData.featuredImageUrl 
+          : undefined,
         coAuthorNames: formData.coAuthorNames.length > 0 ? formData.coAuthorNames : undefined,
         scheduledDate: formData.scheduledDate || undefined,
         authorName: formData.author || undefined,

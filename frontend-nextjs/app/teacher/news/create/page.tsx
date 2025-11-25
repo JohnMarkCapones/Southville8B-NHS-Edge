@@ -236,7 +236,19 @@ export default function CreateArticlePage() {
 
     // Find first img tag
     const firstImg = tempDiv.querySelector('img')
-    return firstImg ? firstImg.src : null
+    if (!firstImg) return null
+    
+    const imgSrc = firstImg.src
+    
+    // CRITICAL FIX: Filter out base64 data URIs - they don't work for OG images
+    // Base64 images can't be used for social media previews (Facebook, Twitter, etc.)
+    // Only return actual HTTP/HTTPS URLs
+    if (imgSrc && imgSrc.startsWith('data:')) {
+      console.warn('⚠️ Skipping base64 image for featured image - use proper image upload instead')
+      return null
+    }
+    
+    return imgSrc
   }
 
   // Get featured image (explicit upload takes priority, otherwise use first content image)
