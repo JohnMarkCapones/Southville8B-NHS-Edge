@@ -2,267 +2,327 @@ import {
   Controller,
   Get,
   Post,
-  Body,
+  Put,
   Patch,
-  Param,
   Delete,
+  Body,
+  Param,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles, UserRole } from '../auth/decorators/roles.decorator';
-import { AuthUser } from '../auth/auth-user.decorator';
-import { SupabaseUser } from '../auth/interfaces/supabase-user.interface';
-import { GwaService } from './gwa.service';
+import { GwaService, StudentGwaListResponse } from './gwa.service';
 import { CreateGwaDto } from './dto/create-gwa.dto';
 import { UpdateGwaDto } from './dto/update-gwa.dto';
-import { QueryGwaDto } from './dto/query-gwa.dto';
-import { Gwa } from './entities/gwa.entity';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthUser } from '../auth/auth-user.decorator';
+import { UserRole } from '../users/dto/create-user.dto';
 
 @ApiTags('GWA Management')
 @ApiBearerAuth('JWT-auth')
 @Controller('gwa')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class GwaController {
+  private readonly logger = new Logger(GwaController.name);
+
   constructor(private readonly gwaService: GwaService) {}
 
-  @Post()
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Create a new GWA record',
-    description:
-      'Teachers can create GWA records for students in their advisory section. Admins can create for any student.',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'GWA record created successfully',
-    type: Gwa,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - validation failed',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - insufficient permissions',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Conflict - GWA record already exists for this period',
-  })
-  async create(
-    @Body() createGwaDto: CreateGwaDto,
-    @AuthUser() user: SupabaseUser,
-  ): Promise<Gwa> {
-    return this.gwaService.create(createGwaDto, user.id);
-  }
-
-  @Get()
+  @Get('student/:studentId')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({
-    summary: 'Get all GWA records with filters',
+    summary: 'Get GWA history for a specific student',
     description:
-      'Retrieve GWA records with optional filtering by student, grading period, and school year. Supports pagination.',
+      'Returns all GWA records for a student across all grading periods and school years',
   })
   @ApiResponse({
     status: 200,
-    description: 'GWA records retrieved successfully',
+    description: 'GWA history retrieved successfully',
     schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: { $ref: '#/components/schemas/Gwa' },
-        },
-        pagination: {
-          type: 'object',
-          properties: {
-            page: { type: 'number' },
-            limit: { type: 'number' },
-            total: { type: 'number' },
-            totalPages: { type: 'number' },
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'GWA record ID' },
+          student_id: { type: 'string', description: 'Student UUID' },
+          gwa: { type: 'number', description: 'GWA value (50-100)' },
+          grading_period: {
+            type: 'string',
+            description: 'Grading period (Q1, Q2, Q3, Q4)',
           },
+          school_year: {
+            type: 'string',
+            description: 'School year (e.g., "2024-2025")',
+          },
+          remarks: { type: 'string', description: 'Optional remarks' },
+          honor_status: { type: 'string', description: 'Honor status' },
+          recorded_by: { type: 'string', description: 'Teacher who recorded' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
         },
       },
     },
   })
-  @ApiQuery({
-    name: 'studentId',
-    required: false,
-    description: 'Filter by student ID',
-  })
-  @ApiQuery({
-    name: 'gradingPeriod',
-    required: false,
-    description: 'Filter by grading period (Q1, Q2, Q3, Q4)',
-  })
-  @ApiQuery({
-    name: 'schoolYear',
-    required: false,
-    description: 'Filter by school year (YYYY-YYYY)',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Page number (default: 1)',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Items per page (default: 10)',
-  })
-  @ApiQuery({
-    name: 'sortBy',
-    required: false,
-    description: 'Sort field (default: created_at)',
-  })
-  @ApiQuery({
-    name: 'sortOrder',
-    required: false,
-    description: 'Sort order (asc/desc, default: desc)',
-  })
-  async findAll(@Query() queryDto: QueryGwaDto): Promise<any> {
-    return this.gwaService.findAll(queryDto);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Student not found' })
+  async getStudentGwaHistory(
+    @Param('studentId') studentId: string,
+    @AuthUser() _user: any,
+  ): Promise<any[]> {
+    this.logger.log(`Getting GWA history for student: ${studentId}`);
+    return this.gwaService.getStudentGwaHistory(studentId);
   }
 
-  @Get('student/:studentId')
-  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN)
+  @Get('my-gwa')
+  @Roles(UserRole.STUDENT)
   @ApiOperation({
-    summary: 'Get GWA history for a specific student',
+    summary: 'Get authenticated student GWA records',
     description:
-      "Students can view their own GWA history. Teachers and admins can view any student's GWA history.",
+      'Returns GWA records for the authenticated student with optional filtering by grading period and school year',
   })
-  @ApiParam({
-    name: 'studentId',
-    description: 'Student ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+  @ApiQuery({
+    name: 'grading_period',
+    description: 'Grading period (Q1, Q2, Q3, Q4)',
+    example: 'Q1',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'school_year',
+    description: 'School year (e.g., "2024-2025")',
+    example: '2024-2025',
+    required: false,
   })
   @ApiResponse({
     status: 200,
-    description: 'Student GWA history retrieved successfully',
-    type: [Gwa],
+    description: 'Student GWA records retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'GWA record ID' },
+          student_id: { type: 'string', description: 'Student UUID' },
+          gwa: { type: 'number', description: 'GWA value (50-100)' },
+          grading_period: {
+            type: 'string',
+            description: 'Grading period (Q1, Q2, Q3, Q4)',
+          },
+          school_year: {
+            type: 'string',
+            description: 'School year (e.g., "2024-2025")',
+          },
+          remarks: { type: 'string', description: 'Optional remarks' },
+          honor_status: { type: 'string', description: 'Honor status' },
+          recorded_by: { type: 'string', description: 'Teacher who recorded' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Student not found',
-  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Students can only access their own records',
+    description: 'Forbidden - Student access required',
   })
-  async findByStudent(
-    @Param('studentId') studentId: string,
-    @AuthUser() user: SupabaseUser,
-  ): Promise<Gwa[]> {
-    return this.gwaService.findByStudent(studentId, user);
+  @ApiResponse({ status: 404, description: 'Student record not found' })
+  async getMyGwa(
+    @AuthUser() user: any,
+    @Query('grading_period') gradingPeriod?: string,
+    @Query('school_year') schoolYear?: string,
+  ): Promise<any[]> {
+    this.logger.log(
+      `Getting GWA records for student: ${user.id}, period: ${gradingPeriod}, year: ${schoolYear}`,
+    );
+    return this.gwaService.getStudentGwa(user.id, gradingPeriod, schoolYear);
   }
 
-  @Get(':id')
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @Get('teacher/advisory-students')
+  @Roles(UserRole.TEACHER)
   @ApiOperation({
-    summary: 'Get a specific GWA record by ID',
-    description: 'Retrieve a single GWA record with all related information.',
+    summary: "Get students in teacher's advisory section with GWA records",
+    description:
+      "Returns all students in the authenticated teacher's advisory section along with their GWA records for the specified grading period and school year",
   })
-  @ApiParam({
-    name: 'id',
-    description: 'GWA record ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+  @ApiQuery({
+    name: 'grading_period',
+    description: 'Grading period (Q1, Q2, Q3, Q4)',
+    example: 'Q1',
+  })
+  @ApiQuery({
+    name: 'school_year',
+    description: 'School year (e.g., "2024-2025")',
+    example: '2024-2025',
   })
   @ApiResponse({
     status: 200,
-    description: 'GWA record retrieved successfully',
-    type: Gwa,
+    description: 'Students with GWA records retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        students: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              student_id: { type: 'string', description: 'Student UUID' },
+              student_name: {
+                type: 'string',
+                description: 'Student full name',
+              },
+              student_number: { type: 'string', description: 'Student number' },
+              gwa: { type: 'number', description: 'GWA value (50-100)' },
+              remarks: { type: 'string', description: 'Optional remarks' },
+              honor_status: { type: 'string', description: 'Honor status' },
+              gwa_id: {
+                type: 'string',
+                description: 'GWA record ID (null if no entry)',
+              },
+            },
+          },
+        },
+        section_name: { type: 'string', description: 'Advisory section name' },
+        grade_level: { type: 'string', description: 'Grade level' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teacher access required',
+  })
+  @ApiResponse({ status: 404, description: 'Teacher or section not found' })
+  async getAdvisoryStudentsWithGwa(
+    @AuthUser() user: any,
+    @Query('grading_period') gradingPeriod: string,
+    @Query('school_year') schoolYear: string,
+  ): Promise<StudentGwaListResponse> {
+    this.logger.log(
+      `Getting advisory students for teacher: ${user.id}, period: ${gradingPeriod}, year: ${schoolYear}`,
+    );
+    return this.gwaService.getAdvisoryStudentsWithGwa(
+      user.id,
+      gradingPeriod,
+      schoolYear,
+    );
+  }
+
+  @Post()
+  @Roles(UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'Create new GWA entry',
+    description:
+      "Creates a new GWA entry for a student in the teacher's advisory section",
   })
   @ApiResponse({
-    status: 404,
-    description: 'GWA record not found',
+    status: 201,
+    description: 'GWA entry created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'GWA entry ID' },
+        student_id: { type: 'string', description: 'Student ID' },
+        gwa: { type: 'number', description: 'GWA value' },
+        grading_period: { type: 'string', description: 'Grading period' },
+        school_year: { type: 'string', description: 'School year' },
+        remarks: { type: 'string', description: 'Remarks' },
+        honor_status: { type: 'string', description: 'Honor status' },
+        recorded_by: { type: 'string', description: 'Teacher who recorded' },
+        created_at: { type: 'string', format: 'date-time' },
+        updated_at: { type: 'string', format: 'date-time' },
+      },
+    },
   })
-  async findOne(@Param('id') id: string): Promise<Gwa> {
-    return this.gwaService.findOne(id);
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - Teacher access required or not advisor of student',
+  })
+  async createGwaEntry(
+    @AuthUser() user: any,
+    @Body() createGwaDto: CreateGwaDto,
+  ): Promise<any> {
+    this.logger.log(
+      `Creating GWA entry for student: ${createGwaDto.student_id}`,
+    );
+    return this.gwaService.createGwaEntry(createGwaDto, user.id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @Roles(UserRole.TEACHER)
   @ApiOperation({
-    summary: 'Update a GWA record',
+    summary: 'Update existing GWA entry',
     description:
-      'Teachers can update GWA records for students in their advisory section. Admins can update any GWA record.',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'GWA record ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+      'Updates an existing GWA entry. Only the teacher who created the entry can update it.',
   })
   @ApiResponse({
     status: 200,
-    description: 'GWA record updated successfully',
-    type: Gwa,
+    description: 'GWA entry updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'GWA entry ID' },
+        student_id: { type: 'string', description: 'Student ID' },
+        gwa: { type: 'number', description: 'GWA value' },
+        grading_period: { type: 'string', description: 'Grading period' },
+        school_year: { type: 'string', description: 'School year' },
+        remarks: { type: 'string', description: 'Remarks' },
+        honor_status: { type: 'string', description: 'Honor status' },
+        recorded_by: { type: 'string', description: 'Teacher who recorded' },
+        created_at: { type: 'string', format: 'date-time' },
+        updated_at: { type: 'string', format: 'date-time' },
+      },
+    },
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - validation failed',
-  })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - insufficient permissions',
+    description: 'Forbidden - Teacher access required or not owner of entry',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'GWA record not found',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Conflict - GWA record already exists for this period',
-  })
-  async update(
+  @ApiResponse({ status: 404, description: 'GWA entry not found' })
+  async updateGwaEntry(
+    @AuthUser() user: any,
     @Param('id') id: string,
     @Body() updateGwaDto: UpdateGwaDto,
-    @AuthUser() user: SupabaseUser,
-  ): Promise<Gwa> {
-    return this.gwaService.update(id, updateGwaDto, user.id);
+  ): Promise<any> {
+    this.logger.log(`Updating GWA entry: ${id}`);
+    return this.gwaService.updateGwaEntry(id, updateGwaDto, user.id);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.TEACHER)
   @ApiOperation({
-    summary: 'Delete a GWA record',
+    summary: 'Delete GWA entry',
     description:
-      'Only administrators can delete GWA records. This action is irreversible.',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'GWA record ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+      'Deletes a GWA entry. Only the teacher who created the entry can delete it.',
   })
   @ApiResponse({
-    status: 204,
-    description: 'GWA record deleted successfully',
+    status: 200,
+    description: 'GWA entry deleted successfully',
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - only administrators can delete GWA records',
+    description: 'Forbidden - Teacher access required or not owner of entry',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'GWA record not found',
-  })
-  async remove(
+  @ApiResponse({ status: 404, description: 'GWA entry not found' })
+  async deleteGwaEntry(
+    @AuthUser() user: any,
     @Param('id') id: string,
-    @AuthUser() user: SupabaseUser,
-  ): Promise<void> {
-    return this.gwaService.remove(id, user.id);
+  ): Promise<{ message: string }> {
+    this.logger.log(`Deleting GWA entry: ${id}`);
+    await this.gwaService.deleteGwaEntry(id, user.id);
+    return { message: 'GWA entry deleted successfully' };
   }
 }

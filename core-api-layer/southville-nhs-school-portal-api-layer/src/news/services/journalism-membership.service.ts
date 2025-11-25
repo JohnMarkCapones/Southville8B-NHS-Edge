@@ -414,6 +414,8 @@ export class JournalismMembershipService {
     const domainId = await this.getJournalismDomainId();
 
     // Get current membership info (join through domain_roles to filter by domain)
+    // FIX: Use .limit(1).single() instead of .maybeSingle() to handle duplicate memberships
+    // If user has multiple positions, remove the first one found
     const { data: membership, error: fetchError } = await supabase
       .from('user_domain_roles')
       .select(
@@ -424,7 +426,8 @@ export class JournalismMembershipService {
       )
       .eq('user_id', userId)
       .eq('domain_roles.domain_id', domainId)
-      .maybeSingle();
+      .limit(1)
+      .single();
 
     if (fetchError || !membership) {
       throw new NotFoundException(`User is not a member of journalism team`);

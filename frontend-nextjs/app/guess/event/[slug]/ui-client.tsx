@@ -471,6 +471,7 @@ export default function ClientPage({ params }: ClientPageProps) {
                     className="w-full h-80 lg:h-96 object-cover group-hover:scale-110 transition-transform duration-700"
                     priority={false}
                     sizes="(min-width: 1024px) 1024px, 100vw"
+                    unoptimized={(event.eventImage?.includes('X-Amz-Algorithm') || event.eventImage?.includes('X-Amz-Signature') || event.eventImage?.includes('%3FX-Amz-') || event.eventImage?.includes('r2.cloudflarestorage.com'))}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 </div>

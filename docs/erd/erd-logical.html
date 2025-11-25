@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Southville 8B NHS Edge - Logical ERD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .info-section {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-radius: 4px;
+      }
+
+      .info-section h2 {
+        color: #667eea;
+        margin-bottom: 15px;
+        font-size: 1.5em;
+      }
+
+      .info-section p {
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 10px;
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .legend-item {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .legend-item h3 {
+        color: #667eea;
+        font-size: 1.1em;
+        margin-bottom: 8px;
+      }
+
+      .legend-item code {
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.9em;
+        color: #d63384;
+      }
+
+      .diagram-container {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        margin-top: 30px;
+        overflow-x: auto;
+        min-height: 600px;
+      }
+
+      .mermaid {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 500px;
+      }
+
+      .footer {
+        background: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        color: #666;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .footer a {
+        color: #667eea;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 1.8em;
+        }
+
+        .content {
+          padding: 20px;
+        }
+
+        .diagram-container {
+          padding: 15px;
+        }
+      }
+
+      .loading {
+        text-align: center;
+        padding: 50px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Southville 8B NHS Edge</h1>
+        <p>Logical Entity Relationship Diagram (ERD)</p>
+      </div>
+
+      <div class="content">
+        <div class="info-section">
+          <h2>About This Diagram</h2>
+          <p>
+            This is a <strong>Logical ERD</strong> (Conceptual Model) that
+            represents the high-level structure of the Southville 8B NHS Edge
+            database. The diagram is organized into logical domains for better
+            understanding of the system architecture.
+          </p>
+          <p>
+            <strong>Type:</strong> Logical/Conceptual ERD<br />
+            <strong>Scope:</strong> Key entities organized by domain with
+            essential attributes<br />
+            <strong>Purpose:</strong> High-level understanding of system
+            structure
+          </p>
+
+          <div class="legend">
+            <div class="legend-item">
+              <h3>Cardinality Symbols</h3>
+              <p><code>||--o{</code> = One-to-Many</p>
+              <p><code>||--||</code> = One-to-One</p>
+              <p><code>}o--o{</code> = Many-to-Many</p>
+            </div>
+            <div class="legend-item">
+              <h3>Key Markers</h3>
+              <p><code>PK</code> = Primary Key</p>
+              <p><code>FK</code> = Foreign Key</p>
+              <p><code>UK</code> = Unique Key</p>
+            </div>
+            <div class="legend-item">
+              <h3>ERD Shapes</h3>
+              <p><strong>Rectangles</strong> = Entities (tables)</p>
+              <p><strong>Attributes</strong> = Listed inside entities</p>
+              <p><strong>Lines</strong> = Relationships (with verbs)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="diagram-container">
+          <div class="loading" id="loading">Loading diagram...</div>
+          <div class="mermaid" id="mermaid-diagram">
+            erDiagram %% Southville 8B NHS Edge - Logical ERD (Conceptual Model)
+            %% Organized by logical domains with key entities and relationships
+            %% This represents the conceptual/logical view of the database %%
+            ============================================ %% CORE USER &
+            AUTHENTICATION DOMAIN %%
+            ============================================ users { uuid id PK
+            "Primary identifier" varchar email UK "Unique email" varchar
+            full_name "User's full name" uuid role_id FK "User's role" varchar
+            status "Account status" timestamptz last_login_at "Last login
+            timestamp" } roles { uuid id PK "Role identifier" varchar name UK
+            "Role name (student, teacher, admin)" } profiles { uuid id PK
+            "Profile identifier" uuid user_id FK UK "One-to-one with user"
+            varchar avatar "Profile picture" text bio "User biography" json
+            social_media_links "Social media connections" } admins { uuid id PK
+            "Admin identifier" uuid user_id FK UK "One-to-one with user" varchar
+            email UK "Admin email" } teachers { uuid id PK "Teacher identifier"
+            uuid user_id FK UK "One-to-one with user" varchar first_name "First
+            name" varchar last_name "Last name" uuid department_id FK
+            "Department assignment" uuid subject_specialization_id FK "Subject
+            specialization" uuid advisory_section_id FK "Advisory section" }
+            students { uuid id PK "Student identifier" uuid user_id FK UK
+            "One-to-one with user" text student_id UK "Student ID number" text
+            lrn_id "Learning Resource Number" varchar grade_level "Current grade
+            level" uuid section_id FK "Section assignment" } %%
+            ============================================ %% ACADEMIC STRUCTURE
+            DOMAIN %% ============================================
+            academic_years { uuid id PK "Academic year identifier" varchar
+            year_name UK "Year name (e.g., 2024-2025)" date start_date "Academic
+            year start" date end_date "Academic year end" boolean is_active
+            "Currently active year" } academic_periods { uuid id PK "Period
+            identifier" uuid academic_year_id FK "Belongs to academic year"
+            varchar period_name "Period name (Q1, Q2, etc.)" int period_order
+            "Order within year" date start_date "Period start" date end_date
+            "Period end" boolean is_grading_period "Is this a grading period?" }
+            departments { uuid id PK "Department identifier" varchar
+            department_name UK "Department name" uuid head_id FK "Department
+            head (user)" boolean is_active "Department status" } subjects { uuid
+            id PK "Subject identifier" varchar subject_name "Subject name"
+            varchar code UK "Subject code" uuid department_id FK "Department
+            offering subject" int[] grade_levels "Grade levels for this subject"
+            } sections { uuid id PK "Section identifier" varchar name UK
+            "Section name (e.g., 8B-1)" varchar grade_level "Grade level" uuid
+            teacher_id FK "Advisory teacher" uuid floor_id FK "Floor location"
+            uuid room_id FK "Room assignment" } schedules { uuid id PK "Schedule
+            identifier" uuid subject_id FK "Subject being taught" uuid
+            teacher_id FK "Teacher assigned" uuid section_id FK "Section
+            attending" uuid room_id FK "Room location" uuid building_id FK
+            "Building location" varchar day_of_week "Day of week" time
+            start_time "Class start time" time end_time "Class end time" varchar
+            school_year "School year" varchar semester "Semester" boolean
+            is_published "Published status" } %%
+            ============================================ %% QUIZ & ASSESSMENT
+            DOMAIN %% ============================================ quizzes {
+            uuid quiz_id PK "Quiz identifier" varchar title "Quiz title" text
+            description "Quiz description" uuid subject_id FK "Subject" uuid
+            teacher_id FK "Creator" varchar type "Quiz type" timestamptz
+            start_date "Start date/time" timestamptz end_date "End date/time"
+            varchar status "Quiz status" numeric total_points "Total possible
+            points" numeric passing_score "Passing score" } quiz_questions {
+            uuid question_id PK "Question identifier" uuid quiz_id FK "Belongs
+            to quiz" text question_text "Question content" varchar question_type
+            "Type (multiple choice, etc.)" int order_index "Display order"
+            numeric points "Points for this question" jsonb correct_answer
+            "Correct answer(s)" } quiz_choices { uuid choice_id PK "Choice
+            identifier" uuid question_id FK "Belongs to question" text
+            choice_text "Choice text" boolean is_correct "Is correct answer" int
+            order_index "Display order" } quiz_attempts { uuid attempt_id PK
+            "Attempt identifier" uuid quiz_id FK "Quiz being attempted" uuid
+            student_id FK "Student attempting" int attempt_number "Attempt
+            number" numeric score "Score achieved" numeric max_possible_score
+            "Maximum possible" varchar status "Attempt status" timestamptz
+            started_at "Start time" timestamptz submitted_at "Submission time" }
+            quiz_student_answers { uuid answer_id PK "Answer identifier" uuid
+            attempt_id FK "Belongs to attempt" uuid question_id FK "Question
+            answered" uuid choice_id FK "Choice selected" numeric points_awarded
+            "Points earned" boolean is_correct "Is answer correct" }
+            question_bank { uuid id PK "Question bank identifier" uuid
+            teacher_id FK "Owner" text question_text "Question content" varchar
+            question_type "Question type" uuid subject_id FK "Subject" varchar
+            difficulty "Difficulty level" numeric default_points "Default
+            points" jsonb choices "Answer choices" jsonb correct_answer "Correct
+            answer" } %% ============================================ %% CLUBS &
+            ACTIVITIES DOMAIN %% ============================================
+            clubs { uuid id PK "Club identifier" varchar name "Club name" text
+            description "Club description" uuid advisor_id FK "Club advisor"
+            uuid co_advisor_id FK "Co-advisor" uuid president_id FK "President"
+            uuid domain_id FK "Domain/category" } student_club_memberships {
+            uuid id PK "Membership identifier" uuid student_id FK "Student
+            member" uuid club_id FK "Club" uuid position_id FK "Position in
+            club" date joined_at "Join date" boolean is_active "Active status" }
+            club_positions { uuid id PK "Position identifier" varchar name UK
+            "Position name" text description "Position description" int level
+            "Position level/hierarchy" } %%
+            ============================================ %% EVENTS & NEWS DOMAIN
+            %% ============================================ events { uuid id PK
+            "Event identifier" varchar title "Event title" text description
+            "Event description" date date "Event date" time time "Event time"
+            varchar location "Event location" uuid organizer_id FK "Event
+            organizer" uuid club_id FK "Hosting club (optional)" varchar status
+            "Event status" boolean is_featured "Featured event" } news { uuid id
+            PK "News article identifier" varchar title "Article title" varchar
+            slug UK "URL slug" text article_html "Article content" text
+            description "Article summary" uuid author_id FK "Author" uuid
+            category_id FK "News category" varchar status "Publication status"
+            varchar visibility "Visibility level" timestamptz published_date
+            "Publication date" } news_categories { uuid id PK "Category
+            identifier" varchar name UK "Category name" varchar slug UK
+            "Category slug" text description "Category description" } tags {
+            uuid id PK "Tag identifier" varchar name UK "Tag name" varchar slug
+            UK "Tag slug" varchar color "Tag color" } %%
+            ============================================ %% ANNOUNCEMENTS &
+            ALERTS DOMAIN %% ============================================
+            announcements { uuid id PK "Announcement identifier" uuid user_id FK
+            "Creator" varchar title "Announcement title" text content
+            "Announcement content" varchar type "Announcement type" varchar
+            visibility "Visibility level" timestamptz expires_at "Expiration
+            date" } alerts { uuid id PK "Alert identifier" varchar type "Alert
+            type" varchar title "Alert title" text message "Alert message" uuid
+            recipient_id FK "Recipient" uuid created_by FK "Creator" timestamptz
+            expires_at "Expiration" boolean is_read "Read status" } %%
+            ============================================ %% GALLERY & MEDIA
+            DOMAIN %% ============================================
+            gallery_albums { uuid id PK "Album identifier" varchar title "Album
+            title" text description "Album description" varchar slug UK "URL
+            slug" varchar category "Album category" uuid cover_image_id FK
+            "Cover image" boolean is_featured "Featured album" } gallery_items {
+            uuid id PK "Item identifier" varchar original_filename "Original
+            filename" bigint file_size_bytes "File size" varchar mime_type "MIME
+            type" varchar media_type "Media type (image/video)" varchar title
+            "Item title" text caption "Item caption" uuid uploaded_by FK
+            "Uploader" text cf_image_url "Cloudflare image URL" } gallery_tags {
+            uuid id PK "Tag identifier" varchar name UK "Tag name" varchar slug
+            UK "Tag slug" varchar color "Tag color" } %%
+            ============================================ %% MODULES & RESOURCES
+            DOMAIN %% ============================================ modules {
+            uuid id PK "Module identifier" varchar title "Module title" text
+            description "Module description" varchar file_url "File URL" uuid
+            subject_id FK "Subject" uuid uploaded_by FK "Uploader" boolean
+            is_global "Global module" boolean is_deleted "Deleted status" }
+            section_modules { uuid id PK "Assignment identifier" uuid section_id
+            FK "Section" uuid module_id FK "Module" boolean visible "Visibility
+            to students" uuid assigned_by FK "Assigned by user" } %%
+            ============================================ %% CAMPUS
+            INFRASTRUCTURE DOMAIN %%
+            ============================================ buildings { uuid id PK
+            "Building identifier" varchar building_name "Building name" varchar
+            code UK "Building code" int capacity "Building capacity" } floors {
+            uuid id PK "Floor identifier" uuid building_id FK "Building" varchar
+            name "Floor name" int number "Floor number" } rooms { uuid id PK
+            "Room identifier" uuid floor_id FK "Floor" varchar name "Room name"
+            varchar room_number "Room number" int capacity "Room capacity"
+            varchar status "Room status" } %%
+            ============================================ %% GRADING & RANKINGS
+            DOMAIN %% ============================================ students_gwa
+            { uuid id PK "GWA record identifier" uuid student_id FK "Student"
+            numeric gwa "General Weighted Average" varchar grading_period
+            "Grading period" varchar school_year "School year" varchar
+            honor_status "Honor status" uuid recorded_by FK "Recorded by
+            teacher" } student_rankings { uuid id PK "Ranking identifier" uuid
+            student_id FK "Student" varchar grade_level "Grade level" int rank
+            "Student rank" varchar honor_status "Honor status" varchar quarter
+            "Quarter" varchar school_year "School year" } %%
+            ============================================ %% MESSAGING &
+            COMMUNICATION DOMAIN %% ============================================
+            conversations { uuid id PK "Conversation identifier" text type
+            "Conversation type" text title "Conversation title" uuid created_by
+            FK "Creator" } conversation_participants { uuid conversation_id PK
+            "Conversation" uuid user_id PK "Participant" text role "Participant
+            role" timestamptz last_read_at "Last read timestamp" } messages {
+            uuid id PK "Message identifier" uuid conversation_id FK
+            "Conversation" uuid sender_id FK "Sender" text content "Message
+            content" text message_type "Message type" timestamptz created_at
+            "Sent timestamp" } %% ============================================
+            %% LOGICAL RELATIONSHIPS %%
+            ============================================ %% User &
+            Authentication Relationships roles ||--o{ users : "Assigned to"
+            users ||--|| profiles : "Has" users ||--|| admins : "Is" users
+            ||--|| teachers : "Is" users ||--|| students : "Is" %% Academic
+            Structure Relationships academic_years ||--o{ academic_periods :
+            "Contains" departments ||--o{ subjects : "Offers" departments ||--o{
+            teachers : "Belongs to" subjects ||--o{ teachers : "Specializes in"
+            sections ||--o{ teachers : "Advised by" sections ||--o{ students :
+            "Contains" subjects ||--o{ schedules : "Taught in" teachers ||--o{
+            schedules : "Teaches" sections ||--o{ schedules : "Attends" rooms
+            ||--o{ schedules : "Hosts" buildings ||--o{ schedules : "Houses"
+            floors ||--o{ rooms : "Contains" buildings ||--o{ floors : "Has" %%
+            Quiz & Assessment Relationships quizzes ||--o{ quiz_questions :
+            "Contains" quiz_questions ||--o{ quiz_choices : "Has" quizzes ||--o{
+            quiz_attempts : "Receives" quiz_attempts ||--o{ quiz_student_answers
+            : "Contains" quiz_questions ||--o{ quiz_student_answers : "Answered
+            in" quiz_choices ||--o{ quiz_student_answers : "Selected in"
+            students ||--o{ quiz_attempts : "Attempts" teachers ||--o{ quizzes :
+            "Creates" subjects ||--o{ quizzes : "Belongs to" question_bank
+            ||--o{ quiz_questions : "Sources" teachers ||--o{ question_bank :
+            "Owns" %% Clubs & Activities Relationships clubs }o--o{ students :
+            "Has members" students }o--o{ clubs : "Joins" club_positions ||--o{
+            student_club_memberships : "Held in" users ||--o{ clubs : "Advises"
+            %% Events & News Relationships users ||--o{ events : "Organizes"
+            clubs ||--o{ events : "Hosts" users ||--o{ news : "Authors"
+            news_categories ||--o{ news : "Categorizes" news }o--o{ tags :
+            "Tagged with" events }o--o{ tags : "Tagged with" %% Announcements &
+            Alerts Relationships users ||--o{ announcements : "Creates" users
+            ||--o{ alerts : "Receives" users ||--o{ alerts : "Creates" %%
+            Gallery & Media Relationships gallery_items ||--o{ gallery_albums :
+            "Covers" gallery_items }o--o{ gallery_tags : "Tagged with" users
+            ||--o{ gallery_items : "Uploads" %% Modules & Resources
+            Relationships subjects ||--o{ modules : "Has" modules }o--o{
+            sections : "Assigned to" users ||--o{ modules : "Uploads" users
+            ||--o{ section_modules : "Assigns" %% Grading & Rankings
+            Relationships students ||--o{ students_gwa : "Earns" teachers ||--o{
+            students_gwa : "Records" students ||--o{ student_rankings : "Ranked
+            in" %% Messaging Relationships users ||--o{ conversations :
+            "Creates" users }o--o{ conversations : "Participates in"
+            conversations ||--o{ messages : "Contains" users ||--o{ messages :
+            "Sends"
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>
+          <strong>Southville 8B NHS Edge</strong> - Logical ERD | Generated from
+          <code>erd-logical.mmd</code> |
+          <a href="README.md" target="_blank">View Documentation</a>
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // Initialize Mermaid
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "default",
+        er: {
+          fontSize: 12,
+          diagramPadding: 20,
+        },
+      });
+
+      // Hide loading message once diagram is rendered
+      window.addEventListener("load", function () {
+        setTimeout(function () {
+          const loading = document.getElementById("loading");
+          if (loading) {
+            loading.style.display = "none";
+          }
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

@@ -5,6 +5,7 @@
 
 export * from './auth';
 export * from './announcements';
+export * from './banners';
 export * from './events';
 export * from './academic-calendar';
 export * from './student-rankings';
@@ -15,6 +16,7 @@ export * from './question-bank';
 export * from './users';
 export * from './gallery';
 export * from './sections';
+export * from './roles';
 
 // Export clubs functions (avoiding conflicts with club-forms)
 export {

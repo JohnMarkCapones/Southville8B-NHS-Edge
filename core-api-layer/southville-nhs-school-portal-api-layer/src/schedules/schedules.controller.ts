@@ -149,6 +149,12 @@ export class SchedulesController {
     enum: ['FIRST', 'SECOND', 'SUMMER'],
     description: 'Filter by semester',
   })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['draft', 'published', 'archived'],
+    description: 'Filter by schedule status',
+  })
   @ApiResponse({
     status: 200,
     description: 'Schedules retrieved successfully',
@@ -180,13 +186,17 @@ export class SchedulesController {
     @Query('dayOfWeek') dayOfWeek?: string,
     @Query('schoolYear') schoolYear?: string,
     @Query('semester') semester?: string,
+    @Query('status') status?: string,
   ): Promise<{ data: Schedule[]; pagination: any }> {
     const filters: any = {
+      page,
+      limit,
       sectionId,
       teacherId,
       dayOfWeek,
       schoolYear,
       semester,
+      status,
     };
 
     // Remove undefined filters
@@ -236,6 +246,23 @@ export class SchedulesController {
     // Use findAll with teacherName filter
     const result = await this.schedulesService.findAll(searchDto);
     return result.data;
+  }
+
+  @Get('teachers')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({
+    summary: 'List teachers that teach a given subject via schedules',
+  })
+  @ApiQuery({ name: 'subjectId', required: false, type: String })
+  async listTeachersBySubject(@Query('subjectId') subjectId: string) {
+    this.logger.log(
+      `[listTeachersBySubject] Received request with subjectId: ${subjectId}`,
+    );
+    const result = await this.schedulesService.listTeachersBySubject(subjectId);
+    this.logger.log(
+      `[listTeachersBySubject] Returning ${result.length} teachers`,
+    );
+    return result;
   }
 
   @Get('section/:sectionId')
@@ -349,6 +376,18 @@ export class SchedulesController {
   @ApiResponse({ status: 404, description: 'Schedule not found' })
   async findOne(@Param('id') id: string): Promise<Schedule> {
     return this.schedulesService.findOne(id);
+  }
+
+  @Get(':id/audit')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Get audit trail for a schedule (Admin/Teacher)' })
+  @ApiParam({ name: 'id', description: 'Schedule ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Audit logs retrieved successfully',
+  })
+  async getAudit(@Param('id') id: string) {
+    return this.schedulesService.getAuditLogs(id);
   }
 
   @Patch(':id')
@@ -473,5 +512,90 @@ export class SchedulesController {
     @Body() conflictCheckDto: ConflictCheckDto,
   ): Promise<{ hasConflicts: boolean; conflicts: any[] }> {
     return this.schedulesService.validateScheduleConflicts(conflictCheckDto);
+  }
+
+  @Get('teacher/today')
+  @Roles(UserRole.TEACHER)
+  @ApiOperation({
+    summary: "Get today's schedules for authenticated teacher",
+    description:
+      "Returns all schedules for the authenticated teacher for today's day of the week",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Today's teacher schedules retrieved successfully",
+    type: [Schedule],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Teacher access required',
+  })
+  async getTeacherTodaySchedules(@AuthUser() user: any): Promise<Schedule[]> {
+    this.logger.log(`Getting today's schedules for teacher: ${user.id}`);
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayNames = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const todayDayName = dayNames[dayOfWeek];
+
+    return this.schedulesService.getTeacherTodaySchedules(
+      user.id,
+      todayDayName,
+    );
+  }
+
+  // ================================
+  // Admin endpoints: publish/templates
+  // ================================
+
+  @Post(':id/publish')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Publish or unpublish a schedule (Admin)' })
+  @ApiParam({ name: 'id', description: 'Schedule ID' })
+  @ApiQuery({ name: 'publish', required: true, type: Boolean })
+  async setPublish(
+    @Param('id') id: string,
+    @Query('publish', new ParseBoolPipe()) publish: boolean,
+  ): Promise<{
+    id: string;
+    status: string;
+    is_published: boolean;
+    published_at: string | null;
+  }> {
+    return this.schedulesService.setPublishState(id, publish);
+  }
+
+  @Get('templates')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'List schedule templates (Admin)' })
+  async listTemplates(): Promise<any[]> {
+    return this.schedulesService.listTemplates();
+  }
+
+  @Post('templates')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a schedule template (Admin)' })
+  async createTemplate(
+    @Body()
+    body: {
+      name: string;
+      description?: string;
+      grade_level?: string;
+      payload: any;
+    },
+    @AuthUser() user: any,
+  ): Promise<any> {
+    return this.schedulesService.createTemplate({
+      ...body,
+      created_by: user?.id,
+    });
   }
 }

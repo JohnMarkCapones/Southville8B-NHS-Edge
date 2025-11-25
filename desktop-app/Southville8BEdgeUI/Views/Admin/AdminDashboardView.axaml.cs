@@ -40,15 +40,15 @@ public partial class AdminDashboardView : UserControl
             StudentsSubtext,
             ActiveTeachersValue,
             TeachersSubtext,
-            OnlineUsersValue,
-            OnlineUsersSubtext,
+            TotalSectionsValue,
+            SectionsSubtext,
             RoomUtilizationValue,
             SystemUptimeValue,
             UptimeSubtext,
-            MonthlyRevenueValue,
-            OperatingCostsValue,
-            NetRevenueValue,
-            BudgetUtilizationText,
+            TotalBuildingsValue,
+            TotalRoomsValue,
+            TotalUsersValue,
+            TotalDepartmentsValue,
             AvailableRoomsText,
             OccupiedRoomsText,
             MaintenanceRoomsText,
@@ -65,14 +65,11 @@ public partial class AdminDashboardView : UserControl
         _responsiveButtonElements.AddRange(new Control[]
         {
             RefreshButton,
-            ReportsButton,
             ViewAllAlertsButton,
             RoomsButton,
             EventsButton,
             UsersButton,
             ChatButton,
-            LibraryButton,
-            ReportsActionButton,
             ViewAllEventsButton
         });
 
@@ -80,7 +77,6 @@ public partial class AdminDashboardView : UserControl
         _responsiveProgressBars.AddRange(new Control[]
         {
             RoomProgressBar,
-            BudgetProgressBar,
             OverallProgressBar
         });
 
@@ -89,7 +85,7 @@ public partial class AdminDashboardView : UserControl
         {
             StudentsIcon,
             TeachersIcon,
-            OnlineIcon,
+            SectionsIcon,
             RoomIcon,
             UptimeIcon
         });

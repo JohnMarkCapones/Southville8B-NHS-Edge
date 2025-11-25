@@ -11,6 +11,7 @@
 
 import { apiConfig, buildApiUrl } from './config';
 import { ApiError, createErrorFromResponse, logError } from './errors';
+import { refreshTokenAction } from '@/app/actions/auth';
 
 /**
  * Request options extending standard RequestInit
@@ -18,9 +19,12 @@ import { ApiError, createErrorFromResponse, logError } from './errors';
 export interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
   /** Whether this request requires authentication (default: true) */
   requiresAuth?: boolean;
-  
+
   /** Whether to retry on auth failure after token refresh (default: true) */
   retryOnAuthFailure?: boolean;
+
+  /** Query parameters to append to the URL */
+  params?: Record<string, any>;
 }
 
 /**
@@ -120,21 +124,58 @@ class ApiClient {
    * @throws ApiError if response is not ok
    */
   private async handleResponse<T>(response: Response): Promise<T> {
+    console.log('[API CLIENT] Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      url: response.url
+    });
+    
     // If response is not ok, create and throw ApiError
     if (!response.ok) {
+      console.error('[API CLIENT] Response not ok:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
       const error = await createErrorFromResponse(response);
       throw error;
     }
 
     // Handle 204 No Content
     if (response.status === 204) {
+      console.log('[API CLIENT] 204 No Content response');
+      return null as T;
+    }
+
+    // Check if response has content before parsing
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+
+    // If no content-type or content-length is 0, return null for successful responses
+    if (!contentType || contentLength === '0') {
+      console.log('[API CLIENT] Empty response body (no content-type or content-length=0)');
       return null as T;
     }
 
     // Parse and return JSON
     try {
-      return await response.json();
+      const text = await response.text();
+      // If response is empty string, return null
+      if (!text || text.trim() === '') {
+        console.log('[API CLIENT] Empty response body (empty text)');
+        return null as T;
+      }
+
+      const data = JSON.parse(text);
+      console.log('[API CLIENT] JSON parsed successfully:', {
+        hasData: !!data,
+        dataType: typeof data,
+        dataKeys: data && typeof data === 'object' ? Object.keys(data) : 'N/A'
+      });
+      return data;
     } catch (error) {
+      console.error('[API CLIENT] Failed to parse JSON:', error);
       throw new ApiError(
         'Failed to parse response JSON',
         response.status,
@@ -160,6 +201,7 @@ class ApiClient {
       retryOnAuthFailure = true,
       body,
       method = 'GET',
+      params,
       ...fetchOptions
     } = options;
 
@@ -167,7 +209,29 @@ class ApiClient {
     const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase());
 
     // Build full URL
-    const url = buildApiUrl(endpoint);
+    let url = buildApiUrl(endpoint);
+    
+    console.log('[API CLIENT] Making request:', {
+      method,
+      endpoint,
+      url,
+      requiresAuth,
+      isMutation
+    });
+
+    // Append query parameters if present
+    if (params && Object.keys(params).length > 0) {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
+    }
 
     // Build headers
     const headers = this.buildHeaders(fetchOptions.headers, requiresAuth, isMutation);
@@ -201,6 +265,7 @@ class ApiClient {
       console.log('[API Client] Making request:', {
         method,
         url,
+        params,
         requiresAuth,
         hasToken: requiresAuth ? !!this.getTokenFromCookie() : 'N/A',
         hasCsrf: isMutation ? !!this.getCsrfTokenFromCookie() : 'N/A',
@@ -248,18 +313,42 @@ class ApiClient {
 
       // Handle 401 Unauthorized (token expired or invalid)
       if (error instanceof ApiError && error.status === 401 && retryOnAuthFailure) {
-        // For Phase 1: Just redirect to login
-        // For Phase 2: Implement token refresh logic here
         if (typeof window !== 'undefined') {
-          // Don't redirect if we're on a public page (API endpoints are now public)
+          // Don't process if we're on a public page
           const currentPath = window.location.pathname;
-          const isPublicPage = currentPath === '/' || 
-                               currentPath.startsWith('/guess') || 
+          const isPublicPage = currentPath === '/' ||
+                               currentPath.startsWith('/guess') ||
                                currentPath.startsWith('/_next');
-          
+
           if (!isPublicPage) {
-            console.log('[API Client] 401 Unauthorized - redirecting to portal');
-            
+            console.log('[API Client] 401 Unauthorized - attempting token refresh');
+
+            try {
+              // Attempt to refresh the token
+              const refreshResult = await refreshTokenAction();
+
+              if (refreshResult.success) {
+                console.log('[API Client] Token refreshed successfully - retrying request');
+
+                // Retry the original request with the new token
+                // Set retryOnAuthFailure to false to prevent infinite loop
+                return this.request<T>(endpoint, {
+                  ...options,
+                  body,
+                  method,
+                  params,
+                  retryOnAuthFailure: false,
+                });
+              } else {
+                console.log('[API Client] Token refresh failed:', refreshResult.error);
+              }
+            } catch (refreshError) {
+              console.error('[API Client] Token refresh error:', refreshError);
+            }
+
+            // If refresh failed, redirect to login
+            console.log('[API Client] Redirecting to portal after failed refresh');
+
             // Determine role based on the current path
             let role = 'student'; // default
             if (currentPath.startsWith('/teacher')) {
@@ -267,7 +356,7 @@ class ApiClient {
             } else if (currentPath.startsWith('/admin') || currentPath.startsWith('/superadmin')) {
               role = 'admin';
             }
-            
+
             window.location.href = `/guess/portal?role=${role}`;
           }
         }

@@ -24,8 +24,8 @@ import {
   ChevronUp,
   Send,
   Smartphone,
-  Apple,
   Play,
+  Bug,
 } from "lucide-react"
 
 export function Footer() {
@@ -97,15 +97,6 @@ export function Footer() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Link 
-                href="/guess/mobile-app" 
-                className="w-full sm:w-auto inline-flex items-center justify-center bg-black text-white hover:bg-gray-800 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"
-                aria-label="Download from App Store"
-              >
-                <Apple className="w-5 h-5 mr-2" />
-                App Store
-              </Link>
-
               <Link 
                 href="/guess/mobile-app" 
                 className="w-full sm:w-auto inline-flex items-center justify-center bg-white/10 backdrop-blur-sm text-white border border-white/30 hover:bg-white/20 px-6 py-3 rounded-xl font-semibold group transition-all duration-300 hover:scale-105"
@@ -344,15 +335,17 @@ export function Footer() {
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start space-x-3 xs:space-x-4 sm:space-x-6 text-xs xs:text-sm">
                 {[
-                  { href: "/privacy", label: "Privacy Policy" },
-                  { href: "/terms", label: "Terms of Service" },
-                  { href: "/accessibility", label: "Accessibility" },
+                  { href: "/guess/privacy", label: "Privacy Policy" },
+                  { href: "/guess/terms", label: "Terms of Service" },
+                  { href: "/guess/accessibility", label: "Accessibility" },
+                  { href: "/guess/bug-report", label: "Report a Bug", icon: Bug },
                 ].map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
-                    className="text-gray-300 hover:text-school-gold transition-all duration-300 touch-manipulation py-1 hover:scale-105"
+                    className="text-gray-300 hover:text-school-gold transition-all duration-300 touch-manipulation py-1 hover:scale-105 flex items-center gap-1"
                   >
+                    {'icon' in link && link.icon && <link.icon className="w-3 h-3" />}
                     {link.label}
                   </Link>
                 ))}

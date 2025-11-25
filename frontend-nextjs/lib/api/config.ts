@@ -55,8 +55,8 @@ export const apiConfig: ApiConfig = {
   // API version - backend uses /api/v1
   version: '1',
   
-  // 30 second timeout for all requests
-  timeout: 30000,
+  // 60 second timeout for all requests (PPTX conversion can take time)
+  timeout: 60000,
   
   // Rate limiting configuration
   rateLimits: {
@@ -86,7 +86,7 @@ export const apiConfig: ApiConfig = {
 
 /**
  * Helper to build full API URL with versioning
- * 
+ *
  * @param endpoint - API endpoint path (e.g., "/users/me")
  * @returns Full URL (e.g., "http://localhost:3004/api/v1/users/me")
  */

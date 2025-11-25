@@ -78,4 +78,18 @@ export class DomainsController {
   async findOne(@Param('id') id: string) {
     return this.domainsService.findOne(id);
   }
+
+  @Get(':id/roles')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Get all domain roles for a specific domain' })
+  @ApiResponse({
+    status: 200,
+    description: 'Domain roles retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Domain not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getDomainRoles(@Param('id') id: string) {
+    return this.domainsService.getDomainRoles(id);
+  }
 }

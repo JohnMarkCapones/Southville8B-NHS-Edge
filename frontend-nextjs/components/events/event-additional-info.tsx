@@ -55,11 +55,14 @@ export function EventAdditionalInfoComponent({
   variant = 'default',
   maxItems
 }: EventAdditionalInfoProps) {
+  // Safety check for undefined/null additionalInfo
+  const safeAdditionalInfo = Array.isArray(additionalInfo) ? additionalInfo : [];
+
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
 
   // Sort additional info by orderIndex
-  const sortedInfo = [...additionalInfo].sort((a, b) => a.orderIndex - b.orderIndex);
+  const sortedInfo = [...safeAdditionalInfo].sort((a, b) => a.orderIndex - b.orderIndex);
   
   // Limit items if maxItems is specified
   const displayedInfo = maxItems && !showAll 

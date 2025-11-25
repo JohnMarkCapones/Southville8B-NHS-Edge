@@ -171,15 +171,30 @@ export const getSubjectsByVisibility = async (visibility: 'public' | 'students' 
 };
 
 /**
- * Check if subject code exists
+ * Check if subject code exists (using dedicated validation endpoint)
  */
 export const checkSubjectCodeExists = async (code: string, excludeId?: string): Promise<boolean> => {
   try {
-    const response = await getSubjects({ search: code, limit: 1 });
-    const existingSubject = response.data.find(subject => 
-      subject.code.toLowerCase() === code.toLowerCase() && subject.id !== excludeId
-    );
-    return !!existingSubject;
+    const url = excludeId
+      ? `/subjects/validate/code/${encodeURIComponent(code)}?excludeId=${excludeId}`
+      : `/subjects/validate/code/${encodeURIComponent(code)}`;
+    const response = await apiClient.get<{ exists: boolean }>(url);
+    return response.exists;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Check if subject name exists (using dedicated validation endpoint)
+ */
+export const checkSubjectNameExists = async (name: string, excludeId?: string): Promise<boolean> => {
+  try {
+    const url = excludeId
+      ? `/subjects/validate/name/${encodeURIComponent(name)}?excludeId=${excludeId}`
+      : `/subjects/validate/name/${encodeURIComponent(name)}`;
+    const response = await apiClient.get<{ exists: boolean }>(url);
+    return response.exists;
   } catch {
     return false;
   }
@@ -230,6 +245,7 @@ export const getSubjectStats = async (): Promise<{
 
   return stats;
 };
+
 
 
 

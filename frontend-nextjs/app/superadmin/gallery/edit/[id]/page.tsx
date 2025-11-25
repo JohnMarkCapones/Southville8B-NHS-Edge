@@ -15,12 +15,13 @@ import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { useGallery } from "@/hooks/useGallery"
 import type { GalleryItem } from "@/lib/api/types/gallery"
+import { getCardUrl, getImageAltText } from "@/lib/utils/gallery-images"
 
 export default function EditGalleryPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { getItemById, updateItem } = useGallery()
+  const { loadItem, updateItem } = useGallery()
   
   const [item, setItem] = useState<GalleryItem | null>(null)
   const [loading, setLoading] = useState(true)
@@ -41,7 +42,7 @@ export default function EditGalleryPage() {
     const fetchItem = async () => {
       try {
         const itemId = params.id as string
-        const fetchedItem = await getItemById(itemId)
+        const fetchedItem = await loadItem(itemId)
         if (fetchedItem) {
           setItem(fetchedItem)
           setFormData({
@@ -69,7 +70,7 @@ export default function EditGalleryPage() {
     }
 
     fetchItem()
-  }, [params.id, getItemById, toast])
+  }, [params.id, loadItem, toast])
 
   const handleSave = async () => {
     if (!item) return
@@ -185,8 +186,8 @@ export default function EditGalleryPage() {
             <CardContent>
               <div className="aspect-video bg-muted rounded-lg overflow-hidden">
                 <img
-                  src={item.file_url || "/placeholder.svg"}
-                  alt={item.title || "Gallery item"}
+                  src={getCardUrl(item)}
+                  alt={getImageAltText(item)}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -328,6 +329,32 @@ export default function EditGalleryPage() {
     </PageTransition>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

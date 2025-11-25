@@ -11,6 +11,12 @@ export class QuizQuestion {
   question_text: string;
 
   @ApiProperty({
+    description: 'Optional question description/explanation',
+    required: false,
+  })
+  description?: string;
+
+  @ApiProperty({
     description: 'Question type',
     enum: [
       'multiple_choice',
@@ -38,6 +44,12 @@ export class QuizQuestion {
   allow_partial_credit: boolean;
 
   @ApiProperty({
+    description: 'Is this question required to answer',
+    default: false,
+  })
+  is_required: boolean;
+
+  @ApiProperty({
     description: 'Time limit in seconds for this question',
     required: false,
   })
@@ -50,10 +62,58 @@ export class QuizQuestion {
   is_pool_question: boolean;
 
   @ApiProperty({
+    description: 'Randomize choices order for this question',
+    default: false,
+  })
+  is_randomize: boolean;
+
+  @ApiProperty({
     description: 'Source question bank ID if imported (UUID)',
     required: false,
   })
   source_question_bank_id?: string;
+
+  @ApiProperty({
+    description: 'Case sensitive matching for fill-in-blank questions',
+    default: false,
+    required: false,
+  })
+  case_sensitive?: boolean;
+
+  @ApiProperty({
+    description: 'Whitespace sensitive matching for fill-in-blank questions',
+    default: false,
+    required: false,
+  })
+  whitespace_sensitive?: boolean;
+
+  // ============================================================================
+  // Image Support Fields (Cloudflare Images)
+  // ============================================================================
+
+  @ApiProperty({
+    description: 'Cloudflare Images ID for question image',
+    required: false,
+  })
+  question_image_id?: string;
+
+  @ApiProperty({
+    description: 'Full Cloudflare Images delivery URL for question image',
+    required: false,
+  })
+  question_image_url?: string;
+
+  @ApiProperty({
+    description: 'File size in bytes of question image',
+    required: false,
+  })
+  question_image_file_size?: number;
+
+  @ApiProperty({
+    description: 'MIME type of question image',
+    required: false,
+  })
+  question_image_mime_type?: string;
 
   @ApiProperty({ description: 'Created at timestamp' })
   created_at: string;

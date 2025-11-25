@@ -7,6 +7,9 @@ import {
   IsArray,
   ValidateNested,
   ArrayMaxSize,
+  IsEmail,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -90,6 +93,62 @@ export class CreateClubDto {
   @IsString()
   @MaxLength(300)
   mission_statement?: string;
+
+  @ApiPropertyOptional({
+    description: 'Official club email address',
+    example: 'mathclub@southville8b.edu.ph',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @IsEmail()
+  @MaxLength(255)
+  email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Number of championship wins',
+    example: 5,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  championship_wins?: number;
+
+  @ApiPropertyOptional({
+    description: 'Benefits section title',
+    example: 'Why Join Our Club?',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  benefits_title?: string;
+
+  @ApiPropertyOptional({
+    description: 'Benefits section description',
+    example:
+      'Join our club to develop leadership skills, network with peers, and participate in exciting competitions.',
+  })
+  @IsOptional()
+  @IsString()
+  benefits_description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Club image/logo URL (Cloudflare Images public URL)',
+    example: 'https://imagedelivery.net/<account-hash>/<image-id>/public',
+  })
+  @IsOptional()
+  @IsString()
+  club_image?: string;
+
+  @ApiPropertyOptional({
+    description: 'Club logo URL (Cloudflare Images public URL)',
+    example: 'https://imagedelivery.net/<account-hash>/<logo-id>/public',
+  })
+  @IsOptional()
+  @IsString()
+  club_logo?: string;
 
   @ApiPropertyOptional({
     description: 'Club goals (max 5)',

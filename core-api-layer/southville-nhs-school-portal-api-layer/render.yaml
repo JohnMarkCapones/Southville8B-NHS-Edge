@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: southville-nhs-api
+    runtime: node
+    plan: pro
+    region: singapore
+    buildCommand: npm ci --legacy-peer-deps --include=dev && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    rootDir: core-api-layer/southville-nhs-school-portal-api-layer
+    envVars:
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
+    branch: main
+

@@ -1,6 +1,7 @@
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 import { Trophy, Medal, Users, Calendar, Clock, Star, Award, Target, Heart, Zap, TrendingUp } from "lucide-react"
 import Image from "next/image"
 
@@ -152,6 +153,7 @@ export default function AthleticsPage() {
 
   return (
     <div className="min-h-screen">
+      <GuessBreadcrumb items={[{ label: "Athletics" }]} />
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 dark:from-blue-800 dark:via-blue-700 dark:to-cyan-600 overflow-hidden">
         <div className="absolute inset-0 opacity-10 dark:opacity-20">

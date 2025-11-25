@@ -80,6 +80,21 @@ export class CreateNewsDto {
   visibility?: 'public' | 'students' | 'teachers' | 'private';
 
   @ApiPropertyOptional({
+    description: 'Review status of the article',
+    example: 'pending',
+    enum: ['pending', 'in_review', 'approved', 'rejected', 'needs_revision'],
+    default: 'pending',
+  })
+  @IsOptional()
+  @IsEnum(['pending', 'in_review', 'approved', 'rejected', 'needs_revision'])
+  reviewStatus?:
+    | 'pending'
+    | 'in_review'
+    | 'approved'
+    | 'rejected'
+    | 'needs_revision';
+
+  @ApiPropertyOptional({
     description: 'Scheduled publish date (for future publication)',
     example: '2025-01-01T09:00:00Z',
   })
@@ -88,14 +103,32 @@ export class CreateNewsDto {
   scheduledDate?: string;
 
   @ApiPropertyOptional({
-    description: 'Co-author user IDs (must be journalism members)',
-    example: ['e1caec49-f61d-4158-bac7-1dd456e9976b'],
+    description: 'Co-author names (freeform text)',
+    example: ['Jane Smith', 'Bob Johnson'],
     type: [String],
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
-  coAuthorIds?: string[];
+  @IsString({ each: true })
+  coAuthorNames?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Custom author name (overrides user.full_name if provided)',
+    example: 'John Doe',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  authorName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Additional credits (photographers, contributors, etc.)',
+    example: 'Photo by Jane Smith, Graphics by Bob Johnson',
+  })
+  @IsOptional()
+  @IsString()
+  credits?: string;
 
   @ApiPropertyOptional({
     description:

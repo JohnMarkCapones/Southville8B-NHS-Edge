@@ -22,6 +22,34 @@ export class QuizChoice {
   })
   metadata?: any;
 
+  // ============================================================================
+  // Image Support Fields (Cloudflare Images)
+  // ============================================================================
+
+  @ApiProperty({
+    description: 'Cloudflare Images ID for choice image',
+    required: false,
+  })
+  choice_image_id?: string;
+
+  @ApiProperty({
+    description: 'Full Cloudflare Images delivery URL for choice image',
+    required: false,
+  })
+  choice_image_url?: string;
+
+  @ApiProperty({
+    description: 'File size in bytes of choice image',
+    required: false,
+  })
+  choice_image_file_size?: number;
+
+  @ApiProperty({
+    description: 'MIME type of choice image',
+    required: false,
+  })
+  choice_image_mime_type?: string;
+
   @ApiProperty({ description: 'Created at timestamp' })
   created_at: string;
 }

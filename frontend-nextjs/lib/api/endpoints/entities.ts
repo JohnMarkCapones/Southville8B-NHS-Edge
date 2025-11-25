@@ -24,6 +24,24 @@ export interface PaginatedResponse<T> {
   };
 }
 
+// Backend response structure for departments and other services that return pagination at root level
+export interface BackendPaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Backend response structure for modules service (uses 'modules' instead of 'data')
+export interface ModuleListResponse {
+  modules: Module[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 /**
  * Count response structure
  */
@@ -57,7 +75,7 @@ export interface DepartmentFilters {
 /**
  * Fetch departments with pagination
  */
-export async function getDepartments(filters?: DepartmentFilters): Promise<PaginatedResponse<Department>> {
+export async function getDepartments(filters?: DepartmentFilters): Promise<BackendPaginatedResponse<Department>> {
   const params = new URLSearchParams();
   if (filters?.page) params.append('page', filters.page.toString());
   if (filters?.limit) params.append('limit', filters.limit.toString());
@@ -65,7 +83,7 @@ export async function getDepartments(filters?: DepartmentFilters): Promise<Pagin
   if (filters?.search) params.append('search', filters.search);
 
   const endpoint = `/departments${params.toString() ? `?${params.toString()}` : ''}`;
-  return apiClient.get<PaginatedResponse<Department>>(endpoint);
+  return apiClient.get<BackendPaginatedResponse<Department>>(endpoint);
 }
 
 /**
@@ -73,14 +91,20 @@ export async function getDepartments(filters?: DepartmentFilters): Promise<Pagin
  */
 export async function getDepartmentCount(): Promise<EntityCountResponse> {
   try {
-    const response = await getDepartments({ limit: 10000, page: 1 });
-    const active = response.data.filter(d => d.is_active).length;
-    const inactive = response.data.filter(d => !d.is_active).length;
+    // Use limit=1 to minimize data transfer, we only need the total from pagination
+    const response = await getDepartments({ limit: 1, page: 1 });
 
+    // For active/inactive counts, we need to fetch with proper pagination
+    // Fetch active departments
+    const activeResponse = await getDepartments({ limit: 1, page: 1, isActive: true });
+    // Fetch inactive departments
+    const inactiveResponse = await getDepartments({ limit: 1, page: 1, isActive: false });
+
+    // Backend returns pagination data at root level, not nested under 'pagination'
     return {
-      total: response.pagination.total,
-      active,
-      inactive,
+      total: response.total,
+      active: activeResponse.total,
+      inactive: inactiveResponse.total,
     };
   } catch (error) {
     console.error('[API] Error fetching department count:', error);
@@ -140,7 +164,7 @@ export interface Section {
   id: string;
   name: string;
   grade_level: string;
-  teacher_id?: string;
+  adviser_id?: string;
   capacity?: number;
   created_at: string;
   updated_at: string;
@@ -178,7 +202,8 @@ export async function getSections(filters?: SectionFilters): Promise<PaginatedRe
  */
 export async function getSectionCount(): Promise<EntityCountResponse> {
   try {
-    const response = await getSections({ limit: 10000, page: 1 });
+    // Use limit=1 to minimize data transfer, we only need the total from pagination
+    const response = await getSections({ limit: 1, page: 1 });
 
     return {
       total: response.pagination.total,
@@ -225,7 +250,7 @@ export interface ModuleFilters {
 /**
  * Fetch modules with pagination
  */
-export async function getModules(filters?: ModuleFilters): Promise<PaginatedResponse<Module>> {
+export async function getModules(filters?: ModuleFilters): Promise<ModuleListResponse> {
   const params = new URLSearchParams();
   if (filters?.page) params.append('page', filters.page.toString());
   if (filters?.limit) params.append('limit', filters.limit.toString());
@@ -239,7 +264,7 @@ export async function getModules(filters?: ModuleFilters): Promise<PaginatedResp
   if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
   const endpoint = `/modules${params.toString() ? `?${params.toString()}` : ''}`;
-  return apiClient.get<PaginatedResponse<Module>>(endpoint);
+  return apiClient.get<ModuleListResponse>(endpoint);
 }
 
 /**
@@ -247,20 +272,33 @@ export async function getModules(filters?: ModuleFilters): Promise<PaginatedResp
  */
 export async function getModuleCount(): Promise<EntityCountResponse> {
   try {
-    // Fetch without deleted modules
+    // Use limit=1 to minimize data transfer, we only need the total from pagination
     const response = await getModules({
-      limit: 10000,
+      limit: 1,
       page: 1,
       includeDeleted: false
     });
 
-    const globalModules = response.data.filter(m => m.is_global).length;
-    const sectionModules = response.data.filter(m => !m.is_global).length;
+    // For global/section counts, we need to fetch with proper pagination
+    const globalResponse = await getModules({
+      limit: 1,
+      page: 1,
+      includeDeleted: false,
+      isGlobal: true
+    });
 
+    const sectionResponse = await getModules({
+      limit: 1,
+      page: 1,
+      includeDeleted: false,
+      isGlobal: false
+    });
+
+    // Backend returns pagination data at root level
     return {
-      total: response.pagination.total,
-      active: globalModules,
-      inactive: sectionModules,
+      total: response.total,
+      active: globalResponse.total,
+      inactive: sectionResponse.total,
     };
   } catch (error) {
     console.error('[API] Error fetching module count:', error);
@@ -285,6 +323,7 @@ export interface Event {
   banner_image_url?: string;
   thumbnail_url?: string;
   organizer_id: string;
+  club_id?: string; // Optional club ID for club-specific events
   created_at: string;
   updated_at: string;
 }
@@ -297,6 +336,7 @@ export interface EventFilters {
   startDate?: string;
   endDate?: string;
   organizerId?: string;
+  clubId?: string; // Filter by club ID
   tagId?: string;
   search?: string;
 }
@@ -325,19 +365,24 @@ export async function getEvents(filters?: EventFilters): Promise<PaginatedRespon
  */
 export async function getEventCount(): Promise<EntityCountResponse> {
   try {
-    const response = await getEvents({ limit: 10000, page: 1 });
+    // Use limit=1 to minimize data transfer, we only need the total from pagination
+    const response = await getEvents({ limit: 1, page: 1 });
 
-    const published = response.data.filter(e => e.status === 'published').length;
-    const upcoming = response.data.filter(e => {
-      const now = new Date();
-      const startDate = new Date(e.start_date);
-      return e.status === 'published' && startDate > now;
-    }).length;
+    // For published count
+    const publishedResponse = await getEvents({
+      limit: 1,
+      page: 1,
+      status: 'published'
+    });
+
+    // Note: For upcoming events, we can't filter by date on the backend easily
+    // So we'll just return published count as active
+    // If you need accurate upcoming count, the backend needs a date filter endpoint
 
     return {
       total: response.pagination.total,
-      active: published,
-      inactive: upcoming,
+      active: publishedResponse.pagination.total,
+      inactive: 0, // Set to 0 or implement backend date filtering
     };
   } catch (error) {
     console.error('[API] Error fetching event count:', error);

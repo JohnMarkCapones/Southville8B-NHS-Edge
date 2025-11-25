@@ -51,8 +51,7 @@ export class CreateClubAnnouncementDto {
   })
   @IsOptional()
   @IsEnum(AnnouncementPriority, {
-    message:
-      'Priority must be one of: low, normal, high, urgent',
+    message: 'Priority must be one of: low, normal, high, urgent',
   })
   priority?: AnnouncementPriority;
 }

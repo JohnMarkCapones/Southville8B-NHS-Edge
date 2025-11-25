@@ -1,4 +1,4 @@
-import { IsUUID, IsOptional, IsArray, IsString } from 'class-validator';
+import { IsUUID, IsOptional, IsArray, IsString, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SubmitAnswerDto {
@@ -48,4 +48,15 @@ export class SubmitAnswerDto {
     required: false,
   })
   answerJson?: any;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({
+    example: 45,
+    description: 'Time spent on this question in seconds',
+    required: false,
+    minimum: 0,
+  })
+  timeSpentSeconds?: number;
 }

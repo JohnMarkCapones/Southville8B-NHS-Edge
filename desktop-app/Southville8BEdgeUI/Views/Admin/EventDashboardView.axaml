@@ -325,16 +325,10 @@
 				</StackPanel>
 
 				<StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-					<Button x:Name="FilterButton" Classes="secondary" Command="{Binding FilterEventsCommand}">
+					<Button x:Name="RefreshButton" Classes="secondary" Command="{Binding RefreshDataCommand}" ToolTip.Tip="Refresh event data">
 						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-							<ic:FluentIcon Icon="Search" IconSize="Size20"/>
-							<TextBlock Text="Filter"/>
-						</StackPanel>
-					</Button>
-					<Button x:Name="CreateButton" Classes="primary" Command="{Binding CreateEventCommand}">
-						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-							<ic:FluentIcon Icon="Add" IconSize="Size20"/>
-							<TextBlock Text="Create Event"/>
+							<ic:FluentIcon Icon="ArrowClockwise" IconSize="Size20"/>
+							<TextBlock Text="Refresh"/>
 						</StackPanel>
 					</Button>
 				</StackPanel>
@@ -417,17 +411,36 @@
                               Margin="12,0"
                               ItemsSource="{Binding TypeOptions}"
                               SelectedItem="{Binding SelectedType}"/>
-					<ComboBox x:Name="LocationFilter" Grid.Column="4"
+					<ComboBox x:Name="TagFilter" Grid.Column="4"
                               Classes="filter-combo"
-                              PlaceholderText="All Locations"
+                              PlaceholderText="All Tags"
                               Margin="12,0"
-                              ItemsSource="{Binding LocationOptions}"
-                              SelectedItem="{Binding SelectedLocation}"/>
+                              ItemsSource="{Binding TagOptions}"
+                              SelectedItem="{Binding SelectedTag}"
+                              DisplayMemberBinding="{Binding Name}"/>
 				</Grid>
 			</Border>
 
+			<!-- Loading Indicator -->
+			<Border x:Name="LoadingCard" Classes="card" IsVisible="{Binding IsLoading}" HorizontalAlignment="Center" Padding="40">
+				<StackPanel Spacing="16" HorizontalAlignment="Center">
+					<ProgressBar IsIndeterminate="True" Width="200" Height="6"/>
+					<TextBlock Text="Loading events..." Classes="light" HorizontalAlignment="Center"/>
+				</StackPanel>
+			</Border>
+
+			<!-- Error State -->
+			<Border x:Name="ErrorCard" Classes="card" IsVisible="{Binding HasError}" HorizontalAlignment="Center" Padding="40">
+				<StackPanel Spacing="16" HorizontalAlignment="Center">
+					<ic:FluentIcon Icon="Warning" IconSize="Size32" Foreground="{DynamicResource DangerBrush}" HorizontalAlignment="Center"/>
+					<TextBlock Text="Error Loading Events" Classes="empty-title" HorizontalAlignment="Center"/>
+					<TextBlock Text="{Binding ErrorMessage}" Classes="light" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+					<Button Content="Retry" Classes="primary" Command="{Binding RefreshEventsCommand}" HorizontalAlignment="Center"/>
+				</StackPanel>
+			</Border>
+
 			<!-- Events Grid -->
-			<ItemsControl x:Name="EventsGrid" ItemsSource="{Binding FilteredEvents}">
+			<ItemsControl x:Name="EventsGrid" ItemsSource="{Binding FilteredEvents}" IsVisible="{Binding !IsLoading}">
 				<ItemsControl.ItemsPanel>
 					<ItemsPanelTemplate>
 						<WrapPanel Orientation="Horizontal"/>
@@ -440,7 +453,7 @@
 								<Grid ColumnDefinitions="*,Auto">
 									<StackPanel Grid.Column="0">
 										<TextBlock x:Name="EventTitleText" Text="{Binding Title}" Classes="event-title"/>
-										<TextBlock x:Name="EventTypeText" Text="{Binding Type}" Classes="light" FontSize="12"/>
+										<TextBlock x:Name="EventTypeText" Text="{Binding DisplayStatus}" Classes="light" FontSize="12"/>
 									</StackPanel>
 									<Border Grid.Column="1"
                                             x:Name="StatusIndicator"
@@ -470,8 +483,8 @@
 										<TextBlock x:Name="OrganizerText" Text="{Binding Organizer}" Classes="event-detail"/>
 									</StackPanel>
 									<StackPanel Grid.Column="1" Grid.Row="2" Spacing="4">
-										<TextBlock Text="Attendees" Classes="label"/>
-										<TextBlock x:Name="AttendeesText" Text="{Binding AttendeeInfo}" Classes="event-detail"/>
+										<TextBlock Text="Tags" Classes="label"/>
+										<TextBlock x:Name="TagsText" Text="{Binding TagList}" Classes="event-detail"/>
 									</StackPanel>
 								</Grid>
 
@@ -483,33 +496,15 @@
                                                MaxLines="2"/>
 								</StackPanel>
 
-								<!-- Progress bar for attendance if applicable -->
-								<StackPanel Spacing="4" IsVisible="{Binding MaxAttendees}">
-									<TextBlock Text="Attendance" Classes="label"/>
-									<ProgressBar Value="{Binding AttendancePercentage}"
-                                               Minimum="0"
-                                               Maximum="100"
-                                               Height="6"
-                                               CornerRadius="3"
-                                               Foreground="{DynamicResource SuccessBrush}"/>
-								</StackPanel>
 
-								<Grid ColumnDefinitions="*,Auto,Auto">
+                                <Grid ColumnDefinitions="*,Auto">
 									<Button Grid.Column="0"
                                             x:Name="ViewDetailsButton"
                                             Content="View Details"
                                             Classes="secondary"
                                             Command="{Binding $parent[UserControl].((vm:EventDashboardViewModel)DataContext).ViewEventDetailsCommand}"
                                             CommandParameter="{Binding}"/>
-									<Button Grid.Column="1"
-                                            x:Name="EditButton"
-                                            Content="Edit"
-                                            Classes="secondary"
-                                            Command="{Binding $parent[UserControl].((vm:EventDashboardViewModel)DataContext).EditEventCommand}"
-                                            CommandParameter="{Binding}"
-                                            IsEnabled="{Binding CanEdit}"
-                                            Margin="8,0,0,0"/>
-									<Button Grid.Column="2"
+                                    <Button Grid.Column="1"
                                             x:Name="DeleteButton"
                                             Content="Delete"
                                             Classes="danger"
@@ -521,6 +516,21 @@
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
+
+			<!-- Load More Button -->
+			<Border x:Name="LoadMoreCard" Classes="card" IsVisible="{Binding CanLoadMore}" HorizontalAlignment="Center" Padding="20">
+				<StackPanel Spacing="12" HorizontalAlignment="Center">
+					<Button x:Name="LoadMoreButton" 
+                            Content="Load More Events" 
+                            Classes="primary" 
+                            Command="{Binding LoadMoreEventsCommand}"
+                            IsEnabled="{Binding !IsLoadingMore}"/>
+					<TextBlock Text="Loading more events..." 
+                               Classes="light" 
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding IsLoadingMore}"/>
+				</StackPanel>
+			</Border>
 
 			<!-- Empty State -->
 			<Border x:Name="EmptyStateCard" Classes="card"

@@ -27,6 +27,7 @@ import {
   Edit3,
   Heart,
   Share2,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,44 +41,50 @@ import { useToast } from "@/hooks/use-toast"
 import { TiptapEditor } from "@/components/ui/tiptap-editor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AnimatedButton } from "@/components/ui/animated-button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useCreateNews } from "@/hooks/useNewsMutations"
+import type { CreateNewsDto } from "@/lib/api/endpoints/news"
+import { newsApi } from "@/lib/api/endpoints/news"
+import type { NewsCategory } from "@/types/news"
 
 interface ArticleFormData {
   title: string
-  slug: string
-  excerpt: string
-  content: string
-  category: string
+  description: string
+  articleHtml: string
+  articleJson: object | null
+  categoryId: string
   tags: string[]
-  featuredImage: string
-  status: "draft" | "scheduled" | "published" | "archived"
-  visibility: "public" | "students" | "teachers" | "internal"
+  featuredImageUrl: string
+  visibility: "public" | "students" | "teachers" | "private"
   scheduledDate: string
-  metaDescription: string
-  author: string
-  coAuthors: string[]
-  credits: string
-  expirationDate: string
+  coAuthorNames: string[]
+  // UI-only fields (not sent to backend)
+  slug?: string
+  author?: string
+  credits?: string
+  expirationDate?: string
 }
-
-const categories = [
-  { value: "academic", label: "Academic News", icon: BookOpen },
-  { value: "events", label: "Events", icon: Calendar },
-  { value: "achievements", label: "Achievements", icon: GraduationCap },
-  { value: "announcements", label: "Announcements", icon: Send },
-  { value: "sports", label: "Sports", icon: Users },
-]
 
 const visibilityOptions = [
   { value: "public", label: "Public", icon: Globe, description: "Visible to everyone" },
   { value: "students", label: "Students Only", icon: GraduationCap, description: "Only students can view" },
   { value: "teachers", label: "Teachers Only", icon: Users, description: "Only teachers can view" },
-  { value: "internal", label: "Internal", icon: BookOpen, description: "Admin and staff only" },
+  { value: "private", label: "Private", icon: BookOpen, description: "Admin and staff only" },
 ]
 
 export default function CreateArticlePage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const { mutateAsync: createNews, isPending } = useCreateNews()
   const [currentTag, setCurrentTag] = useState("")
   const [currentCoAuthor, setCurrentCoAuthor] = useState("")
   const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved")
@@ -86,28 +93,55 @@ export default function CreateArticlePage() {
   const [readingTime, setReadingTime] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit")
+  const [categories, setCategories] = useState<NewsCategory[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  const [showNoImageWarning, setShowNoImageWarning] = useState(false)
+  const [pendingSaveAsDraft, setPendingSaveAsDraft] = useState(false)
+  const [hasDateError, setHasDateError] = useState(false)
 
   const [formData, setFormData] = useState<ArticleFormData>({
     title: "",
-    slug: "",
-    excerpt: "",
-    content: "",
-    category: "",
+    description: "",
+    articleHtml: "",
+    articleJson: null,
+    categoryId: "",
     tags: [],
-    featuredImage: "",
-    status: "draft",
+    featuredImageUrl: "",
     visibility: "public",
     scheduledDate: "",
-    metaDescription: "",
-    author: "Admin User",
-    coAuthors: [],
+    coAuthorNames: [],
+    // UI-only fields (not sent to backend)
+    slug: "",
+    author: "",
     credits: "",
     expirationDate: "",
   })
 
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true)
+        const categoriesData = await newsApi.getCategories()
+        setCategories(categoriesData)
+      } catch (error) {
+        console.error('[CreateArticlePage] Error fetching categories:', error)
+        toast({
+          title: "⚠️ Failed to load categories",
+          description: "Categories could not be loaded. You can still create the article without a category.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    fetchCategories()
+  }, [toast])
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (formData.title || formData.content) {
+      if (formData.title || formData.articleHtml) {
         setAutoSaveStatus("saving")
         setTimeout(() => {
           setAutoSaveStatus("saved")
@@ -119,7 +153,7 @@ export default function CreateArticlePage() {
   }, [formData])
 
   useEffect(() => {
-    const text = formData.content.replace(/<[^>]*>/g, "")
+    const text = formData.articleHtml.replace(/<[^>]*>/g, "")
     const words = text
       .trim()
       .split(/\s+/)
@@ -127,7 +161,7 @@ export default function CreateArticlePage() {
     setWordCount(words.length)
     setCharCount(text.length)
     setReadingTime(Math.ceil(words.length / 200))
-  }, [formData.content])
+  }, [formData.articleHtml])
 
   const generateSlug = (title: string) => {
     return title
@@ -164,10 +198,10 @@ export default function CreateArticlePage() {
   }
 
   const addCoAuthor = () => {
-    if (currentCoAuthor.trim() && !formData.coAuthors.includes(currentCoAuthor.trim())) {
+    if (currentCoAuthor.trim() && !formData.coAuthorNames.includes(currentCoAuthor.trim())) {
       setFormData((prev) => ({
         ...prev,
-        coAuthors: [...prev.coAuthors, currentCoAuthor.trim()],
+        coAuthorNames: [...prev.coAuthorNames, currentCoAuthor.trim()],
       }))
       setCurrentCoAuthor("")
     }
@@ -176,103 +210,160 @@ export default function CreateArticlePage() {
   const removeCoAuthor = (authorToRemove: string) => {
     setFormData((prev) => ({
       ...prev,
-      coAuthors: prev.coAuthors.filter((author) => author !== authorToRemove),
+      coAuthorNames: prev.coAuthorNames.filter((author) => author !== authorToRemove),
     }))
   }
 
-  const handleSave = async (status: "draft" | "published" | "scheduled") => {
-    setIsLoading(true)
+  // Check if article has any images (featured image or images in content)
+  const hasImages = () => {
+    // Check for featured image
+    if (formData.featuredImageUrl && formData.featuredImageUrl.trim()) {
+      return true
+    }
+    // Check for images in HTML content
+    const imgRegex = /<img[^>]+src=[\"']([^\"'>]+)[\"']/i
+    return imgRegex.test(formData.articleHtml)
+  }
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    if (status === "published") {
+  const handleSave = async (saveAsDraft: boolean = true) => {
+    // Validation
+    if (!formData.title.trim()) {
       toast({
-        title: "✅ Article Published Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              "{formData.title || "Untitled Article"}" is now live and visible to{" "}
-              {formData.visibility === "public" ? "everyone" : formData.visibility}.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                <FileText className="w-3 h-3" />
-              </div>
-              <span>{formData.category || "Uncategorized"}</span>
-              <span>•</span>
-              <span>{wordCount} words</span>
-              <span>•</span>
-              <span>{readingTime} min read</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
-              <CheckCircle className="w-3 h-3" />
-              <span>Article is now visible to readers</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 6000,
-        className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
+        title: "⚠️ Validation Error",
+        description: "Please enter an article title",
+        variant: "destructive",
       })
-    } else if (status === "scheduled") {
-      toast({
-        title: "✅ Article Scheduled Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              "{formData.title || "Untitled Article"}" will be published on{" "}
-              {new Date(formData.scheduledDate).toLocaleString()}.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                <Calendar className="w-3 h-3" />
-              </div>
-              <span>{formData.category || "Uncategorized"}</span>
-              <span>•</span>
-              <span>{wordCount} words</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-500/10 px-2 py-1 rounded-md w-fit">
-              <CheckCircle className="w-3 h-3" />
-              <span>Will auto-publish at scheduled time</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 6000,
-        className: "border-blue-500/20 bg-blue-500/5 backdrop-blur-md",
-      })
-    } else {
-      toast({
-        title: "✅ Draft Saved Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">
-              "{formData.title || "Untitled Article"}" has been saved as a draft.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                <FileText className="w-3 h-3" />
-              </div>
-              <span>{wordCount} words</span>
-              <span>•</span>
-              <span>Last saved: {new Date().toLocaleTimeString()}</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-gray-600 bg-gray-500/10 px-2 py-1 rounded-md w-fit">
-              <CheckCircle className="w-3 h-3" />
-              <span>Continue editing anytime</span>
-            </div>
-          </div>
-        ),
-        variant: "default",
-        duration: 5000,
-        className: "border-gray-500/20 bg-gray-500/5 backdrop-blur-md",
-      })
+      return
     }
 
-    setIsLoading(false)
+    if (!formData.articleHtml.trim() || !formData.articleJson) {
+      toast({
+        title: "⚠️ Validation Error",
+        description: "Please write some content for your article",
+        variant: "destructive",
+      })
+      return
+    }
 
-    if (status === "published") {
+    // Validate expiration date vs scheduled date
+    if (formData.scheduledDate && formData.expirationDate) {
+      const scheduledTime = new Date(formData.scheduledDate).getTime()
+      const expirationTime = new Date(formData.expirationDate).getTime()
+
+      if (expirationTime < scheduledTime) {
+        setHasDateError(true)
+        toast({
+          title: "⚠️ Invalid Date Range",
+          description: "Expiration date cannot be before the scheduled publication date. Please adjust the dates.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    // Clear date error if validation passes
+    setHasDateError(false)
+
+    // Check for images - show warning but allow to proceed
+    if (!hasImages()) {
+      setPendingSaveAsDraft(saveAsDraft)
+      setShowNoImageWarning(true)
+      return
+    }
+
+    // Proceed with save
+    await performSave(saveAsDraft)
+  }
+
+  const performSave = async (saveAsDraft: boolean = true) => {
+    try {
+      // Build the DTO matching backend expectations
+      const createDto: CreateNewsDto = {
+        title: formData.title,
+        description: formData.description || undefined,
+        articleJson: formData.articleJson,
+        articleHtml: formData.articleHtml,
+        // Only send categoryId if it's a valid UUID (not empty string or mock value)
+        categoryId: formData.categoryId && formData.categoryId.length > 0 &&
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formData.categoryId)
+                    ? formData.categoryId : undefined,
+        tags: formData.tags.length > 0 ? formData.tags : undefined,
+        visibility: formData.visibility,
+        featuredImageUrl: formData.featuredImageUrl || undefined,
+        coAuthorNames: formData.coAuthorNames.length > 0 ? formData.coAuthorNames : undefined,
+        scheduledDate: formData.scheduledDate || undefined,
+        authorName: formData.author || undefined,
+        credits: formData.credits || undefined,
+      }
+
+      // Call the real API
+      const newArticle = await createNews(createDto)
+
+      // Success toast
+      if (saveAsDraft) {
+        toast({
+          title: "✅ Draft Saved Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">
+                "{newArticle.title}" has been saved as a draft.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  <FileText className="w-3 h-3" />
+                </div>
+                <span>{wordCount} words</span>
+                <span>•</span>
+                <span>Last saved: {new Date().toLocaleTimeString()}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-600 bg-gray-500/10 px-2 py-1 rounded-md w-fit">
+                <CheckCircle className="w-3 h-3" />
+                <span>Continue editing anytime</span>
+              </div>
+            </div>
+          ),
+          variant: "default",
+          duration: 5000,
+          className: "border-gray-500/20 bg-gray-500/5 backdrop-blur-md",
+        })
+      } else {
+        toast({
+          title: "✅ Article Created Successfully",
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">
+                "{newArticle.title}" has been created and saved.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  <FileText className="w-3 h-3" />
+                </div>
+                <span>{wordCount} words</span>
+                <span>•</span>
+                <span>{readingTime} min read</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-md w-fit">
+                <CheckCircle className="w-3 h-3" />
+                <span>Article created successfully</span>
+              </div>
+            </div>
+          ),
+          variant: "default",
+          duration: 6000,
+          className: "border-green-500/20 bg-green-500/5 backdrop-blur-md",
+        })
+      }
+
+      // Navigate back to news list
       router.push("/superadmin/news")
+    } catch (error: any) {
+      console.error("Error creating article:", error)
+      toast({
+        title: "❌ Failed to Create Article",
+        description: error?.message || "An error occurred while creating the article. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
     }
   }
 
@@ -354,20 +445,20 @@ export default function CreateArticlePage() {
             </div>
             <Button
               variant="outline"
-              onClick={() => handleSave("draft")}
-              disabled={isLoading}
+              onClick={() => handleSave(true)}
+              disabled={isPending}
               className="hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 hover:scale-105"
             >
               <Save className="h-4 w-4 mr-2" />
-              Save Draft
+              {isPending ? "Saving..." : "Save Draft"}
             </Button>
             <Button
-              onClick={() => handleSave(formData.status)}
-              disabled={isLoading || !formData.title || !formData.content}
+              onClick={() => handleSave(false)}
+              disabled={isPending || !formData.title || !formData.articleHtml}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 transition-all duration-200 hover:scale-105 hover:shadow-lg"
             >
               <Send className="h-4 w-4 mr-2" />
-              {formData.status === "scheduled" ? "Schedule" : "Publish"}
+              {isPending ? "Creating..." : "Create Article"}
             </Button>
           </div>
         </div>
@@ -418,19 +509,19 @@ export default function CreateArticlePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="excerpt" className="text-sm font-medium dark:text-gray-200">
+                      <Label htmlFor="description" className="text-sm font-medium dark:text-gray-200">
                         Description
                       </Label>
                       <Textarea
-                        id="excerpt"
-                        value={formData.excerpt}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, excerpt: e.target.value }))}
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                         placeholder="Brief description of the article..."
                         rows={3}
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-gray-400"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formData.excerpt.length}/200 characters
+                        {formData.description.length}/500 characters
                       </p>
                     </div>
                   </CardContent>
@@ -478,9 +569,9 @@ export default function CreateArticlePage() {
                         </Button>
                       </div>
 
-                      {formData.coAuthors.length > 0 && (
+                      {formData.coAuthorNames.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {formData.coAuthors.map((author) => (
+                          {formData.coAuthorNames.map((author) => (
                             <Badge
                               key={author}
                               variant="secondary"
@@ -558,8 +649,14 @@ export default function CreateArticlePage() {
                           id="scheduledDate"
                           type="datetime-local"
                           value={formData.scheduledDate}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))}
-                          className="dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          onChange={(e) => {
+                            setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))
+                            setHasDateError(false)
+                          }}
+                          min={new Date().toISOString().slice(0, 16)}
+                          className={`dark:bg-slate-800 dark:border-slate-700 dark:text-white ${
+                            hasDateError ? "border-red-500 dark:border-red-500 focus:ring-red-500" : ""
+                          }`}
                         />
                       </div>
                     )}
@@ -576,8 +673,14 @@ export default function CreateArticlePage() {
                         id="expirationDate"
                         type="datetime-local"
                         value={formData.expirationDate}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, expirationDate: e.target.value }))}
-                        className="dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                        onChange={(e) => {
+                          setFormData((prev) => ({ ...prev, expirationDate: e.target.value }))
+                          setHasDateError(false)
+                        }}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className={`dark:bg-slate-800 dark:border-slate-700 dark:text-white ${
+                          hasDateError ? "border-red-500 dark:border-red-500 focus:ring-red-500" : ""
+                        }`}
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-500">
                         Article will be automatically unpublished after this date
@@ -658,27 +761,30 @@ export default function CreateArticlePage() {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium dark:text-gray-200">Category</Label>
                       <Select
-                        value={formData.category}
-                        onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
+                        value={formData.categoryId}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
+                        disabled={isLoadingCategories}
                       >
                         <SelectTrigger className="transition-all duration-200 dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select category (optional)"} />
                         </SelectTrigger>
                         <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                           {categories.map((category) => (
                             <SelectItem
-                              key={category.value}
-                              value={category.value}
+                              key={category.id}
+                              value={category.id}
                               className="dark:text-white dark:focus:bg-slate-700"
                             >
-                              <div className="flex items-center gap-2">
-                                <category.icon className="h-4 w-4" />
-                                {category.label}
-                              </div>
+                              {category.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {categories.length === 0 && !isLoadingCategories && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          No categories available. You can still create the article without a category.
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -732,8 +838,8 @@ export default function CreateArticlePage() {
                 </CardHeader>
                 <CardContent>
                   <TiptapEditor
-                    content={formData.content}
-                    onChange={(content) => setFormData((prev) => ({ ...prev, content }))}
+                    content={formData.articleHtml}
+                    onChange={(html, json) => setFormData((prev) => ({ ...prev, articleHtml: html, articleJson: json }))}
                   />
                 </CardContent>
               </Card>
@@ -760,9 +866,9 @@ export default function CreateArticlePage() {
                 <header className="mb-12">
                   {/* Article Meta */}
                   <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
-                    {formData.category && (
+                    {formData.categoryId && (
                       <Badge variant="outline" className="text-primary border-primary">
-                        {categories.find((c) => c.value === formData.category)?.label || formData.category}
+                        {categories.find((c) => c.id === formData.categoryId)?.name || "Category"}
                       </Badge>
                     )}
                     <div className="flex items-center gap-1">
@@ -783,9 +889,9 @@ export default function CreateArticlePage() {
                     {formData.title || "Article Title"}
                   </h1>
 
-                  {formData.excerpt && (
+                  {formData.description && (
                     <p className="text-xl sm:text-2xl leading-relaxed text-muted-foreground mb-8 break-words">
-                      {formData.excerpt}
+                      {formData.description}
                     </p>
                   )}
 
@@ -829,11 +935,11 @@ export default function CreateArticlePage() {
                 </header>
 
                 {/* Featured Image */}
-                {formData.featuredImage && (
+                {formData.featuredImageUrl && (
                   <div className="relative mb-12">
                     <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
                       <img
-                        src={formData.featuredImage || "/placeholder.svg"}
+                        src={formData.featuredImageUrl || "/placeholder.svg"}
                         alt={formData.title}
                         className="w-full h-full object-cover"
                       />
@@ -842,24 +948,24 @@ export default function CreateArticlePage() {
                 )}
 
                 <div className="mb-16">
-                  {formData.content ? (
+                  {formData.articleHtml ? (
                     <div
                       className="prose prose-lg dark:prose-invert max-w-none break-words"
-                      dangerouslySetInnerHTML={{ __html: formData.content }}
+                      dangerouslySetInnerHTML={{ __html: formData.articleHtml }}
                     />
                   ) : (
                     <p className="text-muted-foreground italic">No content yet. Start writing in the Edit tab.</p>
                   )}
                 </div>
 
-                {formData.coAuthors.length > 0 && (
+                {formData.coAuthorNames.length > 0 && (
                   <div className="mb-8 border-l-4 border-primary pl-6">
                     <h3 className="font-semibold mb-3 text-lg">Co-Authors</h3>
                     <div className="flex flex-wrap gap-2">
-                      {formData.coAuthors.map((author) => (
-                        <Badge key={author} variant="secondary" className="break-words max-w-full">
+                      {formData.coAuthorNames.map((authorName) => (
+                        <Badge key={authorName} variant="secondary" className="break-words max-w-full">
                           <UserCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="break-words">{author}</span>
+                          <span className="break-words">{authorName}</span>
                         </Badge>
                       ))}
                     </div>
@@ -903,6 +1009,52 @@ export default function CreateArticlePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* No Image Warning Dialog */}
+      <AlertDialog open={showNoImageWarning} onOpenChange={setShowNoImageWarning}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              No Images Found
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-base">
+                <p className="text-slate-700 dark:text-slate-300">
+                  This article doesn't have any images. Articles with images perform better and are more engaging for readers.
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-1">
+                    💡 Best Practices:
+                  </p>
+                  <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                    <li>Add a featured image for better visibility</li>
+                    <li>Include images in your article content</li>
+                    <li>Images improve engagement and sharing</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+                  You can still publish without images, but it's recommended to add at least one.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowNoImageWarning(false)}>
+              Go Back & Add Image
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowNoImageWarning(false)
+                performSave(pendingSaveAsDraft)
+              }}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Continue Without Image
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

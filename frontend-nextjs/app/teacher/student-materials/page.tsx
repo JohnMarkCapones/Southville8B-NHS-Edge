@@ -55,6 +55,7 @@ import {
   X,
   AlertCircle,
   Check,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -293,6 +294,7 @@ export default function StudentMaterialsPage() {
     materialId: "",
     materialTitle: "",
   })
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [uploadConfirmation, setUploadConfirmation] = useState({
     open: false,
@@ -609,6 +611,9 @@ export default function StudentMaterialsPage() {
   const confirmDelete = useCallback(async () => {
     const materialId = deleteConfirmation.materialId
 
+    if (isDeleting || !materialId) return
+
+    setIsDeleting(true)
     try {
       console.log('[StudentMaterials] Deleting module:', materialId)
       await apiDeleteModule(materialId)
@@ -620,6 +625,9 @@ export default function StudentMaterialsPage() {
       })
 
       console.log('[StudentMaterials] ✅ Module deleted successfully')
+      
+      // Close dialog immediately after successful deletion
+      setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })
     } catch (error) {
       console.error('[StudentMaterials] ❌ Delete error:', error)
 
@@ -630,9 +638,9 @@ export default function StudentMaterialsPage() {
         duration: 5000,
       })
     } finally {
-      setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })
+      setIsDeleting(false)
     }
-  }, [deleteConfirmation.materialId, apiDeleteModule, toast])
+  }, [deleteConfirmation.materialId, apiDeleteModule, toast, isDeleting])
   // CHANGE END
 
   // Handle bulk delete
@@ -856,7 +864,11 @@ export default function StudentMaterialsPage() {
       {/* CHANGE: Added Delete Confirmation Dialog */}
       <Dialog
         open={deleteConfirmation.open}
-        onOpenChange={(open) => setDeleteConfirmation({ ...deleteConfirmation, open })}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader className="space-y-3">
@@ -885,11 +897,23 @@ export default function StudentMaterialsPage() {
               variant="outline"
               onClick={() => setDeleteConfirmation({ open: false, materialId: "", materialTitle: "" })}
               className="flex-1"
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button onClick={confirmDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
-              Delete
+            <Button 
+              onClick={confirmDelete} 
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

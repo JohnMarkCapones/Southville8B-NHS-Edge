@@ -11,13 +11,18 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateBuildingDto } from './dto/create-building.dto';
 import { UpdateBuildingDto } from './dto/update-building.dto';
 import { Building } from './entities/building.entity';
+import { NotificationService } from '../common/services/notification.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class BuildingsService {
   private readonly logger = new Logger(BuildingsService.name);
   private supabase: SupabaseClient;
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private notificationService: NotificationService,
+  ) {}
 
   private getSupabaseClient(): SupabaseClient {
     if (!this.supabase) {
@@ -70,7 +75,26 @@ export class BuildingsService {
       this.logger.log(
         `Building created successfully: ${building.building_name}`,
       );
-      return building;
+
+      // Notify admins about building creation (global notification)
+      await this.notificationService.notifyAll(
+        'New Building Created',
+        `A new building "${building.building_name}" (${building.code}) has been created.`,
+        NotificationType.INFO,
+        undefined,
+        { expiresInDays: 7 },
+      );
+
+      // Transform database fields to API response format
+      return {
+        id: building.id,
+        buildingName: building.building_name,
+        code: building.code,
+        capacity: building.capacity,
+        createdAt: building.created_at,
+        updatedAt: building.updated_at,
+        floors: [],
+      };
     } catch (error) {
       if (
         error instanceof ConflictException ||
@@ -125,32 +149,33 @@ export class BuildingsService {
     }
 
     // Transform database fields to API response format
-    const transformedBuildings = buildings?.map(building => ({
-      id: building.id,
-      buildingName: building.building_name,
-      code: building.code,
-      capacity: building.capacity,
-      createdAt: building.created_at,
-      updatedAt: building.updated_at,
-      floors: building.floors?.map(floor => ({
-        id: floor.id,
-        name: floor.name,
-        number: floor.number,
-        buildingId: floor.building_id,
-        createdAt: floor.created_at,
-        updatedAt: floor.updated_at,
-        rooms: floor.rooms?.map(room => ({
-          id: room.id,
-          name: room.name,
-          roomNumber: room.room_number,
-          capacity: room.capacity,
-          status: room.status,
-          floorId: room.floor_id,
-          createdAt: room.created_at,
-          updatedAt: room.updated_at,
-        }))
-      }))
-    })) || [];
+    const transformedBuildings =
+      buildings?.map((building) => ({
+        id: building.id,
+        buildingName: building.building_name,
+        code: building.code,
+        capacity: building.capacity,
+        createdAt: building.created_at,
+        updatedAt: building.updated_at,
+        floors: building.floors?.map((floor) => ({
+          id: floor.id,
+          name: floor.name,
+          number: floor.number,
+          buildingId: floor.building_id,
+          createdAt: floor.created_at,
+          updatedAt: floor.updated_at,
+          rooms: floor.rooms?.map((room) => ({
+            id: room.id,
+            name: room.name,
+            roomNumber: room.room_number,
+            capacity: room.capacity,
+            status: room.status,
+            floorId: room.floor_id,
+            createdAt: room.created_at,
+            updatedAt: room.updated_at,
+          })),
+        })),
+      })) || [];
 
     const totalPages = Math.ceil((count || 0) / limit);
 
@@ -199,14 +224,14 @@ export class BuildingsService {
       capacity: building.capacity,
       createdAt: building.created_at,
       updatedAt: building.updated_at,
-      floors: building.floors?.map(floor => ({
+      floors: building.floors?.map((floor) => ({
         id: floor.id,
         name: floor.name,
         number: floor.number,
         buildingId: floor.building_id,
         createdAt: floor.created_at,
         updatedAt: floor.updated_at,
-        rooms: floor.rooms?.map(room => ({
+        rooms: floor.rooms?.map((room) => ({
           id: room.id,
           name: room.name,
           roomNumber: room.room_number,
@@ -215,8 +240,8 @@ export class BuildingsService {
           floorId: room.floor_id,
           createdAt: room.created_at,
           updatedAt: room.updated_at,
-        }))
-      }))
+        })),
+      })),
     };
   }
 
@@ -225,6 +250,9 @@ export class BuildingsService {
     updateBuildingDto: UpdateBuildingDto,
   ): Promise<Building> {
     const supabase = this.getSupabaseClient();
+
+    // Log the incoming DTO for debugging
+    this.logger.debug(`Updating building ${id} with data:`, updateBuildingDto);
 
     // Check if building code already exists (if updating code)
     if (updateBuildingDto.code) {
@@ -240,16 +268,28 @@ export class BuildingsService {
       }
     }
 
+    // Build update object, only including defined values
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updateBuildingDto.buildingName !== undefined) {
+      updateData.building_name = updateBuildingDto.buildingName;
+    }
+    if (updateBuildingDto.code !== undefined) {
+      updateData.code = updateBuildingDto.code;
+    }
+    if (updateBuildingDto.capacity !== undefined) {
+      updateData.capacity = updateBuildingDto.capacity;
+    }
+
+    this.logger.debug(`Supabase update payload:`, updateData);
+
     const { data: building, error } = await supabase
       .from('buildings')
-      .update({
-        building_name: updateBuildingDto.buildingName,
-        code: updateBuildingDto.code,
-        capacity: updateBuildingDto.capacity,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
-      .select()
+      .select('*')
       .single();
 
     if (error) {
@@ -264,7 +304,25 @@ export class BuildingsService {
     }
 
     this.logger.log(`Building updated successfully: ${building.building_name}`);
-    return building;
+
+    // Notify admins about building update (global notification)
+    await this.notificationService.notifyAll(
+      'Building Updated',
+      `Building "${building.building_name}" (${building.code}) has been updated.`,
+      NotificationType.INFO,
+      undefined,
+      { expiresInDays: 7 },
+    );
+
+    // Transform database fields to API response format
+    return {
+      id: building.id,
+      buildingName: building.building_name,
+      code: building.code,
+      capacity: building.capacity,
+      createdAt: building.created_at,
+      updatedAt: building.updated_at,
+    };
   }
 
   async remove(id: string): Promise<void> {
@@ -280,6 +338,15 @@ export class BuildingsService {
     }
 
     this.logger.log(`Building deleted successfully: ${id}`);
+
+    // Notify admins about building deletion (global notification)
+    await this.notificationService.notifyAll(
+      'Building Deleted',
+      `A building has been deleted.`,
+      NotificationType.WARNING,
+      undefined,
+      { expiresInDays: 7 },
+    );
   }
 
   async getBuildingStats(id: string): Promise<any> {

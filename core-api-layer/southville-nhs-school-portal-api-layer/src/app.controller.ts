@@ -38,28 +38,15 @@ export class AppController {
       },
     },
   })
-  async getHealth() {
-    try {
-      // Test Supabase connection using an existing table
-      const supabase = this.supabaseService.getClient();
-      const { data, error } = await supabase
-        .from('users')
-        .select('id')
-        .limit(1);
-
-      return {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        supabase: error ? 'disconnected' : 'connected',
-        error: error?.message || null,
-      };
-    } catch (error) {
-      return {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        supabase: 'error',
-        error: error.message,
-      };
-    }
+  getHealth() {
+    // Ultra-fast health check for Render - return immediately
+    // Render's health check times out quickly, so we return instantly
+    // Supabase connectivity can be checked separately if needed
+    return {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      supabase: 'not_checked', // Skip Supabase check for health endpoint
+      error: null,
+    };
   }
 }

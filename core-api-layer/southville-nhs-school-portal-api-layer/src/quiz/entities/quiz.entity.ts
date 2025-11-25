@@ -106,4 +106,10 @@ export class Quiz {
 
   @ApiProperty({ description: 'Updated at timestamp' })
   updated_at: string;
+
+  @ApiProperty({ description: 'Soft delete timestamp', required: false })
+  deleted_at?: string;
+
+  @ApiProperty({ description: 'User ID who deleted the quiz', required: false })
+  deleted_by?: string;
 }

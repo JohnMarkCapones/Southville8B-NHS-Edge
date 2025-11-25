@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +19,7 @@ interface SequentialModeRendererProps {
   onPrevious: () => void
   onSubmit: () => void
   timeRemaining: number
+  markQuestionViewed?: (questionId: string) => void
 }
 
 export function SequentialModeRenderer({
@@ -30,8 +31,24 @@ export function SequentialModeRenderer({
   onPrevious,
   onSubmit,
   timeRemaining,
+  markQuestionViewed,
 }: SequentialModeRendererProps) {
   const [showSubmissionDialog, setShowSubmissionDialog] = useState(false)
+
+  // ✅ TIME TRACKING: Mark current question as viewed when it changes
+  // This is especially important when used in hybrid mode
+  useEffect(() => {
+    if (markQuestionViewed && quiz.questions[currentQuestionIndex]) {
+      markQuestionViewed(quiz.questions[currentQuestionIndex].id)
+    }
+  }, [currentQuestionIndex, quiz.questions, markQuestionViewed])
+
+  // console.log('[SequentialRenderer] Rendering', {
+  //   questionsCount: quiz.questions.length,
+  //   currentQuestionIndex,
+  //   currentQuestion: quiz.questions[currentQuestionIndex],
+  //   hasValidationSettings: !!quiz.validationSettings
+  // })
 
   const currentQuestion = quiz.questions[currentQuestionIndex]
   const progress = quiz.questions.length > 0 ? ((currentQuestionIndex + 1) / quiz.questions.length) * 100 : 0
@@ -41,10 +58,10 @@ export function SequentialModeRenderer({
   const allQuestionsAnswered = quiz.questions.every((q) => responses[q.id])
 
   // Check if user can proceed to next question
-  const canProceedToNext = !quiz.validationSettings.requireAnswerToProgress || isCurrentQuestionAnswered
+  const canProceedToNext = !quiz.validationSettings?.requireAnswerToProgress || isCurrentQuestionAnswered
 
   // Check if user can submit quiz
-  const canSubmitQuiz = !quiz.validationSettings.requireAllAnswersToSubmit || allQuestionsAnswered
+  const canSubmitQuiz = !quiz.validationSettings?.requireAllAnswersToSubmit || allQuestionsAnswered
 
   const handleSubmitClick = () => {
     setShowSubmissionDialog(true)
@@ -77,7 +94,7 @@ export function SequentialModeRenderer({
       {/* Current Question */}
       <Card
         className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm ${
-          quiz.validationSettings.requireAnswerToProgress && !isCurrentQuestionAnswered
+          quiz.validationSettings?.requireAnswerToProgress && !isCurrentQuestionAnswered
             ? "ring-2 ring-orange-200 dark:ring-orange-800"
             : ""
         }`}
@@ -90,12 +107,14 @@ export function SequentialModeRenderer({
               </Badge>
             )}
             <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-xl font-semibold">{currentQuestion.title}</h2>
-              {quiz.validationSettings.requireAnswerToProgress && !isCurrentQuestionAnswered && (
+              <span className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-full text-lg font-medium">
+                {currentQuestionIndex + 1}
+              </span>
+              <h2 className="text-xl font-semibold">Question {currentQuestionIndex + 1}</h2>
+              {quiz.validationSettings?.requireAnswerToProgress && !isCurrentQuestionAnswered && (
                 <Lock className="w-4 h-4 text-orange-500" />
               )}
             </div>
-            {currentQuestion.description && <p className="text-muted-foreground">{currentQuestion.description}</p>}
           </div>
 
           <QuizRenderer
@@ -104,7 +123,7 @@ export function SequentialModeRenderer({
             onResponseChange={(response) => onResponseChange(currentQuestion.id, response)}
           />
 
-          {quiz.validationSettings.requireAnswerToProgress && !isCurrentQuestionAnswered && (
+          {quiz.validationSettings?.requireAnswerToProgress && !isCurrentQuestionAnswered && (
             <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
               <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
                 <AlertCircle className="w-4 h-4" />
@@ -116,27 +135,27 @@ export function SequentialModeRenderer({
       </Card>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
         <Button
           variant="outline"
           onClick={onPrevious}
           disabled={currentQuestionIndex === 0}
-          className="px-6 bg-transparent"
+          className="px-4 sm:px-6 bg-transparent min-h-[44px]"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
+          <ArrowLeft className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">Previous</span>
         </Button>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-1 justify-end">
           {currentQuestionIndex === quiz.questions.length - 1 ? (
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
               {!canSubmitQuiz && (
-                <span className="text-sm text-orange-600 dark:text-orange-400">Answer all questions to submit</span>
+                <span className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 text-right">Answer all questions to submit</span>
               )}
               <Button
                 onClick={handleSubmitClick}
                 disabled={!canSubmitQuiz}
-                className={`px-8 ${
+                className={`px-6 sm:px-8 min-h-[44px] w-full sm:w-auto ${
                   canSubmitQuiz
                     ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
                     : "bg-gray-400 cursor-not-allowed"
@@ -147,20 +166,21 @@ export function SequentialModeRenderer({
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
               {!canProceedToNext && (
-                <span className="text-sm text-orange-600 dark:text-orange-400">Complete this question to continue</span>
+                <span className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 text-right">Complete this question to continue</span>
               )}
               <Button
                 onClick={onNext}
                 disabled={!canProceedToNext}
-                className={`px-6 ${
+                className={`px-4 sm:px-6 min-h-[44px] w-full sm:w-auto ${
                   canProceedToNext
                     ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
+                <span className="sm:hidden">Next Question</span>
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>

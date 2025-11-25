@@ -83,11 +83,3 @@ export class CreateSubjectDto {
   })
   visibility?: 'public' | 'students' | 'restricted';
 }
-
-
-
-
-
-
-
-

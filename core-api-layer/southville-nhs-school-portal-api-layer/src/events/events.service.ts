@@ -27,6 +27,13 @@ import { UpdateEventScheduleDto } from './dto/update-event-schedule.dto';
 import { CreateEventFaqDto } from './dto/create-event.dto';
 import { UpdateEventFaqDto } from './dto/update-event-faq.dto';
 import { ReorderEventItemsDto } from './dto/reorder-event-items.dto';
+import { EventStatisticsDto } from './dto/event-statistics.dto';
+import { TagDto } from './dto/tag.dto';
+import { NotificationService } from '../common/services/notification.service';
+import {
+  NotificationType,
+  NotificationCategory,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class EventsService {
@@ -38,6 +45,7 @@ export class EventsService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private notificationService: NotificationService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -63,10 +71,23 @@ export class EventsService {
       // Validate organizer exists
       await this.validateOrganizer(dto.organizerId);
 
+      // Validate club if provided
+      if (dto.clubId) {
+        await this.validateClubId(dto.clubId);
+      }
+
       // Validate tags if provided
       if (dto.tagIds && dto.tagIds.length > 0) {
         await this.validateTagIds(dto.tagIds);
       }
+
+      // Log Cloudflare Images metadata from DTO
+      this.logger.log('📸 Creating event with image metadata:');
+      this.logger.log(`  - eventImage: ${dto.eventImage}`);
+      this.logger.log(`  - cfImageId: ${dto.cfImageId}`);
+      this.logger.log(`  - cfImageUrl: ${dto.cfImageUrl}`);
+      this.logger.log(`  - imageFileSize: ${dto.imageFileSize}`);
+      this.logger.log(`  - imageMimeType: ${dto.imageMimeType}`);
 
       // Create event
       const { data: event, error } = await supabase
@@ -78,7 +99,12 @@ export class EventsService {
           time: dto.time,
           location: dto.location,
           organizer_id: dto.organizerId,
+          club_id: dto.clubId || null,
           event_image: dto.eventImage,
+          cf_image_id: dto.cfImageId || '',
+          cf_image_url: dto.cfImageUrl || '',
+          image_file_size: dto.imageFileSize || 0,
+          image_mime_type: dto.imageMimeType || '',
           status: dto.status,
           visibility: dto.visibility,
         })
@@ -227,7 +253,88 @@ export class EventsService {
       await this.invalidateEventCaches();
 
       this.logger.log(`Event created successfully: ${event.id}`);
-      return await this.findOne(event.id);
+
+      // Notify target audience about new event
+      const eventData = await this.findOne(event.id);
+      const targetUserIds = await this.getTargetUsersForEvent(eventData);
+
+      if (targetUserIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          targetUserIds,
+          `New Event: ${eventData.title}`,
+          `${eventData.description?.substring(0, 100) || 'A new event has been created.'}...`,
+          NotificationType.INFO,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for ${targetUserIds.length} users about new event: ${eventData.title}`,
+        );
+      } else {
+        this.logger.warn(
+          `No target users found for event: ${eventData.title} (visibility: ${eventData.visibility}, club_id: ${eventData.clubId})`,
+        );
+      }
+
+      // ✅ NEW: Notify all teachers about school-wide events created by admin
+      try {
+        if (
+          eventData.visibility === 'public' ||
+          (Array.isArray(eventData.visibility) &&
+            eventData.visibility.includes('public'))
+        ) {
+          // Get all active teachers
+          const { data: teachers, error: teachersError } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .not('user_id', 'is', null);
+
+          if (!teachersError && teachers && teachers.length > 0) {
+            const teacherUserIds = teachers
+              .map((t) => t.user_id)
+              .filter(Boolean);
+
+            if (teacherUserIds.length > 0) {
+              // Verify users are active
+              const { data: activeTeachers } = await supabase
+                .from('users')
+                .select('id')
+                .in('id', teacherUserIds)
+                .eq('status', 'active');
+
+              if (activeTeachers && activeTeachers.length > 0) {
+                const activeTeacherIds = activeTeachers.map((u) => u.id);
+
+                await this.notificationService.notifyUsers(
+                  activeTeacherIds,
+                  `📅 School Event: ${eventData.title}`,
+                  `New school event on ${eventData.date} at ${eventData.time || 'TBA'}. Location: ${eventData.location || 'TBA'}. ${eventData.description?.substring(0, 80) || ''}`,
+                  NotificationType.INFO,
+                  userId,
+                  {
+                    category: NotificationCategory.EVENT_ANNOUNCEMENT,
+                    expiresInDays: 14,
+                  },
+                );
+
+                this.logger.log(
+                  `👩‍🏫 Notified ${activeTeacherIds.length} teachers about school event: ${eventData.title}`,
+                );
+              }
+            }
+          }
+        }
+      } catch (teacherNotifError) {
+        this.logger.warn(
+          'Failed to notify teachers about event:',
+          teacherNotifError,
+        );
+      }
+
+      return eventData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -265,8 +372,22 @@ export class EventsService {
     // Start with a query that includes related data
     let query = supabase.from('events').select(
       `
-      *,
+      id,
+      title,
+      description,
+      date,
+      time,
+      location,
+      organizer_id,
+      club_id,
+      event_image,
+      status,
+      visibility,
+      is_featured,
+      created_at,
+      updated_at,
       organizer:users!events_organizer_id_fkey(id, full_name, email),
+      club:clubs!events_club_id_fkey(id, name, description),
       tags:event_tags(tag:tags(id, name, color)),
       additionalInfo:event_additional_info(id, title, content, order_index),
       highlights:event_highlights(id, title, content, image_url, order_index),
@@ -359,14 +480,30 @@ export class EventsService {
         time: event.time,
         location: event.location,
         organizerId: event.organizer_id,
+        clubId: event.club_id,
         eventImage: event.event_image,
         status: event.status,
         visibility: event.visibility,
         is_featured: event.is_featured,
         createdAt: event.created_at,
         updatedAt: event.updated_at,
-        organizer: event.organizer,
-        tags: event.tags?.map((t) => t.tag),
+        organizer: ((organizer) =>
+          organizer
+            ? {
+                id: organizer.id,
+                fullName: organizer.full_name,
+                email: organizer.email,
+              }
+            : undefined)(
+          Array.isArray(event.organizer) ? event.organizer[0] : event.organizer,
+        ),
+        club: ((club) =>
+          club
+            ? { id: club.id, name: club.name, description: club.description }
+            : undefined)(
+          Array.isArray(event.club) ? event.club[0] : event.club,
+        ),
+        tags: (event.tags as any[])?.flatMap((t: any) => t.tag) || [],
         additionalInfo: event.additionalInfo?.sort(
           (a, b) => a.order_index - b.order_index,
         ),
@@ -390,7 +527,179 @@ export class EventsService {
     // Cache the result
     await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
 
-    return result;
+    return result as any;
+  }
+
+  async findByClubId(
+    clubId: string,
+    filters: any = {},
+  ): Promise<{ data: Event[]; pagination: any }> {
+    const cacheKey = `events:club:${clubId}:${JSON.stringify(filters)}`;
+
+    // Try to get from cache
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) {
+      return cached as { data: Event[]; pagination: any };
+    }
+
+    const supabase = this.getSupabaseClient();
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      visibility,
+      startDate,
+      endDate,
+      search,
+    } = filters;
+
+    // Validate club exists
+    await this.validateClubId(clubId);
+
+    // Start with a query that includes related data
+    let query = supabase.from('events').select(
+      `
+      id,
+      title,
+      description,
+      date,
+      time,
+      location,
+      organizer_id,
+      club_id,
+      event_image,
+      status,
+      visibility,
+      is_featured,
+      created_at,
+      updated_at,
+      organizer:users!events_organizer_id_fkey(id, full_name, email),
+      club:clubs!events_club_id_fkey(id, name, description),
+      tags:event_tags(tag:tags(id, name, color)),
+      additionalInfo:event_additional_info(id, title, content, order_index),
+      highlights:event_highlights(id, title, content, image_url, order_index),
+      schedule:event_schedule(id, activity_time, activity_description, order_index),
+      faq:events_faq(id, question, answer)
+      `,
+      { count: 'exact' },
+    );
+
+    // Filter by club_id
+    query = query.eq('club_id', clubId);
+
+    // Filter out soft-deleted events
+    query = query.is('deleted_at', null);
+
+    // Apply filters
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (visibility) {
+      query = query.eq('visibility', visibility);
+    }
+
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
+    if (search) {
+      query = query.or(
+        `title.ilike.%${search}%,description.ilike.%${search}%,location.ilike.%${search}%`,
+      );
+    }
+
+    // Apply pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    // Order by date descending
+    query = query.order('date', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      this.logger.error('Error fetching club events:', error);
+      throw new InternalServerErrorException('Failed to fetch club events');
+    }
+
+    // Transform the data to match our entity structure
+    const transformedData =
+      data?.map((event) => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        organizerId: event.organizer_id,
+        clubId: event.club_id,
+        eventImage: event.event_image,
+        status: event.status,
+        visibility: event.visibility,
+        is_featured: event.is_featured,
+        createdAt: event.created_at,
+        updatedAt: event.updated_at,
+        organizer: ((organizer) =>
+          organizer
+            ? {
+                id: organizer.id,
+                fullName: organizer.full_name,
+                email: organizer.email,
+              }
+            : undefined)(
+          Array.isArray(event.organizer) ? event.organizer[0] : event.organizer,
+        ),
+        club: ((club) =>
+          club
+            ? { id: club.id, name: club.name, description: club.description }
+            : undefined)(
+          Array.isArray(event.club) ? event.club[0] : event.club,
+        ),
+        tags: (event.tags as any[])?.flatMap((t: any) => t.tag) || [],
+        additionalInfo: event.additionalInfo?.sort(
+          (a, b) => a.order_index - b.order_index,
+        ),
+        highlights: event.highlights?.sort(
+          (a, b) => a.order_index - b.order_index,
+        ),
+        schedule: event.schedule?.sort((a, b) => a.order_index - b.order_index),
+        faq: event.faq,
+      })) || [];
+
+    const result = {
+      data: transformedData,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit),
+      },
+    };
+
+    // Cache the result
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result as any;
+  }
+
+  async findPublicEventsByClubId(
+    clubId: string,
+    filters: any = {},
+  ): Promise<{ data: Event[]; pagination: any }> {
+    // Only return public events for club
+    const publicFilters = {
+      ...filters,
+      visibility: 'public',
+      status: 'published',
+    };
+
+    return this.findByClubId(clubId, publicFilters);
   }
 
   async findOne(id: string): Promise<Event> {
@@ -407,8 +716,22 @@ export class EventsService {
       .from('events')
       .select(
         `
-        *,
+        id,
+        title,
+        description,
+        date,
+        time,
+        location,
+        organizer_id,
+        club_id,
+        event_image,
+        status,
+        visibility,
+        is_featured,
+        created_at,
+        updated_at,
         organizer:users!events_organizer_id_fkey(id, full_name, email),
+        club:clubs!events_club_id_fkey(id, name, description),
         tags:event_tags(tag:tags(id, name, color)),
         additionalInfo:event_additional_info(id, title, content, order_index),
         highlights:event_highlights(id, title, content, image_url, order_index),
@@ -433,6 +756,7 @@ export class EventsService {
       time: data.time,
       location: data.location,
       organizerId: data.organizer_id,
+      clubId: data.club_id,
       eventImage: data.event_image,
       status: data.status,
       visibility: data.visibility,
@@ -440,6 +764,7 @@ export class EventsService {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       organizer: data.organizer,
+      club: data.club,
       tags: data.tags?.map((t) => t.tag),
       additionalInfo: data.additionalInfo?.sort(
         (a, b) => a.order_index - b.order_index,
@@ -454,7 +779,7 @@ export class EventsService {
     // Cache the result
     await this.cacheManager.set(cacheKey, transformedEvent, this.CACHE_TTL);
 
-    return transformedEvent;
+    return transformedEvent as any;
   }
 
   async findUpcoming(): Promise<{ data: Event[]; pagination: any }> {
@@ -473,7 +798,20 @@ export class EventsService {
       .from('events')
       .select(
         `
-        *,
+        id,
+        title,
+        description,
+        date,
+        time,
+        location,
+        organizer_id,
+        club_id,
+        event_image,
+        status,
+        visibility,
+        is_featured,
+        created_at,
+        updated_at,
         organizer:users!events_organizer_id_fkey(id, full_name, email),
         tags:event_tags(tag:tags(id, name, color)),
         additionalInfo:event_additional_info(id, title, content, order_index),
@@ -505,14 +843,24 @@ export class EventsService {
         time: event.time,
         location: event.location,
         organizerId: event.organizer_id,
+        clubId: event.club_id,
         eventImage: event.event_image,
         status: event.status,
         visibility: event.visibility,
         is_featured: event.is_featured,
         createdAt: event.created_at,
         updatedAt: event.updated_at,
-        organizer: event.organizer,
-        tags: event.tags?.map((t) => t.tag),
+        organizer: ((organizer) =>
+          organizer
+            ? {
+                id: organizer.id,
+                fullName: organizer.full_name,
+                email: organizer.email,
+              }
+            : undefined)(
+          Array.isArray(event.organizer) ? event.organizer[0] : event.organizer,
+        ),
+        tags: (event.tags as any[])?.flatMap((t: any) => t.tag) || [],
         additionalInfo: event.additionalInfo?.sort(
           (a, b) => a.order_index - b.order_index,
         ),
@@ -536,7 +884,7 @@ export class EventsService {
     // Cache the result
     await this.cacheManager.set(cacheKey, result, this.UPCOMING_CACHE_TTL);
 
-    return result;
+    return result as any;
   }
 
   async findByOrganizer(
@@ -573,6 +921,11 @@ export class EventsService {
         await this.validateOrganizer(dto.organizerId);
       }
 
+      // Validate club if being updated
+      if (dto.clubId) {
+        await this.validateClubId(dto.clubId);
+      }
+
       // Validate tags if being updated
       if (dto.tagIds && dto.tagIds.length > 0) {
         await this.validateTagIds(dto.tagIds);
@@ -589,6 +942,7 @@ export class EventsService {
       if (dto.time) updateData.time = dto.time;
       if (dto.location) updateData.location = dto.location;
       if (dto.organizerId) updateData.organizer_id = dto.organizerId;
+      if (dto.clubId !== undefined) updateData.club_id = dto.clubId;
       if (dto.eventImage !== undefined) updateData.event_image = dto.eventImage;
       if (dto.status) updateData.status = dto.status;
       if (dto.visibility) updateData.visibility = dto.visibility;
@@ -633,7 +987,29 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event updated successfully: ${id}`);
-      return await this.findOne(id);
+
+      // Notify target audience about event update
+      const eventData = await this.findOne(id);
+      const targetUserIds = await this.getTargetUsersForEvent(eventData);
+
+      if (targetUserIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          targetUserIds,
+          `Event Updated: ${eventData.title}`,
+          `The event "${eventData.title}" has been updated.`,
+          NotificationType.INFO,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for ${targetUserIds.length} users about event update: ${eventData.title}`,
+        );
+      }
+
+      return eventData;
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -647,11 +1023,20 @@ export class EventsService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<Event> {
     const supabase = this.getSupabaseClient();
 
     try {
-      await this.findOne(id); // Verify event exists
+      // Fetch full event details to return for audit logging
+      const { data: event, error: fetchError} = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !event) {
+        throw new NotFoundException(`Event with ID ${id} not found`);
+      }
 
       const { error } = await supabase.from('events').delete().eq('id', id);
 
@@ -665,6 +1050,9 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event deleted successfully: ${id}`);
+
+      // Return the entity so audit interceptor can capture the title
+      return event;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -674,11 +1062,14 @@ export class EventsService {
     }
   }
 
-  async softDelete(id: string, userId: string, reason?: string): Promise<void> {
+  async softDelete(id: string, userId: string, reason?: string): Promise<Event> {
     const supabase = this.getSupabaseClient();
 
     try {
-      await this.findOne(id); // Verify event exists
+      // Get event data before soft-deleting
+      const eventData = await this.findOne(id);
+      // Fetch event data for audit logging
+      const event = await this.findOne(id);
 
       const { error } = await supabase
         .from('events')
@@ -698,6 +1089,28 @@ export class EventsService {
       await this.cacheManager.del(`event:${id}`);
 
       this.logger.log(`Event archived successfully: ${id}`);
+
+      // Notify target audience about event cancellation
+      const targetUserIds = await this.getTargetUsersForEvent(eventData);
+
+      if (targetUserIds.length > 0) {
+        await this.notificationService.notifyUsers(
+          targetUserIds,
+          `Event Cancelled: ${eventData.title}`,
+          `The event "${eventData.title}" has been cancelled.`,
+          NotificationType.WARNING,
+          userId,
+          {
+            category: NotificationCategory.EVENT_ANNOUNCEMENT,
+            expiresInDays: 7,
+          },
+        );
+        this.logger.log(
+          `Created notifications for ${targetUserIds.length} users about event cancellation: ${eventData.title}`,
+        );
+      }
+      // Return the event for audit logging
+      return event;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -715,7 +1128,22 @@ export class EventsService {
 
     let query = supabase.from('events').select(
       `
-      *,
+      id,
+      title,
+      description,
+      date,
+      time,
+      location,
+      organizer_id,
+      club_id,
+      event_image,
+      status,
+      visibility,
+      is_featured,
+      created_at,
+      updated_at,
+      deleted_at,
+      deleted_by,
       organizer:users!events_organizer_id_fkey(id, full_name, email),
       tags:event_tags(tag:tags(id, name, color))
       `,
@@ -777,6 +1205,7 @@ export class EventsService {
         time: event.time,
         location: event.location,
         organizerId: event.organizer_id,
+        clubId: event.club_id,
         eventImage: event.event_image,
         status: event.status,
         visibility: event.visibility,
@@ -785,8 +1214,17 @@ export class EventsService {
         updatedAt: event.updated_at,
         deletedAt: event.deleted_at,
         deletedBy: event.deleted_by, // Just return the UUID
-        organizer: event.organizer,
-        tags: event.tags?.map((t) => t.tag),
+        organizer: ((organizer) =>
+          organizer
+            ? {
+                id: organizer.id,
+                fullName: organizer.full_name,
+                email: organizer.email,
+              }
+            : undefined)(
+          Array.isArray(event.organizer) ? event.organizer[0] : event.organizer,
+        ),
+        tags: (event.tags as any[])?.flatMap((t: any) => t.tag) || [],
       })) || [];
 
     return {
@@ -1281,14 +1719,275 @@ export class EventsService {
     }
   }
 
+  private async validateClubId(clubId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    const { data } = await supabase
+      .from('clubs')
+      .select('id')
+      .eq('id', clubId)
+      .single();
+
+    if (!data) {
+      throw new BadRequestException('Club ID is invalid');
+    }
+  }
+
+  async getTags(): Promise<TagDto[]> {
+    const cacheKey = 'events:tags';
+
+    // Try to get from cache first
+    const cached = await this.cacheManager.get<TagDto[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const supabase = this.getSupabaseClient();
+
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('id, name, slug')
+        .order('name', { ascending: true });
+
+      if (error) {
+        this.logger.error('Error fetching tags:', error);
+        throw new InternalServerErrorException('Failed to fetch tags');
+      }
+
+      const tags: TagDto[] = (data || []).map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        slug: tag.slug,
+      }));
+
+      // Cache the result for 10 minutes
+      await this.cacheManager.set(cacheKey, tags, this.UPCOMING_CACHE_TTL);
+
+      return tags;
+    } catch (error) {
+      this.logger.error('Error fetching tags:', error);
+      throw new InternalServerErrorException('Failed to fetch tags');
+    }
+  }
+
+  async getStatistics(): Promise<EventStatisticsDto> {
+    const cacheKey = 'events:statistics';
+
+    // Try to get from cache first
+    const cached = await this.cacheManager.get<EventStatisticsDto>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const supabase = this.getSupabaseClient();
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    try {
+      // Execute all queries in parallel for better performance
+      const [
+        totalResult,
+        thisWeekResult,
+        publishedResult,
+        draftResult,
+        cancelledResult,
+        upcomingResult,
+        pastResult,
+      ] = await Promise.all([
+        // Total events
+        supabase.from('events').select('id', { count: 'exact', head: true }),
+
+        // This week events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', startOfWeek.toISOString()),
+
+        // Published events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'published'),
+
+        // Draft events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'draft'),
+
+        // Cancelled events
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'cancelled'),
+
+        // Upcoming events (published and future date)
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'published')
+          .gte('date', now.toISOString().split('T')[0]),
+
+        // Past events (completed or past date)
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .or(
+            `status.eq.completed,and(date.lt.${now.toISOString().split('T')[0]})`,
+          ),
+      ]);
+
+      // Check for errors
+      const errors = [
+        totalResult.error,
+        thisWeekResult.error,
+        publishedResult.error,
+        draftResult.error,
+        cancelledResult.error,
+        upcomingResult.error,
+        pastResult.error,
+      ].filter(Boolean);
+
+      if (errors.length > 0) {
+        this.logger.error('Error fetching event statistics:', errors);
+        throw new InternalServerErrorException(
+          'Failed to fetch event statistics',
+        );
+      }
+
+      const statistics: EventStatisticsDto = {
+        totalEvents: totalResult.count || 0,
+        thisWeekEvents: thisWeekResult.count || 0,
+        publishedEvents: publishedResult.count || 0,
+        draftEvents: draftResult.count || 0,
+        cancelledEvents: cancelledResult.count || 0,
+        upcomingEvents: upcomingResult.count || 0,
+        pastEvents: pastResult.count || 0,
+      };
+
+      // Cache the result for 5 minutes
+      await this.cacheManager.set(cacheKey, statistics, this.CACHE_TTL);
+
+      return statistics;
+    } catch (error) {
+      this.logger.error('Error calculating event statistics:', error);
+      throw new InternalServerErrorException(
+        'Failed to calculate event statistics',
+      );
+    }
+  }
+
   private async invalidateEventCaches(): Promise<void> {
     // Note: In a production environment, you might want to implement
     // a more sophisticated cache invalidation strategy
-    const patterns = ['events:*', 'events:upcoming'];
+    const patterns = ['events:*', 'events:upcoming', 'events:statistics'];
 
     for (const pattern of patterns) {
       // Since cache-manager doesn't expose keys(), we'll rely on TTL expiration
       // In production, consider using Redis with pattern-based deletion
+    }
+  }
+
+  /**
+   * Get target user IDs for an event based on visibility and club_id
+   */
+  private async getTargetUsersForEvent(event: Event): Promise<string[]> {
+    try {
+      const supabase = this.getSupabaseClient();
+      const userIds: string[] = [];
+
+      // If event is public, notify all active users
+      if (
+        event.visibility === 'public' ||
+        (Array.isArray(event.visibility) && event.visibility.includes('public'))
+      ) {
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('status', 'active');
+
+        if (error) {
+          this.logger.error('Error fetching users for public event:', error);
+          return [];
+        }
+
+        if (users) {
+          userIds.push(...users.map((u) => u.id));
+        }
+      }
+      // If event is private and has club_id, notify club members
+      else if (event.clubId) {
+        const { data: memberships, error } = await supabase
+          .from('club_memberships')
+          .select('user_id')
+          .eq('club_id', event.clubId)
+          .eq('status', 'active');
+
+        if (error) {
+          this.logger.error(
+            'Error fetching club members for private event:',
+            error,
+          );
+          return [];
+        }
+
+        if (memberships) {
+          const memberUserIds = memberships
+            .map((m) => m.user_id)
+            .filter(Boolean);
+
+          // Verify these users are active
+          if (memberUserIds.length > 0) {
+            const { data: activeUsers } = await supabase
+              .from('users')
+              .select('id')
+              .in('id', memberUserIds)
+              .eq('status', 'active');
+
+            if (activeUsers) {
+              userIds.push(...activeUsers.map((u) => u.id));
+            }
+          }
+        }
+      }
+      // If event is private without club_id, notify admins only
+      else {
+        // Get admin role ID
+        const { data: adminRole } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', 'Admin')
+          .single();
+
+        if (adminRole) {
+          const { data: admins, error } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role_id', adminRole.id)
+            .eq('status', 'active');
+
+          if (error) {
+            this.logger.error(
+              'Error fetching admins for private event:',
+              error,
+            );
+            return [];
+          }
+
+          if (admins) {
+            userIds.push(...admins.map((u) => u.id));
+          }
+        }
+      }
+
+      // Remove duplicates
+      return Array.from(new Set(userIds));
+    } catch (error) {
+      this.logger.error('Error in getTargetUsersForEvent:', error);
+      return [];
     }
   }
 }

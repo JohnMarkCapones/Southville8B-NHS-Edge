@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { BrandChip } from "@/components/ui/brand-chip"
+import { GuessBreadcrumb } from "@/components/ui/guess-breadcrumb"
 
 const teachers = [
   {
@@ -33,6 +34,7 @@ const teachers = [
 export default function AboutPageClient() {
   return (
     <main>
+      <GuessBreadcrumb items={[{ label: "About Us" }]} />
       {/* Top banner */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900">
         <div className="absolute inset-0 bg-[radial-gradient(75%_60%_at_10%_10%,rgba(37,99,235,0.18),transparent),radial-gradient(60%_55%_at_90%_20%,rgba(14,165,233,0.16),transparent)]" />

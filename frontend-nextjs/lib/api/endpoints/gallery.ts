@@ -15,6 +15,7 @@
 
 import { apiClient } from '../client';
 import { GalleryMediaType } from '../types/gallery';
+import { buildImageUrl } from '@/lib/utils/gallery-images';
 import type {
   GalleryItem,
   GalleryTag,
@@ -38,17 +39,24 @@ import type {
 /**
  * Transform backend gallery item to frontend format
  * Maps backend snake_case to camelCase and determines category
+ * Uses Cloudflare Images for proper image URLs
  */
 function transformBackendItemToFrontend(backendItem: GalleryItem): FrontendGalleryItem {
   // Determine category from tags
   const category = determineCategoryFromTags(backendItem.tags || []);
 
+  // Generate Cloudflare Images URLs from cf_image_id
+  // Use 'public' variant for all sizes since custom variants aren't created yet
+  const thumbnailUrl = buildImageUrl(backendItem.cf_image_id, 'public');
+  const cardUrl = buildImageUrl(backendItem.cf_image_id, 'public');
+  const publicUrl = buildImageUrl(backendItem.cf_image_id, 'public');
+
   return {
     id: backendItem.id,
     title: backendItem.title || backendItem.original_filename || 'Untitled',
     category,
-    image: backendItem.file_url,
-    thumbnail: backendItem.thumbnail_url,
+    image: publicUrl, // Full-size image for display
+    thumbnail: thumbnailUrl, // Optimized thumbnail for grids (using public variant)
     description: backendItem.caption || backendItem.alt_text || '',
     mediaType: backendItem.media_type,
     isFeatured: backendItem.is_featured,
@@ -303,6 +311,23 @@ export async function updateGalleryItem(
  */
 export async function deleteGalleryItem(id: string): Promise<DeleteResponse> {
   return apiClient.delete<DeleteResponse>(`/gallery/${id}`);
+}
+
+/**
+ * Restore a soft-deleted gallery item
+ *
+ * **Permissions**: Admin, Teacher only
+ *
+ * @param id - Gallery item UUID
+ * @returns Success message
+ *
+ * @example
+ * ```ts
+ * const result = await restoreGalleryItem('item-uuid-123');
+ * ```
+ */
+export async function restoreGalleryItem(id: string): Promise<{ message: string }> {
+  return apiClient.post<{ message: string }>(`/gallery/${id}/restore`, {});
 }
 
 /**

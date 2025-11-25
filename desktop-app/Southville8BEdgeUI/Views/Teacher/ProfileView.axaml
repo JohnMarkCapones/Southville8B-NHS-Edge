@@ -94,6 +94,22 @@
         <Style Selector="TextBox:focus, ComboBox:focus">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
+        <!-- Read-only TextBox styling -->
+        <Style Selector="TextBox[IsReadOnly=True]">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsEnabled" Value="True"/>
+            <Setter Property="Cursor" Value="Arrow"/>
+        </Style>
+        <Style Selector="TextBox[IsReadOnly=True]:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="TextBox[IsReadOnly=True]:focus">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
 
         <!-- BUTTONS -->
         <Style Selector="Button.outline">
@@ -144,21 +160,29 @@
     </UserControl.Styles>
 
     <Grid>
+        <!-- Loading Indicator -->
+        <Border IsVisible="{Binding IsLoading}" Background="#80000000" ZIndex="999">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200"/>
+                <TextBlock Text="Loading profile..." Margin="0,8,0,0" Foreground="White"/>
+            </StackPanel>
+        </Border>
+        
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="16" Margin="16" Classes="main-content">
                 <!-- Page Header -->
                 <Border Classes="card">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Grid ColumnDefinitions="Auto,*">
                         <!-- Profile Avatar -->
                         <Border Classes="avatar" VerticalAlignment="Center">
-                            <TextBlock Text="SY" Classes="avatar-initials" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Initials}" Classes="avatar-initials" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
 
                         <!-- Profile Info -->
                         <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" Margin="16,0,0,0">
-                            <TextBlock Text="St. Yummy" Classes="page-title"/>
-                            <TextBlock Text="Senior Math Teacher" Classes="subtle"/>
-                            <TextBlock Text="st.yummy@nhis.edu" Classes="meta"/>
+                            <TextBlock Text="{Binding FullName}" Classes="page-title"/>
+                            <TextBlock Text="{Binding SubjectSpecialization}" Classes="subtle"/>
+                            <TextBlock Text="{Binding Email}" Classes="meta"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
                                 <Border Classes="badge-success">
                                     <TextBlock Text="Active" Classes="badge-text"/>
@@ -167,12 +191,6 @@
                                     <TextBlock Text="Verified" Classes="badge-text"/>
                                 </Border>
                             </StackPanel>
-                        </StackPanel>
-
-                        <!-- Action Buttons -->
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="16,0,0,0">
-                            <Button Content="Upload Photo" Classes="outline"/>
-                            <Button Content="Edit Profile" Classes="primary"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -187,21 +205,16 @@
                                 <TextBlock Text="Personal Information" Classes="section-header"/>
                                 <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="120,*">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Full Name" Classes="label" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Text="St. Yummy" Margin="12,0,0,12"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding FullName}" IsReadOnly="True" Margin="12,0,0,12"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Email" Classes="label" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="st.yummy@nhis.edu" Margin="12,0,0,12"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Email}" IsReadOnly="True" Margin="12,0,0,12"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Phone" Classes="label" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Watermark="Enter phone number" Margin="12,0,0,12"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PhoneNumber}" IsReadOnly="True" Margin="12,0,0,12"/>
 
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Department" Classes="label" VerticalAlignment="Center"/>
-                                    <ComboBox Grid.Row="3" Grid.Column="1" Margin="12,0,0,0">
-                                        <ComboBoxItem Content="Mathematics"/>
-                                        <ComboBoxItem Content="Science"/>
-                                        <ComboBoxItem Content="English"/>
-                                        <ComboBoxItem Content="Social Studies"/>
-                                    </ComboBox>
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DepartmentName}" IsReadOnly="True" Margin="12,0,0,0"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -212,13 +225,13 @@
                                 <TextBlock Text="Contact and Address" Classes="section-header"/>
                                 <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Address" Classes="label" MinWidth="120" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Watermark="Enter address" Margin="12,0,0,12" AutomationProperties.Name="Address"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Address}" IsReadOnly="True" Margin="12,0,0,12" AutomationProperties.Name="Address"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="City" Classes="label" MinWidth="120" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Watermark="Enter city" Margin="12,0,0,12" AutomationProperties.Name="City"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Birthday" Classes="label" MinWidth="120" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Birthday}" IsReadOnly="True" Margin="12,0,0,12" AutomationProperties.Name="Birthday"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Emergency Contact" Classes="label" MinWidth="120" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Watermark="Emergency contact number" Margin="12,0,0,0" AutomationProperties.Name="Emergency Contact"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Age" Classes="label" MinWidth="120" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Age}" IsReadOnly="True" Margin="12,0,0,0" AutomationProperties.Name="Age"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -226,7 +239,7 @@
 
                     <!-- Right Column -->
                     <StackPanel Grid.Column="1" Spacing="16" Margin="16,0,0,0">
-                        <!-- Security Settings -->
+                        <!-- Security Settings - Commented Out
                         <Border Classes="card">
                             <StackPanel Spacing="16">
                                 <TextBlock Text="Security" Classes="section-header"/>
@@ -257,8 +270,9 @@
                                 </StackPanel>
                             </StackPanel>
                         </Border>
+                        -->
 
-                        <!-- Account Actions -->
+                        <!-- Account Actions - Commented Out
                         <Border Classes="card">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="Account Actions" Classes="section-header"/>
@@ -269,6 +283,7 @@
                                 </StackPanel>
                             </StackPanel>
                         </Border>
+                        -->
                     </StackPanel>
                 </Grid>
             </StackPanel>

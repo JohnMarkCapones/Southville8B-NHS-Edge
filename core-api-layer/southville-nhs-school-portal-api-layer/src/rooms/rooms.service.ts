@@ -67,14 +67,25 @@ export class RoomsService {
         throw new BadRequestException('Floor not found');
       }
 
-      // Room number conflict detection removed - allow automatic increment
+      // Auto-generate room number if not provided
+      let roomNumber = createRoomDto.roomNumber;
+      if (!roomNumber) {
+        this.logger.log(
+          `Auto-generating room number for floor ${createRoomDto.floorId}`,
+        );
+        roomNumber = await this.getNextRoomNumber(createRoomDto.floorId);
+        this.logger.log(`Generated room number: ${roomNumber}`);
+      }
+
+      // Auto-generate name if not provided
+      const roomName = createRoomDto.name || `Room ${roomNumber}`;
 
       const { data: room, error } = await supabase
         .from('rooms')
         .insert({
           floor_id: createRoomDto.floorId,
-          name: createRoomDto.name,
-          room_number: createRoomDto.roomNumber,
+          name: roomName,
+          room_number: roomNumber,
           capacity: createRoomDto.capacity,
           status: createRoomDto.status || RoomStatus.AVAILABLE,
         })

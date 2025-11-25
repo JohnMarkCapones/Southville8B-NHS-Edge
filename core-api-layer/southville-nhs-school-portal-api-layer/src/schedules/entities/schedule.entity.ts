@@ -15,6 +15,13 @@ export enum Semester {
   SECOND = '2nd',
 }
 
+export enum GradingPeriod {
+  Q1 = 'Q1',
+  Q2 = 'Q2',
+  Q3 = 'Q3',
+  Q4 = 'Q4',
+}
+
 export class Schedule {
   @ApiProperty({ description: 'Schedule ID' })
   id: string;
@@ -60,11 +67,20 @@ export class Schedule {
   schoolYear: string;
 
   @ApiProperty({
-    description: 'Semester',
+    description: 'Grading period (quarters)',
+    enum: GradingPeriod,
+    example: GradingPeriod.Q1,
+    required: false,
+  })
+  gradingPeriod?: GradingPeriod;
+
+  @ApiProperty({
+    description: 'Semester (legacy)',
     enum: Semester,
     example: Semester.FIRST,
+    required: false,
   })
-  semester: Semester;
+  semester?: Semester;
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: string;
@@ -122,7 +138,7 @@ export class Schedule {
   @ApiProperty({ description: 'Building information', required: false })
   building?: {
     id: string;
-    name: string;
+    buildingName: string;
   };
 
   @ApiProperty({

@@ -167,9 +167,29 @@ export class ModulesController {
         sectionIds: fields.sectionIds
           ? Array.isArray(fields.sectionIds)
             ? fields.sectionIds
-            : [fields.sectionIds]
+            : typeof fields.sectionIds === 'string'
+              ? JSON.parse(fields.sectionIds)
+              : [fields.sectionIds]
           : undefined,
       };
+
+      // Debug logging
+      console.log(
+        '[MODULES CONTROLLER] Raw sectionIds field:',
+        fields.sectionIds,
+      );
+      console.log(
+        '[MODULES CONTROLLER] Parsed sectionIds:',
+        createModuleDto.sectionIds,
+      );
+      console.log(
+        '[MODULES CONTROLLER] sectionIds type:',
+        typeof createModuleDto.sectionIds,
+      );
+      console.log(
+        '[MODULES CONTROLLER] sectionIds isArray:',
+        Array.isArray(createModuleDto.sectionIds),
+      );
 
       // Validate required fields based on module type
       if (createModuleDto.isGlobal && !createModuleDto.subjectId) {
@@ -654,7 +674,12 @@ export class ModulesController {
   async generateDownloadUrl(
     @Param('id', ParseUUIDPipe) id: string,
     @AuthUser() user: any,
-  ): Promise<{ downloadUrl: string; expiresAt: string }> {
+  ): Promise<{
+    downloadUrl?: string;
+    slideUrls?: string[];
+    fileType: 'pdf' | 'pptx';
+    expiresAt: string;
+  }> {
     return this.modulesService.generateDownloadUrl(id, user.id);
   }
 

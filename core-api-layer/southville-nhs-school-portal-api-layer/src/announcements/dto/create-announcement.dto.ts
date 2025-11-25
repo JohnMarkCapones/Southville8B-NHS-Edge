@@ -11,13 +11,14 @@ import {
   ArrayMinSize,
   ArrayMaxSize,
   Validate,
+  ValidateIf,
   ValidatorConstraint,
   ValidatorConstraintInterface,
   ValidationArguments,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import sanitizeHtml from 'sanitize-html';
+const sanitizeHtml = require('sanitize-html');
 
 export enum AnnouncementVisibility {
   PUBLIC = 'public',
@@ -104,18 +105,23 @@ export class CreateAnnouncementDto {
   })
   visibility: AnnouncementVisibility = AnnouncementVisibility.PUBLIC;
 
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1, { message: 'At least one target role is required' })
+  @ArrayMinSize(1, {
+    message: 'At least one target role is required when provided',
+  })
   @ArrayMaxSize(10, { message: 'Maximum 10 target roles allowed' })
   @IsUUID('4', { each: true })
   @ApiProperty({
     type: [String],
-    description: 'Target role IDs (min: 1, max: 10)',
+    required: false,
+    description:
+      'Target role IDs (min: 1, max: 10). Required if sectionIds not provided.',
     example: ['role-uuid-1', 'role-uuid-2'],
     minItems: 1,
     maxItems: 10,
   })
-  targetRoleIds: string[];
+  targetRoleIds?: string[];
 
   @IsOptional()
   @IsArray()
@@ -129,4 +135,28 @@ export class CreateAnnouncementDto {
     maxItems: 10,
   })
   tagIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20, { message: 'Maximum 20 sections allowed per announcement' })
+  @IsUUID('4', { each: true })
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description: 'Section IDs to target (for desktop app, max: 20)',
+    example: ['section-uuid-1', 'section-uuid-2'],
+    maxItems: 20,
+  })
+  sectionIds?: string[];
+
+  // Custom validator to ensure at least one targeting method is provided
+  @ValidateIf((o: CreateAnnouncementDto) => {
+    const hasRoles = o.targetRoleIds && o.targetRoleIds.length > 0;
+    const hasSections = o.sectionIds && o.sectionIds.length > 0;
+    return !hasRoles && !hasSections;
+  })
+  @IsNotEmpty({
+    message: 'Either targetRoleIds or sectionIds must be provided',
+  })
+  private readonly _validateTargeting?: any;
 }

@@ -29,6 +29,9 @@ import {
   Server,
   CalendarDays,
   FolderOpen,
+  Sparkles,
+  FileText,
+  Activity,
 } from "lucide-react"
 
 export const primaryNavItems = [
@@ -49,7 +52,6 @@ export const primaryNavItems = [
       { icon: Users2, label: "All Users", description: "Manage all system users" },
       { icon: GraduationCap, label: "Students", description: "Student management" },
       { icon: UserCog, label: "Teachers", description: "Teacher management" },
-      { icon: Shield, label: "Admins", description: "Administrator accounts" },
     ],
   },
   {
@@ -83,7 +85,9 @@ export const primaryNavItems = [
     label: "Schedule & Calendar Management",
     content: [
       { icon: CalendarIcon, label: "Academic Calendar", description: "Academic year calendar" },
+      { icon: Calendar, label: "Schedule Management", description: "Manage all schedules, templates, and publishing" },
       { icon: ClockIcon, label: "Class Schedules", description: "Class scheduling system" },
+      { icon: Sparkles, label: "Schedule Wizard", description: "Step-by-step schedule creation wizard" },
     ],
   },
   {
@@ -98,6 +102,7 @@ export const primaryNavItems = [
     label: "Customization & Settings",
     content: [
       { icon: Settings, label: "System Config", description: "System configuration" },
+      { icon: Activity, label: "Audit Logs", description: "System-wide audit trail and compliance tracking" },
       { icon: Palette, label: "Themes", description: "Theme customization" },
       { icon: Plug, label: "Integrations", description: "Third-party integrations" },
       { icon: HardDriveIcon, label: "Backup", description: "Data backup settings" },

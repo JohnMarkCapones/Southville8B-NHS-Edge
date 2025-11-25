@@ -6,10 +6,10 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { 
-  Subject, 
-  CreateSubjectRequest, 
-  UpdateSubjectRequest, 
+import {
+  Subject,
+  CreateSubjectRequest,
+  UpdateSubjectRequest,
   SubjectsListParams,
   getSubjects,
   getSubject,
@@ -17,7 +17,8 @@ import {
   updateSubject,
   deleteSubject,
   getSubjectStats,
-  checkSubjectCodeExists
+  checkSubjectCodeExists,
+  checkSubjectNameExists
 } from '@/lib/api/endpoints/subjects';
 
 interface UseSubjectsState {
@@ -45,7 +46,8 @@ interface UseSubjectsReturn extends UseSubjectsState {
   searchSubjects: (query: string) => Promise<void>;
   getStats: () => Promise<any>;
   checkCodeExists: (code: string, excludeId?: string) => Promise<boolean>;
-  
+  checkNameExists: (name: string, excludeId?: string) => Promise<boolean>;
+
   // State management
   clearError: () => void;
   setLoading: (loading: boolean) => void;
@@ -215,6 +217,15 @@ export const useSubjects = (initialParams?: SubjectsListParams): UseSubjectsRetu
     }
   }, []);
 
+  // Check if subject name exists
+  const checkNameExists = useCallback(async (name: string, excludeId?: string): Promise<boolean> => {
+    try {
+      return await checkSubjectNameExists(name, excludeId);
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Clear error
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
@@ -243,10 +254,12 @@ export const useSubjects = (initialParams?: SubjectsListParams): UseSubjectsRetu
     searchSubjects,
     getStats,
     checkCodeExists,
+    checkNameExists,
     clearError,
     setLoading,
   };
 };
+
 
 
 

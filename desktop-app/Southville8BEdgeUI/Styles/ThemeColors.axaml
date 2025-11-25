@@ -50,13 +50,25 @@
       <Color x:Key="ShadowHighColor">#20000000</Color>
       <!-- unified brush for component shadows -->
       <SolidColorBrush x:Key="ShadowColorBrush" Color="#10000000"/>
+
+      <!-- Profile UI specific colors -->
+      <SolidColorBrush x:Key="ProfileBackgroundBrush">#FAFAFA</SolidColorBrush>
+      <SolidColorBrush x:Key="ProfileCardBrush">#FFFFFF</SolidColorBrush>
+      <SolidColorBrush x:Key="AvatarPlaceholderBrush">#E5E7EB</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusActiveBrush">#10B981</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusInactiveBrush">#EF4444</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusActiveSoftBrush">#D1FAE5</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusInactiveSoftBrush">#FEE2E2</SolidColorBrush>
+      <SolidColorBrush x:Key="SectionDividerBrush">#F3F4F6</SolidColorBrush>
+      <SolidColorBrush x:Key="MinimalAccentBrush">#6366F1</SolidColorBrush>
+      <SolidColorBrush x:Key="MinimalAccentSoftBrush">#EEF2FF</SolidColorBrush>
     </ResourceDictionary>
 
     <!-- Dark -->
     <ResourceDictionary x:Key="Dark">
       <!-- surfaces -->
       <SolidColorBrush x:Key="PageBackgroundBrush">#16181D</SolidColorBrush>
-      <SolidColorBrush x:Key="CardBackgroundBrush">#1F2228</SolidColorBrush>
+      <SolidColorBrush x:Key="CardBackgroundBrush">#0F0F0F</SolidColorBrush>
       <SolidColorBrush x:Key="SidebarBackgroundBrush">#1C1F25</SolidColorBrush>
       <SolidColorBrush x:Key="BorderBrush">#2C3138</SolidColorBrush>
 
@@ -101,6 +113,18 @@
       <Color x:Key="ShadowHighColor">#66000000</Color>
       <!-- unified brush for component shadows -->
       <SolidColorBrush x:Key="ShadowColorBrush" Color="#40000000"/>
+
+      <!-- Profile UI specific colors -->
+      <SolidColorBrush x:Key="ProfileBackgroundBrush">#0F0F0F</SolidColorBrush>
+      <SolidColorBrush x:Key="ProfileCardBrush">#1A1A1A</SolidColorBrush>
+      <SolidColorBrush x:Key="AvatarPlaceholderBrush">#404040</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusActiveBrush">#10B981</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusInactiveBrush">#EF4444</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusActiveSoftBrush">#064E3B</SolidColorBrush>
+      <SolidColorBrush x:Key="StatusInactiveSoftBrush">#7F1D1D</SolidColorBrush>
+      <SolidColorBrush x:Key="SectionDividerBrush">#2A2A2A</SolidColorBrush>
+      <SolidColorBrush x:Key="MinimalAccentBrush">#6366F1</SolidColorBrush>
+      <SolidColorBrush x:Key="MinimalAccentSoftBrush">#1E1B4B</SolidColorBrush>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

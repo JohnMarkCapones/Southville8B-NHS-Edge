@@ -34,10 +34,13 @@ import {
   Sun,
   Moon,
   Monitor,
+  Calendar,
+  Users,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { logoutAction } from "@/app/actions/auth"
 import { useTranslation, languages } from "@/lib/i18n"
+import { useNotifications } from "@/hooks/useNotifications"
 
 interface StudentHeaderProps {
   studentName: string
@@ -55,64 +58,94 @@ export default function StudentHeader({ studentName, studentAvatar, gradeLevel, 
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const { t, language, setLanguage } = useTranslation()
+  
+  const {
+    notifications: apiNotifications,
+    loading: notificationsLoading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const notifications = [
-    {
-      id: 1,
-      type: "assignment",
-      title: language === 'fil' ? "Takdang Aralin sa Math" : "Math Assignment Due",
-      message: language === 'fil' ? "Ang homework sa Algebra ay due bukas ng 11:59 PM" : "Algebra homework is due tomorrow at 11:59 PM",
-      time: language === 'fil' ? "2 oras na ang nakalipas" : "2 hours ago",
-      read: false,
-      icon: BookOpen,
-      color: "text-blue-500",
-    },
-    {
-      id: 2,
-      type: "grade",
-      title: language === 'fil' ? "Bagong Marka na Na-post" : "New Grade Posted",
-      message: language === 'fil' ? "Ang marka mo sa Science quiz ay na-post na: 95/100" : "Your Science quiz grade has been posted: 95/100",
-      time: language === 'fil' ? "4 oras na ang nakalipas" : "4 hours ago",
-      read: false,
-      icon: AlertCircle,
-      color: "text-green-500",
-    },
-    {
-      id: 3,
-      type: "schedule",
-      title: language === 'fil' ? "Pagbabago sa Oras" : "Schedule Change",
-      message: language === 'fil' ? "Ang PE class ay inilipat sa Gymnasium B para sa araw na ito" : "PE class moved to Gymnasium B for today",
-      time: language === 'fil' ? "1 araw na ang nakalipas" : "1 day ago",
-      read: true,
-      icon: Clock,
-      color: "text-orange-500",
-    },
-    {
-      id: 4,
-      type: "announcement",
-      title: language === 'fil' ? "Anunsyo sa Paaralan" : "School Announcement",
-      message: language === 'fil' ? "Ang Parent-Teacher Conference ay naka-schedule para sa susunod na linggo" : "Parent-Teacher Conference scheduled for next week",
-      time: language === 'fil' ? "2 araw na ang nakalipas" : "2 days ago",
-      read: true,
-      icon: Bell,
-      color: "text-purple-500",
-    },
-  ]
+  // Map API notifications to the format expected by this component
+  const notifications = apiNotifications.map((n) => {
+    // Map notification type to icon and color
+    let icon = Bell
+    let color = "text-blue-500"
+    
+    switch (n.type) {
+      case "academic":
+        icon = BookOpen
+        color = "text-blue-500"
+        break
+      case "event":
+        icon = Calendar
+        color = "text-purple-500"
+        break
+      case "social":
+        icon = Users
+        color = "text-green-500"
+        break
+      case "success":
+        icon = AlertCircle
+        color = "text-green-500"
+        break
+      case "warning":
+        icon = AlertCircle
+        color = "text-orange-500"
+        break
+      case "error":
+        icon = AlertCircle
+        color = "text-red-500"
+        break
+      default:
+        icon = Bell
+        color = "text-blue-500"
+    }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+    // Format timestamp
+    const now = new Date()
+    const diff = now.getTime() - n.timestamp.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-  const markAsRead = (id: number) => {
-    // In a real app, this would update the notification status
-    console.log(`[v0] Marking notification ${id} as read`)
+    let time: string
+    if (minutes < 1) {
+      time = language === 'fil' ? "Ngayon lang" : "Just now"
+    } else if (minutes < 60) {
+      time = language === 'fil' ? `${minutes} minuto na ang nakalipas` : `${minutes}m ago`
+    } else if (hours < 24) {
+      time = language === 'fil' ? `${hours} oras na ang nakalipas` : `${hours}h ago`
+    } else if (days < 7) {
+      time = language === 'fil' ? `${days} araw na ang nakalipas` : `${days}d ago`
+    } else {
+      time = n.timestamp.toLocaleDateString()
+    }
+
+    return {
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      time,
+      read: n.read,
+      icon,
+      color,
+      actionUrl: n.actionUrl,
+    }
+  })
+
+  const handleMarkAsRead = async (id: string) => {
+    await markAsRead(id)
   }
 
-  const markAllAsRead = () => {
-    // In a real app, this would mark all notifications as read
-    console.log("[v0] Marking all notifications as read")
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
   }
 
   const themeOptions = [
@@ -269,7 +302,7 @@ export default function StudentHeader({ studentName, studentAvatar, gradeLevel, 
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={markAllAsRead}
+                          onClick={handleMarkAllAsRead}
                           className="text-xs hover:bg-white/50 dark:hover:bg-slate-800/50 touch-manipulation min-h-[36px]"
                         >
                           {t('header.markAllRead')}
@@ -287,7 +320,12 @@ export default function StudentHeader({ studentName, studentAvatar, gradeLevel, 
                   </div>
                 </div>
                 <div className="max-h-80 sm:max-h-96 overflow-y-auto">
-                  {notifications.length > 0 ? (
+                  {notificationsLoading ? (
+                    <div className="p-8 text-center text-slate-500">
+                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p>{t('header.loading') || 'Loading...'}</p>
+                    </div>
+                  ) : notifications.length > 0 ? (
                     notifications.map((notification) => {
                       const IconComponent = notification.icon
                       return (
@@ -296,7 +334,13 @@ export default function StudentHeader({ studentName, studentAvatar, gradeLevel, 
                           className={`p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors touch-manipulation ${
                             !notification.read ? "bg-blue-50 dark:bg-blue-900/10" : ""
                           }`}
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={() => {
+                            if (notification.actionUrl) {
+                              window.location.href = notification.actionUrl
+                            } else {
+                              handleMarkAsRead(notification.id)
+                            }
+                          }}
                         >
                           <div className="flex items-start space-x-3">
                             <div

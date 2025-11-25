@@ -60,9 +60,15 @@ export class RolesGuard implements CanActivate {
       let userRole = this.roleCacheService.getCachedRole(sanitizedUserId);
 
       if (!userRole) {
-        console.log(
-          `🔍 Cache miss for user ${sanitizedUserId}, querying database...`,
-        );
+        // Only log in development mode or when debugging
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_ROLE_CACHE === 'true'
+        ) {
+          console.log(
+            `🔍 Cache miss for user ${sanitizedUserId}, querying database...`,
+          );
+        }
         userRole =
           await this.authService.getUserRoleFromDatabase(sanitizedUserId);
 
@@ -72,16 +78,28 @@ export class RolesGuard implements CanActivate {
           if (sanitizedRole) {
             // Cache the role for future requests
             this.roleCacheService.setCachedRole(sanitizedUserId, sanitizedRole);
-            console.log(
-              `✅ Cached role "${sanitizedRole}" for user ${sanitizedUserId}`,
-            );
+            if (
+              process.env.NODE_ENV === 'development' &&
+              process.env.DEBUG_ROLE_CACHE === 'true'
+            ) {
+              console.log(
+                `✅ Cached role "${sanitizedRole}" for user ${sanitizedUserId}`,
+              );
+            }
             userRole = sanitizedRole;
           }
         }
       } else {
-        console.log(
-          `⚡ Cache hit for user ${sanitizedUserId}, role: "${userRole}"`,
-        );
+        // Cache hit - no need to log every single request
+        // Only log in development mode or when debugging
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.DEBUG_ROLE_CACHE === 'true'
+        ) {
+          console.log(
+            `⚡ Cache hit for user ${sanitizedUserId}, role: "${userRole}"`,
+          );
+        }
       }
 
       if (!userRole) {

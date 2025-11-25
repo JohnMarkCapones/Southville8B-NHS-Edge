@@ -8,12 +8,14 @@ export interface NewsApiResponse {
   title: string
   slug: string
   author_id: string
+  author_name?: string | null
   article_json?: any
   article_html: string
   description: string
   category_id: string
   status: 'draft' | 'pending_approval' | 'approved' | 'published'
   visibility: 'public' | 'students' | 'teachers' | 'private'
+  review_status?: 'pending' | 'in_review' | 'approved' | 'rejected' | 'needs_revision' | null
   published_date?: string
   views: number
   created_at: string
@@ -36,6 +38,12 @@ export interface NewsApiResponse {
       name: string
     }
   }>
+  co_authors?: Array<{
+    id: string
+    co_author_name: string
+    role?: string
+  }>
+  credits?: string | null
   featured_image_url?: string
   // Fields that might not exist in API but we'll handle
   likes?: number
@@ -44,6 +52,20 @@ export interface NewsApiResponse {
   featured?: boolean
   trending?: boolean
   read_time?: string
+}
+
+export interface ApprovalHistoryRecord {
+  id: string
+  news_id: string
+  approver_id: string
+  status: 'approved' | 'rejected' | 'pending' | 'changes_requested'
+  remarks: string | null
+  action_at: string
+  approver?: {
+    id: string
+    full_name: string
+    email: string
+  }
 }
 
 export interface NewsCategoryApiResponse {
@@ -55,6 +77,29 @@ export interface NewsCategoryApiResponse {
   icon?: string
   created_at: string
   updated_at: string
+}
+
+export interface ReviewCommentApiResponse {
+  id: string
+  news_id: string
+  reviewer_id: string
+  comment: string
+  created_at: string
+  updated_at: string
+  deleted_at?: string | null
+  deleted_by?: string | null
+  reviewer?: {
+    id: string
+    full_name: string
+    email: string
+  }
+}
+
+export interface ReviewComment {
+  id: string
+  author: string
+  comment: string
+  timestamp: string
 }
 
 export interface NewsListParams {
@@ -83,15 +128,18 @@ export interface AdminNewsListResponse {
 export interface CreateNewsDto {
   title: string
   slug?: string
-  description: string
-  article_html: string
-  article_json?: any
-  category_id: string
-  visibility: 'public' | 'students' | 'teachers' | 'private'
-  status?: 'draft' | 'pending_approval'
-  featured_image_url?: string
+  description?: string
+  articleHtml: string
+  articleJson: any
+  categoryId?: string
+  visibility?: 'public' | 'students' | 'teachers' | 'private'
+  reviewStatus?: 'pending' | 'in_review' | 'approved' | 'rejected' | 'needs_revision'
+  featuredImageUrl?: string
   tags?: string[]
-  co_author_ids?: string[]
+  coAuthorNames?: string[]
+  scheduledDate?: string
+  authorName?: string
+  credits?: string
 }
 
 export interface UpdateNewsDto {
@@ -105,12 +153,18 @@ export interface UpdateNewsDto {
   status?: 'draft' | 'pending_approval' | 'approved' | 'published'
   featured_image_url?: string
   tags?: string[]
+  authorName?: string
+  coAuthorNames?: string[]
+  credits?: string
 }
 
 export interface UploadImageResponse {
-  url: string
+  url: string // Cloudflare Images URL (cf_image_url)
+  cf_image_url?: string // Cloudflare Images delivery URL
+  cf_image_id?: string // Cloudflare Images ID
   fileName: string
   fileSize: number
+  mimeType?: string
 }
 
 class NewsApiError extends Error {
@@ -235,15 +289,38 @@ function mapApiNewsToFrontend(apiNews: NewsApiResponse): NewsArticle {
   const isFeatured = apiNews.featured !== undefined ? apiNews.featured : apiNews.views > 2000
   const isTrending = apiNews.trending !== undefined ? apiNews.trending : apiNews.views > 1500
 
+  // Debug: Log what we're getting from the API
+  console.log('DEBUG - API News Data:', {
+    author_name: apiNews.author_name,
+    author_object: apiNews.author,
+    author_full_name: apiNews.author?.full_name,
+    author_id: apiNews.author_id
+  })
+
+  // Get author name: priority order is author_name -> author.full_name -> "Unknown"
+  const authorName = apiNews.author_name || apiNews.author?.full_name || 'Unknown'
+
+  // Determine author type based on author email or role
+  // Students typically have @student or student-specific email patterns
+  // Teachers have @teacher or professional emails
+  // This is a temporary solution until the backend provides explicit author_type
+  const authorEmail = apiNews.author?.email || ''
+  const authorType = authorEmail.includes('@student') || authorEmail.includes('student')
+    ? 'student'
+    : 'teacher'
+
   return {
     id: apiNews.id,
     title: apiNews.title,
     slug: apiNews.slug,
     content: apiNews.article_html || '',
     excerpt: apiNews.description || cleanContent.substring(0, 160) + '...',
-    author: getAuthorName(apiNews.author),
+    author: authorName,
+    authorType: authorType,
     authorImage: undefined, // API doesn't provide avatar currently
+    authorAvatar: undefined, // Alias for authorImage
     date: formatDate(apiNews.published_date || apiNews.created_at),
+    submittedDate: formatDate(apiNews.created_at),
     category: getCategoryName(apiNews.category),
     image: apiNews.featured_image_url,
     views: formatNumber(apiNews.views),
@@ -260,9 +337,14 @@ function mapApiNewsToFrontend(apiNews: NewsApiResponse): NewsArticle {
     // Additional admin fields
     status: mapBackendStatus(apiNews.status),
     visibility: mapBackendVisibility(apiNews.visibility),
+    reviewStatus: apiNews.review_status || 'pending',
     publishedDate: apiNews.published_date || '',
     deletedAt: apiNews.deleted_at,
     deletedBy: apiNews.deleted_by,
+    // Co-authors and credits
+    coAuthors: apiNews.co_authors?.map(ca => ca.co_author_name) || [],
+    credits: apiNews.credits || '',
+    articleJson: apiNews.article_json,
   } as any // Cast to any to allow extra fields
 }
 
@@ -455,19 +537,17 @@ export const newsApi = {
     if (params.status) searchParams.append('status', params.status.toLowerCase().replace(' ', '_'))
     if (params.visibility) searchParams.append('visibility', params.visibility.toLowerCase())
     if (params.search) searchParams.append('search', params.search)
+    if (params.includeDeleted !== undefined) {
+      searchParams.append('includeDeleted', params.includeDeleted.toString())
+    }
 
     const endpoint = `/news?${searchParams.toString()}`
 
     try {
       const response = await apiClient.get<NewsApiResponse[]>(endpoint)
 
-      // Filter by deleted status if needed
+      // No need for client-side filtering - backend handles includeDeleted
       let filteredData = response
-      if (params.includeDeleted === false) {
-        filteredData = response.filter(article => !article.deleted_at)
-      } else if (params.includeDeleted === true) {
-        filteredData = response.filter(article => article.deleted_at !== null)
-      }
 
       // Apply client-side search if provided
       if (params.search) {
@@ -529,6 +609,18 @@ export const newsApi = {
   },
 
   /**
+   * Submit news article for approval (sets review_status to pending)
+   */
+  async submit(id: string): Promise<void> {
+    try {
+      await apiClient.post<void>(`/news/${id}/submit`, {})
+    } catch (error) {
+      console.error('[newsApi.submit] Error:', error)
+      throw error
+    }
+  },
+
+  /**
    * Update news article (authenticated)
    */
   async updateNews(id: string, data: UpdateNewsDto): Promise<NewsArticle> {
@@ -559,14 +651,125 @@ export const newsApi = {
    */
   async restoreNews(id: string): Promise<NewsArticle> {
     try {
-      // Attempt to restore by updating deleted_at to null
-      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}`, {
-        deleted_at: null,
-        deleted_by: null,
-      } as any)
+      // Call dedicated restore endpoint (Admin only)
+      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/restore`, {})
       return mapApiNewsToFrontend(response)
     } catch (error) {
       console.error('[newsApi.restoreNews] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Publish news article (authenticated - Advisers only)
+   * Sets published_date to now and changes status to published
+   * @param id Article ID
+   * @param forceApprove If true, auto-approves pending articles when publishing
+   */
+  async publishNews(id: string, forceApprove: boolean = false): Promise<void> {
+    try {
+      const params = forceApprove ? '?forceApprove=true' : ''
+      await apiClient.post(`/news/${id}/publish${params}`, {})
+    } catch (error) {
+      console.error('[newsApi.publishNews] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Unpublish news article (authenticated - Advisers only)
+   * Changes status from published back to draft
+   */
+  async unpublishNews(id: string): Promise<void> {
+    try {
+      await apiClient.post(`/news/${id}/unpublish`, {})
+    } catch (error) {
+      console.error('[newsApi.unpublishNews] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Get review comments for a news article (authenticated)
+   */
+  async getReviewComments(newsId: string): Promise<ReviewComment[]> {
+    try {
+      const response = await apiClient.get<ReviewCommentApiResponse[]>(`/news/${newsId}/review-comments`)
+      console.log('[newsApi.getReviewComments] Raw API response:', JSON.stringify(response, null, 2))
+      return response.map(comment => {
+        console.log('[newsApi.getReviewComments] Processing comment:', {
+          id: comment.id,
+          reviewer: comment.reviewer,
+          full_name: comment.reviewer?.full_name,
+          email: comment.reviewer?.email,
+        })
+        return {
+          id: comment.id,
+          author: comment.reviewer?.full_name || comment.reviewer?.email || 'Unknown',
+          comment: comment.comment,
+          timestamp: comment.created_at,
+        }
+      })
+    } catch (error) {
+      console.error('[newsApi.getReviewComments] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Add a review comment to a news article (authenticated - Teachers/Admins only)
+   */
+  async addReviewComment(newsId: string, comment: string): Promise<ReviewComment> {
+    try {
+      const response = await apiClient.post<ReviewCommentApiResponse>(`/news/${newsId}/review-comments`, {
+        comment,
+      })
+      console.log('[newsApi.addReviewComment] Raw API response:', JSON.stringify(response, null, 2))
+      console.log('[newsApi.addReviewComment] Reviewer data:', {
+        reviewer: response.reviewer,
+        full_name: response.reviewer?.full_name,
+        email: response.reviewer?.email,
+      })
+      return {
+        id: response.id,
+        author: response.reviewer?.full_name || response.reviewer?.email || 'Unknown',
+        comment: response.comment,
+        timestamp: response.created_at,
+      }
+    } catch (error) {
+      console.error('[newsApi.addReviewComment] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Update a review comment (authenticated - Owner only)
+   */
+  async updateReviewComment(commentId: string, comment: string): Promise<ReviewComment> {
+    try {
+      const response = await apiClient.patch<ReviewCommentApiResponse>(`/news/review-comments/${commentId}`, {
+        comment,
+      })
+      return {
+        id: response.id,
+        author: response.reviewer?.full_name || response.reviewer?.email || 'Unknown',
+        comment: response.comment,
+        timestamp: response.created_at,
+      }
+    } catch (error) {
+      console.error('[newsApi.updateReviewComment] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Delete a review comment (authenticated - Owner or Admin)
+   */
+  async deleteReviewComment(commentId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/news/review-comments/${commentId}`)
+    } catch (error) {
+      console.error('[newsApi.deleteReviewComment] Error:', error)
       throw error
     }
   },
@@ -607,8 +810,8 @@ export const newsApi = {
    */
   async approveNews(id: string, message?: string): Promise<NewsArticle> {
     try {
-      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/approve`, {
-        approval_message: message,
+      const response = await apiClient.post<NewsApiResponse>(`/news/${id}/approve`, {
+        remarks: message,
       })
       return mapApiNewsToFrontend(response)
     } catch (error) {
@@ -622,12 +825,201 @@ export const newsApi = {
    */
   async rejectNews(id: string, reason: string): Promise<NewsArticle> {
     try {
-      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/reject`, {
-        rejection_reason: reason,
+      const response = await apiClient.post<NewsApiResponse>(`/news/${id}/reject`, {
+        remarks: reason,
       })
       return mapApiNewsToFrontend(response)
     } catch (error) {
       console.error('[newsApi.rejectNews] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Quick update article status (Admin only)
+   */
+  async updateStatus(id: string, status: string): Promise<NewsArticle> {
+    try {
+      console.log(`[newsApi.updateStatus] Updating article ${id} status to ${status}`)
+      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/status`, {
+        status,
+      })
+      return mapApiNewsToFrontend(response)
+    } catch (error) {
+      console.error('[newsApi.updateStatus] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Quick update article visibility (Admin only)
+   */
+  async updateVisibility(id: string, visibility: string): Promise<NewsArticle> {
+    try {
+      console.log(`[newsApi.updateVisibility] Updating article ${id} visibility to ${visibility}`)
+      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/visibility`, {
+        visibility,
+      })
+      return mapApiNewsToFrontend(response)
+    } catch (error) {
+      console.error('[newsApi.updateVisibility] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Update article featured image (Admin only)
+   */
+  async updateFeaturedImage(id: string, featuredImageUrl: string): Promise<NewsArticle> {
+    try {
+      console.log(`[newsApi.updateFeaturedImage] Updating article ${id} featured image`)
+      const response = await apiClient.patch<NewsApiResponse>(`/news/${id}/featured-image`, {
+        featuredImageUrl,
+      })
+      return mapApiNewsToFrontend(response)
+    } catch (error) {
+      console.error('[newsApi.updateFeaturedImage] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Remove article featured image (Admin only)
+   */
+  async removeFeaturedImage(id: string): Promise<NewsArticle> {
+    try {
+      console.log(`[newsApi.removeFeaturedImage] Removing featured image from article ${id}`)
+      const response = await apiClient.delete<NewsApiResponse>(`/news/${id}/featured-image`)
+      return mapApiNewsToFrontend(response)
+    } catch (error) {
+      console.error('[newsApi.removeFeaturedImage] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Get news statistics (KPI counts)
+   * @param all - Get all stats (admin only) instead of user-specific stats
+   */
+  async getNewsStats(all: boolean = false): Promise<{
+    pendingReview: number
+    published: number
+    needsRevision: number
+    approved: number
+    rejected: number
+    draft: number
+    total: number
+    studentSubmissions: number
+  }> {
+    try {
+      const params = all ? '?all=true' : ''
+      const response = await apiClient.get<{
+        pendingReview: number
+        published: number
+        needsRevision: number
+        approved: number
+        rejected: number
+        draft: number
+        total: number
+        studentSubmissions: number
+      }>(`/news/stats${params}`)
+      return response
+    } catch (error) {
+      console.error('[newsApi.getNewsStats] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Get current user's own articles
+   */
+  async getMyArticles(): Promise<NewsArticle[]> {
+    try {
+      const response = await apiClient.get<NewsApiResponse[]>(`/news/my-articles`)
+      return response.map(mapApiNewsToFrontend)
+    } catch (error) {
+      console.error('[newsApi.getMyArticles] Error:', error)
+      throw error
+    }
+  },
+
+  // ============================================
+  // Journalism Team: Members & KPIs (Authenticated)
+  // ============================================
+  async getJournalismMembers(): Promise<Array<{ membershipId: string; userId: string; userName: string; userEmail: string; position: string }>> {
+    try {
+      return await apiClient.get('/journalism/members')
+    } catch (error) {
+      console.error('[newsApi.getJournalismMembers] Error:', error)
+      throw error
+    }
+  },
+
+  async getJournalismMember(userId: string): Promise<{ membershipId: string; userId: string; userName: string; userEmail: string; position: string }> {
+    try {
+      return await apiClient.get(`/journalism/members/${userId}`)
+    } catch (error) {
+      console.error('[newsApi.getJournalismMember] Error:', error)
+      throw error
+    }
+  },
+
+  async addJournalismMember(payload: { userId: string; position: string }): Promise<{ membershipId: string; userId: string; userName: string; userEmail: string; position: string }>
+  {
+    try {
+      return await apiClient.post('/journalism/members', payload)
+    } catch (error) {
+      console.error('[newsApi.addJournalismMember] Error:', error)
+      throw error
+    }
+  },
+
+  async updateJournalismMember(userId: string, payload: { position: string }): Promise<{ userId: string; previousPosition: string; newPosition: string; updatedBy: string }>
+  {
+    try {
+      return await apiClient.patch(`/journalism/members/${userId}`, payload)
+    } catch (error) {
+      console.error('[newsApi.updateJournalismMember] Error:', error)
+      throw error
+    }
+  },
+
+  async removeJournalismMember(userId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/journalism/members/${userId}`)
+    } catch (error) {
+      console.error('[newsApi.removeJournalismMember] Error:', error)
+      throw error
+    }
+  },
+
+  async getJournalismKpis(): Promise<{
+    totalMembers: number;
+    membersByPosition: { position: string; count: number }[];
+    uniquePositionsOccupied: { adviser: boolean; editorInChief: boolean };
+    activeContributors30d: number;
+    pipelineBreakdown: { status: string; count: number }[];
+    topContributors90d: { userId: string; name: string; count: number }[];
+  }> {
+    try {
+      return await apiClient.get('/news/journalism/kpis')
+    } catch (error) {
+      console.error('[newsApi.getJournalismKpis] Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Get approval history for an article
+   * Shows all approve/reject actions with remarks
+   */
+  async getApprovalHistory(articleId: string): Promise<ApprovalHistoryRecord[]> {
+    try {
+      console.log(`[newsApi.getApprovalHistory] Fetching approval history for article ${articleId}`)
+      const response = await apiClient.get<ApprovalHistoryRecord[]>(`/news/${articleId}/approval-history`)
+      return response
+    } catch (error) {
+      console.error('[newsApi.getApprovalHistory] Error:', error)
       throw error
     }
   },

@@ -20,6 +20,9 @@ import { BulkCreateSchedulesDto } from './dto/bulk-create-schedules.dto';
 import { AssignStudentsDto } from './dto/assign-students.dto';
 import { ConflictCheckDto } from './dto/conflict-check.dto';
 import { SearchSchedulesDto } from './dto/search-schedules.dto';
+import { NotificationService } from '../common/services/notification.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 
 @Injectable()
 export class SchedulesService {
@@ -32,6 +35,8 @@ export class SchedulesService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private notificationService: NotificationService,
+    private activityMonitoring: ActivityMonitoringService,
   ) {}
 
   private getSupabaseClient(): SupabaseClient {
@@ -54,16 +59,21 @@ export class SchedulesService {
     const supabase = this.getSupabaseClient();
 
     try {
-      // Validate foreign keys exist
+      // Validate foreign keys
       await this.validateForeignKeys(dto);
 
       // Check for conflicts
-      const hasConflicts = await this.checkConflicts(dto);
-      if (hasConflicts) {
-        throw new ConflictException('Schedule conflicts detected');
-      }
+      await this.checkConflicts(dto);
 
-      const { data: schedule, error } = await supabase
+      // Map grading period to semester for backwards compatibility
+      // Q1, Q2 → 1st semester; Q3, Q4 → 2nd semester
+      const semester = dto.gradingPeriod
+        ? dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2'
+          ? '1st'
+          : '2nd'
+        : '1st'; // Default to 1st semester if not provided
+
+      const { data, error } = await supabase
         .from('schedules')
         .insert({
           subject_id: dto.subjectId,
@@ -75,132 +85,168 @@ export class SchedulesService {
           start_time: dto.startTime,
           end_time: dto.endTime,
           school_year: dto.schoolYear,
-          semester: dto.semester,
+          semester: semester,
+          grading_period: dto.gradingPeriod,
         })
         .select()
         .single();
 
       if (error) {
         this.logger.error('Error creating schedule:', error);
-        throw new InternalServerErrorException('Failed to create schedule');
+        throw new InternalServerErrorException(
+          `Failed to create schedule: ${error.message}`,
+        );
       }
+
+      // Audit log
+      await this.logAudit({
+        action: 'create',
+        scheduleId: data?.id,
+        actorUserId: null,
+        before: null,
+        after: data,
+        changedFields: null,
+      });
 
       // Invalidate related caches
       await this.invalidateRelatedCaches(dto);
 
-      return await this.findOne(schedule.id);
+      this.logger.log(`Schedule created successfully: ${data.id}`);
+
+      // Notify affected users (teacher and students in section)
+      try {
+        const userIds: string[] = [];
+        
+        // Get teacher user_id
+        if (dto.teacherId) {
+          const { data: teacher } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .eq('id', dto.teacherId)
+            .single();
+          if (teacher?.user_id) {
+            userIds.push(teacher.user_id);
+          }
+        }
+
+        // Get all students in the section
+        if (dto.sectionId) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('section_id', dto.sectionId);
+          if (students) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter((id) => id);
+            userIds.push(...studentUserIds);
+          }
+        }
+
+        // Activity monitoring - notify affected users
+        if (userIds.length > 0) {
+          try {
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('subject_name')
+              .eq('id', dto.subjectId)
+              .single();
+            const subjectName = subject?.subject_name || 'a subject';
+            const scheduleDetails = `${subjectName} - ${dto.dayOfWeek} ${dto.startTime}-${dto.endTime}`;
+            
+            await this.activityMonitoring.handleScheduleCreated(
+              data.id,
+              scheduleDetails,
+              userIds,
+              'system',
+            );
+          } catch (error) {
+            this.logger.warn('Failed to handle schedule creation activity monitoring:', error);
+          }
+        }
+
+        if (userIds.length > 0) {
+          // Get subject name for notification
+          const { data: subject } = await supabase
+            .from('subjects')
+            .select('subject_name')
+            .eq('id', dto.subjectId)
+            .single();
+
+          const subjectName = subject?.subject_name || 'a subject';
+          await this.notificationService.notifyUsers(
+            userIds,
+            'New Class Schedule',
+            `A new schedule has been created for ${subjectName}.`,
+            NotificationType.INFO,
+            undefined,
+            { expiresInDays: 7 },
+          );
+        }
+      } catch (error) {
+        // Don't fail schedule creation if notification fails
+        this.logger.warn('Failed to create notifications for schedule:', error);
+      }
+
+      return data;
     } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
-      ) {
+      if (error instanceof ConflictException) {
         throw error;
       }
-      this.logger.error('Unexpected error creating schedule:', error);
+      this.logger.error('Error creating schedule:', error);
       throw new InternalServerErrorException('Failed to create schedule');
     }
   }
 
   async bulkCreate(dto: BulkCreateSchedulesDto): Promise<Schedule[]> {
     const supabase = this.getSupabaseClient();
+    const results: Schedule[] = [];
+    const errors: any[] = [];
 
     try {
-      // Validate all foreign keys first
       for (const scheduleDto of dto.schedules) {
-        await this.validateForeignKeys(scheduleDto);
+        try {
+          const schedule = await this.create(scheduleDto);
+          results.push(schedule);
+        } catch (error) {
+          errors.push({
+            schedule: scheduleDto,
+            error: error.message,
+          });
+        }
       }
 
-      // Check for conflicts across all schedules
-      const conflictResults = await Promise.all(
-        dto.schedules.map((scheduleDto) => this.checkConflicts(scheduleDto)),
+      this.logger.log(
+        `Bulk create completed: ${results.length} successful, ${errors.length} failed`,
       );
 
-      const conflictingSchedules = dto.schedules.filter(
-        (_, index) => conflictResults[index],
-      );
-
-      if (conflictingSchedules.length > 0) {
-        throw new ConflictException(
-          `Conflicts detected in ${conflictingSchedules.length} schedules`,
-        );
-      }
-
-      // Prepare bulk insert data
-      const schedulesData = dto.schedules.map((scheduleDto) => ({
-        subject_id: scheduleDto.subjectId,
-        teacher_id: scheduleDto.teacherId,
-        section_id: scheduleDto.sectionId,
-        room_id: scheduleDto.roomId,
-        building_id: scheduleDto.buildingId,
-        day_of_week: scheduleDto.dayOfWeek,
-        start_time: scheduleDto.startTime,
-        end_time: scheduleDto.endTime,
-        school_year: scheduleDto.schoolYear,
-        semester: scheduleDto.semester,
-      }));
-
-      const { data: schedules, error } = await supabase
-        .from('schedules')
-        .insert(schedulesData)
-        .select();
-
-      if (error) {
-        this.logger.error('Error bulk creating schedules:', error);
-        throw new InternalServerErrorException(
-          'Failed to bulk create schedules',
-        );
-      }
-
-      // Invalidate all related caches
-      await this.invalidateAllCaches();
-
-      // Return schedules with relations
-      const schedulesWithRelations = await Promise.all(
-        schedules.map((schedule) => this.findOne(schedule.id)),
-      );
-
-      return schedulesWithRelations;
+      return results;
     } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
-      ) {
-        throw error;
-      }
-      this.logger.error('Unexpected error bulk creating schedules:', error);
+      this.logger.error('Error in bulk create:', error);
       throw new InternalServerErrorException('Failed to bulk create schedules');
     }
   }
 
-  async findAll(
-    filters: SearchSchedulesDto,
-  ): Promise<{ data: Schedule[]; pagination: any }> {
-    const cacheKey = `schedules:all:${JSON.stringify(filters)}`;
+  async findAll(filters: any) {
+    try {
+      console.log('FindAll schedules query:', JSON.stringify(filters));
 
-    // Try to get from cache
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      this.logger.log(`Cache hit for ${cacheKey}`);
-      return cached as { data: Schedule[]; pagination: any };
-    }
-    this.logger.log(`Cache miss for ${cacheKey}`);
+      const cacheKey = `schedules:all:${JSON.stringify(filters)}`;
 
-    const supabase = this.getSupabaseClient();
-    const {
-      page = 1,
-      limit = 10,
-      sectionId,
-      teacherId,
-      dayOfWeek,
-      schoolYear,
-      semester,
-      search,
-    } = filters;
+      const supabase = this.getSupabaseClient();
+      const {
+        page = 1,
+        limit = 10,
+        sectionId,
+        teacherId,
+        dayOfWeek,
+        schoolYear,
+        semester,
+        search,
+      } = filters;
 
-    let query = supabase.from('schedules').select(
-      `
+      let query = supabase.from('schedules').select(
+        `
       id,
       subject_id,
       teacher_id,
@@ -212,341 +258,293 @@ export class SchedulesService {
       end_time,
       school_year,
       semester,
+      status,
+      is_published,
+      published_at,
+      recurring_rule,
+      version,
       created_at,
       updated_at,
-      subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
-      teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
-      section:sections!inner(id, name, grade_level, teacher_id),
-      room:rooms!inner(
+      subject:subjects(
+        id,
+        subject_name,
+        description,
+        grade_level,
+        color_hex
+      ),
+      teacher:teachers(
+        id,
+        first_name,
+        last_name,
+        middle_name,
+        user:users(
+          id,
+          full_name,
+          email
+        )
+      ),
+      section:sections(
+        id,
+        name,
+        grade_level,
+        teacher_id
+      ),
+      room:rooms(
         id,
         room_number,
+        name,
         capacity,
         floor_id,
         floor:floors(
           id,
           number,
-          building:buildings(id, building_name)
+          building:buildings(
+            id,
+            building_name
+          )
         )
       )
     `,
-      { count: 'exact' },
-    );
-
-    // Apply filters
-    if (sectionId) {
-      query = query.eq('section_id', sectionId);
-    }
-    if (teacherId) {
-      query = query.eq('teacher_id', teacherId);
-    }
-    if (dayOfWeek) {
-      query = query.eq('day_of_week', dayOfWeek);
-    }
-    if (schoolYear) {
-      query = query.eq('school_year', schoolYear);
-    }
-    if (semester) {
-      query = query.eq('semester', semester);
-    }
-
-    // Apply search
-    if (search) {
-      query = query.or(
-        `teacher.first_name.ilike.%${search}%,teacher.last_name.ilike.%${search}%,subject.subject_name.ilike.%${search}%,section.name.ilike.%${search}%`,
+        { count: 'exact' },
       );
+
+      // Apply filters
+      if (sectionId) {
+        query = query.eq('section_id', sectionId);
+      }
+      if (teacherId) {
+        query = query.eq('teacher_id', teacherId);
+      }
+      if (dayOfWeek) {
+        query = query.eq('day_of_week', dayOfWeek);
+      }
+      if (schoolYear) {
+        query = query.eq('school_year', schoolYear);
+      }
+      if (semester) {
+        query = query.eq('semester', semester);
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (search) {
+        query = query.or(
+          `teacher.first_name.ilike.%${search}%,teacher.last_name.ilike.%${search}%,subject.subject_name.ilike.%${search}%,section.name.ilike.%${search}%`,
+        );
+      }
+
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit - 1;
+
+      const { data, error, count } = await query.range(startIndex, endIndex);
+
+      if (error) {
+        console.error('Supabase error in findAll:', error);
+        this.logger.error('Error fetching schedules:', error);
+        throw new InternalServerErrorException(
+          `Failed to fetch schedules: ${error.message}`,
+        );
+      }
+
+      console.log(
+        'FindAll schedules success. Count:',
+        count,
+        'Data length:',
+        data?.length,
+      );
+
+      // Transform the data
+      const transformedData =
+        data?.map((schedule: any) => ({
+          id: schedule.id,
+          subjectId: schedule.subject_id,
+          teacherId: schedule.teacher_id,
+          sectionId: schedule.section_id,
+          roomId: schedule.room_id,
+          buildingId: schedule.building_id,
+          dayOfWeek: schedule.day_of_week,
+          startTime: schedule.start_time,
+          endTime: schedule.end_time,
+          schoolYear: schedule.school_year,
+          semester: schedule.semester,
+          createdAt: schedule.created_at,
+          updatedAt: schedule.updated_at,
+          subject: schedule.subject
+            ? {
+                id: schedule.subject.id,
+                subjectName: schedule.subject.subject_name,
+                description: schedule.subject.description,
+                gradeLevel: schedule.subject.grade_level,
+                colorHex: schedule.subject.color_hex,
+              }
+            : undefined,
+          teacher: schedule.teacher
+            ? {
+                id: schedule.teacher.id,
+                firstName: schedule.teacher.first_name,
+                lastName: schedule.teacher.last_name,
+                middleName: schedule.teacher.middle_name,
+                user: schedule.teacher.user
+                  ? {
+                      id: schedule.teacher.user.id,
+                      fullName: schedule.teacher.user.full_name,
+                      email: schedule.teacher.user.email,
+                    }
+                  : undefined,
+              }
+            : undefined,
+          section: schedule.section
+            ? {
+                id: schedule.section.id,
+                name: schedule.section.name,
+                gradeLevel: schedule.section.grade_level,
+                teacherId: schedule.section.teacher_id,
+              }
+            : undefined,
+          room: schedule.room
+            ? {
+                id: schedule.room.id,
+                roomNumber: schedule.room.room_number,
+                capacity: schedule.room.capacity,
+                floorId: schedule.room.floor_id,
+                floor: schedule.room.floor
+                  ? {
+                      id: schedule.room.floor.id,
+                      floorNumber: schedule.room.floor.number,
+                      building: schedule.room.floor.building
+                        ? {
+                            id: schedule.room.floor.building.id,
+                            name: schedule.room.floor.building.building_name,
+                          }
+                        : undefined,
+                    }
+                  : undefined,
+              }
+            : undefined,
+          building: schedule.room?.floor?.building
+            ? {
+                id: schedule.room.floor.building.id,
+                buildingName: schedule.room.floor.building.building_name,
+              }
+            : undefined,
+        })) || [];
+
+      const pagination = {
+        total: count,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit),
+      };
+
+      // Cache the result
+      await this.cacheManager.set(
+        cacheKey,
+        { data: transformedData, pagination },
+        this.CACHE_TTL,
+      );
+
+      console.log('FindAll schedules completed successfully. Returning data.');
+      return { data: transformedData, pagination };
+    } catch (error) {
+      console.error('Error in findAll schedules:', error);
+      this.logger.error('Error in findAll schedules:', error);
+      throw error;
     }
-
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit - 1;
-
-    const { data, error, count } = await query.range(startIndex, endIndex);
-
-    if (error) {
-      this.logger.error('Error fetching schedules:', error);
-      throw new InternalServerErrorException('Failed to fetch schedules');
-    }
-
-    // Transform the data
-    const transformedData =
-      data?.map((schedule: any) => ({
-        id: schedule.id,
-        subjectId: schedule.subject_id,
-        teacherId: schedule.teacher_id,
-        sectionId: schedule.section_id,
-        roomId: schedule.room_id,
-        buildingId: schedule.building_id,
-        dayOfWeek: schedule.day_of_week,
-        startTime: schedule.start_time,
-        endTime: schedule.end_time,
-        schoolYear: schedule.school_year,
-        semester: schedule.semester,
-        createdAt: schedule.created_at,
-        updatedAt: schedule.updated_at,
-        subject: schedule.subject
-          ? {
-              id: schedule.subject.id,
-              subjectName: schedule.subject.subject_name,
-              description: schedule.subject.description,
-              gradeLevel: schedule.subject.grade_level,
-              colorHex: schedule.subject.color_hex,
-            }
-          : undefined,
-        teacher: schedule.teacher
-          ? {
-              id: schedule.teacher.id,
-              firstName: schedule.teacher.first_name,
-              lastName: schedule.teacher.last_name,
-              middleName: schedule.teacher.middle_name,
-              user: schedule.teacher.user
-                ? {
-                    id: schedule.teacher.user.id,
-                    fullName: schedule.teacher.user.full_name,
-                    email: schedule.teacher.user.email,
-                  }
-                : undefined,
-            }
-          : undefined,
-        section: schedule.section
-          ? {
-              id: schedule.section.id,
-              name: schedule.section.name,
-              gradeLevel: schedule.section.grade_level,
-              teacherId: schedule.section.teacher_id,
-            }
-          : undefined,
-        room: schedule.room
-          ? {
-              id: schedule.room.id,
-              roomNumber: schedule.room.room_number,
-              capacity: schedule.room.capacity,
-              floorId: schedule.room.floor_id,
-              floor: schedule.room.floor
-                ? {
-                    id: schedule.room.floor.id,
-                    floorNumber: schedule.room.floor.number,
-                    building: schedule.room.floor.building
-                      ? {
-                          id: schedule.room.floor.building.id,
-                          name: schedule.room.floor.building.building_name,
-                        }
-                      : undefined,
-                  }
-                : undefined,
-            }
-          : undefined,
-        building: schedule.room?.floor?.building
-          ? {
-              id: schedule.room.floor.building.id,
-              name: schedule.room.floor.building.building_name,
-            }
-          : undefined,
-      })) || [];
-
-    const pagination = {
-      total: count,
-      page,
-      limit,
-      pages: Math.ceil((count || 0) / limit),
-    };
-
-    // Cache the result
-    await this.cacheManager.set(
-      cacheKey,
-      { data: transformedData, pagination },
-      this.CACHE_TTL,
-    );
-
-    return { data: transformedData, pagination };
   }
 
   async findOne(id: string): Promise<Schedule> {
     const cacheKey = `schedule:${id}`;
 
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      this.logger.log(`Cache hit for ${cacheKey}`);
-      return cached as Schedule;
-    }
-    this.logger.log(`Cache miss for ${cacheKey}`);
+    try {
+      const cached = await this.cacheManager.get<Schedule>(cacheKey);
+      if (cached) {
+        this.logger.log(`Cache hit for schedule: ${id}`);
+        return cached;
+      }
 
-    const supabase = this.getSupabaseClient();
-    const { data, error } = await supabase
-      .from('schedules')
-      .select(
-        `
-        id,
-        subject_id,
-        teacher_id,
-        section_id,
-        room_id,
-        building_id,
-        day_of_week,
-        start_time,
-        end_time,
-        school_year,
-        semester,
-        created_at,
-        updated_at,
-        subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
-        teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
-        section:sections!inner(id, name, grade_level, teacher_id),
-        room:rooms!inner(
-          id,
-          room_number,
-          capacity,
-          floor_id,
+      this.logger.log(`Cache miss for schedule: ${id}`);
+
+      const supabase = this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(
+          `
+        *,
+        subject:subjects(*),
+        teacher:teachers(*),
+        section:sections(*),
+        room:rooms(
+          *,
           floor:floors(
-            id,
-            number,
-            building:buildings(id, building_name)
+            *,
+            building:buildings(*)
           )
         ),
-        students:student_schedule(student:students(id, first_name, last_name, middle_name, student_id, lrn_id, grade_level))
+        building:buildings(*)
       `,
-      )
-      .eq('id', id)
-      .single();
+        )
+        .eq('id', id)
+        .single();
 
-    if (error) {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          throw new NotFoundException('Schedule not found');
+        }
+        this.logger.error('Error fetching schedule:', error);
+        throw new InternalServerErrorException('Failed to fetch schedule');
+      }
+
+      // Cache the result
+      await this.cacheManager.set(cacheKey, data, this.CACHE_TTL);
+
+      return data;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.error('Error fetching schedule:', error);
-      throw new NotFoundException(`Schedule with ID "${id}" not found`);
+      throw new InternalServerErrorException('Failed to fetch schedule');
     }
-
-    const transformedData: Schedule = {
-      id: (data as any).id,
-      subjectId: (data as any).subject_id,
-      teacherId: (data as any).teacher_id,
-      sectionId: (data as any).section_id,
-      roomId: (data as any).room_id,
-      buildingId: (data as any).building_id,
-      dayOfWeek: (data as any).day_of_week,
-      startTime: (data as any).start_time,
-      endTime: (data as any).end_time,
-      schoolYear: (data as any).school_year,
-      semester: (data as any).semester,
-      createdAt: (data as any).created_at,
-      updatedAt: (data as any).updated_at,
-      subject: (data as any).subject
-        ? {
-            id: (data as any).subject.id,
-            subjectName: (data as any).subject.subject_name,
-            description: (data as any).subject.description,
-            gradeLevel: (data as any).subject.grade_level,
-            colorHex: (data as any).subject.color_hex,
-          }
-        : undefined,
-      teacher: (data as any).teacher
-        ? {
-            id: (data as any).teacher.id,
-            firstName: (data as any).teacher.first_name,
-            lastName: (data as any).teacher.last_name,
-            middleName: (data as any).teacher.middle_name,
-            user: (data as any).teacher.user
-              ? {
-                  id: (data as any).teacher.user.id,
-                  fullName: (data as any).teacher.user.full_name,
-                  email: (data as any).teacher.user.email,
-                }
-              : undefined,
-          }
-        : undefined,
-      section: (data as any).section
-        ? {
-            id: (data as any).section.id,
-            name: (data as any).section.name,
-            gradeLevel: (data as any).section.grade_level,
-            teacherId: (data as any).section.teacher_id,
-          }
-        : undefined,
-      room: (data as any).room
-        ? {
-            id: (data as any).room.id,
-            roomNumber: (data as any).room.room_number,
-            capacity: (data as any).room.capacity,
-            floorId: (data as any).room.floor_id,
-            floor: (data as any).room.floor
-              ? {
-                  id: (data as any).room.floor.id,
-                  floorNumber: (data as any).room.floor.number,
-                  building: (data as any).room.floor.building
-                    ? {
-                        id: (data as any).room.floor.building.id,
-                        name: (data as any).room.floor.building.building_name,
-                      }
-                    : undefined,
-                }
-              : undefined,
-          }
-        : undefined,
-      building: (data as any).room?.floor?.building
-        ? {
-            id: (data as any).room.floor.building.id,
-            name: (data as any).room.floor.building.building_name,
-          }
-        : undefined,
-      students: (data as any).students?.map((ss: any) => ss.student),
-    };
-
-    await this.cacheManager.set(
-      cacheKey,
-      transformedData,
-      this.DETAILED_CACHE_TTL,
-    );
-
-    return transformedData;
   }
 
   async update(id: string, dto: UpdateScheduleDto): Promise<Schedule> {
     const supabase = this.getSupabaseClient();
+    const cacheKey = `schedule:${id}`;
 
     try {
       // Check if schedule exists
-      const existing = await this.findOne(id);
+      await this.findOne(id);
 
-      // Validate foreign keys if provided
-      if (
-        dto.subjectId ||
-        dto.teacherId ||
-        dto.sectionId ||
-        dto.roomId ||
-        dto.buildingId
-      ) {
-        await this.validateForeignKeys(dto as CreateScheduleDto);
-      }
+      const updateData: any = {};
+      if (dto.subjectId !== undefined) updateData.subject_id = dto.subjectId;
+      if (dto.teacherId !== undefined) updateData.teacher_id = dto.teacherId;
+      if (dto.sectionId !== undefined) updateData.section_id = dto.sectionId;
+      if (dto.roomId !== undefined) updateData.room_id = dto.roomId;
+      if (dto.buildingId !== undefined) updateData.building_id = dto.buildingId;
+      if (dto.dayOfWeek !== undefined) updateData.day_of_week = dto.dayOfWeek;
+      if (dto.startTime !== undefined) updateData.start_time = dto.startTime;
+      if (dto.endTime !== undefined) updateData.end_time = dto.endTime;
+      if (dto.schoolYear !== undefined) updateData.school_year = dto.schoolYear;
 
-      // Check for conflicts if time-related fields are being updated
-      if (
-        dto.startTime ||
-        dto.endTime ||
-        dto.dayOfWeek ||
-        dto.teacherId ||
-        dto.roomId ||
-        dto.sectionId
-      ) {
-        const conflictDto = {
-          ...existing,
-          ...dto,
-        };
-        const hasConflicts = await this.checkConflicts(conflictDto, id);
-        if (hasConflicts) {
-          throw new ConflictException('Schedule conflicts detected');
+      // Handle grading period and auto-map to semester
+      if (dto.gradingPeriod !== undefined) {
+        updateData.grading_period = dto.gradingPeriod;
+        // Auto-map grading period to semester if semester not explicitly provided
+        if (dto.semester === undefined) {
+          updateData.semester =
+            dto.gradingPeriod === 'Q1' || dto.gradingPeriod === 'Q2'
+              ? '1st'
+              : '2nd';
         }
       }
 
-      const updateData: any = {};
-      if (dto.subjectId) updateData.subject_id = dto.subjectId;
-      if (dto.teacherId) updateData.teacher_id = dto.teacherId;
-      if (dto.sectionId) updateData.section_id = dto.sectionId;
-      if (dto.roomId) updateData.room_id = dto.roomId;
-      if (dto.buildingId) updateData.building_id = dto.buildingId;
-      if (dto.dayOfWeek) updateData.day_of_week = dto.dayOfWeek;
-      if (dto.startTime) updateData.start_time = dto.startTime;
-      if (dto.endTime) updateData.end_time = dto.endTime;
-      if (dto.schoolYear) updateData.school_year = dto.schoolYear;
-      if (dto.semester) updateData.semester = dto.semester;
+      if (dto.semester !== undefined) updateData.semester = dto.semester;
 
-      const { data: updatedSchedule, error } = await supabase
+      // before snapshot
+      const before = await this.findOne(id).catch(() => null);
+
+      const { data, error } = await supabase
         .from('schedules')
         .update(updateData)
         .eq('id', id)
@@ -558,23 +556,90 @@ export class SchedulesService {
         throw new InternalServerErrorException('Failed to update schedule');
       }
 
-      // Invalidate related caches
-      await this.invalidateRelatedCaches(existing);
-      if (dto.teacherId || dto.sectionId) {
-        await this.invalidateRelatedCaches(dto as CreateScheduleDto);
+      // Audit log
+      await this.logAudit({
+        action: 'update',
+        scheduleId: id,
+        actorUserId: null,
+        before,
+        after: data,
+        changedFields: updateData,
+      });
+
+      // Invalidate cache
+      await this.cacheManager.del(cacheKey);
+
+      // Notify affected users about schedule update
+      try {
+        const schedule = await this.findOne(id);
+        const userIds: string[] = [];
+
+        // Get teacher user_id
+        if (schedule.teacherId) {
+          const { data: teacher } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .eq('id', schedule.teacherId)
+            .single();
+          if (teacher?.user_id) {
+            userIds.push(teacher.user_id);
+          }
+        }
+
+        // Get all students in the section
+        if (schedule.sectionId) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('section_id', schedule.sectionId);
+          if (students) {
+            const studentUserIds = students
+              .map((s) => s.user_id)
+              .filter((id) => id);
+            userIds.push(...studentUserIds);
+          }
+        }
+
+          // Activity monitoring - notify affected users
+          if (userIds.length > 0) {
+            try {
+              const schedule = await this.findOne(id);
+              const subjectName = (schedule as any).subject?.subject_name || 'a subject';
+              const scheduleDetails = `${subjectName} - ${data.day_of_week} ${data.start_time}-${data.end_time}`;
+              
+              await this.activityMonitoring.handleScheduleUpdated(
+                id,
+                scheduleDetails,
+                userIds,
+                updateData,
+                'system',
+              );
+            } catch (error) {
+              this.logger.warn('Failed to handle schedule update activity monitoring:', error);
+            }
+          }
+
+          if (userIds.length > 0) {
+            const subjectName = (schedule as any).subject?.subject_name || 'a subject';
+            await this.notificationService.notifyUsers(
+              userIds,
+              'Schedule Updated',
+              `The schedule for ${subjectName} has been updated.`,
+              NotificationType.INFO,
+              undefined,
+              { expiresInDays: 7 },
+            );
+          }
+      } catch (error) {
+        this.logger.warn('Failed to create notifications for schedule update:', error);
       }
 
-      return await this.findOne(id);
+      return data;
     } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
-      ) {
+      if (error instanceof NotFoundException) {
         throw error;
       }
-      this.logger.error('Unexpected error updating schedule:', error);
+      this.logger.error('Error updating schedule:', error);
       throw new InternalServerErrorException('Failed to update schedule');
     }
   }
@@ -584,45 +649,101 @@ export class SchedulesService {
 
     try {
       // Check if schedule exists
-      const existing = await this.findOne(id);
+      await this.findOne(id);
 
-      // Delete associated student schedules first
-      const { error: studentScheduleError } = await supabase
-        .from('student_schedule')
-        .delete()
-        .eq('schedule_id', id);
+      // before snapshot
+      const before = await this.findOne(id).catch(() => null);
 
-      if (studentScheduleError) {
-        this.logger.error(
-          'Error deleting student schedules:',
-          studentScheduleError,
-        );
-        throw new InternalServerErrorException(
-          'Failed to delete associated student schedules',
-        );
-      }
+      const { error } = await supabase.from('schedules').delete().eq('id', id);
 
-      // Delete the schedule
-      const { error: scheduleError } = await supabase
-        .from('schedules')
-        .delete()
-        .eq('id', id);
-
-      if (scheduleError) {
-        this.logger.error('Error deleting schedule:', scheduleError);
+      if (error) {
+        this.logger.error('Error deleting schedule:', error);
         throw new InternalServerErrorException('Failed to delete schedule');
       }
 
-      // Invalidate related caches
-      await this.invalidateRelatedCaches(existing);
+      // Audit log
+      await this.logAudit({
+        action: 'delete',
+        scheduleId: id,
+        actorUserId: null,
+        before,
+        after: null,
+        changedFields: null,
+      });
+
+      // Invalidate cache
+      await this.cacheManager.del(`schedule:${id}`);
+
+      // Notify affected users about schedule deletion
+      try {
+        if (before) {
+          const userIds: string[] = [];
+
+          // Get teacher user_id
+          if (before.teacherId) {
+            const { data: teacher } = await supabase
+              .from('teachers')
+              .select('user_id')
+              .eq('id', before.teacherId)
+              .single();
+            if (teacher?.user_id) {
+              userIds.push(teacher.user_id);
+            }
+          }
+
+          // Get all students in the section
+          if (before.sectionId) {
+            const { data: students } = await supabase
+              .from('students')
+              .select('user_id')
+              .eq('section_id', before.sectionId);
+            if (students) {
+              const studentUserIds = students
+                .map((s) => s.user_id)
+                .filter((id) => id);
+              userIds.push(...studentUserIds);
+            }
+          }
+
+          // Activity monitoring - notify affected users
+          if (userIds.length > 0) {
+            try {
+              const subjectName = (before as any).subject?.subject_name || 'a subject';
+              const scheduleDetails = `${subjectName} - ${before.dayOfWeek} ${before.startTime}-${before.endTime}`;
+              
+              await this.activityMonitoring.handleScheduleDeleted(
+                id,
+                scheduleDetails,
+                userIds,
+                'system',
+              );
+            } catch (error) {
+              this.logger.warn('Failed to handle schedule deletion activity monitoring:', error);
+            }
+          }
+
+          if (userIds.length > 0) {
+            const subjectName = (before as any).subject?.subject_name || 'a subject';
+            await this.notificationService.notifyUsers(
+              userIds,
+              'Schedule Cancelled',
+              `The schedule for ${subjectName} has been cancelled.`,
+              NotificationType.WARNING,
+              undefined,
+              { expiresInDays: 7 },
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to create notifications for schedule deletion:', error);
+      }
+
+      this.logger.log(`Schedule deleted successfully: ${id}`);
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof InternalServerErrorException
-      ) {
+      if (error instanceof NotFoundException) {
         throw error;
       }
-      this.logger.error('Unexpected error deleting schedule:', error);
+      this.logger.error('Error deleting schedule:', error);
       throw new InternalServerErrorException('Failed to delete schedule');
     }
   }
@@ -660,7 +781,7 @@ export class SchedulesService {
         );
       }
 
-      // Prepare student schedule assignments
+      // Create student-schedule assignments
       const assignments = dto.studentIds.map((studentId) => ({
         schedule_id: scheduleId,
         student_id: studentId,
@@ -672,25 +793,17 @@ export class SchedulesService {
 
       if (error) {
         this.logger.error('Error assigning students:', error);
-        throw new InternalServerErrorException(
-          'Failed to assign students to schedule',
-        );
+        throw new InternalServerErrorException('Failed to assign students');
       }
 
-      // Invalidate schedule cache
+      // Invalidate cache
       await this.cacheManager.del(`schedule:${scheduleId}`);
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
-      ) {
+      if (error instanceof BadRequestException) {
         throw error;
       }
       this.logger.error('Unexpected error assigning students:', error);
-      throw new InternalServerErrorException(
-        'Failed to assign students to schedule',
-      );
+      throw new InternalServerErrorException('Failed to assign students');
     }
   }
 
@@ -712,247 +825,134 @@ export class SchedulesService {
 
       if (error) {
         this.logger.error('Error removing students:', error);
-        throw new InternalServerErrorException(
-          'Failed to remove students from schedule',
-        );
+        throw new InternalServerErrorException('Failed to remove students');
       }
 
-      // Invalidate schedule cache
+      // Invalidate cache
       await this.cacheManager.del(`schedule:${scheduleId}`);
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof InternalServerErrorException
-      ) {
-        throw error;
-      }
-      this.logger.error('Unexpected error removing students:', error);
-      throw new InternalServerErrorException(
-        'Failed to remove students from schedule',
-      );
+      this.logger.error('Error removing students:', error);
+      throw new InternalServerErrorException('Failed to remove students');
     }
   }
 
   async getStudentSchedule(studentId: string): Promise<Schedule[]> {
     const cacheKey = `schedules:student:${studentId}`;
 
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      this.logger.log(`Cache hit for ${cacheKey}`);
-      return cached as Schedule[];
-    }
-    this.logger.log(`Cache miss for ${cacheKey}`);
+    try {
+      const cached = await this.cacheManager.get<Schedule[]>(cacheKey);
+      if (cached) {
+        this.logger.log(`Cache hit for student schedules: ${studentId}`);
+        return cached;
+      }
 
-    const supabase = this.getSupabaseClient();
-    const { data, error } = await supabase
-      .from('student_schedule')
-      .select(
-        `
-        schedule:schedules!inner(
-          id,
-          subject_id,
-          teacher_id,
-          section_id,
-          room_id,
-          building_id,
-          day_of_week,
-          start_time,
-          end_time,
-          school_year,
-          semester,
-          created_at,
-          updated_at,
-          subject:subjects!inner(id, subject_name, description, grade_level, color_hex),
-          teacher:teachers!inner(id, first_name, last_name, middle_name, user:users!inner(id, full_name, email)),
-          section:sections!inner(id, name, grade_level, teacher_id),
-          room:rooms!inner(
-            id,
-            room_number,
-            capacity,
-            floor_id,
-            floor:floors(
+      this.logger.log(`Cache miss for student schedules: ${studentId}`);
+
+      const supabase = this.getSupabaseClient();
+
+      // First, get the student's section_id
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('section_id')
+        .eq('id', studentId)
+        .single();
+
+      if (studentError || !student) {
+        this.logger.error('Error fetching student:', studentError);
+        throw new NotFoundException('Student not found');
+      }
+
+      if (!student.section_id) {
+        this.logger.warn(`Student ${studentId} has no section assigned`);
+        return [];
+      }
+
+      // Get all schedules for the student's section
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(
+          `
+          *,
+          subject:subjects(*),
+          teacher:teachers(
+            *,
+            user:users(
               id,
-              number,
-              building:buildings(id, building_name)
+              full_name,
+              email
             )
-          )
+          ),
+          section:sections(*),
+          room:rooms(
+            *,
+            floor:floors(
+              *,
+              building:buildings(*)
+            )
+          ),
+          building:buildings(*)
+        `,
         )
-      `,
-      )
-      .eq('student_id', studentId);
+        .eq('section_id', student.section_id)
+        .eq('status', 'published') // Only show published schedules
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
 
-    if (error) {
-      this.logger.error('Error fetching student schedule:', error);
+      if (error) {
+        this.logger.error('Error fetching student schedules:', error);
+        throw new InternalServerErrorException(
+          'Failed to fetch student schedules',
+        );
+      }
+
+      const schedules =
+        data?.map((item: any) => ({
+          id: item.id,
+          subjectId: item.subject_id,
+          teacherId: item.teacher_id,
+          sectionId: item.section_id,
+          roomId: item.room_id,
+          buildingId: item.building_id,
+          dayOfWeek: item.day_of_week,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          schoolYear: item.school_year,
+          semester: item.semester,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          subject: item.subject,
+          teacher: item.teacher,
+          section: item.section,
+          room: item.room,
+          building: item.building,
+        })) || [];
+
+      // Cache the result
+      await this.cacheManager.set(cacheKey, schedules, this.DETAILED_CACHE_TTL);
+
+      this.logger.log(
+        `Found ${schedules.length} schedules for student ${studentId} in section ${student.section_id}`,
+      );
+      return schedules;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error('Error fetching student schedules:', error);
       throw new InternalServerErrorException(
-        'Failed to fetch student schedule',
+        'Failed to fetch student schedules',
       );
     }
-
-    const schedules =
-      data?.map((item: any) => ({
-        id: item.schedule.id,
-        subjectId: item.schedule.subject_id,
-        teacherId: item.schedule.teacher_id,
-        sectionId: item.schedule.section_id,
-        roomId: item.schedule.room_id,
-        buildingId: item.schedule.building_id,
-        dayOfWeek: item.schedule.day_of_week,
-        startTime: item.schedule.start_time,
-        endTime: item.schedule.end_time,
-        schoolYear: item.schedule.school_year,
-        semester: item.schedule.semester,
-        createdAt: item.schedule.created_at,
-        updatedAt: item.schedule.updated_at,
-        subject: item.schedule.subject
-          ? {
-              id: item.schedule.subject.id,
-              subjectName: item.schedule.subject.subject_name,
-              description: item.schedule.subject.description,
-              gradeLevel: item.schedule.subject.grade_level,
-              colorHex: item.schedule.subject.color_hex,
-            }
-          : undefined,
-        teacher: item.schedule.teacher
-          ? {
-              id: item.schedule.teacher.id,
-              firstName: item.schedule.teacher.first_name,
-              lastName: item.schedule.teacher.last_name,
-              middleName: item.schedule.teacher.middle_name,
-              user: item.schedule.teacher.user
-                ? {
-                    id: item.schedule.teacher.user.id,
-                    fullName: item.schedule.teacher.user.full_name,
-                    email: item.schedule.teacher.user.email,
-                  }
-                : undefined,
-            }
-          : undefined,
-        section: item.schedule.section
-          ? {
-              id: item.schedule.section.id,
-              name: item.schedule.section.name,
-              gradeLevel: item.schedule.section.grade_level,
-              teacherId: item.schedule.section.teacher_id,
-            }
-          : undefined,
-        room: item.schedule.room
-          ? {
-              id: item.schedule.room.id,
-              roomNumber: item.schedule.room.room_number,
-              capacity: item.schedule.room.capacity,
-              floorId: item.schedule.room.floor_id,
-              floor: item.schedule.room.floor
-                ? {
-                    id: item.schedule.room.floor.id,
-                    floorNumber: item.schedule.room.floor.number,
-                    building: item.schedule.room.floor.building
-                      ? {
-                          id: item.schedule.room.floor.building.id,
-                          name: item.schedule.room.floor.building.building_name,
-                        }
-                      : undefined,
-                  }
-                : undefined,
-            }
-          : undefined,
-        building: item.schedule.room?.floor?.building
-          ? {
-              id: item.schedule.room.floor.building.id,
-              name: item.schedule.room.floor.building.building_name,
-            }
-          : undefined,
-      })) || [];
-
-    await this.cacheManager.set(cacheKey, schedules, this.DETAILED_CACHE_TTL);
-
-    return schedules;
   }
 
-  async validateScheduleConflicts(
-    dto: ConflictCheckDto,
-  ): Promise<{ hasConflicts: boolean; conflicts: any[] }> {
+  async validateScheduleConflicts(dto: ConflictCheckDto): Promise<{
+    hasConflicts: boolean;
+    conflicts: any[];
+  }> {
     const supabase = this.getSupabaseClient();
 
     try {
-      const conflicts: any[] = [];
-
-      // Check teacher conflicts
-      if (dto.teacherId && dto.dayOfWeek && dto.startTime && dto.endTime) {
-        const { data: teacherConflicts } = await supabase
-          .from('schedules')
-          .select(
-            'id, teacher:teachers(first_name, last_name), day_of_week, start_time, end_time',
-          )
-          .eq('teacher_id', dto.teacherId)
-          .eq('day_of_week', dto.dayOfWeek)
-          .neq(
-            'id',
-            dto.excludeScheduleId || '00000000-0000-0000-0000-000000000000',
-          )
-          .or(
-            `start_time.lte.${dto.startTime},end_time.gt.${dto.startTime},start_time.lt.${dto.endTime},end_time.gte.${dto.endTime}`,
-          );
-
-        if (teacherConflicts && teacherConflicts.length > 0) {
-          conflicts.push({
-            type: 'teacher',
-            message: 'Teacher has conflicting schedule',
-            conflicts: teacherConflicts,
-          });
-        }
-      }
-
-      // Check room conflicts
-      if (dto.roomId && dto.dayOfWeek && dto.startTime && dto.endTime) {
-        const { data: roomConflicts } = await supabase
-          .from('schedules')
-          .select(
-            'id, room:rooms(room_number), day_of_week, start_time, end_time',
-          )
-          .eq('room_id', dto.roomId)
-          .eq('day_of_week', dto.dayOfWeek)
-          .neq(
-            'id',
-            dto.excludeScheduleId || '00000000-0000-0000-0000-000000000000',
-          )
-          .or(
-            `start_time.lte.${dto.startTime},end_time.gt.${dto.startTime},start_time.lt.${dto.endTime},end_time.gte.${dto.endTime}`,
-          );
-
-        if (roomConflicts && roomConflicts.length > 0) {
-          conflicts.push({
-            type: 'room',
-            message: 'Room has conflicting schedule',
-            conflicts: roomConflicts,
-          });
-        }
-      }
-
-      // Check section conflicts
-      if (dto.sectionId && dto.dayOfWeek && dto.startTime && dto.endTime) {
-        const { data: sectionConflicts } = await supabase
-          .from('schedules')
-          .select(
-            'id, section:sections(name), day_of_week, start_time, end_time',
-          )
-          .eq('section_id', dto.sectionId)
-          .eq('day_of_week', dto.dayOfWeek)
-          .neq(
-            'id',
-            dto.excludeScheduleId || '00000000-0000-0000-0000-000000000000',
-          )
-          .or(
-            `start_time.lte.${dto.startTime},end_time.gt.${dto.startTime},start_time.lt.${dto.endTime},end_time.gte.${dto.endTime}`,
-          );
-
-        if (sectionConflicts && sectionConflicts.length > 0) {
-          conflicts.push({
-            type: 'section',
-            message: 'Section has conflicting schedule',
-            conflicts: sectionConflicts,
-          });
-        }
-      }
+      const conflicts = await this.checkConflictsForValidation(dto);
 
       return {
         hasConflicts: conflicts.length > 0,
@@ -960,9 +960,7 @@ export class SchedulesService {
       };
     } catch (error) {
       this.logger.error('Error validating schedule conflicts:', error);
-      throw new InternalServerErrorException(
-        'Failed to validate schedule conflicts',
-      );
+      throw new InternalServerErrorException('Failed to validate conflicts');
     }
   }
 
@@ -970,94 +968,113 @@ export class SchedulesService {
     const supabase = this.getSupabaseClient();
 
     // Validate subject exists
-    const { data: subject } = await supabase
-      .from('subjects')
-      .select('id')
-      .eq('id', dto.subjectId)
-      .single();
+    if (dto.subjectId) {
+      const { data: subject, error: subjectError } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('id', dto.subjectId)
+        .single();
 
-    if (!subject) {
-      throw new BadRequestException(
-        `Subject with ID "${dto.subjectId}" not found`,
-      );
+      if (subjectError || !subject) {
+        throw new BadRequestException('Invalid subject ID');
+      }
     }
 
     // Validate teacher exists
-    const { data: teacher } = await supabase
-      .from('teachers')
-      .select('id')
-      .eq('id', dto.teacherId)
-      .single();
+    if (dto.teacherId) {
+      const { data: teacher, error: teacherError } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('id', dto.teacherId)
+        .single();
 
-    if (!teacher) {
-      throw new BadRequestException(
-        `Teacher with ID "${dto.teacherId}" not found`,
-      );
+      if (teacherError || !teacher) {
+        throw new BadRequestException('Invalid teacher ID');
+      }
     }
 
     // Validate section exists
-    const { data: section } = await supabase
-      .from('sections')
-      .select('id')
-      .eq('id', dto.sectionId)
-      .single();
+    if (dto.sectionId) {
+      const { data: section, error: sectionError } = await supabase
+        .from('sections')
+        .select('id')
+        .eq('id', dto.sectionId)
+        .single();
 
-    if (!section) {
-      throw new BadRequestException(
-        `Section with ID "${dto.sectionId}" not found`,
-      );
+      if (sectionError || !section) {
+        throw new BadRequestException('Invalid section ID');
+      }
     }
 
     // Validate room exists
-    const { data: room } = await supabase
-      .from('rooms')
-      .select('id')
-      .eq('id', dto.roomId)
-      .single();
+    if (dto.roomId) {
+      const { data: room, error: roomError } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('id', dto.roomId)
+        .single();
 
-    if (!room) {
-      throw new BadRequestException(`Room with ID "${dto.roomId}" not found`);
-    }
-
-    // Validate building exists
-    const { data: building } = await supabase
-      .from('buildings')
-      .select('id')
-      .eq('id', dto.buildingId)
-      .single();
-
-    if (!building) {
-      throw new BadRequestException(
-        `Building with ID "${dto.buildingId}" not found`,
-      );
+      if (roomError || !room) {
+        throw new BadRequestException('Invalid room ID');
+      }
     }
   }
 
   private async checkConflicts(
     dto: CreateScheduleDto,
     excludeId?: string,
-  ): Promise<boolean> {
+  ): Promise<any[]> {
     const supabase = this.getSupabaseClient();
 
-    // Use the PostgreSQL function for conflict checking
-    const { data, error } = await supabase.rpc('check_schedule_conflicts', {
-      p_teacher_id: dto.teacherId,
-      p_room_id: dto.roomId,
-      p_section_id: dto.sectionId,
-      p_day_of_week: dto.dayOfWeek,
-      p_start_time: dto.startTime,
-      p_end_time: dto.endTime,
-      p_exclude_schedule_id: excludeId || null,
-    });
+    try {
+      const { data, error } = await supabase.rpc('check_schedule_conflicts', {
+        p_teacher_id: dto.teacherId,
+        p_room_id: dto.roomId,
+        p_section_id: dto.sectionId,
+        p_day_of_week: dto.dayOfWeek,
+        p_start_time: dto.startTime,
+        p_end_time: dto.endTime,
+        p_exclude_schedule_id: excludeId || null,
+      });
 
-    if (error) {
+      if (error) {
+        this.logger.error('Error checking conflicts:', error);
+        throw new InternalServerErrorException('Failed to check conflicts');
+      }
+
+      return data || [];
+    } catch (error) {
       this.logger.error('Error checking conflicts:', error);
-      throw new InternalServerErrorException(
-        `Failed to validate schedule conflicts: ${error.message}`,
-      );
+      throw new InternalServerErrorException('Failed to check conflicts');
     }
+  }
 
-    return data === true;
+  private async checkConflictsForValidation(
+    dto: ConflictCheckDto,
+  ): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      const { data, error } = await supabase.rpc('check_schedule_conflicts', {
+        p_teacher_id: dto.teacherId,
+        p_room_id: dto.roomId,
+        p_section_id: dto.sectionId,
+        p_day_of_week: dto.dayOfWeek,
+        p_start_time: dto.startTime,
+        p_end_time: dto.endTime,
+        p_exclude_schedule_id: dto.excludeScheduleId || null,
+      });
+
+      if (error) {
+        this.logger.error('Error checking conflicts for validation:', error);
+        throw new InternalServerErrorException('Failed to check conflicts');
+      }
+
+      return data || [];
+    } catch (error) {
+      this.logger.error('Error checking conflicts for validation:', error);
+      throw new InternalServerErrorException('Failed to check conflicts');
+    }
   }
 
   private async invalidateRelatedCaches(dto: CreateScheduleDto): Promise<void> {
@@ -1073,14 +1090,441 @@ export class SchedulesService {
 
   private async invalidateAllCaches(): Promise<void> {
     // Clear common cache keys - this is a simplified approach
-    // In production, you might want to implement a more sophisticated cache key tracking system
     const commonKeys = [
-      'schedules:all',
-      'schedules:section',
-      'schedules:teacher',
-      'schedules:student',
+      'schedules:all:*',
+      'schedules:section:*',
+      'schedules:teacher:*',
+      'schedules:student:*',
     ];
 
     await Promise.all(commonKeys.map((key) => this.cacheManager.del(key)));
+  }
+
+  async getTeacherTodaySchedules(
+    teacherId: string,
+    dayOfWeek: string,
+  ): Promise<Schedule[]> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      const cacheKey = `schedules:teacher:today:${teacherId}:${dayOfWeek}`;
+
+      const cached = await this.cacheManager.get<Schedule[]>(cacheKey);
+      if (cached) {
+        this.logger.log(`Cache hit for teacher today schedules: ${teacherId}`);
+        return cached;
+      }
+
+      this.logger.log(
+        `Fetching today's schedules for teacher: ${teacherId}, day: ${dayOfWeek}`,
+      );
+
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(
+          `
+        *,
+        subject:subjects(*),
+        section:sections(*),
+        room:rooms(
+          *,
+          floor:floors(
+            *,
+            building:buildings(*)
+          )
+        ),
+        building:buildings(*)
+      `,
+        )
+        .eq('teacher_id', teacherId)
+        .eq('day_of_week', dayOfWeek)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        this.logger.error('Error fetching teacher schedules:', error);
+        throw new InternalServerErrorException(
+          'Failed to fetch teacher schedules',
+        );
+      }
+
+      const schedules =
+        data?.map((item: any) => ({
+          id: item.id,
+          subjectId: item.subject_id,
+          teacherId: item.teacher_id,
+          sectionId: item.section_id,
+          roomId: item.room_id,
+          buildingId: item.building_id,
+          dayOfWeek: item.day_of_week,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          schoolYear: item.school_year,
+          semester: item.semester,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          status: item.status,
+          is_published: item.is_published,
+          published_at: item.published_at,
+          recurring_rule: item.recurring_rule,
+          version: item.version,
+          subject: item.subject,
+          section: item.section,
+          room: item.room,
+        })) || [];
+
+      // Cache the result
+      await this.cacheManager.set(cacheKey, schedules, this.CACHE_TTL * 1000);
+
+      this.logger.log(
+        `Found ${schedules.length} schedules for teacher ${teacherId} on ${dayOfWeek}`,
+      );
+
+      return schedules;
+    } catch (error) {
+      this.logger.error('Error fetching teacher schedules:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch teacher schedules',
+      );
+    }
+  }
+
+  async listTeachersBySubject(subjectId: string): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+
+    const seen = new Set<string>();
+    const result: any[] = [];
+
+    // If no subjectId provided, return all teachers
+    if (!subjectId) {
+      this.logger.log(
+        '[listTeachersBySubject] No subjectId provided, fetching all teachers',
+      );
+
+      const { data: allTeachers, error: allTeachersError } = await supabase
+        .from('teachers')
+        .select('id, first_name, last_name, middle_name, user_id')
+        .is('deleted_at', null)
+        .order('first_name', { ascending: true });
+
+      if (allTeachersError) {
+        this.logger.error(
+          '[listTeachersBySubject] Error fetching all teachers',
+          allTeachersError,
+        );
+        return [];
+      }
+
+      if (allTeachers) {
+        // Get user data for all teachers in one query
+        const userIds = allTeachers.map((t: any) => t.user_id).filter(Boolean);
+        const userDataMap = new Map<string, any>();
+
+        if (userIds.length > 0) {
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, full_name, email')
+            .in('id', userIds);
+
+          if (!usersError && users) {
+            users.forEach((u: any) => {
+              userDataMap.set(u.id, u);
+            });
+          }
+        }
+
+        for (const t of allTeachers) {
+          const id = t?.id;
+          if (id) {
+            const userData = userDataMap.get(t.user_id);
+            result.push({
+              id,
+              first_name: t.first_name,
+              last_name: t.last_name,
+              middle_name: t.middle_name,
+              full_name: userData?.full_name,
+              email: userData?.email,
+            });
+          }
+        }
+      }
+
+      this.logger.log(
+        `[listTeachersBySubject] Returning ${result.length} total teachers`,
+      );
+      return result;
+    }
+
+    this.logger.log(
+      `[listTeachersBySubject] Looking for teachers for subject: ${subjectId}`,
+    );
+
+    // First, get teachers with subject_specialization_id matching the subject
+    // This is the primary way to find teachers qualified to teach a subject
+    const { data: teachersBySpecialization, error: specializationError } =
+      await supabase
+        .from('teachers')
+        .select('id, first_name, last_name, middle_name, user_id')
+        .eq('subject_specialization_id', subjectId)
+        .is('deleted_at', null)
+        .order('first_name', { ascending: true });
+
+    if (specializationError) {
+      this.logger.error(
+        '[listTeachersBySubject] Error fetching teachers by specialization',
+        {
+          subjectId,
+          error: specializationError,
+        },
+      );
+    } else {
+      this.logger.log(
+        `[listTeachersBySubject] Found ${teachersBySpecialization?.length || 0} teachers by specialization`,
+      );
+    }
+
+    if (!specializationError && teachersBySpecialization) {
+      // Get user data for all teachers in one query
+      const userIds = teachersBySpecialization
+        .map((t: any) => t.user_id)
+        .filter(Boolean);
+      const userDataMap = new Map<string, any>();
+
+      if (userIds.length > 0) {
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        if (!usersError && users) {
+          users.forEach((u: any) => {
+            userDataMap.set(u.id, u);
+          });
+        }
+      }
+
+      for (const t of teachersBySpecialization) {
+        const id = t?.id;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          const userData = userDataMap.get(t.user_id);
+          result.push({
+            id,
+            first_name: t.first_name,
+            last_name: t.last_name,
+            middle_name: t.middle_name,
+            full_name: userData?.full_name,
+            email: userData?.email,
+          });
+        }
+      }
+    }
+
+    // Fallback: Also check teachers who have been scheduled to teach this subject
+    // This covers cases where teachers might teach subjects outside their specialization
+    const { data: schedulesData, error: schedulesError } = await supabase
+      .from('schedules')
+      .select('teacher_id')
+      .eq('subject_id', subjectId)
+      .not('teacher_id', 'is', null);
+
+    if (schedulesError) {
+      this.logger.error('[listTeachersBySubject] Error fetching schedules', {
+        subjectId,
+        error: schedulesError,
+      });
+    } else {
+      this.logger.log(
+        `[listTeachersBySubject] Found ${schedulesData?.length || 0} schedules for this subject`,
+      );
+    }
+
+    if (!schedulesError && schedulesData) {
+      const teacherIds = [
+        ...new Set(schedulesData.map((s: any) => s.teacher_id).filter(Boolean)),
+      ];
+
+      if (teacherIds.length > 0) {
+        const { data: teachersFromSchedules, error: teachersError } =
+          await supabase
+            .from('teachers')
+            .select('id, first_name, last_name, middle_name, user_id')
+            .in('id', teacherIds)
+            .is('deleted_at', null);
+
+        if (!teachersError && teachersFromSchedules) {
+          // Get user data for these teachers
+          const userIds = teachersFromSchedules
+            .map((t: any) => t.user_id)
+            .filter(Boolean);
+          const userDataMap = new Map<string, any>();
+
+          if (userIds.length > 0) {
+            const { data: users, error: usersError } = await supabase
+              .from('users')
+              .select('id, full_name, email')
+              .in('id', userIds);
+
+            if (!usersError && users) {
+              users.forEach((u: any) => {
+                userDataMap.set(u.id, u);
+              });
+            }
+          }
+
+          for (const t of teachersFromSchedules) {
+            const id = t?.id;
+            if (id && !seen.has(id)) {
+              seen.add(id);
+              const userData = userDataMap.get(t.user_id);
+              result.push({
+                id,
+                first_name: t.first_name,
+                last_name: t.last_name,
+                middle_name: t.middle_name,
+                full_name: userData?.full_name,
+                email: userData?.email,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    this.logger.log(
+      `[listTeachersBySubject] Returning ${result.length} teachers for subject: ${subjectId}`,
+    );
+
+    return result;
+  }
+
+  /**
+   * Admin – publish or unpublish a schedule
+   */
+  async setPublishState(
+    id: string,
+    publish: boolean,
+  ): Promise<{
+    id: string;
+    status: string;
+    is_published: boolean;
+    published_at: string | null;
+  }> {
+    const supabase = this.getSupabaseClient();
+
+    const updatePayload: any = publish
+      ? {
+          status: 'published',
+          is_published: true,
+          published_at: new Date().toISOString(),
+        }
+      : { status: 'draft', is_published: false, published_at: null };
+
+    const before = await this.findOne(id).catch(() => null);
+
+    const { data, error } = await supabase
+      .from('schedules')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('id,status,is_published,published_at')
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to update publish state');
+    }
+
+    await this.logAudit({
+      action: publish ? 'publish' : 'unpublish',
+      scheduleId: id,
+      actorUserId: null,
+      before,
+      after: data,
+      changedFields: updatePayload,
+    });
+
+    await this.invalidateAllCaches();
+    return data as any;
+  }
+
+  async getAuditLogs(scheduleId: string): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+    const { data, error } = await supabase
+      .from('schedules_audit_log')
+      .select(
+        'id, action, changed_fields, before, after, note, created_at, actor_user_id, actor:users!actor_user_id(id, full_name, email)',
+      )
+      .eq('schedule_id', scheduleId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      this.logger.error('Failed to fetch audit logs', error);
+      return [];
+    }
+    return data || [];
+  }
+
+  private async logAudit(params: {
+    action: 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
+    scheduleId: string;
+    actorUserId: string | null;
+    before: any;
+    after: any;
+    changedFields: any;
+  }) {
+    try {
+      const supabase = this.getSupabaseClient();
+      await supabase.from('schedules_audit_log').insert({
+        schedule_id: params.scheduleId,
+        actor_user_id: params.actorUserId,
+        action: params.action,
+        before: params.before || null,
+        after: params.after || null,
+        changed_fields: params.changedFields || null,
+      });
+    } catch (e) {
+      this.logger.warn('Audit log insert failed', e);
+    }
+  }
+
+  /**
+   * Admin – templates CRUD (list/create minimal)
+   */
+  async listTemplates(): Promise<any[]> {
+    const supabase = this.getSupabaseClient();
+    const { data, error } = await supabase
+      .from('schedule_templates')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new InternalServerErrorException(
+        'Failed to fetch schedule templates',
+      );
+    }
+    return data || [];
+  }
+
+  async createTemplate(input: {
+    name: string;
+    description?: string;
+    grade_level?: string;
+    payload: any;
+    created_by?: string;
+  }): Promise<any> {
+    const supabase = this.getSupabaseClient();
+    const { data, error } = await supabase
+      .from('schedule_templates')
+      .insert({
+        name: input.name,
+        description: input.description ?? null,
+        grade_level: input.grade_level ?? null,
+        payload: input.payload,
+        created_by: input.created_by ?? null,
+      })
+      .select('*')
+      .single();
+    if (error) {
+      throw new InternalServerErrorException(
+        'Failed to create schedule template',
+      );
+    }
+    return data;
   }
 }

@@ -37,6 +37,8 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { AuthUser } from '../auth/auth-user.decorator';
+import { Audit } from '../common/audit';
+import { AuditEntityType, AuditAction } from '../common/audit/audit.types';
 
 /**
  * Gallery Controller (Simplified - No Albums)
@@ -54,6 +56,10 @@ export class GalleryController {
    * Upload a photo/video
    */
   @Post()
+  @Audit({
+    entityType: AuditEntityType.GALLERY_ITEM,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -217,6 +223,10 @@ export class GalleryController {
    * Update item metadata
    */
   @Put(':id')
+  @Audit({
+    entityType: AuditEntityType.GALLERY_ITEM,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -236,6 +246,10 @@ export class GalleryController {
    * Delete an item (soft delete)
    */
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.GALLERY_ITEM,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiBearerAuth('JWT-auth')
@@ -247,8 +261,35 @@ export class GalleryController {
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @AuthUser() user: any,
-  ): Promise<void> {
+  ): Promise<GalleryItem> {
+    // Return the deleted item for audit logging
+    // (HTTP response will still be 204 No Content due to @HttpCode decorator)
     return this.galleryItemsService.remove(id, user.id);
+  }
+
+  /**
+   * Restore a soft-deleted item
+   */
+  @Post(':id/restore')
+  @Audit({
+    entityType: AuditEntityType.GALLERY_ITEM,
+    descriptionField: 'title',
+    action: AuditAction.RESTORE,
+  })
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restore a soft-deleted gallery item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Item restored successfully', type: GalleryItem })
+  @ApiResponse({ status: 404, description: 'Item not found' })
+  async restore(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AuthUser() user: any,
+  ): Promise<GalleryItem> {
+    // Return the restored item for audit logging and client feedback
+    return this.galleryItemsService.restore(id, user.id);
   }
 
   /**

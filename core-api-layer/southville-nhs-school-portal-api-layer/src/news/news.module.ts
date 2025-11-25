@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { AuthModule } from '../auth/auth.module';
 import { StorageModule } from '../storage/storage.module';
+import { StudentActivitiesModule } from '../student-activities/student-activities.module';
+import { GalleryModule } from '../gallery/gallery.module';
+import { ActivityMonitoringModule } from '../activity-monitoring/activity-monitoring.module';
 
 // Controllers
 import {
@@ -9,6 +12,7 @@ import {
   NewsCategoriesController,
   JournalismMembershipController,
 } from './controllers';
+import { NewsKpiController } from './controllers/news-kpi.controller';
 
 // Services
 import {
@@ -20,6 +24,8 @@ import {
   NewsImageService,
   JournalismMembershipService,
 } from './services';
+import { NewsKpiService } from './services/news-kpi.service';
+import { NewsReviewCommentsService } from './services/news-review-comments.service';
 
 /**
  * News/Journalism Module
@@ -27,11 +33,19 @@ import {
  * Supports journalism domain with position-based permissions
  */
 @Module({
-  imports: [SupabaseModule, AuthModule, StorageModule],
+  imports: [
+    SupabaseModule,
+    AuthModule,
+    StorageModule,
+    StudentActivitiesModule,
+    GalleryModule,
+    ActivityMonitoringModule,
+  ],
   controllers: [
     NewsController,
     NewsCategoriesController,
     JournalismMembershipController,
+    NewsKpiController,
   ],
   providers: [
     // Core service
@@ -44,6 +58,8 @@ import {
     TagsService,
     NewsImageService,
     JournalismMembershipService,
+    NewsReviewCommentsService,
+    NewsKpiService,
   ],
   exports: [
     // Export services for use in other modules

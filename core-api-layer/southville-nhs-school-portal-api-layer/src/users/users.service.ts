@@ -16,6 +16,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { BulkCreateUsersDto } from './dto/bulk-create-users.dto';
 import { ImportUsersDto } from './dto/import-users.dto';
 import {
+  ImportStudentsCsvDto,
+  CsvStudentRowDto,
+  BulkImportResultDto,
+} from './dto/import-students-csv.dto';
+import {
+  ImportTeachersCsvDto,
+  CsvTeacherRowDto,
+} from './dto/import-teachers-csv.dto';
+import {
   UpdateUserStatusDto,
   SuspendUserDto,
 } from './dto/update-user-status.dto';
@@ -23,6 +32,9 @@ import { User } from './entities/user.entity';
 import { Teacher } from './entities/teacher.entity';
 import { Admin } from './entities/admin.entity';
 import { Student } from '../students/entities/student.entity';
+import { NotificationService } from '../common/services/notification.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 import csv from 'csv-parser';
 import { Parser } from 'json2csv';
 
@@ -31,7 +43,11 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   private supabase: SupabaseClient | null = null;
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private notificationService: NotificationService,
+    private activityMonitoring: ActivityMonitoringService,
+  ) {}
 
   private getSupabaseClient(): SupabaseClient {
     if (!this.supabase) {
@@ -63,20 +79,115 @@ export class UsersService {
   }
 
   /**
+   * Generate password from birthday (YYYYMMDD format)
+   * Used for student accounts
+   */
+  private generatePasswordFromBirthday(birthday: string): string {
+    const date = new Date(birthday);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+
+  /**
    * Validate email uniqueness across auth.users and public.users
    */
   private async validateEmailUniqueness(email: string): Promise<void> {
     const supabase = this.getSupabaseClient();
 
     // Check public.users table
-    const { data: publicUser } = await supabase
+    const { data: publicUser, error } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating email uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate email uniqueness',
+      );
+    }
 
     if (publicUser) {
       throw new ConflictException('Email already exists');
+    }
+  }
+
+  /**
+   * Validate teacher uniqueness by email and birthday
+   * Prevents creating duplicate teachers with same email AND birthday
+   */
+  private async validateTeacherUniqueness(
+    email: string,
+    birthday: string,
+  ): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Single query to check if teacher with same email and birthday exists
+    const { data: existingTeacher, error } = await supabase
+      .from('teachers')
+      .select(
+        `
+        id,
+        user_id,
+        first_name,
+        last_name,
+        birthday,
+        user:users!user_id(
+          id,
+          email
+        )
+      `,
+      )
+      .eq('birthday', birthday)
+      .eq('user.email', email)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating teacher uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate teacher uniqueness',
+      );
+    }
+
+    if (existingTeacher) {
+      throw new ConflictException(
+        `Teacher with email '${email}' and birthday '${birthday}' already exists`,
+      );
+    }
+  }
+
+  /**
+   * Validate student uniqueness by LRN and birthday
+   * Prevents creating duplicate students with same LRN AND birthday
+   */
+  private async validateStudentUniqueness(
+    lrnId: string,
+    birthday: string,
+  ): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    // Check if student with same LRN and birthday exists
+    const { data: existingStudent, error } = await supabase
+      .from('students')
+      .select('id, lrn_id, first_name, last_name, birthday')
+      .eq('lrn_id', lrnId)
+      .eq('birthday', birthday)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error validating student uniqueness:', error);
+      throw new InternalServerErrorException(
+        'Failed to validate student uniqueness',
+      );
+    }
+
+    if (existingStudent) {
+      throw new ConflictException(
+        `Student with LRN '${lrnId}' and birthday '${birthday}' already exists`,
+      );
     }
   }
 
@@ -181,6 +292,7 @@ export class UsersService {
         age: teacherData.age,
         subject_specialization_id: teacherData.subjectSpecializationId,
         department_id: teacherData.departmentId,
+        advisory_section_id: teacherData.advisorySectionId,
       })
       .select()
       .single();
@@ -227,6 +339,39 @@ export class UsersService {
   }
 
   /**
+   * Create emergency contact record
+   */
+  private async createEmergencyContactRecord(
+    studentId: string,
+    contactData: any,
+  ): Promise<any> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: contact, error } = await supabase
+      .from('emergency_contacts')
+      .insert({
+        student_id: studentId,
+        guardian_name: contactData.guardianName,
+        relationship: contactData.relationship,
+        phone_number: contactData.phoneNumber,
+        email: contactData.email,
+        address: contactData.address,
+        is_primary: contactData.isPrimary,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error creating emergency contact record:', error);
+      throw new InternalServerErrorException(
+        `Failed to create emergency contact record: ${error.message}`,
+      );
+    }
+
+    return contact;
+  }
+
+  /**
    * Create student record
    */
   private async createStudentRecord(
@@ -267,7 +412,10 @@ export class UsersService {
   /**
    * Main user creation method
    */
-  async createUser(userData: CreateUserDto, createdBy: string): Promise<any> {
+  async createUser(
+    userData: CreateUserDto & { birthday?: string },
+    createdBy: string,
+  ): Promise<any> {
     let authUserId: string | null = null;
     let publicUserId: string | null = null;
 
@@ -275,14 +423,37 @@ export class UsersService {
       // Validate email uniqueness
       await this.validateEmailUniqueness(userData.email);
 
+      // Validate teacher-specific uniqueness
+      if (userData.userType === UserType.TEACHER && userData.birthday) {
+        await this.validateTeacherUniqueness(userData.email, userData.birthday);
+      }
+
+      // Validate student-specific uniqueness
+      if (userData.userType === UserType.STUDENT && userData.birthday) {
+        const studentData = userData as any;
+        if (studentData.lrnId) {
+          await this.validateStudentUniqueness(
+            studentData.lrnId,
+            userData.birthday,
+          );
+        }
+      }
+
       // Get role ID
       const roleId = await this.getRoleIdByName(userData.role);
       if (!roleId) {
         throw new BadRequestException(`Role '${userData.role}' does not exist`);
       }
 
-      // Generate secure password
-      const password = this.generateSecurePassword();
+      // Generate password based on user type
+      // Students and Teachers use birthday-based passwords (YYYYMMDD)
+      // Admins use secure random passwords
+      const password =
+        (userData.userType === UserType.STUDENT ||
+          userData.userType === UserType.TEACHER) &&
+        userData.birthday
+          ? this.generatePasswordFromBirthday(userData.birthday)
+          : this.generateSecurePassword();
 
       // Step 1: Create user in Supabase Auth
       const authUser = await this.createAuthUser(userData, password);
@@ -319,20 +490,48 @@ export class UsersService {
         `User created successfully: ${userData.email} (${userData.userType})`,
       );
 
-      return {
+      const response: any = {
         success: true,
-        user: {
-          id: authUser.id,
-          email: userData.email,
-          fullName: userData.fullName,
-          role: userData.role,
-          userType: userData.userType,
-          status: 'Active',
-        },
+        // Include full_name at top level for audit logging
+        full_name: userData.fullName,
+        id: authUser.id,
+        email: userData.email,
+        role: userData.role,
+        userType: userData.userType,
+        status: 'Active',
         specificRecord,
-        temporaryPassword: password,
         message: `${userData.userType} created successfully`,
       };
+
+      // Only include temporaryPassword for admins (students/teachers use predictable birthday-based passwords)
+      if (userData.userType === UserType.ADMIN) {
+        response.temporaryPassword = password;
+      }
+
+      // Activity monitoring - notify admins about new user
+      try {
+        await this.activityMonitoring.handleUserCreated(
+          authUser.id,
+          userData.email,
+          userData.role,
+          createdBy,
+        );
+      } catch (error) {
+        this.logger.warn(
+          'Failed to handle user creation activity monitoring:',
+          error,
+        );
+        // Don't fail user creation if monitoring fails
+      }
+
+      // Notify user about account creation
+      await this.notificationService.notifyAccountCreated(
+        authUser.id,
+        userData.role,
+        createdBy,
+      );
+
+      return response;
     } catch (error) {
       // Rollback: Clean up created records
       const supabase = this.getSupabaseClient();
@@ -369,6 +568,11 @@ export class UsersService {
   }
 
   async createTeacher(dto: CreateTeacherDto, createdBy: string) {
+    // Validate teacher-specific uniqueness before creating user
+    if (dto.birthday) {
+      await this.validateTeacherUniqueness(dto.email, dto.birthday);
+    }
+
     // Convert CreateTeacherDto to CreateUserDto format
     const userData: any = {
       // Include all original teacher fields for the specific record creation
@@ -399,6 +603,11 @@ export class UsersService {
   }
 
   async createStudent(dto: CreateStudentRequestDto, createdBy: string) {
+    // Validate student-specific uniqueness before creating user
+    if (dto.birthday && dto.lrnId) {
+      await this.validateStudentUniqueness(dto.lrnId, dto.birthday);
+    }
+
     // Convert CreateStudentRequestDto to CreateUserDto format
     const userData: any = {
       email: `${dto.lrnId}@student.local`, // Auto-generate email
@@ -409,7 +618,27 @@ export class UsersService {
       ...dto,
     };
 
-    return this.createUser(userData, createdBy);
+    const result = await this.createUser(userData, createdBy);
+
+    // Create emergency contacts if provided
+    if (dto.emergencyContacts && dto.emergencyContacts.length > 0) {
+      const emergencyContacts: any[] = [];
+      for (const contact of dto.emergencyContacts) {
+        try {
+          const contactRecord: any = await this.createEmergencyContactRecord(
+            result.specificRecord.id,
+            contact,
+          );
+          emergencyContacts.push(contactRecord);
+        } catch (error) {
+          this.logger.error('Error creating emergency contact:', error);
+          // Continue with other contacts even if one fails
+        }
+      }
+      result.emergencyContacts = emergencyContacts;
+    }
+
+    return result;
   }
 
   async createBulkUsers(dtos: BulkCreateUsersDto, createdBy: string) {
@@ -466,29 +695,51 @@ export class UsersService {
       sortOrder = 'desc',
     } = filters;
 
+    // Cap limit at reasonable maximum (1000 for admin interfaces)
+    const effectiveLimit = Math.min(limit, 1000);
+
     let query = supabase.from('users').select(
       `
         *,
-        role:roles(name),
-        teacher:teachers(*, subject_specialization:subjects(*), department:departments(*)),
-        admin:admins(*),
-        student:students(*)
+        role:roles!role_id(id, name),
+        teacher:teachers!user_id(*, department:departments!department_id(id, department_name)),
+        admin:admins!user_id(*),
+        student:students!user_id(*)
       `,
       { count: 'exact' },
     );
 
     // Apply filters
     if (role) {
-      // Get role ID from role name first
-      const { data: roleData } = await supabase
+      // Resolve role name to role_id first (PostgREST doesn't support filtering on joined aliases)
+      const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select('id')
         .eq('name', role)
-        .single();
+        .maybeSingle();
 
-      if (roleData) {
-        query = query.eq('role_id', roleData.id);
+      if (roleError) {
+        this.logger.error('Error fetching role:', roleError);
+        throw new InternalServerErrorException(
+          'Failed to fetch role information',
+        );
       }
+
+      if (!roleData) {
+        // Role name doesn't exist, return empty result
+        this.logger.warn(`Role '${role}' not found, returning empty user list`);
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit: effectiveLimit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      query = query.eq('role_id', roleData.id);
     }
     if (status) {
       query = query.eq('status', status);
@@ -500,10 +751,13 @@ export class UsersService {
     // Apply sorting
     query = query.order(sortBy, { ascending: sortOrder === 'asc' });
 
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
+    // Apply pagination only if limit is reasonable
+    if (effectiveLimit < 1000) {
+      const from = (page - 1) * effectiveLimit;
+      const to = from + effectiveLimit - 1;
+      query = query.range(from, to);
+    }
+    // For limit >= 1000, don't apply range to get all records
 
     const { data, error, count } = await query;
 
@@ -512,13 +766,107 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch users');
     }
 
+    // Transform the data to match UserDto structure
+    const transformedData =
+      data?.map((user: any) => {
+        const baseUser = {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role?.name || null,
+          status: user.status,
+          createdAt: user.created_at,
+          lastLogin: user.last_login || null,
+          phoneNumber: null as string | null,
+          department: null as string | null,
+          studentId: null as string | null,
+          gradeLevel: null as string | null,
+          employeeId: null as string | null,
+          subjectSpecialization: null as string | null,
+        };
+
+        console.log(
+          `Base user for ${user.email}: fullName='${baseUser.fullName}', role='${baseUser.role}'`,
+        );
+
+        // Map Student-specific fields
+        if (user.student) {
+          console.log(
+            `Processing student: ${user.email}, student data:`,
+            user.student,
+          );
+
+          baseUser.studentId = user.student.student_id;
+          baseUser.gradeLevel = user.student.grade_level;
+          baseUser.phoneNumber = user.student.phone_number;
+
+          // Construct full name from student's first_name and last_name
+          const firstName = user.student.first_name || '';
+          const lastName = user.student.last_name || '';
+          const middleName = user.student.middle_name || '';
+
+          console.log(
+            `Student name parts: firstName='${firstName}', lastName='${lastName}', middleName='${middleName}'`,
+          );
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+            console.log(`Constructed fullName: '${baseUser.fullName}'`);
+          }
+        }
+
+        // Map Teacher-specific fields
+        if (user.teacher) {
+          baseUser.employeeId = user.teacher.id;
+          baseUser.phoneNumber = user.teacher.phone_number;
+          baseUser.department =
+            user.teacher.department?.department_name || null;
+          baseUser.subjectSpecialization =
+            user.teacher.subject_specialization_id;
+
+          // Construct full name from teacher's first_name and last_name
+          const firstName = user.teacher.first_name || '';
+          const lastName = user.teacher.last_name || '';
+          const middleName = user.teacher.middle_name || '';
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+          }
+        }
+
+        // Map Admin-specific fields
+        if (user.admin) {
+          baseUser.employeeId = user.admin.id;
+          baseUser.phoneNumber = user.admin.phone_number;
+          baseUser.department = 'Administration';
+
+          // Construct full name from admin's first_name and last_name
+          const firstName = user.admin.first_name || '';
+          const lastName = user.admin.last_name || '';
+          const middleName = user.admin.middle_name || '';
+
+          if (firstName || lastName) {
+            baseUser.fullName = [firstName, middleName, lastName]
+              .filter(Boolean)
+              .join(' ');
+          }
+        }
+
+        return baseUser;
+      }) || [];
+
     return {
-      data: data || [],
+      data: transformedData,
       pagination: {
         page,
-        limit,
+        limit: effectiveLimit,
         total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages:
+          effectiveLimit < 1000 ? Math.ceil((count || 0) / effectiveLimit) : 1,
       },
     };
   }
@@ -531,7 +879,16 @@ export class UsersService {
     // First, let's try a simple query to get the basic user data
     const { data: basicUser, error: basicError } = await supabase
       .from('users')
-      .select('*')
+      .select(
+        `
+        *,
+        role:roles(name),
+        teacher:teachers(*),
+        admin:admins(*),
+        student:students(*),
+        profile:profiles(*)
+      `,
+      )
       .eq('id', id)
       .single();
 
@@ -585,11 +942,21 @@ export class UsersService {
     let teacherData = null;
     let adminData = null;
     let studentData = null;
+    let profileData = null;
 
-    // Check for teacher data
+    // Check for teacher data with advisory section joined
     const { data: teacher, error: teacherError } = await supabase
       .from('teachers')
-      .select('*')
+      .select(
+        `
+        *,
+        advisory_section:sections!advisory_section_id(
+          id,
+          name,
+          grade_level
+        )
+      `,
+      )
       .eq('user_id', id)
       .single();
 
@@ -604,6 +971,11 @@ export class UsersService {
       this.logger.log(
         `[findOne] Teacher data found: ${teacher.first_name} ${teacher.last_name}`,
       );
+      if (teacher.advisory_section) {
+        this.logger.log(
+          `[findOne] Advisory section: ${teacher.advisory_section.name} (${teacher.advisory_section.grade_level})`,
+        );
+      }
     }
 
     // Check for admin data
@@ -663,6 +1035,24 @@ export class UsersService {
       );
     }
 
+    // Check for profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', id)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      this.logger.error('[findOne] Error fetching profile data:', {
+        userId: id,
+        errorCode: profileError.code,
+        errorMessage: profileError.message,
+      });
+    } else if (profile) {
+      profileData = profile;
+      this.logger.log(`[findOne] Profile data found for user: ${id}`);
+    }
+
     // Construct the final user object
     const user = {
       ...basicUser,
@@ -670,6 +1060,7 @@ export class UsersService {
       teacher: teacherData,
       admin: adminData,
       student: studentData,
+      profile: profileData,
     };
 
     this.logger.log(
@@ -711,11 +1102,51 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to update user');
     }
 
+    // Activity monitoring - track user update
+    try {
+      await this.activityMonitoring.handleUserUpdated(id, dto, 'system');
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle user update activity monitoring:',
+        error,
+      );
+    }
+
+    // Notify user about profile update (only if significant changes)
+    if (dto.email || dto.fullName || dto.role) {
+      await this.notificationService.notifyUser(
+        id,
+        'Profile Updated',
+        'Your profile information has been updated.',
+        NotificationType.INFO,
+        undefined,
+        { expiresInDays: 7 },
+      );
+    }
+
     return user;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<User> {
     const supabase = this.getSupabaseClient();
+
+    // Get user email before deletion for activity monitoring
+    const { data: userBeforeDelete } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', id)
+      .single();
+
+    // Fetch user data for audit logging
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !user) {
+      throw new NotFoundException('User not found');
+    }
 
     // Soft delete by updating status
     const { error } = await supabase
@@ -727,12 +1158,37 @@ export class UsersService {
       .eq('id', id);
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundException('User not found');
-      }
       this.logger.error('Error removing user:', error);
       throw new InternalServerErrorException('Failed to remove user');
     }
+
+    // Activity monitoring - notify admins about user deletion
+    try {
+      if (userBeforeDelete?.email) {
+        await this.activityMonitoring.handleUserDeleted(
+          id,
+          userBeforeDelete.email,
+          'system',
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle user deletion activity monitoring:',
+        error,
+      );
+    }
+
+    // Notify user about account deletion (soft delete)
+    await this.notificationService.notifyUser(
+      id,
+      'Account Deactivated',
+      'Your account has been deactivated. Please contact the administrator if you believe this is an error.',
+      NotificationType.WARNING,
+      undefined,
+      { expiresInDays: 30 },
+    );
+    // Return the user for audit logging
+    return user;
   }
 
   async updateUserStatus(
@@ -758,6 +1214,27 @@ export class UsersService {
       this.logger.error('Error updating user status:', error);
       throw new InternalServerErrorException('Failed to update user status');
     }
+
+    // Activity monitoring - track status change
+    try {
+      await this.activityMonitoring.handleUserUpdated(
+        id,
+        { status: statusDto.status },
+        'system',
+      );
+    } catch (error) {
+      this.logger.warn(
+        'Failed to handle user status update activity monitoring:',
+        error,
+      );
+    }
+
+    // Notify user about status change
+    await this.notificationService.notifyAccountStatusChanged(
+      id,
+      statusDto.status,
+      undefined,
+    );
 
     return user;
   }
@@ -1041,6 +1518,750 @@ export class UsersService {
         `Unexpected error syncing last login for user ${userId}:`,
         error,
       );
+    }
+  }
+
+  /**
+   * Parse phone number from scientific notation to proper format
+   */
+  private parsePhoneNumber(value: string): string {
+    // Check if scientific notation
+    if (value.includes('E+') || value.includes('e+')) {
+      const num = parseFloat(value);
+      return '+' + num.toString();
+    }
+    return value;
+  }
+
+  /**
+   * Find section by name and grade level
+   */
+  private async findOrThrowSection(
+    sectionName: string,
+    gradeLevel: string,
+  ): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    // Try to find existing section
+    const { data: section, error } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('name', sectionName)
+      .eq('grade_level', gradeLevel)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching section:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch section information',
+      );
+    }
+
+    // If section exists, return its ID
+    if (section) {
+      return section.id;
+    }
+
+    // Section doesn't exist - create it
+    this.logger.log(`Creating new section: ${sectionName} for ${gradeLevel}`);
+
+    const { data: newSection, error: createError } = await supabase
+      .from('sections')
+      .insert({
+        name: sectionName,
+        grade_level: gradeLevel,
+        // Optional fields are nullable, so we don't need to provide them
+        teacher_id: null,
+        room_id: null,
+        building_id: null,
+      })
+      .select('id')
+      .single();
+
+    if (createError) {
+      this.logger.error('Error creating section:', createError);
+      throw new InternalServerErrorException(
+        `Failed to create section '${sectionName}' for grade '${gradeLevel}'`,
+      );
+    }
+
+    return newSection.id;
+  }
+
+  /**
+   * Find section by name only (for advisory sections, no grade level required)
+   */
+  private async findSectionByName(
+    sectionName: string,
+  ): Promise<string | undefined> {
+    const supabase = this.getSupabaseClient();
+
+    if (!sectionName || sectionName.trim() === '') {
+      return undefined;
+    }
+
+    const { data: sections, error } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('name', sectionName.trim())
+      .limit(1);
+
+    if (error) {
+      this.logger.error('Error fetching section by name:', error);
+      throw new NotFoundException(
+        `Section '${sectionName}' not found. Please ensure the section exists.`,
+      );
+    }
+
+    if (!sections || sections.length === 0) {
+      throw new NotFoundException(
+        `Section '${sectionName}' not found. Please ensure the section exists.`,
+      );
+    }
+
+    return sections[0].id;
+  }
+
+  /**
+   * Find department by name
+   */
+  private async findDepartmentByName(departmentName: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: department, error } = await supabase
+      .from('departments')
+      .select('id')
+      .eq('department_name', departmentName.trim())
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching department by name:', error);
+      throw new NotFoundException(
+        `Department '${departmentName}' not found. Please ensure the department exists.`,
+      );
+    }
+
+    if (!department) {
+      throw new NotFoundException(
+        `Department '${departmentName}' not found. Please ensure the department exists.`,
+      );
+    }
+
+    return department.id;
+  }
+
+  /**
+   * Find subject by name
+   */
+  private async findSubjectByName(subjectName: string): Promise<string> {
+    const supabase = this.getSupabaseClient();
+
+    const { data: subject, error } = await supabase
+      .from('subjects')
+      .select('id')
+      .eq('subject_name', subjectName.trim())
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Error fetching subject by name:', error);
+      throw new NotFoundException(
+        `Subject '${subjectName}' not found. Please ensure the subject exists.`,
+      );
+    }
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject '${subjectName}' not found. Please ensure the subject exists.`,
+      );
+    }
+
+    return subject.id;
+  }
+
+  /**
+   * Parse CSV student rows and group by student (LRN)
+   */
+  private parseCsvStudentRows(rows: CsvStudentRowDto[]): Map<string, any> {
+    const studentMap = new Map<string, any>();
+
+    for (const row of rows) {
+      const lrnId = row.lrn_id;
+
+      if (!studentMap.has(lrnId)) {
+        // First occurrence of this student
+        studentMap.set(lrnId, {
+          student: {
+            firstName: row.first_name,
+            lastName: row.last_name,
+            middleName: row.middle_name,
+            lrnId: row.lrn_id,
+            birthday: row.birthday,
+            gradeLevel: row.grade_level,
+            enrollmentYear: row.enrollment,
+            age: row.age,
+            section: row.section,
+          },
+          emergencyContacts: [],
+        });
+      }
+
+      // Add emergency contact
+      const studentData = studentMap.get(lrnId);
+      studentData.emergencyContacts.push({
+        guardianName: row.guardian_name,
+        relationship: row.relationship,
+        phoneNumber: this.parsePhoneNumber(row.phone_number),
+        email: row.email,
+        address: row.address,
+        isPrimary: studentData.emergencyContacts.length === 0, // First contact is primary
+      });
+    }
+
+    return studentMap;
+  }
+
+  /**
+   * Import students from CSV data
+   */
+  async importStudentsFromCsv(
+    importDto: ImportStudentsCsvDto,
+    createdBy: string,
+  ): Promise<BulkImportResultDto> {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    try {
+      // Parse and group CSV rows by student
+      const studentMap = this.parseCsvStudentRows(importDto.students);
+
+      for (const [lrnId, studentData] of studentMap) {
+        try {
+          // Find section ID
+          const sectionId = await this.findOrThrowSection(
+            studentData.student.section,
+            studentData.student.gradeLevel,
+          );
+
+          // Create student DTO
+          const studentDto: CreateStudentRequestDto = {
+            firstName: studentData.student.firstName,
+            lastName: studentData.student.lastName,
+            middleName: studentData.student.middleName,
+            studentId: `STU-${Date.now()}`, // Auto-generate student ID
+            lrnId: studentData.student.lrnId,
+            birthday: studentData.student.birthday,
+            gradeLevel: studentData.student.gradeLevel,
+            enrollmentYear: studentData.student.enrollmentYear,
+            age: studentData.student.age,
+            sectionId: sectionId,
+            emergencyContacts: studentData.emergencyContacts,
+          };
+
+          // Create student (this will handle auth user, public user, student record, and emergency contacts)
+          const result = await this.createStudent(studentDto, createdBy);
+          results.push(result);
+        } catch (error) {
+          errors.push({
+            lrnId: lrnId,
+            studentName: `${studentData.student.firstName} ${studentData.student.lastName}`,
+            error: error.message,
+          });
+        }
+      }
+
+      const result = {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+
+      // Notify admin about bulk import completion
+      await this.notificationService.notifyBulkOperationComplete(
+        createdBy,
+        'Student Import',
+        results.length,
+        errors.length,
+        createdBy,
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error importing students from CSV:', error);
+      throw new InternalServerErrorException(
+        'Failed to import students from CSV',
+      );
+    }
+  }
+
+  // ===== Domain Role Management Methods =====
+
+  /**
+   * Get all domain roles assigned to a user
+   * @param userId - User ID
+   * @returns Promise<any[]> - Array of user domain role assignments
+   */
+  async getUserDomainRoles(userId: string): Promise<any[]> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // First check if user exists
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Get user's domain role assignments with joined data
+      const { data, error } = await supabase
+        .from('user_domain_roles')
+        .select(
+          `
+          *,
+          domain_role:domain_role_id(
+            id,
+            name,
+            domain_id,
+            domain:domain_id(
+              id,
+              type,
+              name
+            )
+          )
+        `,
+        )
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error(
+          `Error fetching domain roles for user ${userId}:`,
+          error,
+        );
+        throw new BadRequestException(
+          `Failed to fetch user domain roles: ${error.message}`,
+        );
+      }
+
+      return data || [];
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `Unexpected error fetching domain roles for user ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to fetch user domain roles',
+      );
+    }
+  }
+
+  /**
+   * Assign a domain role to a user
+   * @param userId - User ID
+   * @param domainRoleId - Domain role ID to assign
+   * @returns Promise<any> - Created user domain role assignment
+   */
+  async assignDomainRole(userId: string, domainRoleId: string): Promise<any> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // Verify user exists
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Verify domain role exists
+      const { data: domainRole, error: roleError } = await supabase
+        .from('domain_roles')
+        .select('id, name, domain_id')
+        .eq('id', domainRoleId)
+        .single();
+
+      if (roleError || !domainRole) {
+        throw new NotFoundException(
+          `Domain role with ID ${domainRoleId} not found`,
+        );
+      }
+
+      // Check if assignment already exists
+      const { data: existing } = await supabase
+        .from('user_domain_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('domain_role_id', domainRoleId)
+        .single();
+
+      if (existing) {
+        throw new BadRequestException(
+          `User already has this domain role assigned`,
+        );
+      }
+
+      // Create assignment
+      const { data, error } = await supabase
+        .from('user_domain_roles')
+        .insert({
+          user_id: userId,
+          domain_role_id: domainRoleId,
+        })
+        .select(
+          `
+          *,
+          domain_role:domain_role_id(
+            id,
+            name,
+            domain_id,
+            domain:domain_id(
+              id,
+              type,
+              name
+            )
+          )
+        `,
+        )
+        .single();
+
+      if (error) {
+        this.logger.error('Error assigning domain role:', error);
+        throw new BadRequestException(
+          `Failed to assign domain role: ${error.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Assigned domain role ${domainRole.name} to user ${userId}`,
+      );
+
+      return data;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error('Unexpected error assigning domain role:', error);
+      throw new InternalServerErrorException('Failed to assign domain role');
+    }
+  }
+
+  /**
+   * Remove a domain role assignment from a user
+   * @param userId - User ID
+   * @param assignmentId - User domain role assignment ID
+   * @returns Promise<void>
+   */
+  async removeDomainRole(userId: string, assignmentId: string): Promise<void> {
+    try {
+      const supabase = this.getSupabaseClient();
+
+      // Verify assignment exists and belongs to user
+      const { data: assignment, error: fetchError } = await supabase
+        .from('user_domain_roles')
+        .select('id, user_id')
+        .eq('id', assignmentId)
+        .single();
+
+      if (fetchError || !assignment) {
+        throw new NotFoundException(
+          `Domain role assignment with ID ${assignmentId} not found`,
+        );
+      }
+
+      if (assignment.user_id !== userId) {
+        throw new BadRequestException(
+          `Assignment does not belong to user ${userId}`,
+        );
+      }
+
+      // Delete assignment
+      const { error } = await supabase
+        .from('user_domain_roles')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) {
+        this.logger.error('Error removing domain role assignment:', error);
+        throw new BadRequestException(
+          `Failed to remove domain role assignment: ${error.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Removed domain role assignment ${assignmentId} from user ${userId}`,
+      );
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        'Unexpected error removing domain role assignment:',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to remove domain role assignment',
+      );
+    }
+  }
+
+  /**
+   * Import teachers from CSV data
+   */
+  async importTeachersFromCsv(
+    importDto: ImportTeachersCsvDto,
+    createdBy: string,
+  ): Promise<BulkImportResultDto> {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    try {
+      for (const row of importDto.teachers) {
+        try {
+          // Lookup department ID by name
+          const departmentId = await this.findDepartmentByName(
+            row.department_id,
+          );
+
+          // Lookup subject specialization ID by name
+          const subjectSpecializationId = await this.findSubjectByName(
+            row.subject_specialization_id,
+          );
+
+          // Lookup advisory section ID by name (optional)
+          let advisorySectionId: string | undefined = undefined;
+          if (
+            row.advisory_section_id &&
+            row.advisory_section_id.trim() !== ''
+          ) {
+            advisorySectionId = await this.findSectionByName(
+              row.advisory_section_id,
+            );
+          }
+
+          // Use provided email or generate from first_name and last_name
+          const email =
+            row.email && row.email.trim() !== ''
+              ? row.email.trim()
+              : `${row.first_name.toLowerCase()}.${row.last_name.toLowerCase()}@teacher.local`;
+
+          // Create teacher DTO
+          const teacherDto = new CreateTeacherDto();
+          teacherDto.firstName = row.first_name;
+          teacherDto.lastName = row.last_name;
+          teacherDto.middleName = row.middle_name;
+          teacherDto.birthday = row.birthday;
+          teacherDto.age = row.age;
+          teacherDto.subjectSpecializationId = subjectSpecializationId;
+          teacherDto.departmentId = departmentId;
+          teacherDto.advisorySectionId = advisorySectionId;
+          teacherDto.email = email;
+          teacherDto.fullName =
+            `${row.first_name} ${row.middle_name ? row.middle_name + ' ' : ''}${row.last_name}`.trim();
+
+          // Create teacher (this will handle auth user, public user, and teacher record)
+          const result = await this.createTeacher(teacherDto, createdBy);
+          results.push({
+            firstName: row.first_name,
+            lastName: row.last_name,
+            email: email,
+            result: result,
+          });
+        } catch (error) {
+          errors.push({
+            firstName: row.first_name,
+            lastName: row.last_name,
+            error: error.message || String(error),
+          });
+        }
+      }
+
+      const result = {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+
+      // Notify admin about bulk import completion
+      await this.notificationService.notifyBulkOperationComplete(
+        createdBy,
+        'Teacher Import',
+        results.length,
+        errors.length,
+        createdBy,
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error importing teachers from CSV:', error);
+      throw new InternalServerErrorException(
+        'Failed to import teachers from CSV',
+      );
+    }
+  }
+
+  /**
+   * Record a daily login for a user
+   * Uses upsert to handle duplicate same-day logins gracefully
+   * @param userId - User UUID
+   */
+  async recordLogin(userId: string): Promise<void> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get today's date in YYYY-MM-DD format (date-only, no time)
+      const today = new Date().toISOString().split('T')[0];
+
+      // Upsert login record (insert if not exists, do nothing if exists)
+      const { error } = await supabase.from('daily_logins').upsert(
+        {
+          user_id: userId,
+          login_date: today,
+        },
+        {
+          onConflict: 'user_id,login_date',
+          ignoreDuplicates: false,
+        },
+      );
+
+      if (error) {
+        this.logger.error(`Error recording login for user ${userId}:`, error);
+        // Don't throw - this should be non-blocking
+      } else {
+        this.logger.log(`Recorded login for user ${userId} on ${today}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error recording login for user ${userId}:`,
+        error,
+      );
+      // Don't throw - this should be non-blocking
+    }
+  }
+
+  /**
+   * Get the current login streak count for a user
+   * Streak counts consecutive days from today backwards
+   * Returns 0 if user didn't log in today or if there's a gap
+   * @param userId - User UUID
+   * @returns Number of consecutive login days (0 if no streak)
+   */
+  async getLoginStreak(userId: string): Promise<number> {
+    const supabase = this.getSupabaseClient();
+
+    try {
+      // Get today's date in UTC (avoid timezone offsets)
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Get all login dates for this user, ordered by date descending
+      const { data: logins, error } = await supabase
+        .from('daily_logins')
+        .select('login_date')
+        .eq('user_id', userId)
+        .order('login_date', { ascending: false });
+
+      if (error) {
+        this.logger.error(
+          `Error fetching login streak for user ${userId}:`,
+          error,
+        );
+        return 0;
+      }
+
+      if (!logins || logins.length === 0) {
+        return 0;
+      }
+
+      // DEBUG: Log raw and normalized dates to diagnose comparison issues
+      try {
+        const sample = logins.slice(0, 5).map((r: any) => r.login_date);
+        this.logger.debug(
+          `[getLoginStreak] user=${userId} today=${todayStr} sampleRaw=${JSON.stringify(
+            sample,
+          )}`,
+        );
+      } catch (_) {}
+
+      // Normalize dates to YYYY-MM-DD to avoid timezone/format mismatches
+      const normalizeDate = (d: any): string => {
+        // Supabase may return 'YYYY-MM-DD' or a full timestamp string
+        // Convert via Date to consistently get UTC date component
+        try {
+          return new Date(d).toISOString().split('T')[0];
+        } catch (_) {
+          // Fallback: if already 'YYYY-MM-DD'
+          return String(d).split('T')[0];
+        }
+      };
+
+      // Check if user logged in today (normalized)
+      const hasLoginToday = logins.some(
+        (login) => normalizeDate(login.login_date) === todayStr,
+      );
+
+      // DEBUG: Log normalized list presence of today
+      try {
+        const normalized = logins
+          .slice(0, 5)
+          .map((r: any) => normalizeDate(r.login_date));
+        this.logger.debug(
+          `[getLoginStreak] hasLoginToday=${hasLoginToday} normalizedSample=${JSON.stringify(
+            normalized,
+          )}`,
+        );
+      } catch (_) {}
+
+      if (!hasLoginToday) {
+        // No login today means streak is 0
+        return 0;
+      }
+
+      // Calculate consecutive days backwards from today
+      let streak = 0;
+      // Use UTC midnight based on todayStr for consistent day math
+      const expectedDate = new Date(`${todayStr}T00:00:00.000Z`);
+
+      for (let i = 0; i < logins.length; i++) {
+        const loginDateStr = normalizeDate(logins[i].login_date);
+        const expectedDateStr = expectedDate.toISOString().split('T')[0];
+
+        if (loginDateStr === expectedDateStr) {
+          streak++;
+          // Move to previous day
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+          // Gap detected, stop counting
+          break;
+        }
+      }
+
+      this.logger.log(`Login streak for user ${userId}: ${streak} days`);
+      return streak;
+    } catch (error) {
+      this.logger.error(
+        `Unexpected error calculating login streak for user ${userId}:`,
+        error,
+      );
+      return 0;
     }
   }
 }

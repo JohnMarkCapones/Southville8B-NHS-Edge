@@ -16,12 +16,16 @@ import { CreateStudentRankingDto } from './dto/create-student-ranking.dto';
 import * as crypto from 'crypto';
 import { UpdateStudentRankingDto } from './dto/update-student-ranking.dto';
 import { StudentRanking } from './entities/student-ranking.entity';
+import { ActivityMonitoringService } from '../activity-monitoring/activity-monitoring.service';
 
 @Injectable()
 export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly activityMonitoring: ActivityMonitoringService,
+  ) {}
 
   /**
    * Generate password from birthday (YYYYMMDD format)
@@ -294,20 +298,35 @@ export class StudentsService {
         );
       }
 
+      // Activity monitoring - notify advisory teacher if student is assigned to a section
+      if (createStudentDto.sectionId) {
+        try {
+          const studentName = `${createStudentDto.firstName} ${createStudentDto.lastName}`;
+          await this.activityMonitoring.handleAdvisoryActivity(
+            createStudentDto.sectionId,
+            'student_added',
+            studentName,
+            'system',
+          );
+        } catch (error) {
+          this.logger.warn('Failed to handle advisory activity monitoring:', error);
+          // Don't fail student creation if monitoring fails
+        }
+      }
+
       this.logger.log(`Student created successfully: ${email}`);
 
       return {
         success: true,
-        user: {
-          id: authUser.user.id,
-          email: email,
-          fullName: `${createStudentDto.firstName} ${createStudentDto.lastName}`,
-          role: 'Student',
-          userType: 'student',
-          status: 'Active',
-        },
-        student,
-        temporaryPassword: password,
+        // Include student_id at top level for audit logging
+        student_id: student.student_id,
+        id: authUser.user.id,
+        email: email,
+        fullName: `${createStudentDto.firstName} ${createStudentDto.lastName}`,
+        role: 'Student',
+        userType: 'student',
+        status: 'Active',
+        specificRecord: student,
         message: 'Student created successfully',
       };
     } catch (error) {
@@ -331,6 +350,16 @@ export class StudentsService {
       sortOrder = 'asc',
     } = filters;
 
+    console.log('[STUDENTS SERVICE] findAll called with filters:', {
+      page,
+      limit,
+      search,
+      gradeLevel,
+      sectionId,
+      sortBy,
+      sortOrder,
+    });
+
     let query = supabase.from('students').select(
       `
         *,
@@ -342,14 +371,17 @@ export class StudentsService {
 
     // Apply filters
     if (search) {
+      console.log('[STUDENTS SERVICE] Applying search filter:', search);
       query = query.or(
         `first_name.ilike.%${search}%,last_name.ilike.%${search}%,student_id.ilike.%${search}%,lrn_id.ilike.%${search}%`,
       );
     }
     if (gradeLevel) {
+      console.log('[STUDENTS SERVICE] Applying gradeLevel filter:', gradeLevel);
       query = query.eq('grade_level', gradeLevel);
     }
     if (sectionId) {
+      console.log('[STUDENTS SERVICE] Applying sectionId filter:', sectionId);
       query = query.eq('section_id', sectionId);
     }
 
@@ -363,10 +395,30 @@ export class StudentsService {
 
     const { data, error, count } = await query;
 
+    console.log('[STUDENTS SERVICE] Query result:', {
+      hasData: !!data,
+      dataLength: data?.length || 0,
+      hasError: !!error,
+      errorMessage: error?.message,
+      count: count,
+    });
+
     if (error) {
+      console.error('[STUDENTS SERVICE] Query error:', error);
       this.logger.error('Error fetching students:', error);
       throw new InternalServerErrorException('Failed to fetch students');
     }
+
+    console.log('[STUDENTS SERVICE] Returning data:', {
+      dataLength: data?.length || 0,
+      firstStudent: data?.[0] || null,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    });
 
     return {
       data,
@@ -411,6 +463,13 @@ export class StudentsService {
   ): Promise<Student> {
     const supabase = this.supabaseService.getServiceClient();
 
+    // Get current student data to detect section changes
+    const { data: currentStudent } = await supabase
+      .from('students')
+      .select('section_id, first_name, last_name')
+      .eq('id', id)
+      .single();
+
     const { data: student, error } = await supabase
       .from('students')
       .update({
@@ -438,16 +497,48 @@ export class StudentsService {
       throw new InternalServerErrorException('Failed to update student');
     }
 
+    // Activity monitoring - notify advisory teacher if section changed
+    if (
+      updateStudentDto.sectionId &&
+      currentStudent?.section_id !== updateStudentDto.sectionId
+    ) {
+      try {
+        const studentName = `${currentStudent?.first_name || ''} ${currentStudent?.last_name || ''}`.trim() || 'A student';
+        
+        // If student was moved from one section to another
+        if (currentStudent?.section_id) {
+          // Notify old advisory teacher (student removed)
+          await this.activityMonitoring.handleAdvisoryActivity(
+            currentStudent.section_id,
+            'student_removed',
+            studentName,
+            'system',
+          );
+        }
+
+        // Notify new advisory teacher (student added)
+        await this.activityMonitoring.handleAdvisoryActivity(
+          updateStudentDto.sectionId,
+          'student_added',
+          studentName,
+          'system',
+        );
+      } catch (error) {
+        this.logger.warn('Failed to handle advisory activity monitoring:', error);
+        // Don't fail student update if monitoring fails
+      }
+    }
+
     return student;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<any> {
     const supabase = this.supabaseService.getServiceClient();
 
-    // Get student to find user_id
+    // Get full student data for audit logging
     const { data: student } = await supabase
       .from('students')
-      .select('user_id')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -468,6 +559,9 @@ export class StudentsService {
       this.logger.error('Error removing student:', error);
       throw new InternalServerErrorException('Failed to remove student');
     }
+
+    // Return the student for audit logging
+    return student;
   }
 
   // Snake to camel case mapper for emergency contacts

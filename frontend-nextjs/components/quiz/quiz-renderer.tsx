@@ -41,6 +41,13 @@ export function QuizRenderer({
   showCorrectAnswer = false,
   questionNumber,
 }: QuizRendererProps) {
+  console.log('[QuizRenderer] Rendering question:', {
+    id: question.id,
+    type: question.type,
+    title: question.title,
+    has_image: !!(question as any).question_image_url || !!(question as any).questionImageUrl
+  })
+
   const Component = getQuizComponent(question.type)
 
   const handleChange = (value: any) => {

@@ -5,6 +5,8 @@ using Avalonia.Media;
 using Avalonia.VisualTree;
 using Southville8BEdgeUI.Utils;
 using Southville8BEdgeUI.ViewModels.Admin;
+using Southville8BEdgeUI.Services;
+using Southville8BEdgeUI.Models.Api;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,7 +30,9 @@ public partial class EventDashboardView : UserControl
         // Do NOT override DataContext at runtime; shell provides the VM with navigation callbacks.
         if (Design.IsDesignMode)
         {
-            DataContext = new EventDashboardViewModel();
+            // For design mode, we need to provide a mock IApiClient
+            var mockApiClient = new MockApiClient();
+            DataContext = new EventDashboardViewModel(mockApiClient);
         }
 
         InitializeResponsiveElements();
@@ -86,8 +90,7 @@ public partial class EventDashboardView : UserControl
 
         _responsiveButtonElements.AddRange(new Control[]
         {
-            FilterButton,
-            CreateButton
+            RefreshButton
         });
 
         _responsiveInputElements.AddRange(new Control[]
@@ -95,7 +98,7 @@ public partial class EventDashboardView : UserControl
             SearchInput,
             StatusFilter,
             TypeFilter,
-            LocationFilter
+            TagFilter
         });
     }
 
@@ -350,7 +353,7 @@ public partial class EventDashboardView : UserControl
         Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0);
         Grid.SetColumn(StatusFilter, 0); Grid.SetRow(StatusFilter, 2);
         Grid.SetColumn(TypeFilter, 0); Grid.SetRow(TypeFilter, 3);
-        Grid.SetColumn(LocationFilter, 0); Grid.SetRow(LocationFilter, 4);
+        Grid.SetColumn(TagFilter, 0); Grid.SetRow(TagFilter, 4);
 
         if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
         {
@@ -362,7 +365,7 @@ public partial class EventDashboardView : UserControl
         SearchInput.Margin = new Thickness(0, 0, 0, 8);
         StatusFilter.Margin = new Thickness(0, 8, 0, 8);
         TypeFilter.Margin = new Thickness(0, 8, 0, 8);
-        LocationFilter.Margin = new Thickness(0, 8, 0, 0);
+        TagFilter.Margin = new Thickness(0, 8, 0, 0);
     }
 
     private void SetupTabletFilterGrid()
@@ -380,7 +383,7 @@ public partial class EventDashboardView : UserControl
         Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0); Grid.SetColumnSpan(SearchInput, 3);
         Grid.SetColumn(StatusFilter, 0); Grid.SetRow(StatusFilter, 1);
         Grid.SetColumn(TypeFilter, 1); Grid.SetRow(TypeFilter, 1);
-        Grid.SetColumn(LocationFilter, 2); Grid.SetRow(LocationFilter, 1);
+        Grid.SetColumn(TagFilter, 2); Grid.SetRow(TagFilter, 1);
 
         if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
             separator.IsVisible = false;
@@ -388,7 +391,7 @@ public partial class EventDashboardView : UserControl
         SearchInput.Margin = new Thickness(0, 0, 0, 8);
         StatusFilter.Margin = new Thickness(0, 8, 8, 0);
         TypeFilter.Margin = new Thickness(8, 8);
-        LocationFilter.Margin = new Thickness(8, 8, 0, 0);
+        TagFilter.Margin = new Thickness(8, 8, 0, 0);
     }
 
     private void SetupDesktopFilterGrid()
@@ -407,7 +410,7 @@ public partial class EventDashboardView : UserControl
         Grid.SetColumn(SearchInput, 0); Grid.SetRow(SearchInput, 0);
         Grid.SetColumn(StatusFilter, 2); Grid.SetRow(StatusFilter, 0);
         Grid.SetColumn(TypeFilter, 3); Grid.SetRow(TypeFilter, 0);
-        Grid.SetColumn(LocationFilter, 4); Grid.SetRow(LocationFilter, 0);
+        Grid.SetColumn(TagFilter, 4); Grid.SetRow(TagFilter, 0);
 
         if (FilterGrid.Children.OfType<Border>().FirstOrDefault() is Border separator)
         {
@@ -419,7 +422,7 @@ public partial class EventDashboardView : UserControl
         SearchInput.Margin = new Thickness(0);
         StatusFilter.Margin = new Thickness(12, 0);
         TypeFilter.Margin = new Thickness(12, 0);
-        LocationFilter.Margin = new Thickness(12, 0);
+        TagFilter.Margin = new Thickness(12, 0);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -430,5 +433,183 @@ public partial class EventDashboardView : UserControl
         {
             UpdateResponsiveClasses(Bounds.Width);
         }
+    }
+}
+
+// Mock API client for design mode
+public class MockApiClient : IApiClient
+{
+    public Task<T?> GetAsync<T>(string endpoint) where T : class => Task.FromResult<T?>(null);
+    public Task<T?> PostAsync<T>(string endpoint, object? data = null) where T : class => Task.FromResult<T?>(null);
+    public Task<T?> PutAsync<T>(string endpoint, object? data = null) where T : class => Task.FromResult<T?>(null);
+    public Task<T?> PatchAsync<T>(string endpoint, object? data = null) where T : class => Task.FromResult<T?>(null);
+    public Task<T?> DeleteAsync<T>(string endpoint) where T : class => Task.FromResult<T?>(null);
+    public Task<bool> PostAsync(string endpoint, object? data = null) => Task.FromResult(false);
+    public Task<bool> PutAsync(string endpoint, object? data = null) => Task.FromResult(false);
+    public Task<bool> PatchAsync(string endpoint, object? data = null) => Task.FromResult(false);
+    public Task<bool> DeleteAsync(string endpoint) => Task.FromResult(false);
+    public Task<UserProfile?> GetUserProfileAsync(string userId) => Task.FromResult<UserProfile?>(null);
+    public Task<UserProfile?> GetUserProfileAsync(string userId, string accessToken) => Task.FromResult<UserProfile?>(null);
+    public Task<AdminDashboardMetrics?> GetAdminDashboardMetricsAsync() => Task.FromResult<AdminDashboardMetrics?>(null);
+    public Task<List<AdminActivity>?> GetAdminActivitiesAsync(int limit = 10) => Task.FromResult<List<AdminActivity>?>(null);
+    public Task<UserListResponse?> GetUsersAsync(string? role = null, string? status = null, string? search = null, int page = 1, int limit = 25) => Task.FromResult<UserListResponse?>(null);
+    public Task<CreateUserResponse?> CreateStudentAsync(CreateStudentDto dto) => Task.FromResult<CreateUserResponse?>(null);
+    public Task<CreateUserResponse?> CreateTeacherAsync(CreateTeacherDto dto) => Task.FromResult<CreateUserResponse?>(null);
+    public Task<CreateUserResponse?> CreateAdminAsync(CreateAdminDto dto) => Task.FromResult<CreateUserResponse?>(null);
+    public Task<bool> UpdateUserStatusAsync(string userId, string status) => Task.FromResult(false);
+    public Task<bool> UpdateUserAsync(string userId, UpdateUserDto dto) => Task.FromResult(false);
+    public Task<bool> UpdateStudentAsync(string userId, UpdateStudentDto dto) => Task.FromResult(false);
+    public Task<bool> UpdateTeacherAsync(string userId, UpdateTeacherDto dto) => Task.FromResult(false);
+    public Task<bool> UpdateAdminAsync(string userId, UpdateAdminDto dto) => Task.FromResult(false);
+    public Task<bool> DeleteUserAsync(string userId) => Task.FromResult(false);
+    public Task<BulkImportResultDto?> ImportStudentsCsvAsync(ImportStudentsCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
+    public Task<BulkImportResultDto?> ImportTeachersCsvAsync(ImportTeachersCsvDto dto) => Task.FromResult<BulkImportResultDto?>(null);
+    public Task<ResetPasswordResponseDto?> ResetPasswordAsync(string userId) => Task.FromResult<ResetPasswordResponseDto?>(null);
+    public Task<ChangePasswordResponseDto?> ChangePasswordAsync(string currentPassword, string newPassword) => Task.FromResult<ChangePasswordResponseDto?>(null);
+    public Task<AdminChangePasswordResponseDto?> AdminChangePasswordAsync(string userId, string newPassword) => Task.FromResult<AdminChangePasswordResponseDto?>(null);
+    public Task<ForgotPasswordResponseDto?> SendPasswordResetEmailAsync(string email) => Task.FromResult<ForgotPasswordResponseDto?>(null);
+    public Task<SectionListResponse?> GetSectionsAsync(int limit = 100) => Task.FromResult<SectionListResponse?>(null);
+    public Task<BuildingListResponse?> GetBuildingsAsync(int limit = 100) => Task.FromResult<BuildingListResponse?>(null);
+    public Task<BuildingDto?> GetBuildingByIdAsync(string id) => Task.FromResult<BuildingDto?>(null);
+    public Task<BuildingDto?> CreateBuildingAsync(CreateBuildingDto dto) => Task.FromResult<BuildingDto?>(null);
+    public Task<BuildingDto?> UpdateBuildingAsync(string id, UpdateBuildingDto dto) => Task.FromResult<BuildingDto?>(null);
+    public Task<bool> DeleteBuildingAsync(string id) => Task.FromResult(false);
+    public Task<FloorListResponse?> GetFloorsAsync(string? buildingId = null, int limit = 100) => Task.FromResult<FloorListResponse?>(null);
+    public Task<FloorDto?> GetFloorByIdAsync(string id) => Task.FromResult<FloorDto?>(null);
+    public Task<FloorDto?> CreateFloorAsync(CreateFloorDto dto) => Task.FromResult<FloorDto?>(null);
+    public Task<FloorDto?> UpdateFloorAsync(string id, UpdateFloorDto dto) => Task.FromResult<FloorDto?>(null);
+    public Task<bool> DeleteFloorAsync(string id) => Task.FromResult(false);
+    public Task<RoomListResponse?> GetRoomsAsync(string? floorId = null, string? buildingId = null, string? status = null, int limit = 100) => Task.FromResult<RoomListResponse?>(null);
+    public Task<RoomDto?> GetRoomByIdAsync(string id) => Task.FromResult<RoomDto?>(null);
+    public Task<RoomDto?> CreateRoomAsync(CreateRoomDto dto) => Task.FromResult<RoomDto?>(null);
+    public Task<List<RoomDto>?> CreateRoomsBulkAsync(List<CreateRoomDto> rooms) => Task.FromResult<List<RoomDto>?>(null);
+    public Task<RoomDto?> UpdateRoomAsync(string id, UpdateRoomDto dto) => Task.FromResult<RoomDto?>(null);
+    public Task<bool> DeleteRoomAsync(string id) => Task.FromResult(false);
+    public Task<DepartmentsResponse?> GetDepartmentsAsync(int page = 1, int limit = 100) => Task.FromResult<DepartmentsResponse?>(null);
+    public Task<SubjectsResponse?> GetSubjectsByDepartmentAsync(string departmentId, int page = 1, int limit = 100) => Task.FromResult<SubjectsResponse?>(null);
+    public Task<EventListResponse?> GetEventsAsync(int page = 1, int limit = 10, string? status = null, string? search = null, string? tagId = null) => Task.FromResult<EventListResponse?>(null);
+    public Task<EventStatisticsDto?> GetEventStatisticsAsync() => Task.FromResult<EventStatisticsDto?>(null);
+    public Task<List<TagDto>?> GetEventTagsAsync() => Task.FromResult<List<TagDto>?>(null);
+    public Task<EventDto?> GetEventByIdAsync(string id) => Task.FromResult<EventDto?>(null);
+    public Task<EventDto?> CreateEventAsync(CreateEventDto dto) => Task.FromResult<EventDto?>(null);
+    public Task<EventDto?> UpdateEventAsync(string id, UpdateEventDto dto) => Task.FromResult<EventDto?>(null);
+    public Task<bool> DeleteEventAsync(string id) => Task.FromResult(false);
+    
+    // Event FAQ Management Methods
+    public Task<EventFaqDto?> AddEventFaqAsync(string eventId, CreateEventFaqDto dto) => Task.FromResult<EventFaqDto?>(null);
+    public Task<EventFaqDto?> UpdateEventFaqAsync(string eventId, string faqId, UpdateEventFaqDto dto) => Task.FromResult<EventFaqDto?>(null);
+    public Task DeleteEventFaqAsync(string eventId, string faqId) => Task.CompletedTask;
+    
+    // Event Image Upload
+    public Task<string?> UploadEventImageAsync(string filePath) => Task.FromResult<string?>(null);
+    
+    public void SetAccessToken(string accessToken) { }
+    public string? GetCurrentUserId() => "mock-user-id";
+    public string? GetCachedToken() => "mock-token";
+     public void InvalidateCachePrefix(string prefix) { }
+
+    // Alerts API (stubs for design-time)
+    public Task<AlertListResponse?> GetAlertsAsync(int page = 1, int limit = 50) => Task.FromResult<AlertListResponse?>(new AlertListResponse { Data = new List<AlertDto>() });
+    public Task<AlertListResponse?> GetMyAlertsAsync(int page = 1, int limit = 50) => Task.FromResult<AlertListResponse?>(new AlertListResponse { Data = new List<AlertDto>() });
+    public Task<AlertDto?> CreateAlertAsync(CreateAlertDto dto) => Task.FromResult<AlertDto?>(new AlertDto { Id = Guid.NewGuid().ToString(), Type = dto.Type, Title = dto.Title, Message = dto.Message, ExpiresAt = DateTimeOffset.Now.AddDays(1), CreatedAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now });
+    public Task<AlertDto?> UpdateAlertAsync(string id, UpdateAlertDto dto) => Task.FromResult<AlertDto?>(null);
+    public Task<bool> DeleteAlertAsync(string id) => Task.FromResult(true);
+    public Task<bool> MarkAlertAsReadAsync(string alertId) => Task.FromResult(true);
+    public Task<bool> MarkAllAlertsAsReadAsync() => Task.FromResult(true);
+    
+    // Notifications API (stubs for design-time)
+    public Task<NotificationListResponse?> GetMyNotificationsAsync(int page = 1, int limit = 50) => Task.FromResult<NotificationListResponse?>(new NotificationListResponse { Data = new List<NotificationDto>() });
+    public Task<bool> MarkNotificationAsReadAsync(string notificationId) => Task.FromResult(true);
+    public Task<bool> MarkAllNotificationsAsReadAsync() => Task.FromResult(true);
+    public Task<bool> DeleteNotificationAsync(string notificationId) => Task.FromResult(true);
+    public Task<int> GetUnreadNotificationCountAsync() => Task.FromResult(0);
+    
+    // Teacher-specific API methods (stubs for design-time)
+    public Task<TeacherSidebarMetrics?> GetTeacherMetricsAsync(string teacherId) => Task.FromResult<TeacherSidebarMetrics?>(null);
+    public Task<List<ScheduleDto>?> GetTeacherTodaySchedulesAsync(string teacherId) => Task.FromResult<List<ScheduleDto>?>(null);
+    public Task<List<TeacherActivityDto>?> GetTeacherRecentActivitiesAsync(string teacherId) => Task.FromResult<List<TeacherActivityDto>?>(null);
+    public Task<List<TeacherActivityDto>?> GetMyTeacherActivitiesAsync(int limit = 10) => Task.FromResult<List<TeacherActivityDto>?>(null);
+    
+    // GWA Management Methods (stubs for design-time)
+    public Task<StudentGwaListResponse?> GetAdvisoryStudentsWithGwaAsync(string gradingPeriod, string schoolYear) => Task.FromResult<StudentGwaListResponse?>(null);
+    public Task<StudentGwaDto?> CreateGwaEntryAsync(CreateGwaDto dto) => Task.FromResult<StudentGwaDto?>(null);
+    public Task<StudentGwaDto?> UpdateGwaEntryAsync(string id, UpdateGwaDto dto) => Task.FromResult<StudentGwaDto?>(null);
+    public Task<bool> DeleteGwaEntryAsync(string id) => Task.FromResult(false);
+    
+    // Schedule Management Methods (stubs for design-time)
+    public Task<ScheduleListResponse?> GetSchedulesAsync(int page = 1, int limit = 20, string? sectionId = null, string? teacherId = null, string? dayOfWeek = null, string? schoolYear = null, string? semester = null) => Task.FromResult<ScheduleListResponse?>(null);
+    public Task<ScheduleDto?> GetScheduleByIdAsync(string scheduleId) => Task.FromResult<ScheduleDto?>(null);
+    public Task<ScheduleDto?> CreateScheduleAsync(CreateScheduleDto dto) => Task.FromResult<ScheduleDto?>(null);
+    public Task<ScheduleDto?> UpdateScheduleAsync(string scheduleId, UpdateScheduleDto dto) => Task.FromResult<ScheduleDto?>(null);
+    public Task<bool> DeleteScheduleAsync(string scheduleId) => Task.FromResult(false);
+    public Task<List<ScheduleDto>?> BulkCreateSchedulesAsync(List<CreateScheduleDto> schedules) => Task.FromResult<List<ScheduleDto>?>(null);
+    public Task<bool> AssignStudentsToScheduleAsync(string scheduleId, AssignStudentsDto dto) => Task.FromResult(false);
+    public Task<bool> RemoveStudentsFromScheduleAsync(string scheduleId, List<string> studentIds) => Task.FromResult(false);
+    public Task<ConflictCheckResult?> CheckScheduleConflictsAsync(CreateScheduleDto dto) => Task.FromResult<ConflictCheckResult?>(null);
+    public Task<List<Subject>?> GetSubjectsAsync() => Task.FromResult<List<Subject>?>(null);
+    public Task<List<SectionDto>?> GetSectionsAsync() => Task.FromResult<List<SectionDto>?>(null);
+    public Task<List<UserDto>?> GetTeachersAsync() => Task.FromResult<List<UserDto>?>(null);
+    public Task<List<RoomDto>?> GetRoomsAsync() => Task.FromResult<List<RoomDto>?>(null);
+    public Task<List<BuildingDto>?> GetBuildingsAsync() => Task.FromResult<List<BuildingDto>?>(null);
+    
+    // Announcement Management Methods (stubs for design-time)
+    public Task<AnnouncementListResponse?> GetAnnouncementsAsync(string? teacherId = null, string? sectionId = null, string? visibility = null, string? type = null, bool? includeExpired = null, int page = 1, int limit = 100) => Task.FromResult<AnnouncementListResponse?>(null);
+    public Task<AnnouncementDto?> GetAnnouncementByIdAsync(string id) => Task.FromResult<AnnouncementDto?>(null);
+    public Task<AnnouncementDto?> CreateAnnouncementAsync(CreateAnnouncementDto dto) => Task.FromResult<AnnouncementDto?>(null);
+    public Task<AnnouncementDto?> UpdateAnnouncementAsync(string id, UpdateAnnouncementDto dto) => Task.FromResult<AnnouncementDto?>(null);
+    public Task DeleteAnnouncementAsync(string id) => Task.CompletedTask;
+    public Task<AnnouncementStatsDto?> GetAnnouncementStatsAsync(string teacherId) => Task.FromResult<AnnouncementStatsDto?>(null);
+    public Task<List<SectionDto>?> GetMySectionsAsync() => Task.FromResult<List<SectionDto>?>(null);
+    public Task<DepartmentDto?> GetDepartmentAsync(string departmentId) => Task.FromResult<DepartmentDto?>(null);
+    public Task<SubjectDto?> GetSubjectAsync(string subjectId) => Task.FromResult<SubjectDto?>(null);
+    public Task<SectionDto?> GetSectionAsync(string sectionId) => Task.FromResult<SectionDto?>(null);
+    public Task<AcademicYearDto?> GetActiveAcademicYearAsync() => Task.FromResult<AcademicYearDto?>(null);
+    public Task<AcademicDashboardOverviewDto?> GetAcademicDashboardOverviewAsync() => Task.FromResult<AcademicDashboardOverviewDto?>(
+        new AcademicDashboardOverviewDto
+        {
+            ActiveYear = new AcademicYearDto { YearName = "2024-2025", IsActive = true },
+            CurrentPeriod = new AcademicPeriodDto { PeriodName = "First Quarter", PeriodOrder = 1, AcademicYearId = Guid.NewGuid().ToString() },
+            TotalYears = 1,
+            UpcomingYears = 0,
+            ArchivedYears = 0
+        });
+    public Task<StudentDistributionDto?> GetStudentDistributionAsync() => Task.FromResult<StudentDistributionDto?>(new StudentDistributionDto
+    {
+        Total = 0,
+        Grades = new List<StudentDistributionGradeDto>
+        {
+            new StudentDistributionGradeDto{ Grade = "Grade 7", Count = 0 },
+            new StudentDistributionGradeDto{ Grade = "Grade 8", Count = 0 },
+            new StudentDistributionGradeDto{ Grade = "Grade 9", Count = 0 },
+            new StudentDistributionGradeDto{ Grade = "Grade 10", Count = 0 },
+        }
+    });
+}
+
+public class MockDialogService : IDialogService
+{
+    public Task<bool> ConfirmDeleteAsync(string title, string message)
+    {
+        return Task.FromResult(false);
+    }
+
+    public Task ShowInfoAsync(string title, System.Collections.Generic.Dictionary<string, string> details)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> ShowConfirmAsync(string title, string message, string confirmText = "OK", string cancelText = "Cancel")
+    {
+        return Task.FromResult(false);
+    }
+
+    public Task<string?> ShowInputDialogAsync(string title, string message, string placeholder = "", string initialValue = "")
+    {
+        return Task.FromResult<string?>(null);
+    }
+
+    public Task<string?> ShowChoiceDialogAsync(string title, string message, string option1Text, string option2Text)
+    {
+        return Task.FromResult<string?>(null);
     }
 }

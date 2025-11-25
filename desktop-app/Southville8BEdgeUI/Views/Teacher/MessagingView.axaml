@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,6 +8,7 @@
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="Southville8BEdgeUI.Views.Teacher.MessagingView"
              x:DataType="vm:MessagingViewModel"
+             x:Name="MessagingViewControl"
              Background="{DynamicResource PageBackgroundBrush}">
 
     <UserControl.Resources>
@@ -200,10 +201,12 @@
 
         <Style Selector="Button.conversation-item">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Padding" Value="20,16"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.2"/>
@@ -214,18 +217,19 @@
             <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
         </Style>
         <Style Selector="Button.conversation-item.selected">
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,3,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style Selector="Button.conversation-item.tablet">
-            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Padding" Value="18,14"/>
         </Style>
         <Style Selector="Button.conversation-item.mobile">
-            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Padding" Value="16,12"/>
         </Style>
 
-        <!-- MESSAGE BUBBLES -->
+        <!-- MESSAGE BUBBLES - UPDATED WITH BETTER COLORS -->
         <Style Selector="Border.message-bubble">
             <Setter Property="CornerRadius" Value="18"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -242,12 +246,16 @@
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="MaxWidth" Value="240"/>
         </Style>
-        <Style Selector="Border.message-sent">
-            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+        <!-- Sent messages - Use Indigo for a distinctive look -->
+        <Style Selector="Border.message-bubble.message-sent">
+            <Setter Property="Background" Value="{DynamicResource IndigoBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
-        <Style Selector="Border.message-received">
-            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+        <!-- Received messages - Use CardBackground with border for contrast -->
+        <Style Selector="Border.message-bubble.message-received">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
         </Style>
 
@@ -311,6 +319,22 @@
             <Setter Property="CornerRadius" Value="24"/>
             <Setter Property="Padding" Value="20,12"/>
         </Style>
+        <!-- Override send button to use navigation color (AccentBrush) instead of SuccessBrush -->
+        <Style Selector="Button.primary.send-button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+        </Style>
+        <Style Selector="Button.primary.send-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
+        <!-- Override new chat button to use navigation color (AccentBrush) instead of SuccessBrush -->
+        <Style Selector="Button.primary.new-chat-button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextOnAccentBrush}"/>
+        </Style>
+        <Style Selector="Button.primary.new-chat-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
         <Style Selector="Button.send-button.tablet">
             <Setter Property="Padding" Value="18,10"/>
         </Style>
@@ -325,32 +349,39 @@
 
         <!-- Avatar -->
         <Style Selector="Border.avatar">
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Width" Value="52"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="CornerRadius" Value="26"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 #15000000"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
         </Style>
         <Style Selector="Border.avatar.tablet">
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="CornerRadius" Value="24"/>
         </Style>
         <Style Selector="Border.avatar.mobile">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="CornerRadius" Value="22"/>
         </Style>
 
         <!-- Online Indicator -->
         <Style Selector="Border.online-indicator">
-            <Setter Property="Width" Value="6"/>
-            <Setter Property="Height" Value="6"/>
-            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderThickness" Value="2.5"/>
+            <Setter Property="BoxShadow" Value="0 1 3 0 #20000000"/>
         </Style>
         <Style Selector="Border.online-indicator.tablet">
-            <Setter Property="Width" Value="5"/>
-            <Setter Property="Height" Value="5"/>
-            <Setter Property="CornerRadius" Value="2.5"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="BorderThickness" Value="2"/>
         </Style>
         <Style Selector="Border.online-indicator.mobile">
             <Setter Property="Width" Value="4"/>
@@ -423,20 +454,67 @@
             <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
             <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         </Style>
+        
+        <!-- Disable hover/active visuals on ListBox items -->
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pressed">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <!-- Disable hover/active visuals on ContentPresenter template part (without overriding child backgrounds) -->
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <!-- Modal Responsive Styles -->
+        <Style Selector="Border.modal-container">
+            <Setter Property="MaxWidth" Value="400"/>
+            <Setter Property="Padding" Value="24"/>
+        </Style>
+        <Style Selector="Border.modal-container.tablet">
+            <Setter Property="MaxWidth" Value="360"/>
+            <Setter Property="Padding" Value="20"/>
+        </Style>
+        <Style Selector="Border.modal-container.mobile">
+            <Setter Property="MaxWidth" Value="320"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="16"/>
+        </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="MainGrid" Classes="main-content" ColumnDefinitions="360,*" Margin="24">
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" Padding="24,16,24,8">
+            <StackPanel>
+                <TextBlock Text="Messaging" Classes="main-header" FontSize="24" FontWeight="Bold"/>
+                <TextBlock Text="Create and manage conversations with admins and teachers." Classes="subtitle"/>
+            </StackPanel>
+        </Border>
+
+        <Grid x:Name="MainGrid" Classes="main-content" Margin="24" Grid.Row="1">
         <!-- Conversations List -->
         <Border x:Name="ConversationsCard" Grid.Column="0" Classes="card" Margin="0,0,12,0">
             <Grid RowDefinitions="Auto,Auto,*">
                 <!-- Header -->
-                <Border x:Name="ConversationsHeader" Grid.Row="0" Padding="20,20,20,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                <Border x:Name="ConversationsHeader" Grid.Row="0" Padding="24,20,24,18" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0">
                             <TextBlock x:Name="ConversationsHeaderText" Text="Messages" Classes="main-header"/>
                             <TextBlock x:Name="ConversationsSubtitleText" Text="Teacher Communication Hub" Classes="subtitle"/>
                         </StackPanel>
-                        <Button x:Name="NewChatButton" Grid.Column="1" Classes="primary"
+                        <Button x:Name="NewChatButton" Grid.Column="1" Classes="primary new-chat-button"
                                 Command="{Binding NewMessageCommand}" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <ic:FluentIcon Icon="Add" IconSize="Size16"/>
@@ -447,51 +525,112 @@
                 </Border>
 
                 <!-- Search -->
-                <Border Grid.Row="1" Padding="16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                    <TextBox x:Name="SearchTextBox" Watermark="Search conversations..." Text="{Binding SearchText}" CornerRadius="8"/>
+                <Border Grid.Row="1" Padding="20,16,20,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                    <TextBox x:Name="SearchTextBox" Watermark="Search conversations..." Text="{Binding SearchText}" CornerRadius="10" Padding="12,10"/>
                 </Border>
 
                 <!-- Conversations List and Empty State -->
                 <Grid Grid.Row="2">
-                    <ScrollViewer x:Name="ConversationsScrollViewer"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  IsVisible="{Binding HasConversations}" AllowAutoHide="True">
-                        <ItemsControl ItemsSource="{Binding Conversations}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:ConversationViewModel">
-                                    <Button Classes="conversation-item" Classes.selected="{Binding IsSelected}"
-                                            Command="{Binding $parent[UserControl].((vm:MessagingViewModel)DataContext).SelectConversationCommand}"
-                                            CommandParameter="{Binding}">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <Border Grid.Column="0" Classes="avatar" Background="{Binding AvatarBackgroundBrush}" Margin="0,0,12,0">
-                                                <TextBlock Text="{Binding ContactInitials}" Classes="contact-name" FontWeight="SemiBold" Foreground="{Binding AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Spacing="4">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock Grid.Column="0" Text="{Binding ContactName}" Classes="contact-name"/>
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                                                        <Border Classes="online-indicator" VerticalAlignment="Center" IsVisible="{Binding IsOnline}"/>
-                                                        <TextBlock Text="{Binding ContactRole}" FontSize="10" Classes="light"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <TextBlock Text="{Binding LastMessage}" Classes="light" FontSize="12" TextWrapping="Wrap" MaxLines="2"/>
-                                                <TextBlock Text="{Binding LastMessageTime}" Classes="light" FontSize="10"/>
-                                            </StackPanel>
-                                            <Border Grid.Column="2" Background="{DynamicResource DangerBrush}" CornerRadius="10" MinWidth="20" Height="20" IsVisible="{Binding HasUnreadMessages}" VerticalAlignment="Top">
-                                                <TextBlock Text="{Binding UnreadCount}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentTextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </Grid>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <!-- Loading Indicator -->
+                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsLoading}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="Loading conversations..." Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
 
-                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasConversations}">
-                        <Path Data="M8 12H16M8 8H16M8 16H12M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2" Width="48" Height="48"/>
-                        <TextBlock x:Name="NoMessagesText" Text="No conversations found" Classes="empty-title"/>
-                        <TextBlock Text="Try adjusting your search criteria" Classes="subtitle"/>
+                    <Border IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+                        <ScrollViewer x:Name="ConversationsScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      IsVisible="{Binding HasConversations}"
+                                      AllowAutoHide="True">
+                            <ItemsControl ItemsSource="{Binding Conversations}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:ConversationViewModel">
+                                        <Button Classes="conversation-item" Classes.selected="{Binding IsSelected}"
+                                                Command="{Binding $parent[UserControl].((vm:MessagingViewModel)DataContext).SelectConversationCommand}"
+                                                CommandParameter="{Binding}">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+                                                <!-- Avatar with online indicator overlay -->
+                                                <Grid Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Margin="0,0,16,0" VerticalAlignment="Top">
+                                                    <Border Classes="avatar" Background="{Binding AvatarBackgroundBrush}">
+                                                        <TextBlock Text="{Binding ContactInitials}" Classes="contact-name" FontWeight="SemiBold" FontSize="18" Foreground="{Binding AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <!-- Online indicator positioned at bottom-right of avatar -->
+                                                    <Border Classes="online-indicator" 
+                                                            HorizontalAlignment="Right" 
+                                                            VerticalAlignment="Bottom" 
+                                                            Margin="0,0,-2,-2"
+                                                            IsVisible="{Binding IsOnline}"/>
+                                                </Grid>
+                                                
+                                                <!-- Contact Name and Role -->
+                                                <Grid Grid.Column="1" Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,8,6">
+                                                    <TextBlock Grid.Column="0" Text="{Binding ContactName}" Classes="contact-name" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="1" 
+                                                            Background="{DynamicResource BorderBrush}" 
+                                                            Opacity="0.6"
+                                                            CornerRadius="8" 
+                                                            Padding="6,2"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding ContactRole}" FontSize="10" FontWeight="Medium" Classes="light"/>
+                                                    </Border>
+                                                </Grid>
+                                                
+                                                <!-- Unread Badge (top right) -->
+                                                <Border Grid.Column="2" Grid.Row="0"
+                                                        Background="{DynamicResource AccentBrush}" 
+                                                        CornerRadius="12" 
+                                                        MinWidth="24" 
+                                                        Height="24" 
+                                                        IsVisible="{Binding HasUnreadMessages}" 
+                                                        VerticalAlignment="Top"
+                                                        HorizontalAlignment="Right"
+                                                        Padding="8,0">
+                                                    <TextBlock Text="{Binding UnreadCount}" 
+                                                               FontSize="11" 
+                                                               FontWeight="Bold" 
+                                                               Foreground="{DynamicResource AccentTextOnAccentBrush}" 
+                                                               HorizontalAlignment="Center" 
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                
+                                                <!-- Last Message -->
+                                                <TextBlock Grid.Column="1" Grid.Row="1"
+                                                           Text="{Binding LastMessage}" 
+                                                           Classes="light" 
+                                                           FontSize="13" 
+                                                           TextWrapping="Wrap" 
+                                                           MaxLines="2"
+                                                           LineHeight="18"
+                                                           Margin="0,0,8,0"
+                                                           Opacity="0.8"/>
+                                                
+                                                <!-- Timestamp -->
+                                                <TextBlock Grid.Column="2" Grid.Row="1"
+                                                           Text="{Binding LastMessageTime}" 
+                                                           Classes="light" 
+                                                           FontSize="11" 
+                                                           VerticalAlignment="Bottom"
+                                                           HorizontalAlignment="Right"
+                                                           Margin="0,4,0,0"
+                                                           Opacity="0.7"/>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+                        <StackPanel IsVisible="{Binding HasConversations, Converter={StaticResource InverseBoolConverter}}">
+                            <Path Data="M8 12H16M8 8H16M8 16H12M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2" Width="48" Height="48"/>
+                            <TextBlock x:Name="NoMessagesText" Text="No conversations found" Classes="empty-title"/>
+                            <TextBlock Text="Try adjusting your search criteria" Classes="subtitle"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -500,7 +639,7 @@
         <!-- Chat Area -->
         <Border x:Name="ChatCard" Grid.Column="1" Classes="card" Margin="12,0,0,0">
             <Grid>
-                <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasSelectedConversation}">
+                <Grid x:Name="ChatGrid" RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasSelectedConversation}">
                     <Border x:Name="ChatHeader" Grid.Row="0" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                             <Button x:Name="BackButton" Grid.Column="0" Classes="back-button" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="False">
@@ -526,27 +665,74 @@
                                 <Button x:Name="VideoButton" Classes="chat-icon">
                                     <ic:FluentIcon Icon="Video" IconSize="Size16"/>
                                 </Button>
-                                <Button x:Name="InfoButton" Classes="chat-icon">
+                                <Button x:Name="InfoButton" Classes="chat-icon" Command="{Binding ShowContactInfoCommand}">
                                     <ic:FluentIcon Icon="Info" IconSize="Size16"/>
                                 </Button>
                             </StackPanel>
                         </Grid>
                     </Border>
-                    <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="20" AllowAutoHide="True">
-                        <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
-                            <ItemsControl.ItemTemplate>
+                    <Grid Grid.Row="1">
+                        <!-- Loading Indicator for Messages -->
+                        <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsLoadingMessages}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <ic:FluentIcon Icon="ArrowClockwise" IconSize="Size16" Foreground="{DynamicResource AccentBrush}"/>
+                                <TextBlock Text="Loading messages..." Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <ListBox x:Name="MessagesListBox"
+                                 ItemsSource="{Binding SelectedConversation.Messages}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 SelectionMode="Single"
+                                 Margin="20"
+                                 IsVisible="{Binding IsLoadingMessages, Converter={StaticResource InverseBoolConverter}}">
+                            <ListBox.ItemTemplate>
                                 <DataTemplate DataType="vm:MessageViewModel">
                                     <StackPanel Margin="0,8">
-                                        <TextBlock Text="{Binding DateSeparator}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,8,0,4" IsVisible="{Binding ShowDateSeparator}"/>
-                                        <Border Classes="message-bubble" Classes.message-sent="{Binding IsSent}" Classes.message-received="{Binding IsSent, Converter={StaticResource InverseBoolConverter}}">
-                                            <TextBlock Text="{Binding Content}" Foreground="{Binding MessageTextBrush}" TextWrapping="Wrap" Classes="message-text"/>
+                                        <Border Classes="message-bubble"
+                                                Classes.message-sent="{Binding IsSent}"
+                                                Classes.message-received="{Binding IsSent, Converter={StaticResource InverseBoolConverter}}">
+                                            <TextBlock Text="{Binding Content}"
+                                                       Foreground="{Binding MessageTextBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Classes="message-text"/>
                                         </Border>
-                                        <TextBlock Text="{Binding Timestamp}" FontSize="10" Classes="light" HorizontalAlignment="{Binding MessageAlignment}" Margin="12,2,12,0"/>
+                                        <StackPanel Orientation="Horizontal" 
+                                                   HorizontalAlignment="{Binding MessageAlignment}" 
+                                                   Spacing="4"
+                                                   Margin="12,2,12,0"
+                                                   IsVisible="{Binding IsSent}">
+                                            <TextBlock Text="{Binding Timestamp}" 
+                                                       FontSize="10" 
+                                                       Classes="light"/>
+                                            <!-- Status indicator for sent messages -->
+                                            <ic:FluentIcon Icon="ArrowClockwise" 
+                                                          IconSize="Size12" 
+                                                          Foreground="{DynamicResource TextMutedBrush}"
+                                                          IsVisible="{Binding IsSending}"/>
+                                            <ic:FluentIcon Icon="Checkmark" 
+                                                          IconSize="Size12" 
+                                                          Foreground="{DynamicResource TextMutedBrush}"
+                                                          IsVisible="{Binding IsSentStatus}"/>
+                                        </StackPanel>
+                                        <!-- Timestamp for received messages (no status indicator) -->
+                                        <TextBlock Text="{Binding Timestamp}"
+                                                   FontSize="10"
+                                                   Classes="light"
+                                                   HorizontalAlignment="{Binding MessageAlignment}"
+                                                   Margin="12,2,12,0"
+                                                   IsVisible="{Binding IsSent, Converter={StaticResource InverseBoolConverter}}"/>
                                     </StackPanel>
                                 </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
+                    </Grid>
                     <Border Grid.Row="2" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
                         <Grid x:Name="MessageInputGrid" ColumnDefinitions="*,Auto">
                             <TextBox x:Name="MessageTextBox" Grid.Column="0" Text="{Binding NewMessageText}" Watermark="Type a message..." Classes="message-input" Margin="0,0,12,0" AcceptsReturn="False"/>
@@ -554,12 +740,106 @@
                         </Grid>
                     </Border>
                 </Grid>
-                <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasSelectedConversation}">
+                <StackPanel x:Name="EmptyStatePanel" Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding HasSelectedConversation, Converter={StaticResource InverseBoolConverter}}">
                     <Path Data="M8 12H16M8 8H16M8 16H12M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2" Width="64" Height="64"/>
                     <TextBlock x:Name="NoConversationTitleText" Text="Select a conversation" Classes="empty-title"/>
                     <TextBlock x:Name="NoConversationSubtitleText" Text="Choose a conversation from the list to start messaging" Classes="subtitle"/>
                 </StackPanel>
             </Grid>
         </Border>
+
+        <!-- Contact Info Modal Overlay -->
+        <Border IsVisible="{Binding IsContactInfoModalVisible}" 
+                Background="#80000000" 
+                ZIndex="1000"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="24"
+                    MaxWidth="400"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    BoxShadow="0 8 32 0 #40000000"
+                    Classes="modal-container">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,20" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="Contact Information" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding CloseContactInfoModalCommand}"
+                                Padding="4"
+                                VerticalAlignment="Center">
+                            <ic:FluentIcon Icon="Dismiss" IconSize="Size20" Foreground="{DynamicResource TextMutedBrush}"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Contact Info Content -->
+                    <StackPanel Grid.Row="1" Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Border Width="64" 
+                                    Height="64" 
+                                    Background="{Binding SelectedConversation.AvatarBackgroundBrush}" 
+                                    CornerRadius="32"
+                                    HorizontalAlignment="Left">
+                                <TextBlock Text="{Binding SelectedConversation.ContactInitials}" 
+                                           FontSize="24" 
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedConversation.ContactName}" 
+                                           FontSize="16" 
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding SelectedConversation.ContactRole}" 
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,4,0,0"/>
+                                <TextBlock Text="{Binding SelectedConversation.IsOnline, Converter={StaticResource OnlineStatusConverter}}" 
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Actions -->
+                    <StackPanel Grid.Row="2" Spacing="12" Margin="0,20,0,0">
+                        <Button Content="Delete Conversation" 
+                                Classes="danger"
+                                Command="{Binding DeleteConversationCommand}"
+                                HorizontalAlignment="Stretch"
+                                Padding="16,12">
+                            <Button.Styles>
+                                <Style Selector="Button.danger">
+                                    <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                                <Style Selector="Button.danger:pointerover">
+                                    <Setter Property="Background" Value="#B91C1C"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
     </Grid>
+</Grid>
 </UserControl>

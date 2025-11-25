@@ -19,6 +19,7 @@ export interface LearningMaterialFolder {
   name: string;
   description?: string;
   parent_id?: string;
+  subject_id?: string;
   is_deleted: boolean;
   deleted_at?: string;
   deleted_by?: string;
@@ -28,6 +29,10 @@ export interface LearningMaterialFolder {
   updated_at: string;
   children?: LearningMaterialFolder[];
   file_count?: number;
+  subject?: {
+    id: string;
+    name: string;
+  };
 }
 
 /**
@@ -99,6 +104,7 @@ export interface CreateFolderDto {
   name: string;
   description?: string;
   parent_id?: string;
+  subject_id?: string;
 }
 
 /**
@@ -107,6 +113,7 @@ export interface CreateFolderDto {
 export interface UpdateFolderDto {
   name?: string;
   description?: string;
+  subject_id?: string;
 }
 
 /**

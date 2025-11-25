@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,41 +10,47 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
-  Upload, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Star, 
-  Download, 
-  Eye, 
-  Calendar, 
-  Tag, 
-  ImageIcon, 
-  Loader2, 
+import {
+  Search,
+  Filter,
+  Grid3X3,
+  List,
+  Upload,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Star,
+  Download,
+  Eye,
+  Calendar,
+  Tag,
+  ImageIcon,
+  Loader2,
   AlertCircle,
   ChevronLeft,
   ChevronRight
 } from "lucide-react"
 import { useGallery } from "@/hooks/useGallery"
 import { GalleryItem } from "@/lib/api/types/gallery"
+import { useToast } from "@/hooks/use-toast"
+import { getThumbnailUrl, getCardUrl, getImageAltText, needsUnoptimized } from "@/lib/utils/gallery-images"
+import { GalleryLightbox } from "@/components/superadmin/gallery-lightbox"
 
 export default function GalleryPage() {
   const router = useRouter()
-  const { 
-    items, 
-    loading, 
-    error, 
-    pagination, 
-    loadItems, 
-    createItem, 
-    updateItem, 
-    deleteItem, 
-    downloadItem 
+  const { toast } = useToast()
+  const {
+    items,
+    loading,
+    error,
+    pagination,
+    loadItems,
+    createItem,
+    updateItem,
+    deleteItem,
+    downloadItem,
+    loadDeletedItems,
+    restoreItem
   } = useGallery()
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -53,21 +60,48 @@ export default function GalleryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [togglingFeatured, setTogglingFeatured] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
+  const [showArchive, setShowArchive] = useState(false)
+  const [archivedItems, setArchivedItems] = useState<GalleryItem[]>([])
+  const [loadingArchive, setLoadingArchive] = useState(false)
+  const [restoring, setRestoring] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   // Load items on component mount
   useEffect(() => {
     loadItems()
   }, [loadItems])
 
+  // Auto-refresh gallery when page regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      loadItems()
+    }
+
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [loadItems])
+
   // Filter items based on search and category
   const filteredItems = items.filter((item) => {
-    const matchesSearch = !searchQuery || 
+    // Exclude soft-deleted items (safety check)
+    if (item.is_deleted || item.deleted_at) {
+      return false
+    }
+
+    const matchesSearch = !searchQuery ||
       item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.caption?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesCategory = selectedCategory === "all" || 
+
+    const matchesCategory = selectedCategory === "all" ||
       determineCategoryFromTags(item.tags || []) === selectedCategory
-    
+
     return matchesSearch && matchesCategory
   })
 
@@ -114,33 +148,103 @@ export default function GalleryPage() {
 
   // Action handlers
   const handleDelete = (itemId: string) => {
+    // Check if item is already deleted
+    const item = items.find(i => i.id === itemId)
+    if (item && (item.is_deleted || item.deleted_at)) {
+      // Item already deleted, remove from list immediately
+      toast({
+        title: "Item Already Deleted",
+        description: "This gallery item was already deleted.",
+      })
+      return
+    }
+
     setItemToDelete(itemId)
     setShowDeleteDialog(true)
   }
 
   const handleConfirmDelete = async () => {
     if (itemToDelete) {
-      await deleteItem(itemToDelete)
-      setShowDeleteDialog(false)
-      setItemToDelete(null)
-      setSelectedItems([])
+      setDeleting(true)
+      const success = await deleteItem(itemToDelete)
+      setDeleting(false)
+
+      if (success) {
+        setShowDeleteDialog(false)
+        setItemToDelete(null)
+        setSelectedItems([])
+      }
     }
   }
 
   const handleFeatureToggle = async (itemId: string) => {
     const item = items.find(i => i.id === itemId)
-    if (item) {
-      await updateItem(itemId, { is_featured: !item.is_featured })
+    if (!item) return
+
+    // Check if item is deleted
+    if (item.is_deleted || item.deleted_at) {
+      toast({
+        title: "Cannot Update Deleted Item",
+        description: "This item has been deleted. Restore it first to make changes.",
+      })
+      return
     }
+
+    setTogglingFeatured(itemId)
+    await updateItem(itemId, { is_featured: !item.is_featured })
+    setTogglingFeatured(null)
   }
 
   const handleDownload = async (itemId: string) => {
-    await downloadItem(itemId)
+    setDownloading(itemId)
+    const downloadUrl = await downloadItem(itemId)
+    setDownloading(null)
+
+    if (downloadUrl) {
+      // Open download URL in new tab
+      window.open(downloadUrl, '_blank')
+    }
   }
 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault()
     // Context menu logic here
+  }
+
+  const handleLoadArchive = async () => {
+    setLoadingArchive(true)
+    const deleted = await loadDeletedItems()
+    setArchivedItems(deleted)
+    setLoadingArchive(false)
+    setShowArchive(true)
+  }
+
+  const handleRestore = async (itemId: string) => {
+    setRestoring(itemId)
+    const success = await restoreItem(itemId)
+    setRestoring(null)
+
+    if (success) {
+      // Remove from archive list and refresh main gallery
+      setArchivedItems(prev => prev.filter(item => item.id !== itemId))
+    }
+  }
+
+  const handleImageClick = (index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }
+
+  const handleLightboxEdit = (item: GalleryItem) => {
+    router.push(`/superadmin/gallery/edit/${item.id}`)
+  }
+
+  const handleLightboxDelete = (item: GalleryItem) => {
+    handleDelete(item.id)
+  }
+
+  const handleLightboxDownload = async (item: GalleryItem) => {
+    await handleDownload(item.id)
   }
 
   return (
@@ -306,22 +410,23 @@ export default function GalleryPage() {
               {/* Grid View */}
               {viewMode === "grid" ? (
                 <div className="grid grid-cols-4 gap-4">
-                  {paginatedItems.map((item) => {
+                  {paginatedItems.map((item, index) => {
                     const category = determineCategoryFromTags(item.tags || [])
                     return (
                       <div
                         key={item.id}
-                        className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                        className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg cursor-pointer"
                         onContextMenu={(e) => handleContextMenu(e, item.id)}
+                        onClick={() => handleImageClick(index)}
                       >
-                        <div className="absolute top-2 left-2 z-10">
+                        <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedItems.includes(item.id)}
                             onCheckedChange={() => handleSelectItem(item.id)}
                             className="bg-white dark:bg-gray-900 border-2"
                           />
                         </div>
-                        <div className="absolute top-2 right-2 z-10">
+                        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -337,13 +442,37 @@ export default function GalleryPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleFeatureToggle(item.id)}>
-                                <Star className="h-4 w-4 mr-2" />
-                                {item.is_featured ? "Unfeature" : "Feature"}
+                              <DropdownMenuItem
+                                onClick={() => handleFeatureToggle(item.id)}
+                                disabled={togglingFeatured === item.id}
+                              >
+                                {togglingFeatured === item.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    {item.is_featured ? "Unfeaturing..." : "Featuring..."}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Star className="h-4 w-4 mr-2" />
+                                    {item.is_featured ? "Unfeature" : "Feature"}
+                                  </>
+                                )}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDownload(item.id)}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
+                              <DropdownMenuItem
+                                onClick={() => handleDownload(item.id)}
+                                disabled={downloading === item.id}
+                              >
+                                {downloading === item.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Downloading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download
+                                  </>
+                                )}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -358,10 +487,13 @@ export default function GalleryPage() {
                         </div>
 
                         <div className="aspect-[4/3] relative overflow-hidden bg-muted">
-                          <img
-                            src={item.file_url || "/placeholder.svg"}
-                            alt={item.title || 'Gallery item'}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          <Image
+                            src={getThumbnailUrl(item)}
+                            alt={getImageAltText(item)}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            unoptimized={needsUnoptimized(item)}
                           />
                           {item.is_featured && (
                             <div className="absolute bottom-2 left-2">
@@ -420,10 +552,13 @@ export default function GalleryPage() {
                           onCheckedChange={() => handleSelectItem(item.id)}
                         />
                         <div className="w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
-                          <img
-                            src={item.file_url || "/placeholder.svg"}
-                            alt={item.title || 'Gallery item'}
-                            className="w-full h-full object-cover"
+                          <Image
+                            src={getThumbnailUrl(item)}
+                            alt={getImageAltText(item)}
+                            fill
+                            className="object-cover"
+                            sizes="96px"
+                            unoptimized={needsUnoptimized(item)}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -469,13 +604,37 @@ export default function GalleryPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleFeatureToggle(item.id)}>
-                              <Star className="h-4 w-4 mr-2" />
-                              {item.is_featured ? "Unfeature" : "Feature"}
+                            <DropdownMenuItem
+                              onClick={() => handleFeatureToggle(item.id)}
+                              disabled={togglingFeatured === item.id}
+                            >
+                              {togglingFeatured === item.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  {item.is_featured ? "Unfeaturing..." : "Featuring..."}
+                                </>
+                              ) : (
+                                <>
+                                  <Star className="h-4 w-4 mr-2" />
+                                  {item.is_featured ? "Unfeature" : "Feature"}
+                                </>
+                              )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDownload(item.id)}>
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
+                            <DropdownMenuItem
+                              onClick={() => handleDownload(item.id)}
+                              disabled={downloading === item.id}
+                            >
+                              {downloading === item.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Downloading...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
+                                </>
+                              )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -548,34 +707,172 @@ export default function GalleryPage() {
         </CardContent>
       </Card>
 
+      {/* Archive Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Archive</CardTitle>
+              <CardDescription>View and restore deleted gallery items</CardDescription>
+            </div>
+            <Button
+              onClick={handleLoadArchive}
+              variant="outline"
+              disabled={loadingArchive}
+            >
+              {loadingArchive ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : showArchive ? (
+                'Refresh Archive'
+              ) : (
+                'Show Archive'
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        {showArchive && (
+          <CardContent>
+            {archivedItems.length === 0 ? (
+              <div className="text-center py-12">
+                <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Archived Items</h3>
+                <p className="text-muted-foreground">All deleted items have been permanently removed or restored.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {archivedItems.map((item) => {
+                  const category = determineCategoryFromTags(item.tags || [])
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 p-4 border rounded-lg bg-muted/30"
+                    >
+                      <div className="w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative opacity-60">
+                        <Image
+                          src={getThumbnailUrl(item)}
+                          alt={getImageAltText(item)}
+                          fill
+                          className="object-cover"
+                          sizes="96px"
+                          unoptimized={needsUnoptimized(item)}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold truncate text-muted-foreground">{item.title || 'Untitled'}</h3>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-500/20">
+                            Deleted
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-1 mb-2">{item.caption || ''}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            {category}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Deleted {new Date(item.deleted_at!).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleRestore(item.id)}
+                        disabled={restoring === item.id}
+                        variant="default"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {restoring === item.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Restoring...
+                          </>
+                        ) : (
+                          'Restore'
+                        )}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2">Delete Gallery Item</h3>
             <p className="text-muted-foreground mb-4">
-              Are you sure you want to delete this gallery item? This action cannot be undone.
+              Are you sure you want to delete this gallery item? You can restore it later from the Archive section.
             </p>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteDialog(false)}
+                disabled={deleting}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleConfirmDelete}
+                disabled={deleting}
               >
-                Delete
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Lightbox Modal */}
+      <GalleryLightbox
+        items={paginatedItems}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        onEdit={handleLightboxEdit}
+        onDelete={handleLightboxDelete}
+        onDownload={handleLightboxDownload}
+      />
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

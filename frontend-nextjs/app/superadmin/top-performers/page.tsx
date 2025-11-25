@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
+import { useTopPerformers } from "@/hooks/useTopPerformers"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -69,6 +70,22 @@ export default function TopPerformersPage() {
   const [topN, setTopN] = useState("10")
   const [selectedPerformer, setSelectedPerformer] = useState<TopPerformer | null>(null)
 
+  // Use the API hook
+  const {
+    performers: topPerformers,
+    stats,
+    loading,
+    error,
+    fetchTopPerformers,
+    refetch,
+  } = useTopPerformers({
+    initialParams: {
+      timePeriod: timePeriod as any,
+      gradeLevel: gradeLevel as any,
+      topN: parseInt(topN),
+    },
+  })
+
   // Confirmation modals
   const [showAwardModal, setShowAwardModal] = useState(false)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
@@ -83,90 +100,29 @@ export default function TopPerformersPage() {
   const [awardDescription, setAwardDescription] = useState("")
   const [messageContent, setMessageContent] = useState("")
 
-  const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([
-    {
-      id: "1",
-      rank: 1,
-      studentId: "2024-001",
-      name: "Maria Santos",
-      gradeLevel: 10,
-      section: "Einstein",
-      achievement: "Highest GWA - 1st Quarter",
-      gwa: 1.0,
-      recognitionDate: "2024-11-15",
-      status: "Active",
-    },
-    {
-      id: "2",
-      rank: 2,
-      studentId: "2024-045",
-      name: "Juan Dela Cruz",
-      gradeLevel: 9,
-      section: "Newton",
-      achievement: "Mathematics Excellence",
-      gwa: 1.1,
-      recognitionDate: "2024-11-15",
-      status: "Active",
-    },
-    {
-      id: "3",
-      rank: 3,
-      studentId: "2024-089",
-      name: "Ana Reyes",
-      gradeLevel: 8,
-      section: "Curie",
-      achievement: "Perfect Attendance",
-      gwa: 1.2,
-      recognitionDate: "2024-11-14",
-      status: "Active",
-    },
-    {
-      id: "4",
-      rank: 4,
-      studentId: "2024-112",
-      name: "Carlos Garcia",
-      gradeLevel: 10,
-      section: "Darwin",
-      achievement: "Most Improved Student",
-      gwa: 1.3,
-      recognitionDate: "2024-11-13",
-      status: "Active",
-    },
-    {
-      id: "5",
-      rank: 5,
-      studentId: "2024-156",
-      name: "Sofia Martinez",
-      gradeLevel: 7,
-      section: "Tesla",
-      achievement: "Science Fair Champion",
-      gwa: 1.2,
-      recognitionDate: "2024-11-12",
-      status: "Active",
-    },
-  ])
+  // Stats are now provided by the API hook
+  const calculatedStats = useMemo(() => {
+    if (!stats) return null;
+    
+    return {
+      totalHonorStudents: stats.totalHonorStudents,
+      honorRollStudents: stats.honorRollStudents,
+      perfectGwaStudents: stats.perfectGwaStudents,
+      gradeDistribution: stats.gradeDistribution,
+    };
+  }, [stats]);
 
-  const stats = {
-    totalPerformers: topPerformers.length,
-    averageGwa: (topPerformers.reduce((sum, p) => sum + p.gwa, 0) / topPerformers.length).toFixed(2),
-    topStudent: topPerformers[0],
-    recentAchievements: topPerformers.filter(
-      (p) => new Date(p.recognitionDate) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    ).length,
-  }
-
-  const filteredPerformers = topPerformers
-    .filter((performer) => {
+  const filteredPerformers = useMemo(() => {
+    return topPerformers.filter((performer) => {
       const matchesSearch =
         performer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        performer.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        performer.achievement.toLowerCase().includes(searchQuery.toLowerCase())
+        performer.studentId.toLowerCase().includes(searchQuery.toLowerCase())
 
       const matchesGrade = gradeLevel === "all" || performer.gradeLevel.toString() === gradeLevel
 
       return matchesSearch && matchesGrade
-    })
-    .slice(0, Number.parseInt(topN))
+    }).slice(0, Number.parseInt(topN))
+  }, [topPerformers, searchQuery, gradeLevel, topN])
 
   const handleStatusChange = (performer: TopPerformer, newStatus: AwardStatus) => {
     setSelectedPerformer(performer)
@@ -176,7 +132,10 @@ export default function TopPerformersPage() {
 
   const confirmStatusChange = () => {
     if (selectedPerformer && pendingStatus) {
-      setTopPerformers(topPerformers.map((p) => (p.id === selectedPerformer.id ? { ...p, status: pendingStatus } : p)))
+      // TODO: Implement API call to update student status
+      console.log(`Updating status for ${selectedPerformer.name} to ${pendingStatus}`)
+      // After successful API call, refetch the data
+      refetch()
     }
     setShowStatusChangeModal(false)
     setSelectedPerformer(null)
@@ -226,7 +185,10 @@ export default function TopPerformersPage() {
 
   const confirmArchive = () => {
     if (selectedPerformer) {
-      setTopPerformers(topPerformers.map((p) => (p.id === selectedPerformer.id ? { ...p, status: "Archived" } : p)))
+      // TODO: Implement API call to archive student
+      console.log(`Archiving ${selectedPerformer.name}`)
+      // After successful API call, refetch the data
+      refetch()
     }
     setShowArchiveModal(false)
     setSelectedPerformer(null)
@@ -260,6 +222,27 @@ export default function TopPerformersPage() {
     }
   }
 
+  // Handle filter changes
+  const handleFilterChange = async () => {
+    await fetchTopPerformers({
+      search: searchQuery,
+      timePeriod: timePeriod as any,
+      gradeLevel: gradeLevel as any,
+      topN: parseInt(topN),
+    })
+  }
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        handleFilterChange()
+      }
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, timePeriod, gradeLevel, topN])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -275,48 +258,59 @@ export default function TopPerformersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Top Performers</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Honor Students</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPerformers}</div>
-            <p className="text-xs text-muted-foreground">Across all categories</p>
+            <div className="text-2xl font-bold">{calculatedStats?.totalHonorStudents || 0}</div>
+            <p className="text-xs text-muted-foreground">All grade levels</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average GWA</CardTitle>
+            <CardTitle className="text-sm font-medium">Grade 7</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageGwa}</div>
-            <p className="text-xs text-muted-foreground">Performance average</p>
+            <div className="text-2xl font-bold">{calculatedStats?.gradeDistribution.grade7 || 0}</div>
+            <p className="text-xs text-muted-foreground">Honor students</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top Student</CardTitle>
+            <CardTitle className="text-sm font-medium">Grade 8</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.topStudent?.name.split(" ")[0]}</div>
-            <p className="text-xs text-muted-foreground">GWA: {stats.topStudent?.gwa}</p>
+            <div className="text-2xl font-bold">{calculatedStats?.gradeDistribution.grade8 || 0}</div>
+            <p className="text-xs text-muted-foreground">Honor students</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Achievements</CardTitle>
+            <CardTitle className="text-sm font-medium">Grade 9</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.recentAchievements}</div>
-            <p className="text-xs text-muted-foreground">Last 7 days</p>
+            <div className="text-2xl font-bold">{calculatedStats?.gradeDistribution.grade9 || 0}</div>
+            <p className="text-xs text-muted-foreground">Honor students</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Grade 10</CardTitle>
+            <Star className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{calculatedStats?.gradeDistribution.grade10 || 0}</div>
+            <p className="text-xs text-muted-foreground">Honor students</p>
           </CardContent>
         </Card>
       </div>
@@ -393,13 +387,29 @@ export default function TopPerformersPage() {
           <CardTitle>Top Performers Leaderboard</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading top performers...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <p className="text-red-500 mb-4">Error: {error}</p>
+                <Button onClick={refetch} variant="outline">
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[80px]">Rank</TableHead>
                 <TableHead>Student</TableHead>
                 <TableHead>Grade & Section</TableHead>
-                <TableHead>Achievement</TableHead>
                 <TableHead>GWA</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]">Actions</TableHead>
@@ -426,9 +436,6 @@ export default function TopPerformersPage() {
                   </TableCell>
                   <TableCell>
                     Grade {performer.gradeLevel} - {performer.section}
-                  </TableCell>
-                  <TableCell className="max-w-[200px]">
-                    <div className="truncate">{performer.achievement}</div>
                   </TableCell>
                   <TableCell>
                     <div className="font-semibold">{performer.gwa}</div>
@@ -500,6 +507,7 @@ export default function TopPerformersPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

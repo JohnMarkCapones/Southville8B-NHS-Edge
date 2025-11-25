@@ -28,14 +28,20 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
 import { AuthUser } from '../../auth/auth-user.decorator';
 import { R2StorageService } from '../../storage/r2-storage/r2-storage.service';
+import { Audit } from '../../common/audit';
+import { AuditEntityType } from '../../common/audit/audit.types';
+import { CloudflareImagesService } from '../../gallery/services/cloudflare-images.service';
 import { NewsService } from '../services/news.service';
 import { NewsApprovalService } from '../services/news-approval.service';
+import { NewsReviewCommentsService } from '../services/news-review-comments.service';
 import {
   CreateNewsDto,
   UpdateNewsDto,
   ApproveNewsDto,
   RejectNewsDto,
   AddCoAuthorDto,
+  CreateReviewCommentDto,
+  UpdateReviewCommentDto,
 } from '../dto';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
@@ -52,7 +58,9 @@ export class NewsController {
   constructor(
     private readonly newsService: NewsService,
     private readonly newsApprovalService: NewsApprovalService,
+    private readonly newsReviewCommentsService: NewsReviewCommentsService,
     private readonly r2StorageService: R2StorageService,
+    private readonly cloudflareImagesService: CloudflareImagesService,
   ) {}
 
   // ============================================
@@ -95,6 +103,30 @@ export class NewsController {
     return this.newsService.findBySlugPublic(slug);
   }
 
+  /**
+   * Check if a slug exists
+   * Public endpoint - used for duplicate title detection
+   */
+  @Get('check-slug/:title')
+  @ApiOperation({ summary: 'Check if a slug generated from title exists' })
+  @ApiResponse({
+    status: 200,
+    description: 'Slug check result',
+    schema: {
+      type: 'object',
+      properties: {
+        exists: {
+          type: 'boolean',
+          description: 'Whether the slug already exists',
+        },
+        slug: { type: 'string', description: 'The generated slug' },
+      },
+    },
+  })
+  async checkSlug(@Param('title') title: string) {
+    return this.newsService.checkSlugExists(title);
+  }
+
   // ============================================
   // AUTHENTICATED ENDPOINTS
   // ============================================
@@ -104,6 +136,10 @@ export class NewsController {
    * Only journalism members with publishing positions can create
    */
   @Post()
+  @Audit({
+    entityType: AuditEntityType.NEWS,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -153,7 +189,9 @@ export class NewsController {
     schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'R2 public URL of uploaded image' },
+        url: { type: 'string', description: 'Cloudflare Images public URL' },
+        cf_image_id: { type: 'string', description: 'Cloudflare Image ID' },
+        cf_image_url: { type: 'string', description: 'Cloudflare Images URL' },
         fileName: { type: 'string', description: 'Original file name' },
         fileSize: { type: 'number', description: 'File size in bytes' },
       },
@@ -235,41 +273,54 @@ export class NewsController {
         .replace(/-+/g, '-')
         .substring(0, 50);
 
-      // Generate unique file key for R2
-      const uniqueId = uuidv4();
-      const finalFilename = `${uniqueId}-${sanitizedName}${ext}`;
-      const fileKey = `news/images/${finalFilename}`;
-
-      this.logger.debug(`Uploading image to R2: ${fileKey}`);
-
-      // Upload to R2
-      const uploadResult = await this.r2StorageService.uploadFile(
-        fileKey,
-        imageBuffer,
-        imageMimeType,
+      this.logger.debug(
+        `Uploading image to Cloudflare Images: ${imageFilename}`,
       );
 
-      if (!uploadResult.success) {
-        this.logger.error(`R2 upload failed for ${fileKey}`);
-        throw new BadRequestException('Failed to upload image to storage');
-      }
+      // Create file object for Cloudflare Images Service
+      const fileObject = {
+        buffer: imageBuffer,
+        originalname: imageFilename,
+        mimetype: imageMimeType,
+        size: imageBuffer.length,
+        fieldname: 'image',
+        encoding: '7bit',
+        destination: '',
+        filename: imageFilename,
+        path: '',
+      } as Express.Multer.File;
 
-      this.logger.log(`Image uploaded successfully: ${fileKey}`);
+      // Upload to Cloudflare Images
+      const uploadResult = await this.cloudflareImagesService.uploadImage(
+        fileObject,
+        {
+          uploadedBy: userId,
+          context: 'news',
+        },
+      );
 
+      this.logger.log(
+        `Image uploaded successfully to Cloudflare Images: ${uploadResult.cf_image_id}`,
+      );
+
+      // Return Cloudflare Images URL and metadata
       return {
-        url: uploadResult.publicUrl,
+        url: uploadResult.cf_image_url,
+        cf_image_id: uploadResult.cf_image_id,
+        cf_image_url: uploadResult.cf_image_url,
         fileName: imageFilename,
-        fileSize: imageBuffer.length,
+        fileSize: uploadResult.file_size_bytes,
+        mimeType: uploadResult.mime_type,
       };
     } catch (error) {
-      this.logger.error('Error uploading image:', error);
+      this.logger.error('Error uploading image to Cloudflare Images:', error);
 
       if (error instanceof BadRequestException) {
         throw error;
       }
 
       throw new BadRequestException(
-        `Failed to upload image: ${error.message || 'Unknown error'}`,
+        `Failed to upload image to Cloudflare Images: ${error.message || 'Unknown error'}`,
       );
     }
   }
@@ -291,6 +342,12 @@ export class NewsController {
   @ApiQuery({ name: 'authorId', required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
+  @ApiQuery({
+    name: 'includeDeleted',
+    required: false,
+    type: Boolean,
+    description: 'Include deleted/archived articles',
+  })
   async findAll(
     @Query('status') status?: string,
     @Query('visibility') visibility?: string,
@@ -298,6 +355,7 @@ export class NewsController {
     @Query('authorId') authorId?: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
+    @Query('includeDeleted') includeDeleted?: string,
   ) {
     return this.newsService.findAll({
       status,
@@ -306,6 +364,7 @@ export class NewsController {
       authorId,
       limit: limit ? parseInt(limit.toString()) : 20,
       offset: offset ? parseInt(offset.toString()) : 0,
+      includeDeleted: includeDeleted === 'true',
     });
   }
 
@@ -346,18 +405,14 @@ export class NewsController {
   }
 
   /**
-   * Get article by ID
+   * Get article by ID (Public endpoint)
    */
   @Get(':id')
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get article by ID' })
+  @ApiOperation({ summary: 'Get article by ID (public)' })
   @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Article not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findOne(@Param('id') id: string) {
-    return this.newsService.findOne(id);
+    return this.newsService.findOnePublic(id);
   }
 
   /**
@@ -365,6 +420,10 @@ export class NewsController {
    * Author or Advisers can update (only draft/pending)
    */
   @Patch(':id')
+  @Audit({
+    entityType: AuditEntityType.NEWS,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -386,10 +445,91 @@ export class NewsController {
   }
 
   /**
+   * Quick update article status
+   * Admins can update any article status
+   */
+  @Patch(':id/status')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update article status' })
+  @ApiResponse({ status: 200, description: 'Status updated successfully' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+    @AuthUser('id') userId: string,
+  ) {
+    return this.newsService.updateStatus(id, status, userId);
+  }
+
+  /**
+   * Quick update article visibility
+   * Admins can update any article visibility
+   */
+  @Patch(':id/visibility')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update article visibility' })
+  @ApiResponse({ status: 200, description: 'Visibility updated successfully' })
+  async updateVisibility(
+    @Param('id') id: string,
+    @Body('visibility') visibility: string,
+    @AuthUser('id') userId: string,
+  ) {
+    return this.newsService.updateVisibility(id, visibility, userId);
+  }
+
+  /**
+   * Quick update featured image
+   * Admins can update any article featured image
+   */
+  @Patch(':id/featured-image')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update article featured image' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured image updated successfully',
+  })
+  async updateFeaturedImage(
+    @Param('id') id: string,
+    @Body('featuredImageUrl') featuredImageUrl: string,
+    @AuthUser('id') userId: string,
+  ) {
+    return this.newsService.updateFeaturedImage(id, featuredImageUrl, userId);
+  }
+
+  /**
+   * Remove featured image
+   * Admins can remove featured image from any article
+   */
+  @Delete(':id/featured-image')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Remove article featured image' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured image removed successfully',
+  })
+  async removeFeaturedImage(
+    @Param('id') id: string,
+    @AuthUser('id') userId: string,
+  ) {
+    return this.newsService.updateFeaturedImage(id, null, userId);
+  }
+
+  /**
    * Delete an article
    * Author or Advisers can delete (only drafts)
    */
   @Delete(':id')
+  @Audit({
+    entityType: AuditEntityType.NEWS,
+    descriptionField: 'title',
+  })
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -403,7 +543,26 @@ export class NewsController {
   })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async remove(@Param('id') id: string, @AuthUser('id') userId: string) {
-    await this.newsService.remove(id, userId);
+    // Return the deleted article for audit logging
+    // (HTTP response will still be 204 No Content due to @HttpCode decorator)
+    return this.newsService.remove(id, userId);
+  }
+
+  /**
+   * Restore a soft-deleted article
+   * Admins can restore any deleted article
+   */
+  @Patch(':id/restore')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Restore article (clear deleted_at/deleted_by)' })
+  @ApiResponse({ status: 200, description: 'Article restored successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async restore(@Param('id') id: string, @AuthUser('id') userId: string) {
+    return this.newsService.restore(id, userId);
   }
 
   // ============================================
@@ -488,6 +647,7 @@ export class NewsController {
   /**
    * Publish article
    * Only Advisers and Co-Advisers can publish (after approval)
+   * If forceApprove=true, will auto-approve pending articles when publishing
    */
   @Post(':id/publish')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -502,9 +662,46 @@ export class NewsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an Adviser' })
   @ApiResponse({ status: 404, description: 'Article not found' })
-  async publish(@Param('id') id: string, @AuthUser('id') userId: string) {
-    await this.newsApprovalService.publishArticle(id, userId);
+  @ApiQuery({
+    name: 'forceApprove',
+    required: false,
+    type: Boolean,
+    description: 'Auto-approve pending articles when publishing',
+  })
+  async publish(
+    @Param('id') id: string,
+    @AuthUser('id') userId: string,
+    @Query('forceApprove') forceApprove?: string,
+  ) {
+    const shouldForceApprove = forceApprove === 'true';
+    await this.newsApprovalService.publishArticle(
+      id,
+      userId,
+      shouldForceApprove,
+    );
     return { message: 'Article published successfully' };
+  }
+
+  /**
+   * Unpublish article
+   * Only Advisers and Co-Advisers can unpublish
+   */
+  @Post(':id/unpublish')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Unpublish article (Advisers only)' })
+  @ApiResponse({ status: 200, description: 'Article unpublished successfully' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Article not published',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not an Adviser' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async unpublish(@Param('id') id: string, @AuthUser('id') userId: string) {
+    await this.newsApprovalService.unpublishArticle(id, userId);
+    return { message: 'Article unpublished successfully' };
   }
 
   /**
@@ -559,7 +756,7 @@ export class NewsController {
    * Remove co-author from article
    * Author or Advisers can remove
    */
-  @Delete(':id/co-authors/:coAuthorUserId')
+  @Delete(':id/co-authors/:coAuthorName')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiBearerAuth('JWT-auth')
@@ -571,9 +768,182 @@ export class NewsController {
   @ApiResponse({ status: 404, description: 'Article not found' })
   async removeCoAuthor(
     @Param('id') id: string,
-    @Param('coAuthorUserId') coAuthorUserId: string,
+    @Param('coAuthorName') coAuthorName: string,
     @AuthUser('id') userId: string,
   ) {
-    await this.newsService.removeCoAuthor(id, coAuthorUserId, userId);
+    await this.newsService.removeCoAuthor(id, coAuthorName, userId);
+  }
+
+  // ============================================
+  // STATISTICS ENDPOINTS
+  // ============================================
+
+  /**
+   * Get news statistics (KPI counts)
+   * Students get their own stats, Teachers get their own stats, Admins get all stats
+   */
+  @Get('stats')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get news statistics (KPI counts)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        pendingReview: {
+          type: 'number',
+          description: 'Articles pending review or in review',
+        },
+        published: { type: 'number', description: 'Published articles' },
+        needsRevision: {
+          type: 'number',
+          description: 'Articles needing revision',
+        },
+        approved: { type: 'number', description: 'Approved articles' },
+        rejected: { type: 'number', description: 'Rejected articles' },
+        draft: { type: 'number', description: 'Draft articles' },
+        total: { type: 'number', description: 'Total articles' },
+        studentSubmissions: {
+          type: 'number',
+          description: 'Articles submitted by students',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiQuery({
+    name: 'all',
+    required: false,
+    type: Boolean,
+    description: 'Get all stats (Admin/Teacher) instead of user-specific stats',
+  })
+  async getStats(
+    @AuthUser('id') userId: string,
+    @AuthUser('roles') roles: string[],
+    @Query('all') all?: string,
+  ) {
+    // Admins and Teachers can get all stats if 'all' query param is true
+    const isAdmin = roles?.includes(UserRole.ADMIN);
+    const isTeacher = roles?.includes(UserRole.TEACHER);
+    const getAllStats = all === 'true' && (isAdmin || isTeacher);
+
+    // Teachers and Admins can get all stats, Students get their own stats
+    const filterByUser = getAllStats ? undefined : userId;
+
+    return this.newsService.getNewsStats(filterByUser);
+  }
+
+  // ============================================
+  // REVIEW COMMENTS ENDPOINTS
+  // ============================================
+
+  /**
+   * Get all review comments for a news article
+   */
+  @Get(':id/review-comments')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get all review comments for a news article' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review comments retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async getReviewComments(@Param('id') newsId: string) {
+    return this.newsReviewCommentsService.getCommentsByNewsId(newsId);
+  }
+
+  /**
+   * Create a review comment on a news article
+   */
+  @Post(':id/review-comments')
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Add a review comment to a news article (Teachers/Admins only)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Review comment created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not a Teacher or Admin',
+  })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async createReviewComment(
+    @Param('id') newsId: string,
+    @AuthUser('id') userId: string,
+    @Body() createDto: CreateReviewCommentDto,
+  ) {
+    return this.newsReviewCommentsService.createComment(
+      newsId,
+      userId,
+      createDto,
+    );
+  }
+
+  /**
+   * Update a review comment
+   */
+  @Patch('review-comments/:commentId')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update a review comment (owner only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review comment updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not the comment owner',
+  })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async updateReviewComment(
+    @Param('commentId') commentId: string,
+    @AuthUser('id') userId: string,
+    @Body() updateDto: UpdateReviewCommentDto,
+  ) {
+    return this.newsReviewCommentsService.updateComment(
+      commentId,
+      userId,
+      updateDto,
+    );
+  }
+
+  /**
+   * Delete a review comment (soft delete)
+   */
+  @Delete('review-comments/:commentId')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a review comment (owner or admin only)',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Review comment deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not the comment owner or admin',
+  })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async deleteReviewComment(
+    @Param('commentId') commentId: string,
+    @AuthUser('id') userId: string,
+  ) {
+    await this.newsReviewCommentsService.deleteComment(commentId, userId);
   }
 }

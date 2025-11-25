@@ -6,9 +6,12 @@ import {
   IsEnum,
   IsUUID,
   IsArray,
+  IsUrl,
+  IsInt,
   ValidateNested,
   Min,
   MinLength,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -55,6 +58,17 @@ export class CreateQuizQuestionDto {
     ],
   })
   questionType: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @ApiProperty({
+    example: 'This question tests basic arithmetic skills.',
+    description: 'Optional question description/explanation',
+    required: false,
+    maxLength: 1000,
+  })
+  description?: string;
 
   @IsNumber()
   @Min(0)
@@ -109,6 +123,26 @@ export class CreateQuizQuestionDto {
   isPoolQuestion?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  @ApiProperty({
+    example: true,
+    description: 'Is this question required to be answered',
+    default: false,
+    required: false,
+  })
+  isRequired?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({
+    example: true,
+    description: 'Randomize choices order when displaying this question',
+    default: false,
+    required: false,
+  })
+  isRandomize?: boolean;
+
+  @IsOptional()
   @IsUUID()
   @ApiProperty({
     example: '550e8400-e29b-41d4-a716-446655440000',
@@ -136,4 +170,66 @@ export class CreateQuizQuestionDto {
     required: false,
   })
   metadata?: any;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({
+    example: false,
+    description: 'Case sensitive matching for fill-in-blank questions',
+    default: false,
+    required: false,
+  })
+  caseSensitive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({
+    example: false,
+    description: 'Whitespace sensitive matching for fill-in-blank questions',
+    default: false,
+    required: false,
+  })
+  whitespaceSensitive?: boolean;
+
+  // ============================================================================
+  // Image Support Fields (Cloudflare Images)
+  // ============================================================================
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    example: 'quiz-q-1f3b8bf5-b165-473c-9740-aaa4912516f8',
+    description: 'Cloudflare Images ID for question image',
+    required: false,
+  })
+  questionImageId?: string;
+
+  @IsOptional()
+  @IsUrl()
+  @ApiProperty({
+    example: 'https://imagedelivery.net/abc123/quiz-q-1f3b8bf5/card',
+    description: 'Full Cloudflare Images delivery URL for question image',
+    required: false,
+  })
+  questionImageUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @ApiProperty({
+    example: 1048576,
+    description: 'File size in bytes of question image',
+    required: false,
+    minimum: 0,
+  })
+  questionImageFileSize?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    example: 'image/png',
+    description: 'MIME type of question image (e.g., image/jpeg, image/png)',
+    required: false,
+  })
+  questionImageMimeType?: string;
 }

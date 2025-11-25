@@ -472,12 +472,6 @@ export function Header() {
                       color: "text-blue-600",
                     },
                     { href: "/guess/portal?role=admin", icon: Shield, label: "Administrator", color: "text-blue-700" },
-                    {
-                      href: "/guess/portal?role=parent",
-                      icon: Users,
-                      label: "Parent/Guardian",
-                      color: "text-blue-500",
-                    },
                   ].map((item) => (
                     <DropdownMenuItem key={item.label} asChild>
                       <Link href={item.href} className="cursor-pointer group">

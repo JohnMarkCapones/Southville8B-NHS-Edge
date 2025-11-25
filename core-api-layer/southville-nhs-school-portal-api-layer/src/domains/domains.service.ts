@@ -305,4 +305,62 @@ export class DomainsService {
       throw new BadRequestException('Failed to fetch domain');
     }
   }
+
+  /**
+   * Gets all domain roles for a specific domain
+   * @param domainId - Domain ID
+   * @returns Promise<any[]> - Array of domain roles
+   */
+  async getDomainRoles(domainId: string): Promise<any[]> {
+    try {
+      const supabase = this.supabaseService.getServiceClient();
+
+      // First check if domain exists
+      const { data: domain, error: domainError } = await supabase
+        .from('domains')
+        .select('id')
+        .eq('id', domainId)
+        .single();
+
+      if (domainError || !domain) {
+        throw new NotFoundException(`Domain with ID ${domainId} not found`);
+      }
+
+      // Get domain roles
+      const { data, error } = await supabase
+        .from('domain_roles')
+        .select(
+          `
+          *,
+          domain:domain_id(id, type, name)
+        `,
+        )
+        .eq('domain_id', domainId)
+        .order('name', { ascending: true });
+
+      if (error) {
+        this.logger.error(
+          `Error fetching domain roles for domain ${domainId}:`,
+          error,
+        );
+        throw new BadRequestException(
+          `Failed to fetch domain roles: ${error.message}`,
+        );
+      }
+
+      return data || [];
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `Unexpected error fetching domain roles for domain ${domainId}:`,
+        error,
+      );
+      throw new BadRequestException('Failed to fetch domain roles');
+    }
+  }
 }

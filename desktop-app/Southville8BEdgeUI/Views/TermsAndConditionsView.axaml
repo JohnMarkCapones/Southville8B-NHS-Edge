@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Southville8BEdgeUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="Southville8BEdgeUI.Views.TermsAndConditionsView"
+             x:DataType="vm:TermsAndConditionsViewModel"
+             Background="{DynamicResource PageBackgroundBrush}">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.title">
+            <Setter Property="FontSize" Value="32"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBlock.subtitle">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,24"/>
+        </Style>
+        <Style Selector="Button.role-button">
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.role-button:pointerover">
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        <Style Selector="Button.back-button">
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.back-button:pointerover">
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="40">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Terms and Conditions" Classes="title"/>
+            <TextBlock Text="Please review the terms and conditions for your role" Classes="subtitle"/>
+        </StackPanel>
+
+        <!-- Role Selection -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,24">
+            <Button Content="Administrator Terms"
+                    Command="{Binding SelectAdminCommand}"
+                    Classes="role-button"/>
+            <Button Content="Teacher Terms"
+                    Command="{Binding SelectTeacherCommand}"
+                    Classes="role-button"/>
+        </StackPanel>
+
+        <!-- Terms Content -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Margin="0,0,0,24">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <TextBox Text="{Binding CurrentTermsContent}"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         AcceptsTab="False"
+                         TextWrapping="Wrap"
+                         FontSize="14"
+                         FontFamily="Segoe UI"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="40"
+                         Watermark=""/>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Back Button -->
+        <Button Grid.Row="3"
+                Content="Back to Login"
+                Command="{Binding GoBackCommand}"
+                Classes="back-button"
+                HorizontalAlignment="Left"/>
+    </Grid>
+</UserControl>
+

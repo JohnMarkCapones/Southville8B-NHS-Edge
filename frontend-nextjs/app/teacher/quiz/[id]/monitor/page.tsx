@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { useQuizMonitoring } from "@/hooks/useQuizMonitoring" // Backend integration
 import {
   ArrowLeft,
   RefreshCw,
@@ -34,6 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
+  Loader2,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -328,7 +330,9 @@ const mockActivityLogs: ActivityLog[] = [
 ]
 
 type ViewMode = "grid" | "list"
-type FilterMode = "all" | "active" | "flagged" | "finished" | "not_started"
+type FilterMode = "all" | "active" | "idle" | "flagged" | "finished" | "not_started"
+
+// ✅ Student can be active/idle/finished AND flagged simultaneously
 
 const STUDENTS_PER_PAGE = 12
 
@@ -336,8 +340,166 @@ export default function QuizMonitorPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const [students, setStudents] = useState(mockStudents)
+
+  // Backend integration: useQuizMonitoring hook with auto-polling
+  const quizId = params.id as string
+  const {
+    participants,
+    flags,
+    isLoading,
+    isTerminating,
+    error: monitoringError,
+    fetchParticipants,
+    fetchFlags,
+    terminateAttempt,
+    refresh,
+    startPolling,
+    stopPolling,
+    isPolling,
+  } = useQuizMonitoring(quizId, {
+    pollInterval: 10000, // 10 seconds
+    autoRefresh: true, // Start polling automatically
+  })
+
+  const [students, setStudents] = useState<any[]>([]) // ✅ Start with empty array instead of mock data
   const [selectedStudent, setSelectedStudent] = useState<(typeof mockStudents)[0] | null>(null)
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]) // ✅ FIX: Start with empty array, not mock data
+
+  // ✅ Backend integration: Transform flags into activity logs
+  // Helper function to format flag type for display
+  const formatFlagType = (flagType: string): string => {
+    const flagTypeMap: Record<string, string> = {
+      'tab_switch': 'Tab Switch',
+      'device_change': 'Device Change',
+      'fullscreen_exit': 'Fullscreen Exit',
+      'copy_paste': 'Copy/Paste Attempt',
+      'idle': 'Idle',
+      'multiple_sessions': 'Multiple Sessions',
+      'ip_change': 'IP Address Change',
+    }
+    return flagTypeMap[flagType] || flagType.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ')
+  }
+
+  useEffect(() => {
+    if (flags && flags.flags && flags.flags.length > 0) {
+      const transformedLogs: ActivityLog[] = flags.flags.map((flag: any, index: number) => ({
+        id: index,
+        studentName: flag.student_name || `Student ${flag.student_id}`,
+        type: flag.flag_type === 'tab_switch' ? 'warning' :
+              flag.flag_type === 'device_change' ? 'warning' :
+              flag.flag_type === 'fullscreen_exit' ? 'warning' :
+              flag.flag_type === 'idle' ? 'idle' : 'flagged',
+        message: flag.description || flag.message || formatFlagType(flag.flag_type),
+        time: flag.created_at ? new Date(flag.created_at).toLocaleTimeString() : 'Unknown',
+        severity: flag.severity || 'info',
+      }))
+
+      console.log('[Monitoring] Transformed activity logs:', transformedLogs.length)
+      setActivityLogs(transformedLogs)
+    } else {
+      setActivityLogs([])
+    }
+  }, [flags])
+
+  // Backend integration: Transform participants data to UI format
+  useEffect(() => {
+    if (participants && participants.participants && participants.participants.length > 0) {
+      const transformedStudents = participants.participants.map((p: any) => {
+        // Calculate time spent using time_elapsed from backend
+        const timeSpentSeconds = p.time_elapsed || 0
+        const timeSpentMinutes = Math.floor(timeSpentSeconds / 60)
+        const remainingSeconds = timeSpentSeconds % 60
+
+        // Determine status based on is_active flag and last heartbeat
+        let status: "active" | "idle" | "finished" | "not_started" = "not_started"
+
+        if (p.is_active) {
+          // Check last heartbeat to determine if truly active or idle
+          if (p.last_heartbeat) {
+            const lastHeartbeat = new Date(p.last_heartbeat).getTime()
+            const now = Date.now()
+            const timeSinceHeartbeat = now - lastHeartbeat
+
+            if (timeSinceHeartbeat < 45000) { // Active if heartbeat within 45s
+              status = "active"
+            } else {
+              status = "idle"
+            }
+          } else {
+            status = "active"
+          }
+        } else if (p.progress === 100) {
+          status = "finished"
+        }
+
+        // ✅ FIX: Check if flagged SEPARATELY (don't override status)
+        const studentFlags = flags?.flags?.filter((f: any) => f.student_id === p.student_id) || []
+        const isFlagged = studentFlags.length > 0 || p.tab_switches > 2
+
+        // ✅ NEW: Transform answer data with question numbers
+        const transformedAnswers = (p.answers || []).map((ans: any, index: number) => ({
+          question: index + 1,
+          correct: ans.is_correct,
+          time: ans.time_spent_seconds
+            ? `${Math.floor(ans.time_spent_seconds / 60)}:${(ans.time_spent_seconds % 60).toString().padStart(2, '0')}`
+            : 'N/A',
+        }));
+
+        // ✅ NEW: Use submitted_at for finished quizzes, otherwise last_heartbeat
+        const lastActivityTime = p.submitted_at || p.last_heartbeat;
+        const finishedAtTime = p.submitted_at && !p.is_active ? p.submitted_at : null;
+
+        return {
+          id: p.student_id, // ✅ FIX: Use UUID directly, don't parseInt (UUIDs can't be parsed as numbers)
+          name: p.student_name || `Student ${p.student_id}`,
+          email: p.email || "",
+          section: p.section || "N/A",
+          avatar: "/placeholder.svg?height=40&width=40",
+          status,
+          currentQuestion: (p.current_question_index || 0) + 1, // ✅ FIX: Use current_question_index from backend
+          totalQuestions: p.total_questions || 0,
+          timeSpent: `${timeSpentMinutes}:${remainingSeconds.toString().padStart(2, '0')}`,
+          progress: p.progress || 0, // ✅ FIX: Use progress from backend directly
+          lastActive: p.last_heartbeat ? new Date(p.last_heartbeat).toLocaleTimeString() : 'Never',
+          lastActivity: lastActivityTime ? new Date(lastActivityTime).toLocaleTimeString() : 'Never', // ✅ NEW: For timeline
+          startedAt: p.started_at ? new Date(p.started_at).toLocaleTimeString() : null,
+          finishedAt: finishedAtTime ? new Date(finishedAtTime).toLocaleTimeString() : null, // ✅ NEW: For timeline
+          flags: studentFlags.map((f: any) => ({
+            type: f.flag_type,
+            message: f.description || f.message || formatFlagType(f.flag_type), // ✅ FIX: Use formatFlagType
+            time: f.created_at ? new Date(f.created_at).toLocaleTimeString() : '',
+            severity: f.severity || "medium",
+          })),
+          answers: transformedAnswers, // ✅ NEW: Real answer data with correctness
+          tabSwitches: p.tab_switches || 0,
+          attemptId: p.attempt_id,
+          ipChanged: p.ip_changed || false, // ✅ NEW: IP tracking
+          idleTime: p.idle_time_seconds || 0, // ✅ NEW: Idle time
+          isFlagged, // ✅ NEW: Separate flagged indicator
+        }
+      })
+
+      console.log('[Monitoring] Transformed students:', transformedStudents.length)
+      setStudents(transformedStudents)
+    } else if (monitoringError) {
+      console.error('[Monitoring] Error detected:', monitoringError)
+      toast({
+        title: "Connection Error",
+        description: "Failed to fetch monitoring data. Showing cached data.",
+        variant: "destructive",
+      })
+      // Only show mock data if we have no real data
+      if (students.length === 0 || students === mockStudents) {
+        setStudents(mockStudents)
+      }
+    } else if (!participants || participants.participants?.length === 0) {
+      console.log('[Monitoring] No participants yet')
+      // Clear students if no participants (don't show mock data)
+      setStudents([])
+    }
+  }, [participants, flags, monitoringError, toast])
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [filterMode, setFilterMode] = useState<FilterMode>("all")
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -347,7 +509,6 @@ export default function QuizMonitorPage() {
   const [extendTimeDialog, setExtendTimeDialog] = useState(false)
   const [extendMinutes, setExtendMinutes] = useState("5")
   const [currentPage, setCurrentPage] = useState(1)
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(mockActivityLogs)
 
   const [contextMenu, setContextMenu] = useState<{
     x: number
@@ -366,23 +527,26 @@ export default function QuizMonitorPage() {
     action: () => {},
   })
 
-  // TODO: Replace with actual data fetching from database
-  // const fetchQuizData = async () => {
-  //   const response = await fetch(`/api/quiz/${params.id}/monitor`)
-  //   const data = await response.json()
-  //   setStudents(data.students)
-  // }
-
-  // Auto-refresh every 5 seconds
+  // Show error toast if monitoring fails
   useEffect(() => {
-    if (!autoRefresh) return
+    if (monitoringError) {
+      toast({
+        title: "Unable to fetch monitoring data",
+        description: "Showing example data. Check your connection.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
+  }, [monitoringError, toast])
 
-    const interval = setInterval(() => {
-      handleRefresh()
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [autoRefresh])
+  // Control polling based on autoRefresh state
+  useEffect(() => {
+    if (autoRefresh && !isPolling) {
+      startPolling()
+    } else if (!autoRefresh && isPolling) {
+      stopPolling()
+    }
+  }, [autoRefresh, isPolling, startPolling, stopPolling])
 
   useEffect(() => {
     const handleClick = () => setContextMenu(null)
@@ -398,16 +562,12 @@ export default function QuizMonitorPage() {
     }
   }, [contextMenu])
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
-    // TODO: Fetch updated data from database
-    // fetchQuizData()
-
-    // Simulate refresh
-    setTimeout(() => {
-      setIsRefreshing(false)
-    }, 500)
-  }, [])
+    // Backend integration: Refresh monitoring data
+    await refresh()
+    setIsRefreshing(false)
+  }, [refresh])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -457,7 +617,14 @@ export default function QuizMonitorPage() {
   }
 
   const filteredStudents = students.filter((student) => {
-    if (filterMode === "all") return true
+    if (filterMode === "all") {
+      // ✅ FIX: "All" should NOT show "not_started" students
+      return student.status !== "not_started"
+    }
+    if (filterMode === "flagged") {
+      // ✅ FIX: Show all flagged students regardless of status
+      return student.isFlagged
+    }
     return student.status === filterMode
   })
 
@@ -471,12 +638,12 @@ export default function QuizMonitorPage() {
   }, [filterMode])
 
   const stats = {
-    total: students.length,
-    active: students.filter((s) => s.status === "active").length,
-    idle: students.filter((s) => s.status === "idle").length,
+    total: participants?.totalEligible || students.length, // ✅ Use backend total eligible students
+    active: students.filter((s) => s.status === "active").length, // ✅ Includes active + flagged
+    idle: students.filter((s) => s.status === "idle").length, // ✅ Includes idle + flagged
     finished: students.filter((s) => s.status === "finished").length,
-    notStarted: students.filter((s) => s.status === "not_started").length,
-    flagged: students.filter((s) => s.status === "flagged").length,
+    notStarted: participants?.notStartedCount || students.filter((s) => s.status === "not_started").length, // ✅ Use backend not started count
+    flagged: students.filter((s) => s.isFlagged).length, // ✅ FIX: Use isFlagged property
     avgProgress: Math.round(students.reduce((acc, s) => acc + s.progress, 0) / students.length),
     avgTime: "18:25", // TODO: Calculate from actual data
   }
@@ -543,28 +710,36 @@ export default function QuizMonitorPage() {
     setExtendMinutes("5")
   }
 
-  const handleEndQuiz = (studentId: number) => {
+  const handleEndQuiz = async (studentId: number) => {
     const student = students.find((s) => s.id === studentId)
     if (!student) return
 
-    setStudents((prev) => prev.map((s) => (s.id === studentId ? { ...s, status: "finished" as const } : s)))
+    // Backend integration: Terminate attempt using correct attemptId
+    const attemptId = (student as any).attemptId || String(studentId)
+    const success = await terminateAttempt(attemptId, "Quiz ended by teacher")
 
-    toast({
-      title: "Quiz Ended",
-      description: `Quiz has been ended for ${student.name}.`,
-    })
+    if (success) {
+      // Update local state
+      setStudents((prev) => prev.map((s) => (s.id === studentId ? { ...s, status: "finished" as const } : s)))
 
-    setActivityLogs((prev) => [
-      {
-        id: Date.now(),
-        studentName: student.name,
-        type: "finished",
-        message: "Quiz ended by teacher",
-        time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        severity: "info",
-      },
-      ...prev,
-    ])
+      toast({
+        title: "Quiz Ended",
+        description: `Quiz has been ended for ${student.name}.`,
+      })
+
+      setActivityLogs((prev) => [
+        {
+          id: Date.now(),
+          studentName: student.name,
+          type: "finished",
+          message: "Quiz ended by teacher",
+          time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+          severity: "info",
+        },
+        ...prev,
+      ])
+    }
+    // Error toast is handled by the hook
   }
 
   const handleFlagStudent = (studentId: number) => {
@@ -783,6 +958,13 @@ export default function QuizMonitorPage() {
                 Active
               </Button>
               <Button
+                variant={filterMode === "idle" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterMode("idle")}
+              >
+                Idle
+              </Button>
+              <Button
                 variant={filterMode === "flagged" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFilterMode("flagged")}
@@ -796,11 +978,38 @@ export default function QuizMonitorPage() {
               >
                 Finished
               </Button>
+              <Button
+                variant={filterMode === "not_started" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterMode("not_started")}
+              >
+                Not Started
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              {/* Backend Status Indicators */}
+              {isLoading && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Loading...
+                </Badge>
+              )}
+              {monitoringError && (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Demo Mode
+                </Badge>
+              )}
+              {!isLoading && !monitoringError && participants && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Live Data
+                </Badge>
+              )}
+
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
               <Button
@@ -1050,7 +1259,7 @@ export default function QuizMonitorPage() {
             {selectedStudent && (
               <div className="space-y-6">
                 {/* Status Overview */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className={`grid grid-cols-2 ${selectedStudent.status === 'finished' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-4`}>
                   <Card className="p-4">
                     <p className="text-xs text-muted-foreground mb-1">Status</p>
                     <Badge className={getStatusColor(selectedStudent.status)}>
@@ -1072,6 +1281,20 @@ export default function QuizMonitorPage() {
                     <p className="text-xs text-muted-foreground mb-1">Flags</p>
                     <p className="text-2xl font-bold text-red-600 dark:text-red-400">{selectedStudent.flags.length}</p>
                   </Card>
+                  {selectedStudent.status === 'finished' && (
+                    <Card className="p-4 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        Score
+                      </p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {selectedStudent.score ?? 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        View full results →
+                      </p>
+                    </Card>
+                  )}
                 </div>
 
                 {/* Flags */}
@@ -1125,7 +1348,12 @@ export default function QuizMonitorPage() {
                         </div>
                       </div>
                     ))}
-                    {selectedStudent.currentQuestion > selectedStudent.answers.length && (
+                    {selectedStudent.answers.length === 0 && selectedStudent.status !== 'finished' && (
+                      <div className="text-center py-4 text-muted-foreground">
+                        <p className="text-sm">No answers submitted yet</p>
+                      </div>
+                    )}
+                    {selectedStudent.status !== 'finished' && selectedStudent.currentQuestion > selectedStudent.answers.length && selectedStudent.answers.length > 0 && (
                       <div className="flex items-center justify-between p-3 bg-accent rounded-lg">
                         <div className="flex items-center gap-3">
                           <Circle className="h-5 w-5 text-muted-foreground" />

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TimePicker } from "@/components/ui/time-picker"
 import { useToast } from "@/hooks/use-toast"
+import { useAcademicCalendar } from "@/hooks/useAcademicCalendar"
+import { getCalendarCategory, getCalendarCategoryStyle } from "@/lib/api/endpoints/events"
 import {
   Calendar,
   Plus,
@@ -30,6 +32,7 @@ import {
   Clock,
   HelpCircle,
   Info,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -130,8 +133,24 @@ interface AdditionalInfo {
 
 const AcademicCalendarPage = () => {
   const { toast } = useToast()
-  const [events, setEvents] = useState(mockCalendarEvents)
-  const [currentDate, setCurrentDate] = useState(new Date())
+
+  // Use the academic calendar hook for real API data
+  const {
+    year,
+    month,
+    events: apiEvents,
+    loading,
+    error,
+    previousMonth,
+    nextMonth,
+    goToToday,
+    getEventsForDate: getApiEventsForDate,
+    createCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+    duplicateCalendarEvent,
+  } = useAcademicCalendar()
+
   const [viewMode, setViewMode] = useState<"month" | "year" | "list">("month")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -175,6 +194,70 @@ const AcademicCalendarPage = () => {
     date: null,
     event: null,
   })
+
+  // State for total events KPI (separate from monthly events)
+  const [totalEventsStats, setTotalEventsStats] = useState({
+    total: 0,
+    holidays: 0,
+    academic: 0,
+    schoolEvents: 0,
+  })
+
+  // Transform API events to match UI format (monthly events for calendar display)
+  const events = useMemo(() => {
+    const transformed = apiEvents.map((event) => {
+      const category = getCalendarCategory(event)
+      return {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        category: category || 'academic',
+        startDate: event.date,
+        endDate: event.date, // Single day for now
+        location: event.location,
+        notes: event.description,
+        isMultiDay: false,
+        highlights: event.highlights?.map(h => h.content) || [],
+        schedule: event.schedule?.map(s => ({ time: s.activityTime, title: s.activityDescription })) || [],
+        faqs: event.faq || [],
+        additionalInfo: event.additionalInfo?.map(i => i.content) || [],
+      }
+    })
+    console.log('📝 Transformed events for UI:', transformed)
+    return transformed
+  }, [apiEvents])
+
+  // Fetch total events stats (runs once on mount)
+  useMemo(() => {
+    const fetchTotalStats = async () => {
+      try {
+        const { getEvents } = await import('@/lib/api/endpoints/events')
+        const allEvents = await getEvents({ limit: 10000 }) // Get all events
+
+        const stats = {
+          total: allEvents.data.length,
+          holidays: allEvents.data.filter(e => {
+            const cat = getCalendarCategory(e)
+            return cat === 'holiday'
+          }).length,
+          academic: allEvents.data.filter(e => {
+            const cat = getCalendarCategory(e)
+            return cat === 'academic'
+          }).length,
+          schoolEvents: allEvents.data.filter(e => {
+            const cat = getCalendarCategory(e)
+            return cat === 'school-event'
+          }).length,
+        }
+
+        setTotalEventsStats(stats)
+      } catch (error) {
+        console.error('Failed to fetch total events stats:', error)
+      }
+    }
+
+    fetchTotalStats()
+  }, []) // Empty dependency - runs once
 
   const usedTimes = schedule.map((item) => item.time).filter(Boolean)
 
@@ -305,19 +388,17 @@ const AcademicCalendarPage = () => {
     setErrors({})
   }
 
-  // Get days in month
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
+  // Get days in month (using year/month from hook)
+  const getDaysInMonth = () => {
+    const firstDay = new Date(year, month - 1, 1)
+    const lastDay = new Date(year, month, 0)
     const daysInMonth = lastDay.getDate()
     const startingDayOfWeek = firstDay.getDay()
 
-    return { daysInMonth, startingDayOfWeek, year, month }
+    return { daysInMonth, startingDayOfWeek, year, month: month - 1 }
   }
 
-  // Get events for a specific date
+  // Get events for a specific date (local filtering from already loaded events)
   const getEventsForDate = (date: Date) => {
     const dateStr = date.toISOString().split("T")[0]
     return events.filter((event) => {
@@ -329,18 +410,7 @@ const AcademicCalendarPage = () => {
     })
   }
 
-  // Navigate months
-  const previousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
-  }
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
-  }
-
-  const goToToday = () => {
-    setCurrentDate(new Date())
-  }
+  // Navigation functions are provided by the hook: previousMonth, nextMonth, goToToday
 
   // Get category badge
   const getCategoryBadge = (category: string) => {
@@ -444,7 +514,7 @@ const AcademicCalendarPage = () => {
     })
   }
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!validateForm()) {
       toast({
         title: "Validation Error",
@@ -454,35 +524,49 @@ const AcademicCalendarPage = () => {
       return
     }
 
-    const newEvent = {
-      id: `${Date.now()}`,
-      ...formData,
-      isMultiDay: formData.startDate !== formData.endDate,
-      highlights: highlights.filter((h) => h.text.trim()).map((h) => h.text),
-      schedule: schedule.filter((s) => s.time && s.title.trim()),
-      faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()),
-      additionalInfo: additionalInfo.filter((a) => a.text.trim()).map((a) => a.text),
+    try {
+      // Get user ID from cookie (Supabase auth)
+      const getUserId = () => {
+        if (typeof window === 'undefined') return null;
+        // Try to get from Supabase session
+        const sbSession = document.cookie.match(/sb-.*-auth-token=([^;]+)/);
+        if (sbSession) {
+          try {
+            const token = JSON.parse(decodeURIComponent(sbSession[1]));
+            return token?.user?.id || 'temp-user-id';
+          } catch {
+            return 'temp-user-id'; // Fallback for development
+          }
+        }
+        return 'temp-user-id'; // Fallback for development
+      };
+
+      const organizerId = getUserId();
+
+      await createCalendarEvent({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category as any,
+        date: formData.startDate,
+        time: "09:00", // Default time - can be extended with time picker
+        location: formData.location,
+        notes: formData.notes,
+        highlights: highlights.filter((h) => h.text.trim()).map((h) => h.text),
+        schedule: schedule.filter((s) => s.time && s.title.trim()),
+        faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()),
+        additionalInfo: additionalInfo.filter((a) => a.text.trim()).map((a) => a.text),
+        organizerId: organizerId,
+      })
+
+      setAddEventModal(false)
+      resetForm()
+    } catch (error) {
+      console.error('Failed to create event:', error)
     }
-
-    setEvents((prev) => [...prev, newEvent])
-
-    toast({
-      title: "Event Added Successfully",
-      description: (
-        <div className="space-y-2">
-          <p className="font-medium">{formData.title} has been added to the calendar</p>
-          <div className="flex items-center gap-2">{getCategoryBadge(formData.category)}</div>
-        </div>
-      ),
-      className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20 backdrop-blur-sm",
-    })
-
-    setAddEventModal(false)
-    resetForm()
   }
 
   // Handle edit event
-  const handleEditEvent = () => {
+  const handleEditEvent = async () => {
     if (!formData.title || !formData.startDate || !formData.endDate) {
       toast({
         title: "Validation Error",
@@ -492,74 +576,59 @@ const AcademicCalendarPage = () => {
       return
     }
 
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.id === editEventModal.event.id
-          ? {
-              ...e,
-              ...formData,
-              isMultiDay: formData.startDate !== formData.endDate,
-            }
-          : e,
-      ),
-    )
+    try {
+      await updateCalendarEvent(editEventModal.event.id, {
+        title: formData.title,
+        description: formData.description,
+        date: formData.startDate,
+        location: formData.location,
+        notes: formData.notes,
+      })
 
-    toast({
-      title: "Event Updated Successfully",
-      description: (
-        <div className="space-y-2">
-          <p className="font-medium">{formData.title} has been updated</p>
-        </div>
-      ),
-      className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
-    })
-
-    setEditEventModal({ isOpen: false, event: null })
-    setFormData({
-      title: "",
-      description: "",
-      category: "academic",
-      startDate: "",
-      endDate: "",
-      location: "",
-      notes: "",
-    })
+      setEditEventModal({ isOpen: false, event: null })
+      setFormData({
+        title: "",
+        description: "",
+        category: "academic",
+        startDate: "",
+        endDate: "",
+        location: "",
+        notes: "",
+      })
+    } catch (error) {
+      console.error('Failed to update event:', error)
+    }
   }
 
   // Handle delete event
-  const confirmDeleteEvent = () => {
+  const confirmDeleteEvent = async () => {
     if (deleteConfirmation.event) {
-      setEvents((prev) => prev.filter((e) => e.id !== deleteConfirmation.event.id))
-
-      toast({
-        title: "Event Deleted Successfully",
-        description: (
-          <div className="space-y-2">
-            <p className="font-medium">{deleteConfirmation.event.title} has been removed from the calendar</p>
-          </div>
-        ),
-        className: "border-green-500/20 bg-green-50/50 dark:bg-green-950/20 backdrop-blur-sm",
-      })
-
-      setDeleteConfirmation({ isOpen: false, event: null })
+      try {
+        await deleteCalendarEvent(deleteConfirmation.event.id)
+        setDeleteConfirmation({ isOpen: false, event: null })
+      } catch (error) {
+        console.error('Failed to delete event:', error)
+      }
     }
   }
 
   // Handle duplicate event
-  const handleDuplicateEvent = (event: any) => {
-    const newEvent = {
-      ...event,
-      id: `${Date.now()}`,
-      title: `${event.title} (Copy)`,
+  const handleDuplicateEvent = async (event: any) => {
+    try {
+      // Find the original API event
+      const apiEvent = apiEvents.find(e => e.id === event.id)
+      if (apiEvent) {
+        await duplicateCalendarEvent(apiEvent)
+      }
+    } catch (error) {
+      console.error('Failed to duplicate event:', error)
     }
-
-    setEvents((prev) => [...prev, newEvent])
 
     toast({
       title: "Event Duplicated",
       description: (
         <div className="space-y-2">
-          <p className="font-medium">{newEvent.title} has been created</p>
+          <p className="font-medium">{event.title} (Copy) has been created</p>
         </div>
       ),
       className: "border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm",
@@ -609,7 +678,8 @@ const AcademicCalendarPage = () => {
 
   // Render calendar grid
   const renderCalendarGrid = () => {
-    const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentDate)
+    const { daysInMonth, startingDayOfWeek, year: calYear, month: calMonth } = getDaysInMonth()
+    console.log('🗓️ Rendering calendar:', { daysInMonth, startingDayOfWeek, calYear, calMonth, eventsCount: events.length })
     const days = []
 
     // Empty cells for days before month starts
@@ -619,7 +689,7 @@ const AcademicCalendarPage = () => {
 
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day)
+      const date = new Date(calYear, calMonth, day)
       const dayEvents = getEventsForDate(date)
       const isToday = date.toDateString() === new Date().toDateString()
 
@@ -638,7 +708,7 @@ const AcademicCalendarPage = () => {
               return (
                 <div
                   key={event.id}
-                  className={`text-xs p-2 rounded-lg cursor-pointer transition-all border shadow-sm hover:shadow-md hover:scale-[1.02] ${categoryStyle.bg} ${categoryStyle.border}`}
+                  className={`p-2.5 rounded-lg cursor-pointer transition-all border-2 shadow-sm hover:shadow-lg hover:scale-[1.03] ${categoryStyle.bg} ${categoryStyle.border}`}
                   onContextMenu={(e) => {
                     e.stopPropagation()
                     handleContextMenu(e, null, event)
@@ -648,14 +718,14 @@ const AcademicCalendarPage = () => {
                     openEditEventModal(event)
                   }}
                 >
-                  <div className="flex items-start gap-1.5">
-                    <Calendar className={`w-3 h-3 mt-0.5 flex-shrink-0 ${categoryStyle.icon}`} />
+                  <div className="flex items-start gap-2">
+                    <Calendar className={`w-4 h-4 mt-0.5 flex-shrink-0 ${categoryStyle.icon}`} />
                     <div className="flex-1 min-w-0">
-                      <div className={`font-semibold truncate leading-tight ${categoryStyle.text}`}>{event.title}</div>
+                      <div className={`text-sm font-bold leading-snug ${categoryStyle.text}`}>{event.title}</div>
                       {event.location && (
-                        <div className="flex items-center gap-1 mt-1 opacity-75">
-                          <MapPin className={`w-2.5 h-2.5 flex-shrink-0 ${categoryStyle.icon}`} />
-                          <span className={`text-[10px] truncate ${categoryStyle.text}`}>{event.location}</span>
+                        <div className="flex items-center gap-1 mt-1.5 opacity-80">
+                          <MapPin className={`w-3 h-3 flex-shrink-0 ${categoryStyle.icon}`} />
+                          <span className={`text-xs ${categoryStyle.text}`}>{event.location}</span>
                         </div>
                       )}
                     </div>
@@ -730,15 +800,16 @@ const AcademicCalendarPage = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Events</p>
-                <p className="text-2xl font-bold text-foreground">{events.length}</p>
+      {/* Stats Cards - Shows TOTAL events across all time, not just current month */}
+      {(
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Calendar className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Total Events</p>
+                  <p className="text-2xl font-bold text-foreground">{totalEventsStats.total}</p>
               </div>
             </div>
           </CardContent>
@@ -752,7 +823,7 @@ const AcademicCalendarPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Holidays</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {events.filter((e) => e.category === "holiday").length}
+                  {totalEventsStats.holidays}
                 </p>
               </div>
             </div>
@@ -767,7 +838,7 @@ const AcademicCalendarPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Academic Events</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {events.filter((e) => e.category === "academic").length}
+                  {totalEventsStats.academic}
                 </p>
               </div>
             </div>
@@ -782,15 +853,17 @@ const AcademicCalendarPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">School Events</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {events.filter((e) => e.category === "school-event").length}
+                  {totalEventsStats.schoolEvents}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Calendar Controls */}
+      {(
       <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -799,7 +872,7 @@ const AcademicCalendarPage = () => {
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <h2 className="text-xl font-bold text-foreground">
-                {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                {new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
               </h2>
               <Button variant="outline" size="sm" onClick={nextMonth}>
                 <ChevronRight className="w-4 h-4" />
@@ -852,8 +925,18 @@ const AcademicCalendarPage = () => {
                   </div>
                 ))}
               </div>
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-0">{renderCalendarGrid()}</div>
+              {/* Calendar Grid with Loading Overlay */}
+              <div className="relative">
+                {loading && (
+                  <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                    <div className="flex items-center gap-2 bg-card p-3 rounded-lg shadow-lg border">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Loading events...</span>
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-7 gap-0">{renderCalendarGrid()}</div>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -902,6 +985,7 @@ const AcademicCalendarPage = () => {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Context Menu */}
       {contextMenu.visible && (

@@ -1,67 +1,81 @@
 import {
-  IsString,
-  IsNumber,
   IsUUID,
+  IsNumber,
+  IsString,
   IsOptional,
-  IsEnum,
   Min,
   Max,
-  MinLength,
-  MaxLength,
-  Matches,
-  IsInt,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { GradingPeriod } from '../entities/gwa.entity';
 
 export class CreateGwaDto {
-  @IsUUID()
   @ApiProperty({
     description: 'Student ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  studentId: string;
+  @IsUUID()
+  student_id: string;
 
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(50.0)
-  @Max(100.0)
   @ApiProperty({
-    description: 'General Weighted Average (50.00 - 100.00)',
-    example: 95.5,
-    minimum: 50.0,
-    maximum: 100.0,
+    description: 'Academic year ID',
+    example: '6f47753f-2c0f-4978-804c-e76f18abcf0b',
+    required: false,
   })
+  @IsOptional()
+  @IsUUID()
+  academic_year_id?: string;
+
+  @ApiProperty({
+    description: 'Academic period ID',
+    example: 'c67a8ade-52e5-4c62-bd3b-5e39bd1a4e31',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  academic_period_id?: string;
+
+  @ApiProperty({
+    description: 'General Weighted Average (50-100)',
+    example: 87.5,
+    minimum: 50,
+    maximum: 100,
+  })
+  @IsNumber()
+  @Min(50)
+  @Max(100)
   gwa: number;
 
-  @IsEnum(GradingPeriod)
   @ApiProperty({
     description: 'Grading period',
-    enum: GradingPeriod,
-    example: GradingPeriod.Q1,
+    example: 'Q1',
+    enum: ['Q1', 'Q2', 'Q3', 'Q4'],
   })
-  gradingPeriod: GradingPeriod;
-
   @IsString()
-  @Matches(/^\d{4}-\d{4}$/, {
-    message: 'School year must be in format YYYY-YYYY (e.g., 2024-2025)',
-  })
-  @ApiProperty({
-    description: 'School year in YYYY-YYYY format',
-    example: '2024-2025',
-    pattern: '^\\d{4}-\\d{4}$',
-  })
-  schoolYear: string;
+  @IsIn(['Q1', 'Q2', 'Q3', 'Q4'])
+  grading_period: string;
 
+  @ApiProperty({
+    description: 'School year',
+    example: '2024-2025',
+  })
+  @IsString()
+  school_year: string;
+
+  @ApiProperty({
+    description: 'Optional remarks',
+    example: 'Excellent performance',
+    required: false,
+  })
   @IsOptional()
   @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  @ApiProperty({
-    description: 'Remarks (optional)',
-    required: false,
-    example: 'Excellent Performance',
-    minLength: 1,
-    maxLength: 100,
-  })
   remarks?: string;
+
+  @ApiProperty({
+    description: 'Honor status',
+    example: 'With Honors',
+    enum: ['None', 'With Honors', 'High Honors', 'Highest Honors'],
+  })
+  @IsString()
+  honor_status: string;
 }

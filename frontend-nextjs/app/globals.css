@@ -648,3 +648,24 @@ html {
 .animate-button-pulse {
   animation: button-pulse 2s ease-in-out infinite;
 }
+
+/* ========================================
+ * IMAGE RENDERING OPTIMIZATION
+ * ======================================== */
+
+/* Force crisp, high-quality image rendering across all browsers */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Ensure gallery images are sharp and clear */
+img[src*="imagedelivery.net"] {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}

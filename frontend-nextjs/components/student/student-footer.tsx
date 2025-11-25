@@ -19,6 +19,7 @@ import {
   Youtube,
   MapPin,
   Globe,
+  FileText,
 } from "lucide-react"
 
 export default function StudentFooter() {
@@ -120,9 +121,24 @@ export default function StudentFooter() {
                 <Button
                   variant="link"
                   className="p-0 h-auto text-slate-300 hover:text-orange-400 transition-colors flex items-center touch-manipulation min-h-[36px] justify-start"
+                  asChild
                 >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Safety & Privacy
+                  <Link href="/student/privacy">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Privacy Policy
+                  </Link>
+                </Button>
+              </li>
+              <li>
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-slate-300 hover:text-orange-400 transition-colors flex items-center touch-manipulation min-h-[36px] justify-start"
+                  asChild
+                >
+                  <Link href="/student/terms">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Terms of Service
+                  </Link>
                 </Button>
               </li>
               <li>
@@ -154,7 +170,7 @@ export default function StudentFooter() {
                 <MapPin className="w-4 h-4 mt-0.5 text-cyan-400 flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-slate-300">Southville 8B NHS</p>
-                  <p className="text-slate-400 text-xs">Las Piñas City, Philippines</p>
+                  <p className="text-slate-400 text-xs">Brgy San Isidro Rodriguez Rizal</p>
                 </div>
               </li>
               <li className="flex items-center space-x-2">

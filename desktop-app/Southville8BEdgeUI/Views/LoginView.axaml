@@ -60,6 +60,8 @@
 		<SolidColorBrush x:Key="LoginGlassBrush" Color="#F0FFFFFF"/>
 		<!-- Converters -->
 		<c:BoolToPasswordCharConverter x:Key="ShowPasswordToChar" MaskChar="●"/>
+		<c:BoolToLoadingTextConverter x:Key="BoolToLoadingTextConverter"/>
+		<c:BoolInverterConverter x:Key="BoolInverterConverter"/>
 	</UserControl.Resources>
 
 	<UserControl.Styles>
@@ -158,6 +160,14 @@
 			<Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
 			<Setter Property="BorderBrush" Value="{StaticResource LoginBrandPrimaryBrush}"/>
 		</Style>
+
+		<!-- Loading spinner animation -->
+		<Style Selector="PathIcon.loading-spinner">
+			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+			<Setter Property="RenderTransform">
+				<RotateTransform Angle="0"/>
+			</Setter>
+		</Style>
 	</UserControl.Styles>
 
 	<Grid ColumnDefinitions="*, 420" Margin="80,0,80,0">
@@ -177,7 +187,7 @@
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="SV8B NHS" FontSize="36" FontWeight="Bold"
                                Foreground="{StaticResource LoginTextMainSecondaryBrush}"/>
-					<TextBlock Text="School Portal" FontSize="36" FontWeight="Medium"
+					<TextBlock Text="CampusConnect" FontSize="36" FontWeight="Medium"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
 				</StackPanel>
 				<!-- Subtitle -->
@@ -227,7 +237,8 @@
 				HorizontalAlignment="Stretch"
 				BoxShadow="0 20 40 -12 #0000001A, 0 8 32 -8 #0000000F"
 				Margin="0,0,0,0">
-			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+			<Grid>
+				<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
 				<!-- Header row: Title + Logo aligned -->
 				<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,24">
 					<StackPanel Grid.Column="0" Spacing="8" VerticalAlignment="Top">
@@ -266,7 +277,8 @@
 								 Text="{Binding Email}"
 								 Watermark="Enter your email address"
 								 Classes="modern-input"
-								 FontSize="15"/>
+								 FontSize="15"
+								 IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}"/>
 						</Grid>
 					</Border>
 				</StackPanel>
@@ -289,13 +301,15 @@
 								 Watermark="Enter your password"
 								 Classes="modern-input"
 								 FontSize="15"
-								 PasswordChar="{Binding ShowPassword, Converter={StaticResource ShowPasswordToChar}}" />
+								 PasswordChar="{Binding ShowPassword, Converter={StaticResource ShowPasswordToChar}}"
+								 IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}" />
 							<ToggleButton Grid.Column="2"
 								 Background="Transparent"
 								 BorderThickness="0"
 								 Padding="8"
 								 Cursor="Hand"
-								 IsChecked="{Binding ShowPassword, Mode=TwoWay}">
+								 IsChecked="{Binding ShowPassword, Mode=TwoWay}"
+								 IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}">
 								<PathIcon Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
 									Width="18" Height="18"
 									Foreground="{DynamicResource TextMutedBrush}"/>
@@ -310,20 +324,49 @@
 							  Content="Keep me signed in"
 							  IsChecked="{Binding RememberMe}"
 							  Foreground="{DynamicResource TextSecondaryBrush}"
-							  FontSize="14"/>
+							  FontSize="14"
+							  IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}"/>
 					<Button Grid.Column="1"
 							Content="Forgot Password?"
 							Command="{Binding ForgotPasswordCommand}"
 							FontSize="14"
 							Background="Transparent"
 							Classes="link"
-							Padding="0,2">
+							Padding="0,2"
+							IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}">
 					</Button>
 				</Grid>
 
-				<!-- Login Button (Row 4) -->
-				<Button Grid.Row="4"
-						Content="Sign In"
+				<!-- Error Message (Row 4) -->
+				<Border Grid.Row="4" 
+						Background="#FEF2F2" 
+						BorderBrush="#FECACA" 
+						BorderThickness="1" 
+						CornerRadius="8" 
+						Padding="12,8" 
+						Margin="0,0,0,16"
+						MaxWidth="400"
+						HorizontalAlignment="Stretch"
+						IsVisible="{Binding HasError}">
+					<Grid ColumnDefinitions="Auto,*">
+						<PathIcon Grid.Column="0"
+								  Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+								  Width="16" Height="16"
+								  Foreground="#DC2626"
+								  VerticalAlignment="Top"
+								  Margin="0,2,8,0"/>
+						<TextBlock Grid.Column="1"
+								   Text="{Binding ErrorMessage}" 
+								   Foreground="#DC2626" 
+								   FontSize="14" 
+								   FontWeight="Medium"
+								   TextWrapping="Wrap"
+								   VerticalAlignment="Top"/>
+					</Grid>
+				</Border>
+
+				<!-- Login Button (Row 5) -->
+				<Button Grid.Row="5"
 						Command="{Binding LoginCommand}"
 						HorizontalAlignment="Stretch"
 						CornerRadius="12"
@@ -336,7 +379,22 @@
 						BorderThickness="0"
 						Height="52"
 						Margin="0,0,0,16"
+						IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}"
 						Classes="primary-button">
+					<Button.Content>
+						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+							<!-- Loading spinner using Fluent Design System -->
+							<PathIcon IsVisible="{Binding IsLoading}"
+									  Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"
+									  Width="16" Height="16"
+									  Foreground="White"
+									  VerticalAlignment="Center"
+									  Classes="loading-spinner"/>
+							<!-- Button text -->
+							<TextBlock Text="{Binding IsLoading, Converter={StaticResource BoolToLoadingTextConverter}}"
+									   VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button.Content>
 					<Button.Styles>
 						<Style Selector="Button.primary-button">
 							<Setter Property="Background" Value="{StaticResource LoginPrimaryButtonBrush}"/>
@@ -353,31 +411,75 @@
 					</Button.Styles>
 				</Button>
 
-				<!-- Divider with "or" text (Row 5) -->
-				<Grid Grid.Row="5" VerticalAlignment="Center" Margin="0,0,0,24">
+				<!-- Divider with "or" text (Row 6) -->
+				<Grid Grid.Row="6" VerticalAlignment="Center" Margin="0,0,0,24">
 					<Border Height="1" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center"/>
 				</Grid>
 
 
-				<!-- Terms and Conditions (Row 7) -->
-				<Button Grid.Row="7"
+				<!-- Terms and Conditions (Row 8) -->
+				<Button Grid.Row="8"
 						Content="Terms and Conditions"
+						Command="{Binding OpenTermsAndConditionsCommand}"
 						HorizontalAlignment="Center"
 						Background="Transparent"
 						FontSize="13"
 						Margin="0,0,0,0"
 						Classes="link"
 						Foreground="#DC2626"
-						FontWeight="SemiBold">
-					</Button>
+						FontWeight="SemiBold"
+						IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverterConverter}}">
+				</Button>
 
-				<!-- Footer note (Row 8) -->
-				<TextBlock Grid.Row="8"
+				<!-- Footer note (Row 9) -->
+				<TextBlock Grid.Row="9"
 						   Text="Secure portal access for students and faculty"
 						   HorizontalAlignment="Center"
 						   FontSize="12"
 						   Foreground="{DynamicResource TextMutedBrush}"
 						   Margin="0,40,0,0"/>
+				</Grid>
+
+				<!-- Quick Dev Login Badge (Remove in Production) -->
+				<StackPanel HorizontalAlignment="Right" 
+							VerticalAlignment="Bottom" 
+							Margin="0,0,-12,-12"
+							Spacing="4">
+					<Border Background="#3B82F6" 
+							CornerRadius="8,0,0,0" 
+							Padding="8,6"
+							BoxShadow="0 4 8 0 #00000020">
+						<StackPanel Spacing="6">
+							<TextBlock Text="DEV" 
+									   FontSize="10" 
+									   FontWeight="Bold" 
+									   Foreground="White" 
+									   HorizontalAlignment="Center"/>
+							<Button Content="Admin" 
+									Command="{Binding FillAdminCredentialsCommand}"
+									FontSize="11"
+									Padding="12,4"
+									Background="#10B981"
+									Foreground="White"
+									CornerRadius="4"
+									BorderThickness="0"
+									HorizontalAlignment="Stretch"
+									MinHeight="28"
+									Cursor="Hand"/>
+							<Button Content="Teacher" 
+									Command="{Binding FillTeacherCredentialsCommand}"
+									FontSize="11"
+									Padding="12,4"
+									Background="#F59E0B"
+									Foreground="White"
+									CornerRadius="4"
+									BorderThickness="0"
+									HorizontalAlignment="Stretch"
+									MinHeight="28"
+									Cursor="Hand"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
 			</Grid>
 		</Border>
 	</Grid>
