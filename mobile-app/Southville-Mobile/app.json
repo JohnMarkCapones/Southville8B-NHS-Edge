@@ -20,13 +20,12 @@
         "backgroundImage": "./assets/images/SV8B.png",
         "monochromeImage": "./assets/images/SV8B.png"
       },
-      "permissions": [
-        "INTERNET",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
-      ],
+      "permissions": ["INTERNET", "RECEIVE_BOOT_COMPLETED", "VIBRATE"],
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
+      "usesCleartextTraffic": false,
+      "blockedPermissions": []
     },
     "web": {
       "output": "static",

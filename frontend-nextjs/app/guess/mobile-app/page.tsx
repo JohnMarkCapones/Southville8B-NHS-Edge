@@ -1,10 +1,10 @@
-"use client"
-import { Badge } from "@/components/ui/badge"
-import { CardContent } from "@/components/ui/card"
-import { AnimatedCard } from "@/components/ui/animated-card"
-import { AnimatedButton } from "@/components/ui/animated-button"
-import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
-import { cn } from "@/lib/utils"
+"use client";
+import { Badge } from "@/components/ui/badge";
+import { CardContent } from "@/components/ui/card";
+import { AnimatedCard } from "@/components/ui/animated-card";
+import { AnimatedButton } from "@/components/ui/animated-button";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { cn } from "@/lib/utils";
 import {
   Smartphone,
   Download,
@@ -22,53 +22,67 @@ import {
   Sparkles,
   Heart,
   Camera,
-} from "lucide-react"
+} from "lucide-react";
 
 export default function MobileAppPage() {
-  const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [featuresRef, featuresInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [screenshotsRef, screenshotsInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [testimonialsRef, testimonialsInView] = useIntersectionObserver({ threshold: 0.1 })
-  const [downloadRef, downloadInView] = useIntersectionObserver({ threshold: 0.1 })
+  const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 });
+  const [featuresRef, featuresInView] = useIntersectionObserver({
+    threshold: 0.1,
+  });
+  const [screenshotsRef, screenshotsInView] = useIntersectionObserver({
+    threshold: 0.1,
+  });
+  const [testimonialsRef, testimonialsInView] = useIntersectionObserver({
+    threshold: 0.1,
+  });
+  const [downloadRef, downloadInView] = useIntersectionObserver({
+    threshold: 0.1,
+  });
 
   const features = [
     {
       icon: <BookOpen className="w-6 h-6" />,
       title: "Access Grades Anywhere",
-      description: "View your grades, assignments, and academic progress in real-time, anytime, anywhere.",
+      description:
+        "View your grades, assignments, and academic progress in real-time, anytime, anywhere.",
       color: "from-blue-500 to-blue-600",
     },
     {
       icon: <Bell className="w-6 h-6" />,
       title: "Real-time Notifications",
-      description: "Stay updated with instant notifications about events, announcements, and important deadlines.",
+      description:
+        "Stay updated with instant notifications about events, announcements, and important deadlines.",
       color: "from-orange-500 to-red-500",
     },
     {
       icon: <Calendar className="w-6 h-6" />,
       title: "Event Calendar",
-      description: "Never miss school events, activities, or important dates with our integrated calendar system.",
+      description:
+        "Never miss school events, activities, or important dates with our integrated calendar system.",
       color: "from-green-500 to-emerald-500",
     },
     {
       icon: <Users className="w-6 h-6" />,
       title: "Community Connection",
-      description: "Connect with classmates, teachers, and stay engaged with the school community.",
+      description:
+        "Connect with classmates, teachers, and stay engaged with the school community.",
       color: "from-purple-500 to-pink-500",
     },
     {
       icon: <Shield className="w-6 h-6" />,
       title: "Secure & Private",
-      description: "Your data is protected with enterprise-level security and privacy measures.",
+      description:
+        "Your data is protected with enterprise-level security and privacy measures.",
       color: "from-gray-600 to-gray-700",
     },
     {
       icon: <Zap className="w-6 h-6" />,
       title: "Lightning Fast",
-      description: "Optimized performance ensures quick access to all your school information.",
+      description:
+        "Optimized performance ensures quick access to all your school information.",
       color: "from-yellow-500 to-orange-500",
     },
-  ]
+  ];
 
   const testimonials = [
     {
@@ -90,11 +104,12 @@ export default function MobileAppPage() {
     {
       name: "Sarah Kim",
       role: "Grade 12 Student",
-      content: "The calendar feature is a lifesaver! I never miss important deadlines or events anymore.",
+      content:
+        "The calendar feature is a lifesaver! I never miss important deadlines or events anymore.",
       rating: 5,
       avatar: "/placeholder.svg?height=60&width=60&text=SK",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,7 +145,9 @@ export default function MobileAppPage() {
         />
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className={cn("max-w-6xl mx-auto", heroInView && "animate-fadeIn")}>
+          <div
+            className={cn("max-w-6xl mx-auto", heroInView && "animate-fadeIn")}
+          >
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Left content */}
               <div className="text-center lg:text-left">
@@ -147,7 +164,8 @@ export default function MobileAppPage() {
                 </h1>
 
                 <p className="text-xl md:text-2xl mb-8 text-white/90 leading-relaxed">
-                  Your School Portal is now in your pocket. Education merges with technology at the Edge of innovation.
+                  Your School Portal is now in your pocket. Education merges
+                  with technology at the Edge of innovation.
                 </p>
 
                 {/* Download buttons */}
@@ -165,10 +183,17 @@ export default function MobileAppPage() {
                     size="lg"
                     variant="outline"
                     className="bg-white/10 backdrop-blur-sm text-white border-white/30 hover:bg-white/20 px-8 py-4 rounded-xl font-semibold group"
+                    asChild
                   >
-                    <Play className="w-6 h-6 mr-3" />
-                    Get on Android
-                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    <a
+                      href="https://drive.google.com/uc?export=download&id=1SS1swwNhPCtD_fPD9blEyLa_4OZLbyXv"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Play className="w-6 h-6 mr-3" />
+                      Get on Android
+                      <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </a>
                   </AnimatedButton>
                 </div>
 
@@ -227,16 +252,23 @@ export default function MobileAppPage() {
       {/* Features Section */}
       <section ref={featuresRef} className="py-20 bg-background">
         <div className="container mx-auto px-4">
-          <div className={cn("text-center mb-16", featuresInView && "animate-fadeIn")}>
+          <div
+            className={cn(
+              "text-center mb-16",
+              featuresInView && "animate-fadeIn"
+            )}
+          >
             <Badge variant="secondary" className="mb-4">
               <Sparkles className="w-4 h-4 mr-2" />
               App Features
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Everything You Need in <span className="gradient-text">One App</span>
+              Everything You Need in{" "}
+              <span className="gradient-text">One App</span>
             </h2>
             <p className="text-xl max-w-3xl mx-auto text-muted-foreground">
-              Designed with students, parents, and educators in mind. Access all your school information seamlessly.
+              Designed with students, parents, and educators in mind. Access all
+              your school information seamlessly.
             </p>
           </div>
 
@@ -246,7 +278,7 @@ export default function MobileAppPage() {
                 key={index}
                 className={cn(
                   "group hover:scale-105 transition-all duration-300 animate-slideInUp",
-                  featuresInView && "animate-slideInUp",
+                  featuresInView && "animate-slideInUp"
                 )}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
@@ -254,13 +286,17 @@ export default function MobileAppPage() {
                   <div
                     className={cn(
                       "w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center text-white bg-gradient-to-r",
-                      feature.color,
+                      feature.color
                     )}
                   >
                     {feature.icon}
                   </div>
-                  <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                  <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
                 </CardContent>
               </AnimatedCard>
             ))}
@@ -271,7 +307,12 @@ export default function MobileAppPage() {
       {/* Screenshots Section */}
       <section ref={screenshotsRef} className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className={cn("text-center mb-16", screenshotsInView && "animate-fadeIn")}>
+          <div
+            className={cn(
+              "text-center mb-16",
+              screenshotsInView && "animate-fadeIn"
+            )}
+          >
             <Badge variant="secondary" className="mb-4">
               <Camera className="w-4 h-4 mr-2" />
               App Preview
@@ -280,8 +321,8 @@ export default function MobileAppPage() {
               See the App in <span className="gradient-text">Action</span>
             </h2>
             <p className="text-xl max-w-3xl mx-auto text-muted-foreground">
-              Take a closer look at the intuitive interface and powerful features that make school management
-              effortless.
+              Take a closer look at the intuitive interface and powerful
+              features that make school management effortless.
             </p>
           </div>
 
@@ -304,7 +345,12 @@ export default function MobileAppPage() {
       {/* Testimonials Section */}
       <section ref={testimonialsRef} className="py-20 bg-background">
         <div className="container mx-auto px-4">
-          <div className={cn("text-center mb-16", testimonialsInView && "animate-fadeIn")}>
+          <div
+            className={cn(
+              "text-center mb-16",
+              testimonialsInView && "animate-fadeIn"
+            )}
+          >
             <Badge variant="secondary" className="mb-4">
               <Heart className="w-4 h-4 mr-2" />
               User Reviews
@@ -313,7 +359,8 @@ export default function MobileAppPage() {
               Loved by Our <span className="gradient-text">Community</span>
             </h2>
             <p className="text-xl max-w-3xl mx-auto text-muted-foreground">
-              See what students, parents, and educators are saying about the Southville 8B NHS Edge app.
+              See what students, parents, and educators are saying about the
+              Southville 8B NHS Edge app.
             </p>
           </div>
 
@@ -323,7 +370,7 @@ export default function MobileAppPage() {
                 key={index}
                 className={cn(
                   "group hover:scale-105 transition-all duration-300 animate-slideInUp",
-                  testimonialsInView && "animate-slideInUp",
+                  testimonialsInView && "animate-slideInUp"
                 )}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
@@ -336,13 +383,20 @@ export default function MobileAppPage() {
                     />
                     <div>
                       <h3 className="font-bold">{testimonial.name}</h3>
-                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {testimonial.role}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-muted-foreground mb-4 italic">"{testimonial.content}"</p>
+                  <p className="text-muted-foreground mb-4 italic">
+                    "{testimonial.content}"
+                  </p>
                   <div className="flex">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
+                      <Star
+                        key={i}
+                        className="w-4 h-4 fill-current text-yellow-400"
+                      />
                     ))}
                   </div>
                 </CardContent>
@@ -374,7 +428,12 @@ export default function MobileAppPage() {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className={cn("text-center max-w-4xl mx-auto", downloadInView && "animate-fadeIn")}>
+          <div
+            className={cn(
+              "text-center max-w-4xl mx-auto",
+              downloadInView && "animate-fadeIn"
+            )}
+          >
             <Badge
               variant="secondary"
               className="mb-6 text-base px-6 py-3 rounded-full bg-white/20 text-white border-white/30"
@@ -393,8 +452,8 @@ export default function MobileAppPage() {
             </h2>
 
             <p className="text-lg sm:text-xl lg:text-2xl mb-12 leading-relaxed max-w-3xl mx-auto text-white/90">
-              Join thousands of students and parents who are already enjoying the convenience of having their school
-              portal in their pocket.
+              Join thousands of students and parents who are already enjoying
+              the convenience of having their school portal in their pocket.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
@@ -411,10 +470,17 @@ export default function MobileAppPage() {
                 size="xl"
                 variant="outline"
                 className="group font-bold text-lg px-8 py-4 rounded-xl w-full sm:w-auto transition-all duration-300 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20 hover:border-white/50 hover:scale-105 active:scale-95"
+                asChild
               >
-                <Play className="w-6 h-6 mr-3 group-hover:scale-110 transition-all duration-300" />
-                Get on Android
-                <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-2 transition-all duration-300" />
+                <a
+                  href="https://drive.google.com/uc?export=download&id=1SS1swwNhPCtD_fPD9blEyLa_4OZLbyXv"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Play className="w-6 h-6 mr-3 group-hover:scale-110 transition-all duration-300" />
+                  Get on Android
+                  <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-2 transition-all duration-300" />
+                </a>
               </AnimatedButton>
             </div>
 
@@ -441,5 +507,5 @@ export default function MobileAppPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }
