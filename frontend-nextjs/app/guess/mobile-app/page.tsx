@@ -172,15 +172,6 @@ export default function MobileAppPage() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
                   <AnimatedButton
                     size="lg"
-                    className="bg-black text-white hover:bg-gray-800 px-8 py-4 rounded-xl font-semibold group"
-                  >
-                    <Apple className="w-6 h-6 mr-3" />
-                    Download for iOS
-                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </AnimatedButton>
-
-                  <AnimatedButton
-                    size="lg"
                     variant="outline"
                     className="bg-white/10 backdrop-blur-sm text-white border-white/30 hover:bg-white/20 px-8 py-4 rounded-xl font-semibold group"
                     asChild
@@ -457,15 +448,6 @@ export default function MobileAppPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
-              <AnimatedButton
-                size="xl"
-                className="group font-bold text-lg px-8 py-4 rounded-xl shadow-2xl hover:shadow-3xl w-full sm:w-auto relative overflow-hidden transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-105 active:scale-95"
-              >
-                <Apple className="w-6 h-6 mr-3 group-hover:scale-110 transition-all duration-300" />
-                Download for iOS
-                <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-2 transition-all duration-300" />
-              </AnimatedButton>
-
               <AnimatedButton
                 size="xl"
                 variant="outline"
