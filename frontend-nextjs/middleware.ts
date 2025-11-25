@@ -264,6 +264,7 @@ export async function middleware(request: NextRequest) {
   // Define public routes that don't require authentication
   const publicPaths = [
     '/guess',           // Guest pages (login, announcements, events, etc.)
+    '/guess/news',      // News articles - MUST be public for social media crawlers
     '/_next',           // Next.js internals
     '/api/auth',        // Auth endpoints
     '/api/test',        // Test endpoint
@@ -285,12 +286,42 @@ export async function middleware(request: NextRequest) {
   // Root path should redirect to /guess (homepage), not require auth
   const isRootPath = pathname === '/';
   
+  // Check if this is a social media crawler (Facebook, Twitter, LinkedIn, etc.)
+  // These crawlers need to access public pages without authentication
+  const userAgent = request.headers.get('user-agent') || '';
+  const isSocialCrawler = 
+    userAgent.includes('facebookexternalhit') ||
+    userAgent.includes('Facebot') ||
+    userAgent.includes('Twitterbot') ||
+    userAgent.includes('LinkedInBot') ||
+    userAgent.includes('WhatsApp') ||
+    userAgent.includes('Slackbot') ||
+    userAgent.includes('SkypeUriPreview') ||
+    userAgent.includes('Discordbot') ||
+    userAgent.includes('facebook') ||
+    userAgent.includes('Meta') ||
+    userAgent.includes('crawler') ||
+    userAgent.includes('bot');
+  
   // Check if current path is public
   const isPublicPath = isRootPath || publicPaths.some(path => pathname.startsWith(path));
   
   // Log path check for debugging
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[Middleware] Path: ${pathname}, Public: ${isPublicPath}, Root: ${isRootPath}`);
+  if (process.env.NODE_ENV === 'development' || isSocialCrawler) {
+    console.log(`[Middleware] Path: ${pathname}, Public: ${isPublicPath}, Root: ${isRootPath}, Crawler: ${isSocialCrawler}, UA: ${userAgent.substring(0, 80)}`);
+  }
+
+  // Social media crawlers should always be allowed to access pages (for OG tags)
+  // Skip ALL auth checks for social crawlers - they need to read metadata
+  // Also explicitly allow /guess/news paths for all requests (they're public)
+  if (isSocialCrawler || pathname.startsWith('/guess/news')) {
+    if (isSocialCrawler) {
+      console.log(`[Middleware] ✅ Allowing social crawler (${userAgent.substring(0, 50)}) for path: ${pathname}`);
+    } else {
+      console.log(`[Middleware] ✅ Allowing public news path: ${pathname}`);
+    }
+    // Still apply security headers, but skip auth
+    return response;
   }
 
   // If not public, check for authentication token
@@ -312,6 +343,14 @@ export async function middleware(request: NextRequest) {
         );
       }
 
+      // NEVER redirect /guess/news paths - they must be public for social media crawlers
+      // This is a critical safeguard to ensure OG tags are always accessible
+      if (pathname.startsWith('/guess/news')) {
+        console.log(`[Middleware] ⚠️ Attempted redirect of news path blocked: ${pathname}`);
+        // Allow access even without token - news articles are public
+        return response;
+      }
+      
       // For page routes, redirect to portal with role parameter
       const portalUrl = new URL('/guess/portal', request.url);
       
