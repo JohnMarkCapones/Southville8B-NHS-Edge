@@ -1,4 +1,4 @@
-export const SITE_URL = "https://southville8bnhs.com"
+export const SITE_URL = "https://www.southville8bnhs.com"
 export const SITE_NAME = "Southville 8B NHS"
 export const DEFAULT_TITLE = "Southville 8B National High School"
 export const DEFAULT_DESCRIPTION =
@@ -8,6 +8,11 @@ export const TWITTER_HANDLE = "@southville8bnhs"
 export const DEFAULT_OG_IMAGE = "/images/design-mode/image.png"
 
 export function absoluteUrl(path: string) {
+  // If path is already an absolute URL, return it as-is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  
   try {
     return new URL(path, SITE_URL).toString()
   } catch {

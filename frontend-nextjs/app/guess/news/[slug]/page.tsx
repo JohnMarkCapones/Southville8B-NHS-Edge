@@ -20,12 +20,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const path = `/guess/news/${article.slug}`
   const fullUrl = absoluteUrl(path)
-  const title = `${article.title} | Southville 8B NHS News`
-  const description = article.excerpt || article.content.replace(/<[^>]*>/g, '').substring(0, 160) + '...'
+  const title = article.title // Use clean title for OG (without suffix for better preview)
+  const ogTitle = `${article.title} | Southville 8B NHS News` // Full title for page
+  // Ensure description is at least 100 characters for better Facebook preview
+  const rawDescription = article.excerpt || article.content.replace(/<[^>]*>/g, '').trim()
+  const description = rawDescription.length > 100 
+    ? rawDescription.substring(0, 200).trim() + (rawDescription.length > 200 ? '...' : '')
+    : rawDescription || 'Read the latest news from Southville 8B National High School'
   
   // Use article image if available, otherwise use OG image generator
+  // Ensure image URL is absolute (handles both relative paths and full URLs)
   const imageUrl = article.image 
-    ? absoluteUrl(article.image)
+    ? (article.image.startsWith('http://') || article.image.startsWith('https://') 
+        ? article.image 
+        : absoluteUrl(article.image))
     : absoluteUrl(`/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(
       `Published: ${new Date(article.date).toLocaleDateString()}`,
     )}`)
@@ -38,15 +46,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // Get category
   const category = typeof article.category === 'string' 
     ? article.category 
-    : article.category?.name || 'News'
+    : (article.category && typeof article.category === 'object' && 'name' in article.category)
+      ? (article.category as { name: string }).name
+      : 'News'
 
   return {
-    title,
+    title: ogTitle,
     description,
     alternates: { canonical: fullUrl },
     openGraph: {
       type: 'article',
-      title,
+      locale: 'en_US',
+      title, // Use clean title without suffix for better preview
       description,
       url: fullUrl,
       siteName: 'Southville 8B National High School',
@@ -56,6 +67,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
           width: 1200,
           height: 630,
           alt: article.title,
+          type: 'image/jpeg', // Help Facebook understand the image type
         }
       ],
       publishedTime: article.date,

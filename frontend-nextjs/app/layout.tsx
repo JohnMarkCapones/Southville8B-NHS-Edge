@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_PH",
-    url: "https://southville8bnhs.com/",
+    url: "https://www.southville8bnhs.com/",
     title: "Southville 8B National High School",
     description: "Excellence in education with comprehensive academics and vibrant student life.",
     siteName: "Southville 8B NHS",
