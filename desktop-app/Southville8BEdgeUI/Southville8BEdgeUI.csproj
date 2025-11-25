@@ -6,6 +6,7 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <UserSecretsId>7277c25e-eded-40f9-9c2b-2824ca786ee0</UserSecretsId>
   </PropertyGroup>
 
   <!-- Copy public and Assets folders to output so the login carousel can load images at runtime -->

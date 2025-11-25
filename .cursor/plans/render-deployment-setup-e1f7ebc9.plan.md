@@ -1,98 +1,145 @@
-<!-- e1f7ebc9-9d71-4330-a3bf-b2ec84c1c3fb 8c606701-209a-4b9e-b731-27aea0011aec -->
-# Render Deployment Preparation
+<!-- e1f7ebc9-9d71-4330-a3bf-b2ec84c1c3fb ad841dd8-4bfa-4ef8-8bc9-45bceea74232 -->
+# MSI Installer Setup with WiX Toolset
 
 ## Overview
 
-Prepare the Southville NHS School Portal API Layer for deployment on Render by configuring build settings, environment variables, CORS, and deployment documentation.
+Create a professional MSI installer for the Southville 8B NHIS CampusConnect desktop application using WiX Toolset. The installer will package the published application with proper versioning, shortcuts, and deployment structure.
 
 ## Implementation Steps
 
-### 1. Create Render Configuration File
+### 1. Install WiX Toolset Prerequisites
 
-- Create `render.yaml` in the API layer root directory
-- Configure web service with:
-- Build command: `npm ci && npm run build`
-- Start command: `npm run start:prod`
-- Health check path: `/health`
-- Environment: Node.js
-- Auto-deploy from main branch
+- Verify WiX Toolset is installed (or provide installation instructions)
+- Install WiX Toolset Build Tools (v3.11 or later)
+- Add WiX extension to Visual Studio (if using Visual Studio)
 
-### 2. Update CORS Configuration
+### 2. Create WiX Installer Project
 
-- Modify `src/main.ts` to use environment variable for allowed origins
-- Replace hardcoded `['https://yourdomain.com']` with `process.env.ALLOWED_ORIGINS` or `process.env.FRONTEND_URL`
-- Support multiple origins via comma-separated string
-- Default to allowing all origins in development
+- Create new WiX project: `Southville8BEdgeUI.Installer`
+- Add `.wixproj` file with proper configuration
+- Reference the main application project
+- Configure build dependencies (installer builds after main app)
 
-### 3. Create Environment Variables Documentation
+### 3. Create WiX Source File (.wxs)
 
-- Create `.env.example` file listing all required environment variables:
-- **Supabase**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`
-- **Cloudflare R2**: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
-- **Cloudflare Images**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_IMAGES_API_TOKEN`, `CLOUDFLARE_ACCOUNT_HASH`
-- **Application**: `PORT`, `NODE_ENV`, `FRONTEND_URL` or `ALLOWED_ORIGINS`
-- Document optional variables with defaults
+- Create `Product.wxs` with:
+  - Product information (Name, Version, Publisher, UpgradeCode)
+  - Package configuration (Compressed, InstallScope)
+  - Major upgrade configuration (for version updates)
+  - Directory structure (ProgramFilesFolder, StartMenu, Desktop)
+  - Component groups for:
+    - Main executable and dependencies
+    - Assets folder (images, SVGs)
+    - appsettings.json
+    - Application manifest
+  - Shortcuts (Desktop, Start Menu)
+  - Registry entries (if needed for file associations)
 
-### 4. Update Package.json Scripts (if needed)
+### 4. Configure Version Management
 
-- Verify `start:prod` script uses `node dist/main` (already correct)
-- Ensure build script is optimized for production
+- Add `Version.wxi` include file for centralized version management
+- Define ProductVersion, ProductCode, UpgradeCode
+- Set up automatic versioning or manual version control
 
-### 5. Create Deployment Documentation
+### 5. Configure Build Process
 
-- Create `DEPLOYMENT.md` with:
-- Render setup instructions
-- Environment variables setup guide
-- Health check configuration
-- Database migration notes (if applicable)
-- Troubleshooting common issues
+- Update `.wixproj` to:
+  - Reference published output from main project
+  - Use `HeatDirectory` or manual file references
+  - Set output path for MSI file
+  - Configure build order (main app → publish → installer)
 
-### 6. Verify Health Check Endpoint
+### 6. Update Solution File
 
-- Confirm `/health` endpoint exists and works (already implemented in `app.controller.ts`)
-- Health check should return 200 status for Render's health monitoring
+- Add WiX installer project to `Southville8BEdgeUI.sln`
+- Set project dependencies (installer depends on main app)
+- Configure build configuration (Release builds MSI)
 
-### 7. Update .dockerignore (if needed)
+### 7. Configure Publish Profile Integration
 
-- Ensure unnecessary files are excluded from builds
-- Verify migrations and test files are properly excluded
+- Update or create publish profile that works with installer
+- Ensure publish output goes to predictable location
+- Configure installer to reference published files
 
-## Files to Create/Modify
+### 8. Add Installer Assets
 
-1. **Create**: `render.yaml` - Render service configuration
-2. **Create**: `.env.example` - Environment variables template
-3. **Create**: `DEPLOYMENT.md` - Deployment documentation
-4. **Modify**: `src/main.ts` - Update CORS configuration to use environment variables
-5. **Verify**: `package.json` - Ensure production scripts are correct
+- Application icon for installer
+- License file (if applicable)
+- Readme or installation instructions
 
-## Environment Variables Required
+### 9. Configure Installation Features
 
-### Required
+- Desktop shortcut (optional, user choice)
+- Start Menu shortcut (required)
+- Installation directory: `Program Files\Southville 8B NHIS\CampusConnect\`
+- Uninstaller support (automatic with WiX)
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `PORT` (defaults to 3004)
-- `NODE_ENV=production`
-- `FRONTEND_URL` or `ALLOWED_ORIGINS` (for CORS)
+### 10. Create Build Scripts
 
-### Optional (with defaults)
+- PowerShell script for automated MSI building
+- Documentation for manual build process
+- Instructions for signing the MSI (optional, for production)
 
-- `SUPABASE_JWT_SECRET`
-- `R2_*` variables (if using R2 storage)
-- `CLOUDFLARE_*` variables (if using Cloudflare Images)
+## Files to Create
+
+1. **`desktop-app/Southville8BEdgeUI.Installer/Southville8BEdgeUI.Installer.wixproj`** - WiX project file
+2. **`desktop-app/Southville8BEdgeUI.Installer/Product.wxs`** - Main WiX source file
+3. **`desktop-app/Southville8BEdgeUI.Installer/Version.wxi`** - Version information include file
+4. **`desktop-app/Southville8BEdgeUI.Installer/README.md`** - Installer build instructions
+
+## Files to Modify
+
+1. **`desktop-app/Southville8BEdgeUI.sln`** - Add installer project reference
+2. **`desktop-app/Southville8BEdgeUI/Properties/PublishProfiles/FolderProfile.pubxml`** - Ensure publish output location is consistent
+
+## Configuration Details
+
+### Product Information
+
+- **Product Name**: Southville 8B NHIS CampusConnect
+- **Version**: 1.0.0 (configurable via Version.wxi)
+- **Publisher**: Southville 8B National High School (or custom)
+- **UpgradeCode**: Unique GUID (generated once, never changes)
+
+### Installation Structure
+
+```
+Program Files\Southville 8B NHIS\CampusConnect\
+  ├── Southville8BEdgeUI.exe
+  ├── appsettings.json
+  ├── Assets\
+  │   ├── Images\
+  │   └── Login\
+  └── [.NET runtime and dependencies]
+```
+
+### Shortcuts
+
+- **Start Menu**: `Southville 8B NHIS\CampusConnect.lnk`
+- **Desktop**: Optional (user choice during installation)
+
+## Build Process
+
+1. Build main application in Release mode
+2. Publish application to output directory (self-contained, single file)
+3. WiX installer project references published files
+4. Build installer project to generate MSI
+5. MSI output: `desktop-app/Southville8BEdgeUI.Installer/bin/Release/Southville8BEdgeUI-1.0.0.msi`
 
 ## Notes
 
-- Render will automatically detect Node.js and use the build/start commands
-- Health checks will use the `/health` endpoint
-- CORS must be configured to allow the frontend domain
-- All environment variables should be set in Render dashboard before deployment
+- WiX Toolset must be installed on the build machine
+- MSI can be built from Visual Studio or command line (`msbuild`)
+- For production, consider code signing the MSI
+- Version updates require new ProductCode but same UpgradeCode
+- Major upgrade configuration allows automatic uninstall of previous versions
 
 ### To-dos
 
-- [ ] Create render.yaml configuration file with web service settings, build commands, and health check path
-- [ ] Update CORS configuration in main.ts to use environment variables for allowed origins instead of hardcoded values
-- [ ] Create .env.example file documenting all required and optional environment variables with descriptions
-- [ ] Create DEPLOYMENT.md with step-by-step Render deployment instructions and troubleshooting guide
-- [ ] Verify package.json production scripts are correct and optimized for Render deployment
+- [ ] Verify WiX Toolset installation and provide setup instructions if needed
+- [ ] Create Southville8BEdgeUI.Installer WiX project structure with .wixproj file
+- [ ] Create Version.wxi include file for centralized version management
+- [ ] Create Product.wxs with product info, directories, components, and shortcuts
+- [ ] Configure .wixproj build dependencies and file references to published output
+- [ ] Add installer project to solution file and set project dependencies
+- [ ] Test MSI build process and verify installer functionality
