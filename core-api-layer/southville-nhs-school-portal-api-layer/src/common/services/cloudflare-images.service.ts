@@ -71,13 +71,16 @@ export class CloudflareImagesService implements OnModuleInit {
       this.configService.get<string>('CLOUDFLARE_ACCOUNT_ID') || '';
     this.apiToken =
       this.configService.get<string>('CLOUDFLARE_IMAGES_API_TOKEN') || '';
-    this.accountHash =
-      this.configService.get<string>('CLOUDFLARE_ACCOUNT_HASH') || '';
-    this.baseUrl =
+    // Normalize delivery pieces to avoid accidental double slashes in URLs
+    this.accountHash = (
+      this.configService.get<string>('CLOUDFLARE_ACCOUNT_HASH') || ''
+    ).replace(/^\/+|\/+$/g, '');
+    this.baseUrl = (
       this.configService.get<string>(
         'CLOUDFLARE_IMAGES_BASE_URL',
         'https://imagedelivery.net',
-      ) || 'https://imagedelivery.net';
+      ) || 'https://imagedelivery.net'
+    ).replace(/\/+$/, '');
 
     // Validate configuration on startup
     this.validateConfiguration();
