@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
@@ -33,177 +33,60 @@ import {
   Sparkles,
   Bell,
   Download,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
-
-interface NewsArticle {
-  id: number
-  title: string
-  excerpt: string
-  content?: string
-  author: string
-  date: string
-  category: string
-  image: string
-  tags: string[]
-  readTime: string
-  featured?: boolean
-  views?: number
-  likes?: number
-  comments?: number
-  trending?: boolean
-}
-
-const newsArticles: NewsArticle[] = [
-  {
-    id: 1,
-    title: "Southville 8B NHS Wins State Science Fair Championship",
-    excerpt:
-      "Our students dominated the state science fair with groundbreaking projects in environmental science, robotics, and biotechnology, bringing home the championship trophy for the first time in school history.",
-    author: "Dr. Sarah Chen",
-    date: "2024-02-15",
-    category: "Academic Achievement",
-    image: "/placeholder.svg?height=400&width=600&text=Science+Fair+Champions",
-    tags: ["Science", "Achievement", "State Championship", "STEM"],
-    readTime: "5 min read",
-    featured: true,
-    trending: true,
-    views: 2847,
-    likes: 156,
-    comments: 23,
-  },
-  {
-    id: 2,
-    title: "New STEM Laboratory Opens with Cutting-Edge Equipment",
-    excerpt:
-      "State-of-the-art laboratory facilities now available for advanced chemistry, physics, and biology research, featuring the latest technology and equipment.",
-    author: "Principal Martinez",
-    date: "2024-02-12",
-    category: "Facilities",
-    image: "/placeholder.svg?height=300&width=500&text=STEM+Laboratory",
-    tags: ["STEM", "Facilities", "Technology", "Innovation"],
-    readTime: "3 min read",
-    views: 1923,
-    likes: 89,
-    comments: 12,
-  },
-  {
-    id: 3,
-    title: "Eagles Basketball Team Advances to State Finals",
-    excerpt:
-      "Undefeated season continues as our basketball team secures their spot in the state championship game with a thrilling victory over Central High.",
-    author: "Coach Johnson",
-    date: "2024-02-10",
-    category: "Athletics",
-    image: "/placeholder.svg?height=300&width=500&text=Basketball+Championship",
-    tags: ["Basketball", "Championship", "Athletics", "Eagles"],
-    readTime: "4 min read",
-    trending: true,
-    views: 3156,
-    likes: 234,
-    comments: 45,
-  },
-  {
-    id: 4,
-    title: "Student Art Exhibition Showcases Creative Talent",
-    excerpt:
-      "Annual art exhibition features stunning works from our talented visual arts students, displaying creativity across multiple mediums and styles.",
-    author: "Ms. Rodriguez",
-    date: "2024-02-08",
-    category: "Arts & Culture",
-    image: "/placeholder.svg?height=300&width=500&text=Art+Exhibition",
-    tags: ["Arts", "Exhibition", "Students", "Creativity"],
-    readTime: "3 min read",
-    views: 1456,
-    likes: 78,
-    comments: 18,
-  },
-  {
-    id: 5,
-    title: "College Fair Connects Students with Universities",
-    excerpt:
-      "Over 50 colleges and universities participated in our annual college fair event, providing students with valuable information about higher education opportunities.",
-    author: "Counseling Department",
-    date: "2024-02-05",
-    category: "College Prep",
-    image: "/placeholder.svg?height=300&width=500&text=College+Fair",
-    tags: ["College", "Career", "Future", "Universities"],
-    readTime: "2 min read",
-    views: 987,
-    likes: 45,
-    comments: 8,
-  },
-  {
-    id: 6,
-    title: "Environmental Club Launches Campus Sustainability Initiative",
-    excerpt:
-      "Student-led initiative aims to make our campus carbon neutral by 2025 through innovative green practices and community engagement.",
-    author: "Environmental Club",
-    date: "2024-02-03",
-    category: "Environment",
-    image: "/placeholder.svg?height=300&width=500&text=Sustainability+Initiative",
-    tags: ["Environment", "Sustainability", "Student Initiative", "Green"],
-    readTime: "4 min read",
-    views: 1234,
-    likes: 67,
-    comments: 15,
-  },
-  {
-    id: 7,
-    title: "Drama Club Prepares for Spring Musical Production",
-    excerpt:
-      "Students rehearse for the upcoming spring musical 'Hamilton', showcasing exceptional talent and dedication in preparation for the March performances.",
-    author: "Ms. Thompson",
-    date: "2024-02-01",
-    category: "Arts & Culture",
-    image: "/placeholder.svg?height=300&width=500&text=Spring+Musical",
-    tags: ["Drama", "Musical", "Hamilton", "Performance"],
-    readTime: "3 min read",
-    views: 1678,
-    likes: 92,
-    comments: 21,
-  },
-  {
-    id: 8,
-    title: "National Honor Society Inducts New Members",
-    excerpt:
-      "Ceremony recognizes outstanding students for their academic excellence, leadership, service, and character in a prestigious induction ceremony.",
-    author: "NHS Advisor",
-    date: "2024-01-30",
-    category: "Academic Achievement",
-    image: "/placeholder.svg?height=300&width=500&text=NHS+Induction",
-    tags: ["NHS", "Honor Society", "Academic Excellence", "Leadership"],
-    readTime: "2 min read",
-    views: 1345,
-    likes: 76,
-    comments: 11,
-  },
-]
-
-const categories = [
-  { value: "all", label: "All Categories", icon: Newspaper },
-  { value: "Academic Achievement", label: "Academic", icon: GraduationCap },
-  { value: "Athletics", label: "Athletics", icon: Trophy },
-  { value: "Arts & Culture", label: "Arts & Culture", icon: Palette },
-  { value: "Facilities", label: "Facilities", icon: Microscope },
-  { value: "College Prep", label: "College Prep", icon: BookOpen },
-  { value: "Environment", label: "Environment", icon: Globe },
-]
+import { fetchNewsFromAPI, type NewsArticle } from "./data-mapping"
 
 export default function NewsClient() {
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("newest")
 
+  // Fetch news from API
+  useEffect(() => {
+    async function loadNews() {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const articles = await fetchNewsFromAPI()
+        setNewsArticles(articles)
+      } catch (err) {
+        console.error('Failed to load news:', err)
+        setError('Failed to load news articles. Please try again later.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadNews()
+  }, [])
+
   const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 })
   const [featuredRef, featuredInView] = useIntersectionObserver({ threshold: 0.1 })
   const [newsRef, newsInView] = useIntersectionObserver({ threshold: 0.1 })
+
+  // Extract unique categories from news articles
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(newsArticles.map(article => article.category).filter(Boolean)))
+    return [
+      { value: "all", label: "All Categories", icon: Newspaper },
+      ...uniqueCategories.map(cat => ({
+        value: cat,
+        label: cat,
+        icon: GraduationCap // Default icon, you can customize based on category
+      }))
+    ]
+  }, [newsArticles])
 
   const filteredAndSortedNews = useMemo(() => {
     const filtered = newsArticles.filter((article) => {
       const matchesSearch =
         article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        (article.tags && article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())))
 
       const matchesCategory = selectedCategory === "all" || article.category === selectedCategory
 
@@ -231,7 +114,7 @@ export default function NewsClient() {
     }
 
     return filtered
-  }, [searchTerm, selectedCategory, sortBy])
+  }, [newsArticles, searchTerm, selectedCategory, sortBy])
 
   const featuredNews = newsArticles.filter((article) => article.featured)
   const trendingNews = newsArticles.filter((article) => article.trending).slice(0, 3)
@@ -370,8 +253,51 @@ export default function NewsClient() {
         </div>
       </section>
 
+      {/* Loading State */}
+      {isLoading && (
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <p className="text-lg text-muted-foreground">Loading news articles...</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <AlertCircle className="w-12 h-12 text-destructive" />
+              <h3 className="text-xl font-semibold">Failed to Load News</h3>
+              <p className="text-muted-foreground max-w-md">{error}</p>
+              <AnimatedButton onClick={() => window.location.reload()}>
+                Try Again
+              </AnimatedButton>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* No Results State */}
+      {!isLoading && !error && newsArticles.length === 0 && (
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <Newspaper className="w-12 h-12 text-muted-foreground" />
+              <h3 className="text-xl font-semibold">No News Articles Found</h3>
+              <p className="text-muted-foreground max-w-md">
+                There are no published news articles at the moment. Check back soon!
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Featured News */}
-      {featuredNews.length > 0 && (
+      {!isLoading && !error && featuredNews.length > 0 && (
         <section ref={featuredRef} className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className={cn("text-center mb-12", featuredInView && "animate-fadeIn")}>
@@ -443,7 +369,7 @@ export default function NewsClient() {
                         <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                           <User className="w-3 h-3 text-white" />
                         </div>
-                        <span>{article.author}</span>
+                        <span>{typeof article.author === 'string' ? article.author : article.author.name}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
@@ -469,7 +395,7 @@ export default function NewsClient() {
                         </AnimatedButton>
                       ) : (
                         <AnimatedButton variant="gradient" className="flex-1" asChild>
-                          <Link href={`/guess/news/${article.id}`}>
+                          <Link href={`/guess/news/${article.slug}`}>
                             <BookOpen className="w-4 h-4 mr-2" />
                             Read Article
                           </Link>
@@ -488,6 +414,7 @@ export default function NewsClient() {
       )}
 
       {/* Main News Grid */}
+      {!isLoading && !error && regularNews.length > 0 && (
       <section ref={newsRef} className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className={cn("flex items-center justify-between mb-12", newsInView && "animate-fadeIn")}>
@@ -569,7 +496,7 @@ export default function NewsClient() {
                             <div className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                               <User className="w-2.5 h-2.5 text-white" />
                             </div>
-                            <span>{article.author}</span>
+                            <span>{typeof article.author === 'string' ? article.author : article.author.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -587,7 +514,7 @@ export default function NewsClient() {
 
                         <div className="flex gap-2">
                           <AnimatedButton variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/guess/news/${article.id}`}>
+                            <Link href={`/guess/news/${article.slug}`}>
                               Read More
                               <ArrowRight className="w-3 h-3 ml-1" />
                             </Link>
@@ -704,8 +631,10 @@ export default function NewsClient() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Call to Action */}
+      {!isLoading && !error && newsArticles.length > 0 && (
       <section className="py-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Want to contribute?</h2>
@@ -735,6 +664,7 @@ export default function NewsClient() {
           </div>
         </div>
       </section>
+      )}
     </div>
   )
 }

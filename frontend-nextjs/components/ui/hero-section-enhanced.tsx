@@ -57,15 +57,6 @@ export function HeroSectionEnhanced() {
   const [displayedText, setDisplayedText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Achievement ticker
-  const achievements = [
-    "🏆 Science Fair Champions 2024",
-    "⭐ A+ School Rating",
-    "🎓 98% College Acceptance Rate",
-    "🏅 12+ State Championships",
-    "✨ Top 5 in Regional Rankings",
-    "🎯 25 Years of Excellence",
-  ]
 
 
   useEffect(() => {
@@ -220,18 +211,6 @@ export function HeroSectionEnhanced() {
       <div className="pointer-events-none absolute inset-0 mix-blend-soft-light bg-[radial-gradient(75%_60%_at_10%_10%,rgba(59,130,246,0.12),transparent),radial-gradient(60%_55%_at_90%_20%,rgba(14,165,233,0.08),transparent)] dark:mix-blend-normal dark:bg-[radial-gradient(75%_60%_at_10%_10%,rgba(37,99,235,0.18),transparent),radial-gradient(60%_55%_at_90%_20%,rgba(14,165,233,0.12),transparent)]" />
       <div className="pointer-events-none absolute inset-0 hidden sm:block bg-[linear-gradient(to_right,rgba(0,0,0,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.025)_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_60%,transparent_62%,rgba(0,0,0,0.06)_100%)] dark:bg-[radial-gradient(120%_90%_at_50%_60%,transparent_55%,rgba(0,0,0,0.30)_100%)]" />
-
-      {/* Achievement Ticker */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 overflow-hidden">
-        <div className="animate-scroll-left whitespace-nowrap inline-block">
-          {[...achievements, ...achievements].map((achievement, index) => (
-            <span key={index} className="inline-block mx-8 text-sm font-medium">
-              {achievement}
-            </span>
-          ))}
-        </div>
-      </div>
-
 
       {/* Brand chip */}
       <div className="relative z-10">

@@ -125,7 +125,7 @@ export async function fetchNewsFromAPI(): Promise<NewsArticle[]> {
 
   try {
     const res = await fetch(`${apiUrl}/api/v1/news/public?limit=20`, {
-      next: { revalidate: 3600 },
+      cache: 'no-store', // Disable caching for now to see real-time data
     });
 
     if (!res.ok) {
@@ -133,7 +133,10 @@ export async function fetchNewsFromAPI(): Promise<NewsArticle[]> {
       return [];
     }
 
-    const data: BackendNews[] = await res.json();
+    const json = await res.json();
+    
+    // Handle both single object and array responses
+    const data: BackendNews[] = Array.isArray(json) ? json : [json];
 
     // Filter to only show published and approved articles
     const publishedAndApproved = data.filter(article =>

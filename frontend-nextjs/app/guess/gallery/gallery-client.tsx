@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { Badge } from "@/components/ui/badge"
@@ -29,10 +29,14 @@ import {
   Palette,
   Users,
   MapPin,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
+import { getGalleryItems } from "@/lib/api/endpoints/gallery"
+import type { FrontendGalleryItem } from "@/lib/api/types/gallery"
 
 interface GalleryItem {
-  id: number
+  id: string
   title: string
   description: string
   category: string
@@ -47,146 +51,101 @@ interface GalleryItem {
   photographer?: string
 }
 
-const galleryItems: GalleryItem[] = [
-  {
-    id: 1,
-    title: "Science Fair Champions 2024",
-    description:
-      "Our students celebrating their victory at the Regional Science Fair with innovative projects in environmental science and robotics.",
-    category: "Academic Events",
-    date: "2024-02-15",
-    image: "/placeholder.svg?height=400&width=600&text=Science+Fair+Champions",
-    tags: ["Science", "Achievement", "STEM", "Competition"],
-    featured: true,
-    views: 1247,
-    likes: 89,
-    type: "image",
-    location: "Science Laboratory",
-    photographer: "Ms. Rodriguez",
-  },
-  {
-    id: 2,
-    title: "Basketball Championship Game",
-    description: "Eagles basketball team in action during the thrilling state championship final game.",
-    category: "Sports",
-    date: "2024-02-10",
-    image: "/placeholder.svg?height=400&width=600&text=Basketball+Championship",
-    tags: ["Basketball", "Sports", "Championship", "Eagles"],
-    featured: true,
-    views: 2156,
-    likes: 134,
-    type: "image",
-    location: "Sports Complex",
-    photographer: "Coach Martinez",
-  },
-  {
-    id: 3,
-    title: "Annual Art Exhibition Opening",
-    description:
-      "Students showcasing their creative masterpieces at the annual art exhibition featuring paintings, sculptures, and digital art.",
-    category: "Arts & Culture",
-    date: "2024-02-08",
-    image: "/placeholder.svg?height=400&width=600&text=Art+Exhibition",
-    tags: ["Art", "Exhibition", "Creativity", "Students"],
-    views: 987,
-    likes: 67,
-    type: "image",
-    location: "Art Gallery",
-    photographer: "Ms. Chen",
-  },
-  {
-    id: 4,
-    title: "Graduation Ceremony 2024",
-    description:
-      "Proud graduates receiving their diplomas in a memorable ceremony celebrating their academic achievements.",
-    category: "School Events",
-    date: "2024-01-30",
-    image: "/placeholder.svg?height=400&width=600&text=Graduation+Ceremony",
-    tags: ["Graduation", "Achievement", "Ceremony", "Students"],
-    featured: true,
-    views: 3421,
-    likes: 198,
-    type: "image",
-    location: "Main Auditorium",
-    photographer: "Principal Santos",
-  },
-  {
-    id: 5,
-    title: "STEM Laboratory Tour",
-    description:
-      "Virtual tour of our state-of-the-art STEM laboratory featuring cutting-edge equipment and technology.",
-    category: "Facilities",
-    date: "2024-01-25",
-    image: "/placeholder.svg?height=400&width=600&text=STEM+Laboratory",
-    tags: ["STEM", "Laboratory", "Technology", "Facilities"],
-    views: 1543,
-    likes: 92,
-    type: "video",
-    location: "STEM Building",
-    photographer: "Tech Team",
-  },
-  {
-    id: 6,
-    title: "Cultural Festival Performance",
-    description: "Students performing traditional dances and music during the annual cultural diversity festival.",
-    category: "Arts & Culture",
-    date: "2024-01-20",
-    image: "/placeholder.svg?height=400&width=600&text=Cultural+Festival",
-    tags: ["Culture", "Performance", "Festival", "Diversity"],
-    views: 1876,
-    likes: 145,
-    type: "image",
-    location: "Main Courtyard",
-    photographer: "Ms. Dela Cruz",
-  },
-  {
-    id: 7,
-    title: "Environmental Club Tree Planting",
-    description:
-      "Students and faculty working together to plant trees as part of the campus sustainability initiative.",
-    category: "Community Service",
-    date: "2024-01-15",
-    image: "/placeholder.svg?height=400&width=600&text=Tree+Planting",
-    tags: ["Environment", "Sustainability", "Community", "Service"],
-    views: 1234,
-    likes: 78,
-    type: "image",
-    location: "School Garden",
-    photographer: "Environmental Club",
-  },
-  {
-    id: 8,
-    title: "Math Olympiad Training",
-    description:
-      "Dedicated students preparing for the regional mathematics olympiad with intensive problem-solving sessions.",
-    category: "Academic Events",
-    date: "2024-01-10",
-    image: "/placeholder.svg?height=400&width=600&text=Math+Olympiad",
-    tags: ["Mathematics", "Competition", "Training", "Academic"],
-    views: 892,
-    likes: 56,
-    type: "image",
-    location: "Mathematics Room",
-    photographer: "Mr. Reyes",
-  },
-]
-
-const categories = [
-  { value: "all", label: "All Categories", icon: Camera },
-  { value: "Academic Events", label: "Academic", icon: GraduationCap },
-  { value: "Sports", label: "Sports", icon: Trophy },
-  { value: "Arts & Culture", label: "Arts & Culture", icon: Palette },
-  { value: "School Events", label: "School Events", icon: Users },
-  { value: "Facilities", label: "Facilities", icon: MapPin },
-  { value: "Community Service", label: "Community", icon: Heart },
-]
-
 export default function GalleryClient() {
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
   const [sortBy, setSortBy] = useState("newest")
+
+  // Fetch gallery from API
+  useEffect(() => {
+    async function loadGallery() {
+      try {
+        setIsLoading(true)
+        setError(null)
+        console.log('Fetching gallery items...')
+        const response = await getGalleryItems({
+          limit: 50,
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+        })
+        
+        console.log('Gallery API response:', response)
+        console.log('Number of items:', response.items?.length)
+        
+        // Transform API response to match component interface
+        const items: GalleryItem[] = response.items.map(item => {
+          console.log('Processing item:', item.id, item.title)
+          return {
+            id: item.id,
+            title: item.title || 'Untitled',
+            description: item.caption || item.alt_text || '',
+            category: determineCategoryFromTags(item.tags || []),
+            date: item.created_at,
+            image: item.cf_image_url || '/placeholder.svg',
+            tags: item.tags?.map(t => t.name) || [],
+            featured: item.is_featured,
+            views: item.views_count,
+            likes: 0, // Not tracked yet
+            type: item.media_type === 'video' ? 'video' : 'image',
+            location: item.location,
+            photographer: item.photographer_name || item.photographer_credit,
+          }
+        })
+        
+        console.log('Transformed items:', items.length, items)
+        setGalleryItems(items)
+      } catch (err) {
+        console.error('Failed to load gallery:', err)
+        setError('Failed to load gallery. Please try again later.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadGallery()
+  }, [])
+
+  // Helper function to determine category from tags
+  function determineCategoryFromTags(tags: any[]): string {
+    const tagNames = tags.map(t => (typeof t === 'string' ? t : t.name).toLowerCase())
+    
+    if (tagNames.some(t => t.includes('academic') || t.includes('science') || t.includes('stem'))) {
+      return 'Academic Events'
+    }
+    if (tagNames.some(t => t.includes('sport') || t.includes('athletic') || t.includes('basketball'))) {
+      return 'Sports'
+    }
+    if (tagNames.some(t => t.includes('art') || t.includes('music') || t.includes('performance'))) {
+      return 'Arts & Culture'
+    }
+    if (tagNames.some(t => t.includes('event') || t.includes('ceremony') || t.includes('graduation'))) {
+      return 'School Events'
+    }
+    if (tagNames.some(t => t.includes('facility') || t.includes('building') || t.includes('laboratory'))) {
+      return 'Facilities'
+    }
+    if (tagNames.some(t => t.includes('community') || t.includes('service') || t.includes('volunteer'))) {
+      return 'Community Service'
+    }
+    return 'School Events'
+  }
+
+  // Extract unique categories from gallery items
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(galleryItems.map(item => item.category).filter(Boolean)))
+    return [
+      { value: "all", label: "All Categories", icon: Camera },
+      ...uniqueCategories.map(cat => ({
+        value: cat,
+        label: cat,
+        icon: GraduationCap // Default icon
+      }))
+    ]
+  }, [galleryItems])
 
   const [heroRef, heroInView] = useIntersectionObserver({ threshold: 0.1 })
   const [galleryRef, galleryInView] = useIntersectionObserver({ threshold: 0.1 })
@@ -223,7 +182,7 @@ export default function GalleryClient() {
     }
 
     return filtered
-  }, [searchTerm, selectedCategory, sortBy])
+  }, [galleryItems, searchTerm, selectedCategory, sortBy])
 
   const featuredItems = galleryItems.filter((item) => item.featured)
 
@@ -452,7 +411,51 @@ export default function GalleryClient() {
         </section>
       )}
 
+      {/* Loading State */}
+      {isLoading && (
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <p className="text-lg text-muted-foreground">Loading gallery...</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <AlertCircle className="w-12 h-12 text-destructive" />
+              <h3 className="text-xl font-semibold">Failed to Load Gallery</h3>
+              <p className="text-muted-foreground max-w-md">{error}</p>
+              <AnimatedButton onClick={() => window.location.reload()}>
+                Try Again
+              </AnimatedButton>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* No Results State */}
+      {!isLoading && !error && galleryItems.length === 0 && (
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <Camera className="w-12 h-12 text-muted-foreground" />
+              <h3 className="text-xl font-semibold">No Gallery Items Found</h3>
+              <p className="text-muted-foreground max-w-md">
+                There are no gallery items at the moment. Check back soon!
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Main Gallery */}
+      {!isLoading && !error && galleryItems.length > 0 && (
       <section ref={galleryRef} className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className={cn("flex items-center justify-between mb-12", galleryInView && "animate-fadeIn")}>
@@ -566,6 +569,7 @@ export default function GalleryClient() {
           )}
         </div>
       </section>
+      )}
 
       {/* Lightbox Modal */}
       {selectedItem && (
