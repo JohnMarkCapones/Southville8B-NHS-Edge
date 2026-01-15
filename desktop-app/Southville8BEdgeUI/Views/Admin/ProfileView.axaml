@@ -117,14 +117,8 @@
                 <Border Classes="profile-card">
                     <StackPanel Spacing="16" HorizontalAlignment="Center">
                         <Border Classes="avatar-shell">
-                            <TextBlock Text="JM" Classes="avatar-initials" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding UserInitials}" Classes="avatar-initials" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <Button Classes="primary" Command="{Binding UploadPhotoCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                <ic:FluentIcon Icon="ImageAdd" IconSize="Size16"/>
-                                <TextBlock Text="Upload Photo"/>
-                            </StackPanel>
-                        </Button>
                     </StackPanel>
                 </Border>
 
@@ -139,7 +133,7 @@
                             <!-- Full Name -->
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Full Name" Classes="field-label"/>
-                                <TextBox Text="{Binding FullName}" IsReadOnly="{Binding !IsEditing}"/>
+                                <TextBox Text="{Binding FullName}" IsReadOnly="True"/>
                             </StackPanel>
                             <!-- Employee ID -->
                             <StackPanel Grid.Row="0" Grid.Column="2" Spacing="4">
@@ -149,12 +143,12 @@
                             <!-- Email -->
                             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Email Address" Classes="field-label"/>
-                                <TextBox Text="{Binding Email}" IsReadOnly="{Binding !IsEditing}"/>
+                                <TextBox Text="{Binding Email}" IsReadOnly="True"/>
                             </StackPanel>
                             <!-- Phone -->
                             <StackPanel Grid.Row="2" Grid.Column="2" Spacing="4">
                                 <TextBlock Text="Phone Number" Classes="field-label"/>
-                                <TextBox Text="{Binding Phone}" IsReadOnly="{Binding !IsEditing}"/>
+                                <TextBox Text="{Binding Phone}" IsReadOnly="True"/>
                             </StackPanel>
                             <!-- Position -->
                             <StackPanel Grid.Row="4" Grid.Column="0" Spacing="4">
@@ -169,7 +163,7 @@
                             <!-- Address -->
                             <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Spacing="4">
                                 <TextBlock Text="Address" Classes="field-label"/>
-                                <TextBox Text="{Binding Address}" IsReadOnly="{Binding !IsEditing}"/>
+                                <TextBox Text="{Binding Address}" IsReadOnly="True"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -181,24 +175,6 @@
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <ic:FluentIcon Icon="Key" IconSize="Size16"/>
                             <TextBlock Text="Change Password"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="primary" IsVisible="{Binding !IsEditing}" Command="{Binding EditProfileCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="Edit" IconSize="Size16"/>
-                            <TextBlock Text="Edit Profile"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="neutral" IsVisible="{Binding IsEditing}" Command="{Binding CancelEditCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="Dismiss" IconSize="Size16"/>
-                            <TextBlock Text="Cancel"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="success" IsVisible="{Binding IsEditing}" Command="{Binding SaveProfileCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ic:FluentIcon Icon="Save" IconSize="Size16"/>
-                            <TextBlock Text="Save Changes"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

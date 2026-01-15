@@ -40,7 +40,33 @@ public partial class ProfileViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isEditing = false;
 
+    public string UserInitials
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(FullName))
+                return "??";
+
+            var names = FullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (names.Length == 0)
+                return "??";
+
+            if (names.Length == 1)
+                return names[0].Substring(0, Math.Min(2, names[0].Length)).ToUpper();
+
+            // Take first letter of first name and first letter of last name
+            var firstInitial = names[0].Substring(0, 1).ToUpper();
+            var lastInitial = names[names.Length - 1].Substring(0, 1).ToUpper();
+            return firstInitial + lastInitial;
+        }
+    }
+
     public Action<ViewModelBase>? NavigateTo { get; set; }
+
+    partial void OnFullNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(UserInitials));
+    }
 
     public ProfileViewModel()
     {
@@ -67,6 +93,7 @@ public partial class ProfileViewModel : ViewModelBase
             if (profile != null)
             {
                 FullName = profile.FullName ?? string.Empty;
+                OnPropertyChanged(nameof(UserInitials));
                 Email = profile.Email ?? string.Empty;
                 EmployeeId = profile.Id; // Using ID as EmployeeID for now
                 
