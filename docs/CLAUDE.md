@@ -4,434 +4,253 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Southville NHS School Portal - API Layer** is a NestJS-based backend API providing secure, high-performance REST endpoints for the Southville 8B National High School portal. This API integrates with **Supabase** for authentication and database, **Cloudflare R2** for object storage, and uses **Fastify** for optimal performance.
+**Southville 8B NHS Edge** is a comprehensive digital school portal for Southville 8B National High School. This is a **Next.js 15** web application providing a centralized hub for students, teachers, administrators, and parents.
 
-## Essential Commands
+## Working Directory
+
+**All development work happens in: `frontend-nextjs/`**
+
+## Development Commands
 
 ```bash
+# Navigate to frontend directory first
+cd frontend-nextjs
+
 # Development
-npm run start:dev              # Start development server with watch mode
-npm run start:debug            # Start with debugging enabled
+npm run dev              # Start development server at http://localhost:3000
 
 # Build & Production
-npm run build                  # Build the application
-npm run start:prod             # Run production build
+npm run build            # Production build
+npm start               # Start production server
 
 # Code Quality
-npm run lint                   # Run ESLint with auto-fix
-npm run format                 # Format code with Prettier
+npm run lint            # Run ESLint
 
-# Testing
-npm run test                   # Run unit tests
-npm run test:watch             # Run tests in watch mode
-npm run test:cov               # Run tests with coverage report
-npm run test:e2e               # Run end-to-end tests
-npm run test:debug             # Debug tests
-
-# Utility Scripts
-npm run test:r2-connection     # Test R2 storage connection
-npm run security-check         # Run security vulnerability check
+# Bundle Analysis
+npm run analyze         # Analyze production bundle (Windows)
+npm run analyze:dev     # Analyze dev bundle (Windows)
 ```
 
-## High-Level Architecture
+## Tech Stack
 
-### Application Stack
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: TailwindCSS with custom design system
+- **UI Library**: Radix UI primitives + shadcn/ui patterns
+- **State Management**: Zustand
+- **Forms**: React Hook Form + Zod validation
+- **Rich Text Editor**: Tiptap
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Theming**: next-themes (dark mode support)
 
-- **Framework**: NestJS 11 with TypeScript 5.7
-- **HTTP Adapter**: Fastify (not Express) - affects file upload handling
-- **Database**: Supabase PostgreSQL with Row-Level Security (RLS)
-- **Authentication**: Supabase Auth with JWT tokens
-- **Storage**: Cloudflare R2 (S3-compatible) for file uploads
-- **API Versioning**: URI-based (default v1) with `/api` global prefix
-- **Documentation**: Swagger/OpenAPI at `/api/docs`
+## Application Structure
 
-### Application Bootstrap (src/main.ts)
+### Route Organization (`app/` directory)
 
-The application bootstraps with:
-1. **Fastify adapter** with 50MB file upload limit
-2. **Security middleware**: Helmet (CSP), compression, CORS
-3. **Global validation pipe**: `whitelist`, `forbidNonWhitelisted`, `transform`
-4. **API versioning**: URI-based with `/api/v1` prefix
-5. **Multipart support**: Fastify multipart (NOT Express multer)
-6. **Swagger docs**: Available at `/api/docs` with JWT bearer auth
+The app uses Next.js App Router with role-based route segments:
 
-### Module Organization
+- **`/guess/*`** - Public/guest routes (unauthenticated users)
+  - Homepage, login, news, events, clubs, academics, announcements
 
-The codebase follows a **domain-driven module structure**:
+- **`/student/*`** - Student portal (authenticated students)
+  - Dashboard, assignments, grades, schedule, courses
+  - Clubs, events, news, calendar, activities
+  - Quiz system, notes, todo, goals, pomodoro timer
+  - Publisher (student journalism/content creation)
+  - Ranking/leaderboard
+
+- **`/teacher/*`** - Teacher portal (authenticated teachers)
+  - Dashboard, students management, analytics, reports
+  - Quiz builder and grading, schedule
+  - Clubs management, resources, classes
+
+- **`/admin/*`** - Administrator portal
+
+- **`/superadmin/*`** - Super administrator portal
+
+### Component Architecture (`components/` directory)
 
 ```
-src/
-├── config/                    # Configuration files
-│   ├── supabase.config.ts    # Supabase credentials & setup
-│   ├── r2.config.ts          # R2 storage configuration
-│   └── r2-config-validation/ # R2 config validation service
-├── supabase/                  # Supabase integration
-│   ├── supabase.module.ts
-│   └── supabase.service.ts   # getClient() vs getServiceClient()
-├── auth/                      # Authentication & authorization
-│   ├── supabase-auth.guard.ts # JWT validation
-│   ├── guards/
-│   │   ├── roles.guard.ts    # Role-based access control
-│   │   └── policies.guard.ts # Domain-based permissions (PBAC)
-│   ├── jwt-verification.service.ts
-│   ├── role-cache.service.ts
-│   └── pbac.module.ts        # Permission-Based Access Control
-├── storage/                   # R2 storage abstraction
-│   └── storage.module.ts
-├── modules/                   # Educational modules system (R2-integrated)
-│   ├── modules.controller.ts
-│   ├── modules.service.ts
-│   ├── dto/                  # Data Transfer Objects
-│   ├── entities/
-│   ├── services/             # Specialized services
-│   │   ├── module-access.service.ts
-│   │   ├── module-storage.service.ts
-│   │   └── module-download-logger.service.ts
-│   └── guards/
-│       └── module-upload-throttle.guard.ts
-├── students/                  # Student management
-├── users/                     # User management (teachers, admins)
-├── sections/                  # Class sections
-├── buildings/, floors/, rooms/ # Campus infrastructure
-├── announcements/             # School announcements
-├── events/                    # School events
-├── schedules/                 # Class schedules
-├── clubs/                     # Student clubs with forms
-├── gwa/                       # Grade-Weighted Average
-├── alerts/                    # System alerts
-├── academic-calendar/         # Academic calendar
-├── campus-facilities/         # Campus facilities
-├── faq/                       # FAQ management
-├── locations/                 # Campus locations
-├── hotspots/                  # Notable campus hotspots
-├── departments-information/   # Department info
-└── common/                    # Shared utilities
+components/
+├── ui/                    # Reusable UI primitives (shadcn/ui style)
+│   ├── button.tsx
+│   ├── dialog.tsx
+│   ├── card.tsx
+│   └── [other primitives]
+│
+├── student/               # Student-specific features
+├── teacher/               # Teacher-specific features
+├── superadmin/            # Super admin features
+│   ├── dashboard/         # Dashboard components
+│   └── data/              # Mock/example data
+│
+├── layouts/               # Layout components
+├── homepage/              # Homepage sections
+├── academics/             # Academic content
+├── quiz/                  # Quiz system components
+├── productivity/          # Productivity tools
+├── chat/                  # Chat/messaging
+├── gallery/               # Image galleries
+└── [other feature folders]
 ```
 
-### Key Architectural Patterns
+### Key Directories
 
-#### 1. Dual Supabase Client Pattern
+- **`app/`** - Next.js App Router pages and layouts
+- **`components/`** - React components organized by feature
+- **`lib/`** - Utilities, helpers, constants
+  - `lib/utils.ts` - Utility functions (includes `cn` for className merging)
+  - `lib/stores/` - Zustand state stores
+- **`hooks/`** - Custom React hooks
+- **`types/`** - TypeScript type definitions
+- **`constants/`** - Application constants
+- **`public/`** - Static assets
 
-**Critical**: The `SupabaseService` provides two distinct clients:
+## Styling System
 
-```typescript
-// For RLS-protected operations (respects Row-Level Security)
-const client = this.supabaseService.getClient();
+### Color Palette
 
-// For admin operations (bypasses RLS, used for writes)
-const serviceClient = this.supabaseService.getServiceClient();
+Custom blue-based school theme defined in `tailwind.config.ts`:
+
+**Primary Colors**:
+- `school-blue`: #2563EB (Blue-600) - Main brand color
+- `school-gold`: #F59E0B (Amber-500) - Accent
+- `school-green`: #10B981 (Emerald-500) - Success
+- `school-red`: #EF4444 (Red-500) - Error
+
+**Vibrant Colors** (blue harmonious):
+- `vibrant-blue`, `vibrant-indigo`, `vibrant-sky`, `vibrant-cyan`, `vibrant-teal`, `vibrant-slate`
+
+**Accents**:
+- `accent-emerald`, `accent-amber`, `accent-rose`
+
+### Custom Animations
+
+Professional, subtle animations available:
+- `fadeIn` - Fade in with slight upward movement
+- `slideInUp`, `slideInLeft`, `slideInRight` - Directional slides
+- `float` - Gentle floating effect
+- `gentleGlow` - Pulsing glow effect
+- `notification`, `notificationExit` - Notification animations
+- `searchExpand`, `searchCollapse` - Search bar animations
+
+### Breakpoints
+
+```
+xs:  475px
+sm:  640px
+md:  768px
+lg:  1024px
+xl:  1280px
+2xl: 1536px
+3xl: 1920px
 ```
 
-**When to use each**:
-- **`getClient()`**: SELECT queries where RLS policies apply
-- **`getServiceClient()`**: INSERT, UPDATE, DELETE operations (bypasses RLS)
+## State Management
 
-**Common mistake**: Using `getClient()` for INSERT operations will fail with RLS violations.
+**Zustand stores** located in `lib/stores/`:
+- `sidebar-store.ts` - Sidebar state management
+- `teacher-sidebar-store.ts` - Teacher-specific sidebar state
 
-#### 2. Authentication & Authorization Flow
+Use Zustand for global client state. Prefer Server Components for data fetching where possible.
 
-Three layers of security:
+## UI Component Patterns
 
-1. **SupabaseAuthGuard**: Validates JWT token from `Authorization: Bearer <token>` header
-2. **RolesGuard**: Enforces role-based access (`@Roles('Admin', 'Teacher')`)
-3. **PoliciesGuard**: Domain-based permission checks (PBAC system)
+Components follow **shadcn/ui** conventions:
+- Built on Radix UI primitives
+- Styled with Tailwind utility classes
+- Composable and accessible by default
+- Use `cn()` utility for conditional classes
 
-```typescript
-// Controller example
-@UseGuards(SupabaseAuthGuard, RolesGuard)
-@Roles('Admin', 'Teacher')
-@Get()
-async findAll() { ... }
+Example:
+```tsx
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+
+<Button className={cn("custom-class", conditionalClass && "active")}>
+  Click me
+</Button>
 ```
 
-**User context**: Access authenticated user via `@Req()` or custom decorators.
+## Form Handling
 
-#### 3. R2 Storage Integration
+Use React Hook Form + Zod:
+```tsx
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 
-**Cloudflare R2** is used for all file uploads (not Supabase Storage).
+const schema = z.object({
+  name: z.string().min(1, "Name is required")
+})
 
-**Key concepts**:
-- **Bucket structure**: `modules/global/{subject_id}/` or `modules/sections/{section_id}/`
-- **Presigned URLs**: Generate temporary secure URLs for downloads
-- **Soft deletes**: Files moved to `.deleted/` prefix instead of immediate deletion
-- **Multipart uploads**: Automatic for files >10MB
-
-**Environment variables** (see `.env`):
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
-- `R2_MAX_FILE_SIZE` (default: 10MB)
-- `R2_PRESIGNED_URL_EXPIRATION` (default: 3600s)
-
-**Critical**: Use Fastify multipart, not Express multer:
-
-```typescript
-// Correct way to handle file uploads in Fastify
-const data = await request.file();
-const chunks: Buffer[] = [];
-for await (const chunk of data.file) {
-  chunks.push(chunk);
-}
-const fileBuffer = Buffer.concat(chunks);
+const form = useForm({
+  resolver: zodResolver(schema)
+})
 ```
 
-#### 4. Database Entity Patterns
+## Loading & Error States
 
-All entities use TypeScript interfaces (NOT TypeORM decorators) since Supabase manages the schema.
+- Use `loading.tsx` files for route-level loading states
+- Use `not-found.tsx` files for 404 pages
+- Both patterns are available at various route levels
 
-```typescript
-// Example entity (interface, not class)
-export interface Module {
-  id: string;
-  title: string;
-  description?: string;
-  file_url: string;          // R2 public URL
-  r2_file_key: string;       // Internal R2 key
-  uploaded_by: string;       // User UUID
-  is_global: boolean;
-  is_deleted: boolean;
-  subject_id?: string;
-  created_at: string;
-  updated_at: string;
-}
+## Environment Variables
+
+The frontend requires the following environment variables for chat realtime functionality:
+
+### Required for Chat Realtime
+
+- **`NEXT_PUBLIC_SUPABASE_URL`** - Your Supabase project URL (e.g., `https://xxxxxxxxxxxxx.supabase.co`)
+- **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** - Supabase anonymous/public key (safe for client-side)
+
+These values should match the same credentials used in `southville-chat-service/.env`:
+- `SUPABASE_URL` → `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_ANON_KEY` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Optional
+
+- **`NEXT_PUBLIC_CHAT_SERVICE_URL`** - Chat service base URL (defaults to `http://localhost:3001`)
+
+### Setup
+
+1. Create a `.env.local` file in `frontend-nextjs/` directory
+2. Copy the Supabase credentials from your main API or chat service `.env` file
+3. Prefix them with `NEXT_PUBLIC_` for client-side access
+
+Example `.env.local`:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_CHAT_SERVICE_URL=http://localhost:3001
 ```
 
-**Note**: Use snake_case for database fields (Supabase convention), camelCase in DTOs.
+**Note**: The `NEXT_PUBLIC_` prefix is required for Next.js to expose these variables to the client-side code.
 
-#### 5. DTO Validation Pattern
+## Important Notes
 
-All DTOs use `class-validator` and `class-transformer`:
+- This project uses **Next.js 15 App Router** (not Pages Router)
+- Server Components are the default - use `"use client"` only when needed
+- Package.json scripts use **Windows-specific commands** (`set` instead of `export`)
+- TypeScript is strictly enforced
+- All new components should follow the established shadcn/ui patterns
+- Dark mode is supported via `next-themes` provider
+- Chat uses **Supabase Realtime** for instant message updates (no polling)
 
-```typescript
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsUUID } from 'class-validator';
+## Commit Convention
 
-export class CreateModuleDto {
-  @IsString()
-  @IsNotEmpty()
-  title: string;
+Follow Conventional Commits format:
 
-  @IsOptional()
-  @IsString()
-  description?: string;
+```
+<type>(frontend): <description>
 
-  @IsOptional()
-  @IsBoolean()
-  isGlobal?: boolean;
-
-  @IsOptional()
-  @IsUUID()
-  subjectId?: string;
-}
+[optional body]
 ```
 
-**Global validation** is enabled in `main.ts` with:
-- `whitelist: true` - Strip non-whitelisted properties
-- `forbidNonWhitelisted: true` - Throw error on unknown properties
-- `transform: true` - Auto-transform payloads to DTO instances
+**Common types**: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `style`, `perf`
 
-#### 6. Rate Limiting & Throttling
-
-**Global rate limiting** via `@nestjs/throttler`:
-- Default: 100 requests per minute per IP
-
-**Custom throttling** for specific operations:
-- Module uploads: 10 per hour for Teachers (see `ModuleUploadThrottleGuard`)
-- Module downloads: 100 per hour for Students
-
-#### 7. Error Handling Standards
-
-Use NestJS built-in exceptions:
-
-```typescript
-import {
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-  UnauthorizedException
-} from '@nestjs/common';
-
-// Example
-if (!module) {
-  throw new NotFoundException(`Module with ID ${id} not found`);
-}
-
-if (module.uploaded_by !== userId) {
-  throw new ForbiddenException('You do not have permission to modify this module');
-}
-```
-
-**RLS violations** from Supabase will appear as database errors - catch and translate them to appropriate HTTP exceptions.
-
-## Important Development Notes
-
-### Working with Fastify (NOT Express)
-
-**File upload handling differs significantly**:
-
-```typescript
-// ❌ WRONG (Express/Multer style)
-@UseInterceptors(FileInterceptor('file'))
-uploadFile(@UploadedFile() file: Express.Multer.File) { ... }
-
-// ✅ CORRECT (Fastify multipart style)
-async uploadFile(@Req() request: FastifyRequest) {
-  const data = await request.file();
-  const fileBuffer = await data.file.toBuffer(); // or loop through chunks
-  // ...
-}
-```
-
-### Supabase RLS Best Practices
-
-1. **Always use service client for writes**:
-   ```typescript
-   // INSERT, UPDATE, DELETE
-   const { data, error } = await this.supabaseService
-     .getServiceClient()
-     .from('modules')
-     .insert({ ... });
-   ```
-
-2. **Use regular client for reads with RLS**:
-   ```typescript
-   // SELECT with RLS policies applied
-   const { data, error } = await this.supabaseService
-     .getClient()
-     .from('modules')
-     .select('*')
-     .eq('is_deleted', false);
-   ```
-
-3. **Handle RLS policy violations gracefully**:
-   ```typescript
-   if (error) {
-     if (error.message.includes('row-level security')) {
-       throw new ForbiddenException('Access denied');
-     }
-     throw new InternalServerErrorException(error.message);
-   }
-   ```
-
-### R2 Storage Conventions
-
-**File key naming**: Use descriptive, collision-free keys:
-```
-modules/global/{subject_id}/{uuid}-{sanitized-filename}
-modules/sections/{section_id}/{uuid}-{sanitized-filename}
-```
-
-**Soft delete pattern**:
-```typescript
-// Move to .deleted/ prefix instead of permanent deletion
-await r2StorageService.copyFile(
-  originalKey,
-  `.deleted/${originalKey}`
-);
-await r2StorageService.deleteFile(originalKey);
-```
-
-**Presigned URLs**: Always generate presigned URLs for downloads (never expose direct URLs):
-```typescript
-const url = await r2StorageService.generatePresignedUrl(
-  module.r2_file_key,
-  3600 // 1 hour expiration
-);
-```
-
-### Module System Architecture
-
-The **Modules** system is a comprehensive reference implementation showing:
-- Multipart file uploads with Fastify
-- R2 storage integration
-- RLS-based access control
-- Role-based permissions (Admin, Teacher, Student)
-- Download analytics tracking
-- Soft delete with retention
-- Rate limiting for uploads/downloads
-
-See `MODULES_SYSTEM_DOCUMENTATION.md` for complete details.
-
-### Configuration Management
-
-All configuration uses `@nestjs/config` with typed config objects:
-
-```typescript
-// Config registration (config/*.config.ts)
-export default registerAs('r2', () => ({
-  accountId: process.env.R2_ACCOUNT_ID,
-  bucketName: process.env.R2_BUCKET_NAME,
-  // ...
-}));
-
-// Config usage in services
-constructor(private configService: ConfigService) {}
-
-const accountId = this.configService.get<string>('r2.accountId');
-```
-
-**Configuration validation** happens at startup (see `R2ConfigValidationService`).
-
-## Common Pitfalls
-
-1. **Fastify vs Express**: File upload handling is completely different. Don't use Express patterns.
-
-2. **RLS violations**: Using `getClient()` for INSERT/UPDATE/DELETE will fail. Use `getServiceClient()`.
-
-3. **Boolean parsing in multipart forms**: Form data sends booleans as strings. Handle both:
-   ```typescript
-   isGlobal: ['true', '1', true].includes(data.fields.isGlobal?.value)
-   ```
-
-4. **UUID validation**: Ensure UUIDs are valid before database queries. Null/undefined UUIDs will cause "invalid input syntax for type uuid" errors.
-
-5. **Supabase query building**: Always check for errors:
-   ```typescript
-   const { data, error } = await supabase.from('table').select();
-   if (error) throw new InternalServerErrorException(error.message);
-   ```
-
-6. **CORS in production**: Update `main.ts` CORS origin for production domains.
-
-## Testing Considerations
-
-- **Unit tests**: Mock `SupabaseService` and `R2StorageService`
-- **E2E tests**: Use test database and R2 bucket
-- **R2 connection test**: Run `npm run test:r2-connection` to verify R2 setup
-- **Authentication in tests**: Generate valid JWT tokens from Supabase for authenticated routes
-
-## Security Checklist
-
-- ✅ Never commit `.env` file
-- ✅ Use service role key only on backend (never expose to frontend)
-- ✅ Validate all file uploads (MIME type, size, content)
-- ✅ Generate presigned URLs with short expiration for R2 downloads
-- ✅ Implement rate limiting for sensitive operations
-- ✅ Use RLS policies on all Supabase tables
-- ✅ Sanitize file names before storage
-- ✅ Validate user permissions before file operations
-
-## API Documentation
-
-**Swagger docs** are automatically generated and available at:
-```
-http://localhost:3000/api/docs
-```
-
-All endpoints require JWT authentication via:
-```
-Authorization: Bearer <supabase-jwt-token>
-```
-
-## Deployment Notes
-
-- **Environment**: Node.js 18+
-- **Build output**: `dist/` directory
-- **Start command**: `npm run start:prod`
-- **Health check**: `GET /` returns welcome message
-- **Port**: Default 3000 (configurable via `PORT` env var)
-
-## Additional Documentation
-
-- `MODULES_SYSTEM_DOCUMENTATION.md` - Complete modules system reference
-- `R2_CONFIGURATION_README.md` - R2 storage setup guide
-- `R2_ENVIRONMENT_EXAMPLE.md` - R2 environment variables
-- `R2_TESTING_GUIDE.md` - R2 testing procedures
-- `README.md` - Project overview and setup instructions
+**Examples**:
+- `feat(frontend): add quiz submission tracking for students`
+- `fix(frontend): resolve dark mode toggle in settings`
+- `refactor(frontend): simplify student dashboard layout`

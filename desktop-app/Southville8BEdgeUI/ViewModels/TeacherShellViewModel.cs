@@ -645,13 +645,14 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
         try
         {
             
-            // Fetch schedules to count total classes
+            // Fetch schedules to count total classes (matching Dashboard logic)
+            // Don't filter by schoolYear/semester to match SSE which gets all published schedules
             var schedulesResponse = await _apiClient.GetSchedulesAsync(
                 page: 1,
                 limit: 100,
                 teacherId: _teacherId,
-                schoolYear: "2024-2025",
-                semester: "1st"
+                schoolYear: null, // Don't filter by schoolYear to match SSE
+                semester: null    // Don't filter by semester to match SSE
             );
 
             if (schedulesResponse?.Data != null)
@@ -662,42 +663,37 @@ public partial class TeacherShellViewModel : ViewModelBase, IDisposable
                 {
                     TotalClasses = scheduleCount;
                 });
-            }
-            else
-            {
-            }
 
-            // Fetch sections to count students using generic GET to handle response structure
-            var sectionsResponse = await _apiClient.GetAsync<SectionListResponse>("sections?limit=100");
-            
-            if (sectionsResponse?.Data != null && !string.IsNullOrEmpty(_userId))
-            {
-                // Filter sections where teacher_id matches current user
-                var teacherSections = sectionsResponse.Data
-                    .Where(s => !string.IsNullOrEmpty(s.TeacherId) && s.TeacherId == _userId)
+                // Count students from sections in schedules (matching Dashboard logic)
+                // Get unique section IDs from schedules
+                var sectionIds = schedulesResponse.Data
+                    .Select(s => s.SectionId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct()
                     .ToList();
 
-
-                // Fetch students for each section
                 int totalStudents = 0;
-                foreach (var section in teacherSections)
+                if (sectionIds.Any())
                 {
-                    try
+                    // Fetch students for each unique section (matching Dashboard logic)
+                    foreach (var sectionId in sectionIds)
                     {
-                        var endpoint = $"students?sectionId={section.Id}&page=1&limit=100";
-                        var response = await _apiClient.GetAsync<StudentListResponse>(endpoint);
-                        
-                        if (response?.Data != null)
+                        try
                         {
-                            totalStudents += response.Data.Count;
+                            var endpoint = $"students?sectionId={sectionId}&limit=1000";
+                            var response = await _apiClient.GetAsync<StudentListResponse>(endpoint);
+
+                            if (response?.Data != null)
+                            {
+                                totalStudents += response.Data.Count;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[TeacherShellViewModel] Error fetching students for section {sectionId}: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error fetching students for section {section.Id}: {ex.Message}");
-                    }
                 }
-
 
                 Dispatcher.UIThread.Post(() =>
                 {
