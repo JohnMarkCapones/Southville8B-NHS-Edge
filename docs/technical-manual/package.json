@@ -1,0 +1,49 @@
+{
+  "name": "southville-8b-technical-documentation",
+  "version": "1.0.0",
+  "description": "Technical Documentation for Southville 8B NHS Edge System",
+  "private": true,
+  "scripts": {
+    "build:all": "npm run build:pdf && npm run build:html",
+    "build:pdf": "node scripts/build-pdf.js",
+    "build:pdf:volume1": "md-to-pdf volume-1-system-overview/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume2": "md-to-pdf volume-2-installation/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume3": "md-to-pdf volume-3-developer-guide/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume4": "md-to-pdf volume-4-feature-documentation/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume5": "md-to-pdf volume-5-api-integration/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume6": "md-to-pdf volume-6-user-guides/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume7": "md-to-pdf volume-7-maintenance/**/*.md --config-file pdf-config.json",
+    "build:pdf:volume8": "md-to-pdf volume-8-security/**/*.md --config-file pdf-config.json",
+    "build:html": "node scripts/build-html.js",
+    "build:docusaurus": "cd docusaurus-site && npm run build",
+    "serve:docusaurus": "cd docusaurus-site && npm start",
+    "serve:html": "npx http-server ./build -p 8080",
+    "validate": "node scripts/validate-links.js",
+    "lint:docs": "markdownlint **/*.md --ignore node_modules",
+    "preview": "npm run build:html && npm run serve:html",
+    "stats": "node scripts/doc-stats.js",
+    "check:links": "markdown-link-check **/*.md"
+  },
+  "devDependencies": {
+    "md-to-pdf": "^5.2.4",
+    "markdown-it": "^13.0.2",
+    "markdown-it-anchor": "^8.6.7",
+    "markdown-it-toc-done-right": "^4.2.0",
+    "markdownlint-cli": "^0.37.0",
+    "markdown-link-check": "^3.11.2",
+    "puppeteer": "^21.6.1",
+    "fs-extra": "^11.2.0",
+    "chalk": "^4.1.2",
+    "glob": "^10.3.10"
+  },
+  "dependencies": {},
+  "keywords": [
+    "documentation",
+    "technical-manual",
+    "southville-8b",
+    "nextjs",
+    "education"
+  ],
+  "author": "Southville 8B NHS Development Team",
+  "license": "PROPRIETARY"
+}
